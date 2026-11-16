@@ -82,6 +82,7 @@ function MF.Monster(def)
 	if custom then
 		local m = custom:Clone()
 		m.Name = def.id
+		m:SetAttribute("RealModel", true)
 		return m
 	end
 

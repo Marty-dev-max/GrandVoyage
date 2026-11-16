@@ -271,6 +271,22 @@ function MS.Remove(mob)
 	die(mob, nil)
 end
 
+-- swap placeholder-bodied mobs for the real (voxel) models once AssetService has loaded them;
+-- only mobs nobody is fighting, so nothing is lost
+function MS.RefreshModels()
+	local n = 0
+	for uid, mob in pairs(mobs) do
+		if mob.zone and not mob.def.isBoss and not mob.dead and not mob.model:GetAttribute("RealModel") and next(mob.damageBy) == nil and mob.target == nil then
+			mob.dead = true
+			mobs[uid] = nil
+			mob.model:Destroy()
+			MS.Spawn(mob.def.id, mob.home, mob.opts)
+			n += 1
+		end
+	end
+	return n
+end
+
 function MS.Kill(mob)
 	mob.opts.noRespawn = true
 	mob.damageBy = {}

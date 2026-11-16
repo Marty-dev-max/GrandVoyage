@@ -620,9 +620,16 @@ end
 -- ===== Public =====
 -- Bump when the world's code changes in a way the baked map must pick up: a baked World with another version is thrown
 -- away and rebuilt from code at server start (so the owner's published place updates through Rojo too).
+-- Hand-built content made in Studio goes in workspace.Handmade (never touched by rebuilds). Kit props placed there
+-- (tagged EnvProp/EnvPart) are dressed with the stylized meshes like the generated ones.
 WB.WORLD_VERSION = 5
 
 function WB.Build()
+	if not workspace:FindFirstChild("Handmade") then
+		local hm = Instance.new("Folder")
+		hm.Name = "Handmade"
+		hm.Parent = workspace
+	end
 	local old = workspace:FindFirstChild("World")
 	if old and old:GetAttribute("WorldVersion") == WB.WORLD_VERSION then
 		return old

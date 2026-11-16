@@ -263,13 +263,137 @@
   "id": "99700717839919",
   "sha1": "59b3b54a38353a6f8fbb6d7eda25eee67fae05c7"
  },
+ "Mon_ArmadaAdmiral": {
+  "id": "140588707080976",
+  "sha1": "86bfbf63bdf1a6ada2ae578b83e0c38092c688fb"
+ },
+ "Mon_ArmadaRaider": {
+  "id": "90339642471563",
+  "sha1": "5a47aa11c4ee2bed9b31f49e2d4ba1f44ace83cf"
+ },
+ "Mon_ArmoredGunner": {
+  "id": "74010104244750",
+  "sha1": "3256ef836e1677c9d05d9a76604cc64f002f72a1"
+ },
+ "Mon_AxeCaptain": {
+  "id": "108208987822794",
+  "sha1": "821fbadf5e3ec213f1ff25d324355abaf21cebeb"
+ },
  "Mon_BaySerpent": {
   "id": "129684468906851",
   "sha1": "e1a90f77ac73819bbd69298a47daaa65cf89c7e4"
  },
+ "Mon_BeachCrab": {
+  "id": "104034358753603",
+  "sha1": "fb2a410d8784c4b828022887d73b771215ec7086"
+ },
+ "Mon_BountyHunter": {
+  "id": "79934655943864",
+  "sha1": "fc3e2ad536cb8d5b62854c7ba2954d827909a806"
+ },
+ "Mon_CaptainConfetti": {
+  "id": "106043332568014",
+  "sha1": "785d32058add43f797b4c34ce83503b572434418"
+ },
+ "Mon_CircusAcrobat": {
+  "id": "123025930871666",
+  "sha1": "0b12f91f3228c6801b59004f0a2fe4dbb79e7132"
+ },
+ "Mon_CircusLion": {
+  "id": "79288938708486",
+  "sha1": "f0d48e258b10ef45cb09e3439cb90ab877b0064e"
+ },
+ "Mon_ClawCat": {
+  "id": "118136032314086",
+  "sha1": "7b1fa3d7952ff9dbe2105447f45e26d303b4790b"
+ },
+ "Mon_ClownGrunt": {
+  "id": "74753244064898",
+  "sha1": "793de6f3a8a7aff98b621ad9ad44d2dfa2eb6c7c"
+ },
+ "Mon_DepthsWarden": {
+  "id": "109127774691827",
+  "sha1": "44d35cb8248a743993d236661e0c6a75bb69d51f"
+ },
+ "Mon_ForestMonkey": {
+  "id": "130036994538112",
+  "sha1": "5cc16bc31bf865a65229a892ef79820f38b4c68f"
+ },
+ "Mon_FortCore": {
+  "id": "125648826413883",
+  "sha1": "647612aaa64d7ae5a2cf31b7c59a8478cb11118d"
+ },
  "Mon_GuardWolf": {
-  "id": "122689761351580",
-  "sha1": "ec64d22aa86173152e488f4f035b6252dab838c7"
+  "id": "89217687583615",
+  "sha1": "530e37ac33137f86e7d3430d06420ee0fbcd136c"
+ },
+ "Mon_HypnoThug": {
+  "id": "120148172754683",
+  "sha1": "742cd39f98f90a9724d4cbbc3041022c9bc3a5e0"
+ },
+ "Mon_Leviathan": {
+  "id": "103247530075484",
+  "sha1": "b0b5f24fd58682399b9250bec9646b356abec4c7"
+ },
+ "Mon_MarineElite": {
+  "id": "112044070486258",
+  "sha1": "aec1f2daf36c7253ce4d360ae18571d90357ceb7"
+ },
+ "Mon_MarineRecruit": {
+  "id": "111727460942604",
+  "sha1": "3d84f6ed0d85295aa3af25a224a928259db15104"
+ },
+ "Mon_MarineRifleman": {
+  "id": "127507046170301",
+  "sha1": "252307671faa0c7d419168e2eae322b79eed83c8"
+ },
+ "Mon_MistCommodore": {
+  "id": "131675612222154",
+  "sha1": "7def279aa6dddc9a8887914986b9babe958d557f"
+ },
+ "Mon_MistSoldier": {
+  "id": "71395336437629",
+  "sha1": "b5395f99e14e19eded9dd8a9af0adcff8461f488"
+ },
+ "Mon_MountainBandit": {
+  "id": "87062909262583",
+  "sha1": "e9673cfce3a9d2c153c29c3c385b5781d3b12239"
+ },
+ "Mon_NightCatPirate": {
+  "id": "95568053683433",
+  "sha1": "56a813942d7bfa152dbd965d7c7ec28315527e7d"
+ },
+ "Mon_OctofolkBrute": {
+  "id": "98928527731001",
+  "sha1": "4f1359be6cfb0bc83f2ed0a69e84456646102e0e"
+ },
+ "Mon_RingMaster": {
+  "id": "73057119916004",
+  "sha1": "2266b7012bf604e5cb640e17f4a4e0730d7a3929"
+ },
+ "Mon_SawfolkRaider": {
+  "id": "111472747251746",
+  "sha1": "7135c89d9b7a04ffcef8fc1261bc929aea388d40"
+ },
+ "Mon_SawtoothOverlord": {
+  "id": "103762983382170",
+  "sha1": "6caa1c9bdf43e90e924ca0659d3b4350e4012ec1"
+ },
+ "Mon_SharkfolkBrawler": {
+  "id": "74793850622467",
+  "sha1": "f8762ca9bc71fe7412965ff7a287ba778cf8d312"
+ },
+ "Mon_SilentClaw": {
+  "id": "96906065494443",
+  "sha1": "051af6aa2e1426c84a5c234817278bfbeacd3aa9"
+ },
+ "Mon_StarvedPirate": {
+  "id": "115629664736702",
+  "sha1": "2f3d7b7dedb2686579ea37d48e503dbc968a6600"
+ },
+ "Mon_WildBoar": {
+  "id": "120237225854646",
+  "sha1": "9c0567001f9bbc1492888dfbe23c163fa431cbac"
  },
  "Puffer_1": {
   "id": "117505242197074",

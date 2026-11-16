@@ -14,12 +14,16 @@ local Models = require(ReplicatedStorage.Shared.Config.Models)
 local Greenery = require(script.Parent.Parent.World.Greenery)
 
 local AS = {}
+local R
 
 -- largest side in studs
 local PET_SIZE = { 2.6, 3.3, 4.2 }
 local PET_SIZE_MULT = { Leviathan = 1.25, Puffer = 0.9 }
 local FRUIT_SIZE = 2.6
-local MONSTER_SIZE = { GuardWolf = 7.5, BaySerpent = 40 } -- default 7
+local MonstersCfg = require(ReplicatedStorage.Shared.Config.Monsters)
+-- explicit sizes (longest side); otherwise size = base-by-shape x the monster's style.scale
+local MONSTER_SIZE = { BaySerpent = 40, Leviathan = 46, FortCore = 20 }
+local SHAPE_SIZE = { humanoid = 6.5, fishman = 6.8, crab = 6, monkey = 5.5, snail = 7, seaking = 14 }
 -- if an import ever faces the wrong way, fix it here (radians around Y) instead of re-exporting everything
 local YAW_FIX = 0
 
@@ -51,7 +55,9 @@ local function target(name)
 	end
 	local mon = string.match(name, "^Mon_(%w+)$")
 	if mon then
-		return "Monsters", mon, MONSTER_SIZE[mon] or 7
+		local def = MonstersCfg[mon]
+		local style = def and def.style or {}
+		return "Monsters", mon, MONSTER_SIZE[mon] or (SHAPE_SIZE[style.shape or ""] or 8) * (style.scale or 1)
 	end
 	local fruit = string.match(name, "^Fruit_(%w+)$")
 	if fruit then
@@ -173,7 +179,9 @@ local function load(name, id)
 	AS.Loaded[name] = true
 end
 
-function AS.Init() end
+function AS.Init(registry)
+	R = registry
+end
 
 function AS.Start()
 	task.spawn(function()
@@ -198,6 +206,8 @@ function AS.Start()
 		end
 		print(string.format("[AssetService] %d models loaded, %d failed (%.1fs)", n, f, os.clock() - t0))
 		AS.DressWorld()
+		local swapped = R and R.MonsterService and R.MonsterService.RefreshModels and R.MonsterService.RefreshModels() or 0
+		print("[AssetService] swapped " .. swapped .. " placeholder monsters for real models")
 	end)
 end
 

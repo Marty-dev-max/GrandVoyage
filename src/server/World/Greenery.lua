@@ -32,7 +32,7 @@ function G.Scatter(world, variantsOf, perIsland)
 	folder.Parent = world
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Include
-	params.FilterDescendantsInstances = { world }
+	params.FilterDescendantsInstances = { world, workspace:FindFirstChild("Handmade") }
 	local total = 0
 	for _, p in ipairs(PLANTS) do
 		total += p.weight

@@ -261,28 +261,43 @@ end
 -- every avatar gets the same R15 body (owner decision): classic proportions and default body parts, so attack
 -- poses and class outfits fit everyone; face, hair, accessories and clothing stay the player's own
 local function normalizeAvatar(hum)
-	if not GameConfig.NormalizeAvatars or hum.RigType ~= Enum.HumanoidRigType.R15 or hum:GetAttribute("Normalized") then
-		return
+	if not GameConfig.NormalizeAvatars or hum.RigType ~= Enum.HumanoidRigType.R15 then
+		return true
 	end
 	local ok, desc = pcall(function()
 		return hum:GetAppliedDescription()
 	end)
 	if not ok or not desc then
-		return
+		return false
 	end
 	desc.HeightScale, desc.WidthScale, desc.DepthScale, desc.HeadScale = 1, 1, 1, 1
 	desc.BodyTypeScale, desc.ProportionScale = 0, 0
 	desc.Torso, desc.LeftArm, desc.RightArm, desc.LeftLeg, desc.RightLeg = 0, 0, 0, 0, 0
-	hum:SetAttribute("Normalized", true)
-	pcall(function()
+	local applied = pcall(function()
 		hum:ApplyDescription(desc)
 	end)
+	return applied
 end
 
 local function onCharacter(player, char)
 	local hum = char:WaitForChild("Humanoid")
 	char:WaitForChild("HumanoidRootPart")
-	normalizeAvatar(hum)
+	-- every spawn (also after dying): wait until Roblox has put the avatar's look on, then reset the body;
+	-- applying too early was silently undone by the appearance loader
+	task.spawn(function()
+		if not player:HasAppearanceLoaded() then
+			player.CharacterAppearanceLoaded:Wait()
+		end
+		for _ = 1, 4 do
+			task.wait(0.2)
+			if not char.Parent or player.Character ~= char then
+				return
+			end
+			if normalizeAvatar(hum) then
+				return
+			end
+		end
+	end)
 	local p = PS.Profile(player)
 	if not p then
 		return

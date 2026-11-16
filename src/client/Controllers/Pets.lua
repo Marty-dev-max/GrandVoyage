@@ -146,6 +146,9 @@ local function partPose(name, t, move)
 	return nil
 end
 
+local groundParams = RaycastParams.new()
+groundParams.FilterType = Enum.RaycastFilterType.Include
+
 local function place(m, cf, t, move)
 	move = move or 0
 	for _, p in ipairs(m:GetChildren()) do
@@ -211,6 +214,14 @@ function PetsCtl.Start()
 					local half = a.model:GetAttribute("HalfHeight")
 					local y = flyer and 2.5 or (half and (half - 2.9) or -1.6)
 					local goal = (root.CFrame * CFrame.new(3, y, 3.5)).Position
+					if not flyer then
+						-- stand ON the ground under the goal (stairs, hills, any avatar height): one ray per pet
+						groundParams.FilterDescendantsInstances = { workspace:FindFirstChild("World"), workspace:FindFirstChild("Handmade") }
+						local hit = workspace:Raycast(goal + Vector3.new(0, 8, 0), Vector3.new(0, -24, 0), groundParams)
+						if hit then
+							goal = Vector3.new(goal.X, hit.Position.Y + (half or 1.2), goal.Z)
+						end
+					end
 					a.pos = a.pos:Lerp(goal, math.clamp(dt * 6, 0, 1))
 					if (a.pos - goal).Magnitude > 60 then
 						a.pos = goal

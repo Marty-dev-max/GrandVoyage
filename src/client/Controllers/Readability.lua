@@ -220,7 +220,8 @@ local function nextIsland(fromX)
 end
 
 local function buildCompass()
-	compass = New("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 14), Size = UDim2.fromOffset(520, 40), BackgroundColor3 = Color3.new(1, 1, 1), ClipsDescendants = true, Parent = UI.Root })
+	-- slim, see-through compass (it used to be a heavy dark bar with little on it)
+	compass = New("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 14), Size = UDim2.fromOffset(440, 28), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.35, ClipsDescendants = true, Parent = UI.Root })
 	UI.Corner(compass, 20)
 	New("UIGradient", { Color = ColorSequence.new(T.PanelTop, T.PanelDeep), Rotation = 90, Parent = compass })
 	New("UIGradient", { Name = "Fade", Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(0.15, 0.1), NumberSequenceKeypoint.new(0.85, 0.1), NumberSequenceKeypoint.new(1, 0.6) }), Parent = compass }).Enabled = false
@@ -228,14 +229,14 @@ local function buildCompass()
 	compassMarks = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Parent = compass })
 	local tick = New("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0), Size = UDim2.fromOffset(3, 10), BackgroundColor3 = T.Gold, Parent = compass })
 	UI.Corner(tick, 2)
-	navLabel = UI.Text(UI.Root, "", 17, T.Gold, "Bold", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 58), Size = UDim2.fromOffset(520, 22), TextXAlignment = Enum.TextXAlignment.Center })
+	navLabel = UI.Text(UI.Root, "", 16, T.Gold, "Bold", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 46), Size = UDim2.fromOffset(520, 20), TextXAlignment = Enum.TextXAlignment.Center })
 	arrowHolder = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Parent = UI.Root })
 end
 
 local function compassMark(i, text, color)
 	local m = markerPool[i]
 	if not m then
-		m = UI.Text(compassMarks, "", 18, T.Text, "Display", { AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(60, 26), TextXAlignment = Enum.TextXAlignment.Center })
+		m = UI.Text(compassMarks, "", 15, T.Text, "Display", { AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(60, 22), TextXAlignment = Enum.TextXAlignment.Center })
 		markerPool[i] = m
 	end
 	m.Text = text

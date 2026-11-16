@@ -128,6 +128,9 @@ end
 -- Outlined text. kind: "Display" | "Bold" | "Semi" | "Number"
 function UI.Text(parent, text, size, color, kind, props)
 	size = size or 18
+	if UI.IsMobile and size < 13 then
+		size = 13 -- the whole UI is scaled down on phones; anything smaller becomes unreadable
+	end
 	local t = New("TextLabel", {
 		BackgroundTransparency = 1,
 		Text = text or "",
@@ -745,9 +748,27 @@ function UI.Toast(text, kind)
 end
 
 -- ===== Banner (center screen punch) =====
+-- Banners queue up and play one at a time (they used to stack on top of each other); a backlog plays faster.
+local bannerQueue, bannerBusy = {}, false
+local showBanner
 function UI.Banner(title, subtitle, color, rarityId)
+	table.insert(bannerQueue, { title, subtitle, color, rarityId })
+	if bannerBusy then
+		return
+	end
+	bannerBusy = true
+	task.spawn(function()
+		while #bannerQueue > 0 do
+			local b = table.remove(bannerQueue, 1)
+			showBanner(b[1], b[2], b[3], b[4], #bannerQueue > 0 and 1.3 or 2.6)
+		end
+		bannerBusy = false
+	end)
+end
+
+showBanner = function(title, subtitle, color, rarityId, hold)
 	color = color or T.Gold
-	local f = New("Frame", { Name = "Banner", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.3), Size = UDim2.fromOffset(820, 150), BackgroundTransparency = 1, Parent = gui, ZIndex = 40 })
+	local f = New("Frame", { Name = "Banner", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.4), Size = UDim2.fromOffset(820, 150), BackgroundTransparency = 1, Parent = gui, ZIndex = 40 })
 	local t = New("TextLabel", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0.66, 0), Text = string.upper(title), FontFace = F.Display, TextScaled = true, TextColor3 = Color3.new(1, 1, 1), ZIndex = 41, Parent = f })
 	local tg = New("UIGradient", { Color = ColorSequence.new(color:Lerp(Color3.new(1, 1, 1), 0.55), color), Rotation = 90, Parent = t })
 	UI.Stroke(t, T.Edge, 5, Enum.ApplyStrokeMode.Contextual)
@@ -765,13 +786,12 @@ function UI.Banner(title, subtitle, color, rarityId)
 	t.TextTransparency = 1
 	Tween(t, 0.15, { TextTransparency = 0 })
 	Tween(sc, 0.4, { Scale = 1 }, Enum.EasingStyle.Back)
-	task.delay(2.6, function()
-		Tween(sc, 0.25, { Scale = 0.6 }, Enum.EasingStyle.Back, Enum.EasingDirection.In)
-		Tween(t, 0.25, { TextTransparency = 1 })
-		Tween(s, 0.25, { TextTransparency = 1 })
-		task.wait(0.3)
-		f:Destroy()
-	end)
+	task.wait(hold)
+	Tween(sc, 0.25, { Scale = 0.6 }, Enum.EasingStyle.Back, Enum.EasingDirection.In)
+	Tween(t, 0.25, { TextTransparency = 1 })
+	Tween(s, 0.25, { TextTransparency = 1 })
+	task.wait(0.3)
+	f:Destroy()
 end
 
 -- ===== Server announcements (top marquee) =====
@@ -882,10 +902,20 @@ function UI.Toggle(parent, label, value, onChange, desc)
 end
 
 -- Wide center notice bar ("Wave Completed!" style)
-local noticeHolder = New("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.62, 0), Size = UDim2.fromOffset(620, 200), BackgroundTransparency = 1, Parent = gui })
+local noticeHolder = New("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 168), Size = UDim2.fromOffset(620, 120), BackgroundTransparency = 1, Parent = gui })
 UI.List(noticeHolder, nil, 4, Enum.HorizontalAlignment.Center)
 function UI.Notice(text, color)
 	color = color or T.Green
+	-- keep at most 2 notices on screen
+	local bars = {}
+	for _, c in ipairs(noticeHolder:GetChildren()) do
+		if c:IsA("Frame") then
+			table.insert(bars, c)
+		end
+	end
+	for i = 1, #bars - 1 do
+		bars[i]:Destroy()
+	end
 	local bar = New("Frame", { Size = UDim2.fromOffset(560, 34), BackgroundColor3 = color, Parent = noticeHolder })
 	New("UIGradient", { Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.2, 0.15), NumberSequenceKeypoint.new(0.8, 0.15), NumberSequenceKeypoint.new(1, 1) }), Parent = bar })
 	UI.Text(bar, text, 22, T.Text, "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center })

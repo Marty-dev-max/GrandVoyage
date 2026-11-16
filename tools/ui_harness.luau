@@ -484,7 +484,7 @@ end
 local panels = {
 	{ "Inventory" }, { "Stats" }, { "Skills" }, { "JobMaster" }, { "Refine" }, { "Shop" }, { "Tavern" }, { "Shipwright" },
 	{ "Map" }, { "BossBoard" }, { "Guild" }, { "Dungeon", { dungeonId = "CircusTent" } }, { "Party" },
-	{ "Stall", { sellerId = 2 } }, { "StallSetup" }, { "PearlShop" }, { "Pets" }, { "Quests" }, { "Quests", { tab = "Ach" } }, { "Quests", { tab = "Story" } }, { "Settings" },
+	{ "Stall", { sellerId = 2 } }, { "StallSetup" }, { "PearlShop" }, { "Pets" }, { "Quests" }, { "Quests", { tab = "Ach" } }, { "Quests", { tab = "Story" } }, { "MenuHub" }, { "Settings" },
 }
 for _, p in panels do
 	step("CloseAll", UI.CloseAll)

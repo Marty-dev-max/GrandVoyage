@@ -127,6 +127,10 @@ items held in escrow and returned when the stall closes or you leave.
   rarity loot feed (bottom left).
 - **Look (from the reference clips):** near-black panels with a slanted purple header tab and a red square close button, Fredoka One display text with thick outlines, a Settings window with a category sidebar and pill toggles, green "notice" bars for gameplay beats (waves, Auto Battle on/off, Guild War).
 - **Combat feedback (Hunting Together):** white dashed range ring under the player, red starburst behind crit numbers, a right-side "x123 COMBO" counter with a decay bar.
+- **Clean screen (v0.9.1):** one compact currency row (Doubloons / Bounty / Pearls), 6 main menu tiles (Bag, Skills, Quests,
+  Map, Pets, Pearls) + a MENU hub (key L) for Stats, Ships, Guild, Party, Bosses, Settings; collapsible quest tracker;
+  skill slots show icons and hide empty slots past the 4th; banners queue one at a time; notices sit under the target frame;
+  loot feed keeps 4 lines for 3 s; slim see-through compass; min text size 13 on phones.
 - **Windows:** every window has a slanted color tab with a tilted icon chip, speed stripes and a faded icon watermark;
   every block inside starts with a **section header** (icon chip + title + accent rule + info on the right, `UI.Section`),
   and tabs are icon pills sized to their label (`UI.TabBar`). Empty detail panes show a "Select an item" placeholder.

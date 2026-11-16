@@ -269,6 +269,26 @@ local function updateOrbs()
 	end
 end
 
+-- skill icon (uses the 3D icon pack until skills get their own renders): fruit skills show their fruit,
+-- heals a potion, buffs a sparkle, ship skills a ship, everything else the class weapon
+local CLASS_ICON = { Brawler = "knuckles", Swordsman = "sword", Sniper = "slingshot", Cook = "boots", Navigator = "staff", Doctor = "medkit", Shipwright = "hammer", Common = "knuckles" }
+local function skillIconId(sk)
+	if sk.fruit then
+		return UI.IconId("fruit_" .. string.lower(sk.fruit))
+	end
+	local k = sk.kind
+	if k == "Heal" or k == "PartyHeal" then
+		return UI.IconId(sk.id == "HeartyMeal" and "meat" or "potion")
+	elseif k == "Buff" or k == "PartyBuff" then
+		return UI.IconId("skills")
+	elseif k == "ShipBuff" then
+		return UI.IconId("ship")
+	elseif k == "ShipRepair" then
+		return UI.IconId("repairkit")
+	end
+	return UI.IconId(CLASS_ICON[sk.class] or "sword")
+end
+
 -- color for a skill slot: its class color, or its fruit's color for Cursed Fruit skills
 local function skillColor(skill)
 	if not skill then
@@ -306,44 +326,59 @@ local function buildStatus()
 	buffRow = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(170, 158), Size = UDim2.fromOffset(300, 30), Parent = UI.Root })
 	UI.List(buffRow, Enum.FillDirection.Horizontal, 6)
 
-	local m, ml = pill(UI.Root, UDim2.new(1, -16, 0, 16), UI.CurrencyIcon, T.Gold)
-	money = ml
-	UI.Tooltip(m, function()
+	-- one compact row of currencies (was three tall pills)
+	local row = glass(UI.Root, UDim2.fromOffset(430, 42), UDim2.new(1, -16, 0, 14), Vector2.new(1, 0))
+	New("UIPadding", { PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 10), Parent = row })
+	UI.List(row, Enum.FillDirection.Horizontal, 4).VerticalAlignment = Enum.VerticalAlignment.Center
+	local function segment(order, icon, color, width, tip)
+		local seg = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(width, 42), LayoutOrder = order, Parent = row })
+		local ic = UI.Icon(seg, icon, 40, { Name = "PillIcon", Position = UDim2.fromOffset(-2, 0) })
+		local label = UI.Text(seg, "0", 20, color, "Number", { Position = UDim2.fromOffset(38, 0), Size = UDim2.new(1, -38, 1, 0), TextWrapped = false })
+		if tip then
+			UI.Tooltip(seg, tip)
+		end
+		return seg, label, ic
+	end
+	local _, ml = segment(1, UI.CurrencyIcon, T.Gold, 150, function()
 		return "<b>Doubloons</b>\nEarned from monsters, ships and bosses.", T.Gold
 	end)
-	local b, bl = pill(UI.Root, UDim2.new(1, -16, 0, 66), "☠", T.Pirate)
-	bounty = { frame = b, label = bl, icon = b:FindFirstChild("PillIcon") }
-	local pf, pl = pill(UI.Root, UDim2.new(1, -16, 0, 116), PearlsCfg.Icon, Color3.fromRGB(150, 225, 255))
-	HUD.pearls = pl
-	UI.Tooltip(pf, function()
+	money = ml
+	local _, bl, bic = segment(2, "☠", T.Pirate, 128, function()
+		return "<b>Bounty / Merit</b>\nPirates earn Bounty, Marines earn Merit.", T.Pirate
+	end)
+	bounty = { label = bl, icon = bic }
+	local _, pl = segment(3, PearlsCfg.Icon, Color3.fromRGB(150, 225, 255), 120, function()
 		return "<b>Pearls</b>\nEarned from chests, exploring, story quests and MVP bosses. Spend them in the Pearl Shop or trade them in stalls (Lv." .. PearlsCfg.Trade.MinLevel .. "+).", Color3.fromRGB(150, 225, 255)
 	end)
+	HUD.pearls = pl
 	pointsBtn = UI.Button(UI.Root, "+ POINTS", T.Gold, UDim2.fromOffset(150, 40), function()
 		Panels.Open("Stats")
 	end)
 	pointsBtn.Parent.AnchorPoint = Vector2.new(1, 0)
-	pointsBtn.Parent.Position = UDim2.new(1, -16, 0, 168)
+	pointsBtn.Parent.Position = UDim2.new(1, -16, 0, 64)
 	-- build stamp (bottom-right): tells you which version of the code Studio is running
 	UI.Text(UI.Root, "v" .. GameConfig.Version, 12, Color3.fromRGB(220, 220, 235), "Bold", { Name = "Version", AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -8, 1, -2), Size = UDim2.fromOffset(120, 14), TextXAlignment = Enum.TextXAlignment.Right, TextTransparency = 0.35 })
 	orbLayer = New("Frame", { Name = "OrbLayer", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 50, Parent = UI.Root })
 end
 
 -- Anime-Vanguards-style menu: square colored tiles with a big icon, a label and a key hint, in two columns
+-- Every window with its icon, color, hotkey and label. main = shown as a tile; the rest live in the MENU hub.
 local MENU = {
-	{ "🎒", "Inventory", T.Ocean, "I", "Bag" },
+	{ "🎒", "Inventory", T.Ocean, "I", "Bag", main = true },
+	{ "✨", "Skills", T.Gold, "K", "Skills", main = true },
+	{ "📜", "Quests", T.Gold:Lerp(T.Orange, 0.4), "J", "Quests", main = true },
+	{ "🗺️", "Map", T.Ocean, "M", "Map", main = true },
+	{ "🐾", "Pets", T.Green:Lerp(T.Ocean, 0.3), "N", "Pets", main = true },
+	{ "🦪", "PearlShop", Color3.fromRGB(80, 170, 220), nil, "Pearls", main = true },
 	{ "📊", "Stats", T.Purple, "C", "Stats" },
-	{ "✨", "Skills", T.Gold, "K", "Skills" },
-	{ "⚓", "Shipwright", T.OceanDark, nil, "Ships" },
+	{ "ship", "Shipwright", T.OceanDark, nil, "Ships" },
 	{ "🏴", "Guild", T.Pirate, "G", "Guild" },
 	{ "👥", "Party", T.Green, "P", "Party" },
-	{ "🗺️", "Map", T.Ocean, "M", "Map" },
 	{ "👑", "BossBoard", T.Red, "B", "Bosses" },
-	{ "📜", "Quests", T.Gold:Lerp(T.Orange, 0.4), "J", "Quests" },
-	{ "🐾", "Pets", T.Green:Lerp(T.Ocean, 0.3), "N", "Pets" },
-	{ "🦪", "PearlShop", Color3.fromRGB(80, 170, 220), nil, "Pearls" },
 	{ "⚙️", "Settings", T.Grey, "O", "Settings" },
 }
 HUD.Menu = MENU
+Panels.MenuItems = MENU
 
 local function menuTile(parent, it)
 	local holder = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(74, 78), Parent = parent })
@@ -374,18 +409,22 @@ end
 
 local function buildMenu()
 	-- top-anchored under the currency pills so it never runs into the skill bar or the mobile attack button
-	local menu = New("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 218), Size = UDim2.fromOffset(158, 430), BackgroundTransparency = 1, Parent = UI.Root })
+	local menu = New("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 116), Size = UDim2.fromOffset(158, 344), BackgroundTransparency = 1, Parent = UI.Root })
 	menuFrame = menu
 	menuScale = New("UIScale", { Parent = menu })
 	New("UIGridLayout", { CellSize = UDim2.fromOffset(74, 78), CellPadding = UDim2.fromOffset(10, 8), SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Right, Parent = menu })
 	for _, it in ipairs(MENU) do
-		menuTile(menu, it)
+		if it.main then
+			menuTile(menu, it)
+		end
 	end
+	menuTile(menu, { "anchor", "MenuHub", Color3.fromRGB(70, 60, 110), "L", "Menu" })
 	local keymap = {}
 	for _, it in ipairs(MENU) do
 		if it[4] then
 			keymap[Enum.KeyCode[it[4]]] = it[2]
 		end
+		keymap[Enum.KeyCode.L] = "MenuHub"
 	end
 	UserInputService.InputBegan:Connect(function(input, processed)
 		if processed then
@@ -451,7 +490,8 @@ local function buildSkillBar()
 			local lvText = s.fruit and ("Mastery " .. (p.fruit and p.fruit.mastery or 0)) or ("Lv." .. (p.skills[s.id] or 0))
 			return string.format("<b>%s</b>  %s\n%s\nSP %d  •  Cooldown %ss", s.name, lvText, s.desc or "", s.sp, s.cd), skillColor(s)
 		end)
-		skillSlots[i] = { slot = slot, name = name, cd = cd, cdText = cdText, auto = autoDot, sp = sp, grad = grad, stroke = stroke, key = key, base = base }
+		local icon = New("ImageLabel", { BackgroundTransparency = 1, ScaleType = Enum.ScaleType.Fit, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.46), Size = UDim2.fromOffset(56, 56), Visible = false, ZIndex = 2, Parent = slot })
+		skillSlots[i] = { slot = slot, holder = holder, icon = icon, name = name, cd = cd, cdText = cdText, auto = autoDot, sp = sp, grad = grad, stroke = stroke, key = key, base = base }
 	end
 	if UI.IsMobile then
 		local atk = UI.Button(UI.Root, "⚔️", T.Red, UDim2.fromOffset(110, 110), function()
@@ -526,7 +566,7 @@ function HUD.Loot(data)
 		if tier.rank >= 4 then
 			Audio.Play("Rarity" .. tier.id)
 		end
-		task.delay(4.5, function()
+		task.delay(3, function()
 			UI.Tween(f, 0.3, { BackgroundTransparency = 1 })
 			task.wait(0.3)
 			f:Destroy()
@@ -550,7 +590,7 @@ function HUD.Loot(data)
 			table.insert(frames, c)
 		end
 	end
-	for i = 1, #frames - 7 do
+	for i = 1, #frames - 4 do
 		frames[i]:Destroy()
 	end
 end
@@ -583,7 +623,8 @@ local function refresh()
 	bars.jobText.Text = string.format("JOB %.1f%%", ring.target.job * 100)
 	bars.jobText.TextColor3 = ring.jobColor
 	ring.faceStroke.Color = faction == "Marine" and T.Marine or (faction == "Pirate" and T.Pirate or T.Gold)
-	money.Text = UI.Format(player:GetAttribute("Beli") or 0)
+	local beliNow = player:GetAttribute("Beli") or 0
+	money.Text = beliNow >= 1000000 and UI.Short(beliNow) or UI.Format(beliNow)
 	-- attribute (live) or the synced profile, whichever arrives first
 	local prof = State.profile
 	local pearls = player:GetAttribute("Pearls") or (prof and ((prof.pearls or 0) + (prof.pearlsBound or 0))) or 0
@@ -625,7 +666,13 @@ local function refresh()
 	for i, s in ipairs(skillSlots) do
 		local id = p and p.skillBar[i]
 		local skill = id and ClassesCfg.SkillById[id]
-		s.name.Text = skill and skill.name or ""
+		local iconId = skill and skillIconId(skill)
+		s.icon.Image = iconId or ""
+		s.icon.Visible = iconId ~= nil
+		-- with an icon the name moves to the tooltip; without one it stays as text
+		s.name.Text = (skill and not iconId) and skill.name or ""
+		-- hide empty slots past the 4th so the bar only shows what you actually have
+		s.holder.Visible = i <= math.max(4, p and #p.skillBar or 0)
 		s.sp.Text = skill and (skill.sp .. " SP") or ""
 		local c = skillColor(skill)
 		s.grad.Color = skill and ColorSequence.new(c:Lerp(Color3.new(1, 1, 1), 0.15), c:Lerp(Color3.new(0, 0, 0), 0.45)) or ColorSequence.new(T.PanelTop, T.PanelDeep)
@@ -692,10 +739,10 @@ function HUD.Layout()
 	if compact then
 		-- 4 small columns x 3 rows so the menu ends well above the mobile attack button
 		menuScale.Scale = 0.8
-		menuFrame.Size = UDim2.fromOffset(326, 250)
+		menuFrame.Size = UDim2.fromOffset(326, 166)
 	else
 		menuScale.Scale = 1
-		menuFrame.Size = UDim2.fromOffset(158, 520)
+		menuFrame.Size = UDim2.fromOffset(158, 344)
 	end
 	if grid then
 		grid.HorizontalAlignment = Enum.HorizontalAlignment.Right
@@ -703,7 +750,7 @@ function HUD.Layout()
 	-- quest tracker sits under the player card
 	if HUD.questFrame then
 		HUD.questFrame.Position = UDim2.fromOffset(16, topY + 192)
-		HUD.questFrame.Size = UDim2.fromOffset(compact and 300 or 330, 116)
+		HUD.questFrame.Size = UDim2.fromOffset(compact and 300 or 330, HUD.questFrame.Size.Y.Offset)
 	end
 	-- loot feed: bottom-left on PC; on touch screens the thumbstick lives there, so stack it under the tracker
 	local list = lootFeed:FindFirstChildOfClass("UIListLayout")

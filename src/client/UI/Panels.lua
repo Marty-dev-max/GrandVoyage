@@ -1302,6 +1302,34 @@ end
 
 local windowIds = { Shipwright = "Shipyard", FastTravel = "Map", Map = "Map", BossBoard = "Boss", JobMaster = "Job", Refine = "Refine", Blacksmith = "Refine" }
 
+-- ===================== MENU HUB (everything that is not on the main tiles) =====================
+function Panels.MenuHub()
+	local win = UI.Window("MenuHub", "Menu", UDim2.fromOffset(640, 410), Color3.fromRGB(110, 90, 180), "anchor")
+	local grid = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Parent = win.body })
+	New("UIGridLayout", { CellSize = UDim2.fromOffset(188, 152), CellPadding = UDim2.fromOffset(12, 12), SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Center, Parent = grid })
+	for i, it in ipairs(Panels.MenuItems or {}) do
+		if not it.main then
+			local tile = New("TextButton", { Text = "", AutoButtonColor = false, BackgroundColor3 = Color3.new(1, 1, 1), LayoutOrder = i, Parent = grid })
+			UI.Corner(tile, 16)
+			UI.Gradient(tile, it[3]:Lerp(Color3.new(1, 1, 1), 0.25), it[3]:Lerp(Color3.new(0, 0, 0), 0.3), 90)
+			UI.Stroke(tile, T.Edge, 3)
+			UI.Icon(tile, it[1], 88, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 6) })
+			UI.Text(tile, string.upper(it[5]), 22, Color3.new(1, 1, 1), "Display", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 0, 1, -10), Size = UDim2.new(1, 0, 0, 26), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false })
+			if it[4] then
+				local key = New("Frame", { Position = UDim2.fromOffset(8, 8), Size = UDim2.fromOffset(28, 28), BackgroundColor3 = T.PanelDeep, Parent = tile })
+				UI.Corner(key, 8)
+				UI.Stroke(key, T.Edge, 2)
+				UI.Text(key, it[4], 16, T.Gold, "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center })
+			end
+			UI.Tactile(tile)
+			tile.Activated:Connect(function()
+				UI.CloseWindow("MenuHub")
+				Panels.Open(it[2])
+			end)
+		end
+	end
+end
+
 -- ===================== QUESTS JOURNAL (story / daily / achievements) =====================
 local function secondsToReset()
 	local t = os.date("!*t")

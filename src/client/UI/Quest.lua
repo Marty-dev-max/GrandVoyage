@@ -20,7 +20,10 @@ local player = Players.LocalPlayer
 local T = UI.Theme
 local New = UI.New
 
-local tracker, tTitle, tChapter, tGoal, tCount, tBar, tHint, tDist, skipBtn
+local tracker, tTitle, tChapter, tGoal, tCount, tBar, tHint, tDist, skipBtn, tChevron
+-- collapsed by default: chapter, title, goal and progress only (the screen stays clean); tap to expand the hint
+local expanded = false
+local COLLAPSED_H, EXPANDED_H = 82, 118
 local dialog, dName, dText, dNext, dChip
 local data -- last "Quest" push
 
@@ -68,7 +71,7 @@ end
 
 -- ===== tracker =====
 local function buildTracker()
-	tracker = New("TextButton", { Name = "QuestTracker", Text = "", AutoButtonColor = false, Size = UDim2.fromOffset(330, 116), Position = UDim2.fromOffset(16, 190), BackgroundColor3 = Color3.new(1, 1, 1), Visible = false, Parent = UI.Root })
+	tracker = New("TextButton", { Name = "QuestTracker", Text = "", AutoButtonColor = false, Size = UDim2.fromOffset(330, COLLAPSED_H), Position = UDim2.fromOffset(16, 190), BackgroundColor3 = Color3.new(1, 1, 1), Visible = false, Parent = UI.Root })
 	UI.Corner(tracker, 14)
 	UI.Gradient(tracker, T.PanelTop, T.PanelDeep, 90)
 	UI.Stroke(tracker, T.Edge, 3)
@@ -84,8 +87,9 @@ local function buildTracker()
 	UI.Corner(barBack, 4)
 	tBar = New("Frame", { BackgroundColor3 = T.Green, Size = UDim2.fromScale(0, 1), Parent = barBack })
 	UI.Corner(tBar, 4)
-	tHint = UI.Text(tracker, "", 12, T.TextSoft, "Semi", { Position = UDim2.fromOffset(22, 82), Size = UDim2.new(1, -96, 0, 28), TextWrapped = true, TextYAlignment = Enum.TextYAlignment.Top })
-	tDist = UI.Text(tracker, "", 13, T.Gold, "Display", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 84), Size = UDim2.fromOffset(80, 16), TextXAlignment = Enum.TextXAlignment.Right, TextWrapped = false })
+	tHint = UI.Text(tracker, "", 12, T.TextSoft, "Semi", { Position = UDim2.fromOffset(22, 82), Size = UDim2.new(1, -34, 0, 30), TextWrapped = true, TextYAlignment = Enum.TextYAlignment.Top, Visible = false })
+	tDist = UI.Text(tracker, "", 13, T.Gold, "Display", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -30, 0, 22), Size = UDim2.fromOffset(80, 18), TextXAlignment = Enum.TextXAlignment.Right, TextWrapped = false })
+	tChevron = UI.Text(tracker, "▾", 16, T.TextSoft, "Display", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 4), Size = UDim2.fromOffset(18, 18), TextXAlignment = Enum.TextXAlignment.Center })
 	local sb
 	sb, skipBtn = UI.Button(tracker, "Skip tutorial", T.Grey, UDim2.fromOffset(110, 24), function()
 		UI.Confirm("Skip the Daybreak tutorial? You keep everything you have, but miss its rewards.", function()
@@ -98,11 +102,21 @@ local function buildTracker()
 	skipBtn.Position = UDim2.new(1, -8, 1, 4)
 	UI.Tactile(tracker)
 	tracker.Activated:Connect(function()
+		expanded = not expanded
+		Quest.ApplyExpanded()
+	end)
+	-- expanded mode: replay the NPC's lines
+	local rb, replay = UI.Button(tracker, "💬 Replay", T.Ocean, UDim2.fromOffset(96, 24), function()
 		local step = data and Quests.ById[data.id or ""]
 		if step then
 			Quest.Dialog(Quests.Guide[step.island] or "Guide", step.dialog)
 		end
 	end)
+	rb.TextScaled = false
+	rb.TextSize = 12
+	replay.AnchorPoint = Vector2.new(0, 0)
+	replay.Position = UDim2.new(0, 8, 1, 4)
+	Quest.replayBtn = replay
 	HUD.questFrame = tracker
 end
 
@@ -135,9 +149,22 @@ local function refreshTracker()
 	tCount.Text = count
 	UI.Tween(tBar, 0.25, { Size = UDim2.fromScale(ratio, 1) })
 	tHint.Text = step.hint or ""
-	skipBtn.Visible = data.tutorial == true
+	Quest.ApplyExpanded()
 	State.questTarget = targetOf(step)
 	State.questLabel = step.text
+end
+
+function Quest.ApplyExpanded()
+	if not tracker then
+		return
+	end
+	tracker.Size = UDim2.fromOffset(tracker.Size.X.Offset, expanded and EXPANDED_H or COLLAPSED_H)
+	tHint.Visible = expanded
+	tChevron.Text = expanded and "▴" or "▾"
+	skipBtn.Visible = expanded and data ~= nil and data.tutorial == true
+	if Quest.replayBtn then
+		Quest.replayBtn.Visible = expanded
+	end
 end
 
 -- ===== dialog =====

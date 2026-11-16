@@ -17,6 +17,7 @@ local Net = require(Shared.Modules.Net)
 local UI = require(script.Parent.Parent.UI.UIKit)
 local Audio = require(script.Parent.Audio)
 local Settings = require(script.Parent.Settings)
+local Atmos = require(script.Parent.Atmos)
 
 local Sailing = {}
 local player = Players.LocalPlayer
@@ -282,46 +283,8 @@ local function updateArcs(ship, show)
 	end
 end
 
--- ===== wind streaks =====
-local streakPool = 0
-local function spawnStreak(center, windDir, strength)
-	if streakPool > 90 then
-		return
-	end
-	streakPool += 1
-	local p = Instance.new("Part")
-	p.Anchored = true
-	p.CanCollide = false
-	p.CanQuery = false
-	p.CastShadow = false
-	p.Material = Enum.Material.Neon
-	p.Color = Color3.fromRGB(255, 255, 255)
-	p.Transparency = 0.5
-	p.Size = Vector3.new(0.14, 0.14, 6 + math.random() * 9)
-	local offset = Vector3.new(math.random(-100, 100), math.random(2, 24), math.random(-100, 100))
-	local start = center + offset
-	p.CFrame = CFrame.lookAt(start, start + windDir)
-	p.Parent = windFolder
-	local dur = 0.9 + math.random() * 0.6
-	local tw = TweenService:Create(p, TweenInfo.new(dur, Enum.EasingStyle.Linear), { CFrame = CFrame.lookAt(start + windDir * 60 * strength, start + windDir * 61), Transparency = 1 })
-	tw:Play()
-	tw.Completed:Connect(function()
-		p:Destroy()
-		streakPool -= 1
-	end)
-end
-
-local defaultAtmo
 local function setCalmLook(on)
-	local atm = Lighting:FindFirstChild("Atmosphere")
-	if not atm then
-		return
-	end
-	if not defaultAtmo then
-		defaultAtmo = { Density = atm.Density, Color = atm.Color, Haze = atm.Haze }
-	end
-	local goal = on and { Density = 0.45, Color = Color3.fromRGB(170, 190, 200), Haze = 2.5 } or defaultAtmo
-	TweenService:Create(atm, TweenInfo.new(1.5), goal):Play()
+	Atmos.SetCalm(on) -- Atmos owns the light/atmosphere (day-night blend); it fades toward the Doldrums look
 end
 
 local function spinWindmills(dt)
@@ -431,12 +394,11 @@ function Sailing.Start()
 			setCalmLook(zone == "CalmBelt")
 			lastZone = zone
 		end
-		if focus.Y < 120 and fxAcc > 0.05 then
+		if focus.Y < 120 and fxAcc > 0.22 then
 			fxAcc = 0
-			local count = math.floor(wind * 3 * (Settings.Knob("wind") or 1) + 0.5)
-			for _ = 1, count do
-				spawnStreak(Vector3.new(focus.X, 0, focus.Z), Vector3.new(1, 0, -focus.Z / 4000).Unit, 0.6 + wind)
-			end
+			-- soft curved wind wisps (Atmos), a few at a time
+			local count = math.floor(wind * 1.4 * (Settings.Knob("wind") or 1) + 0.5)
+			Atmos.Wind(Vector3.new(focus.X, 0, focus.Z), Vector3.new(1, 0, -focus.Z / 4000).Unit, 0.6 + wind, count)
 		end
 		audioAcc += dt
 		if audioAcc > 1 then

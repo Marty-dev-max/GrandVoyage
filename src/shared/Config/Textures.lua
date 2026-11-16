@@ -5,10 +5,12 @@ return {
 	flame = "rbxassetid://97002980212489",
 	focuslines = "rbxassetid://134938825303806",
 	glow = "rbxassetid://75153249216307",
+	leaf = "rbxassetid://123107571146821",
 	lightning = "rbxassetid://87750500562597",
 	ring = "rbxassetid://82570570668357",
 	slash = "rbxassetid://83498327919546",
 	smoke = "rbxassetid://135113423743602",
 	sparkle = "rbxassetid://121346578428852",
 	speedline = "rbxassetid://120443709779515",
+	windwisp = "rbxassetid://88576023172782",
 }

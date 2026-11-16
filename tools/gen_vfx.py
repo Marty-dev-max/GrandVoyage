@@ -96,6 +96,35 @@ def main():
         dd = np.abs(np.angle(np.exp(1j * (ang - a0))))
         radial = np.maximum(radial, (dd < 0.012 + 0.01 * r) * np.clip((r - rng.uniform(0.35, 0.6)) / 0.4, 0, 1))
     save('focuslines', radial * (r < 1), blur=1)
+    # wind wisp: a soft, thin ribbon that fades in and out along its length (used on curved Beams)
+    W, H = 512, 64
+    u = np.linspace(0, 1, W)[None, :]
+    v = np.linspace(-1, 1, H)[:, None]
+    along = np.sin(np.pi * u) ** 1.6
+    thick = 0.22 + 0.12 * np.sin(u * 9.0)
+    wisp = np.exp(-(v / thick) ** 2 * 2.2) * along
+    img = Image.fromarray((np.clip(wisp, 0, 1) * 255).astype(np.uint8), 'L').filter(ImageFilter.GaussianBlur(1.2))
+    rgba = Image.new('RGBA', (W, H), (255, 255, 255, 0)); rgba.putalpha(img); rgba.save(os.path.join(OUT, 'windwisp.png'))
+    # leaf: light leaf shape with a darker midrib (tinted green/yellow/pink by ParticleEmitter.Color)
+    L = Image.new('RGBA', (128, 128), (0, 0, 0, 0))
+    d = ImageDraw.Draw(L)
+    pts = []
+    for k in range(41):
+        t = k / 40
+        w = math.sin(math.pi * t) ** 0.8 * 30
+        pts.append((64 + w, 10 + t * 108))
+    for k in range(40, -1, -1):
+        t = k / 40
+        w = math.sin(math.pi * t) ** 0.8 * 30
+        pts.append((64 - w * 0.85, 10 + t * 108))
+    d.polygon(pts, fill=(255, 255, 255, 255))
+    d.line([(64, 14), (63, 116)], fill=(190, 190, 190, 255), width=3)
+    for k in range(5):
+        y0 = 30 + k * 17
+        d.line([(64, y0), (64 + 20, y0 - 10)], fill=(215, 215, 215, 255), width=2)
+        d.line([(64, y0 + 6), (64 - 17, y0 - 4)], fill=(215, 215, 215, 255), width=2)
+    L = L.rotate(35, resample=Image.BICUBIC)
+    L.save(os.path.join(OUT, 'leaf.png'))
     print('wrote', sorted(os.listdir(OUT)))
 
 if __name__ == '__main__':

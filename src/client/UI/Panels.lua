@@ -17,6 +17,7 @@ local UI = require(script.Parent.UIKit)
 local State = require(script.Parent.Parent.State)
 local Audio = require(script.Parent.Parent.Controllers.Audio)
 local Settings = require(script.Parent.Parent.Controllers.Settings)
+local Atmos = require(script.Parent.Parent.Controllers.Atmos)
 
 local Panels = {}
 local player = Players.LocalPlayer
@@ -1297,6 +1298,15 @@ function Panels.Settings()
 			table.insert(fruitButtons, { "Spawn Tree Fruit", "spawnfruit" })
 			devGrid("Cursed Fruits", "🍎", T.Pink, fruitButtons)
 			devGrid("Pets & World", "🐾", T.Green, { { "Eggs + Bait", "eggs" }, { "Pet +15 Lv", "petlevel" }, { "Reset Chests", "chestreset" }, { "Model Gallery", "models" }, { "Guild War", "gw_start" }, { "End War", "gw_end" } })
+			-- time of day preview (client only)
+			UI.Section(list, "🌅", "Time of Day", T.Gold)
+			local tgrid = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 108), Parent = list })
+			New("UIGridLayout", { CellSize = UDim2.fromOffset(176, 46), CellPadding = UDim2.fromOffset(8, 8), Parent = tgrid })
+			for _, c in ipairs({ { "Sunrise", 6.4 }, { "Noon", 13 }, { "Golden Hour", 16.8 }, { "Sunset", 18.3 }, { "Night (moon)", 23 }, { "Live cycle", false } }) do
+				UI.Button(tgrid, c[1], T.Gold, nil, function()
+					Atmos.SetClock(c[2] or nil)
+				end)
+			end
 		end
 	end
 	sidebar()

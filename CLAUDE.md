@@ -54,6 +54,9 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   the owner does NOT want thick black outlines on models (outline=0); `UI.ModelView` shows them spinning in ViewportFrames. Dev tab -> Model Gallery.
 - Map look: MaterialService base-material overrides (GV_Grass, GV_Rock, ...) texture every Part of that Material (Part.Color still
   tints them), so world code just picks semantic materials (Grass/Rock/Slate/Sand/Wood/WoodPlanks/Cobblestone, not SmoothPlastic).
+  Light/air: `Controllers/Atmos.lua` owns Lighting on the client (day/night cycle from server time, sun by day + moon by night,
+  per-time-of-day recipes, night lamps, Clouds, soft wind wisps on Beams, drifting leaves on islands); Sailing calls
+  `Atmos.Wind` / `Atmos.SetCalm`. Dev tab -> Time of Day buttons.
   The sea is animated on the client by `Controllers/Ocean.lua` (scrolling wave/foam/glitter Textures + shore foam rings).
 - Owner decisions on art: voxel style for pets, fruits and monsters; textured (SurfaceAppearance-like) stylized look for the map.
 - VFX are ParticleEmitter/Beam based with our own textures (`Config/Textures`); see the toolkit at the top of `Controllers/VFX.lua`.

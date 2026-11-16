@@ -2,11 +2,17 @@
 return {
 	GameName = "Grand Voyage",
 	-- bump on every change: shown bottom-right in game and printed in Output, so you can tell which code is running
-	Version = "0.9.7",
+	Version = "0.9.8",
 	SagaName = "Azure East Saga",
 	DataStoreName = "GV_Player_v1",
 	GuildStoreName = "GV_Guild_v1",
 	AutoSaveInterval = 120,
+
+	-- ===== Day / night (client Controllers/Atmos.lua; same clock on every client via server time) =====
+	DayNight = {
+		CycleMinutes = 24, -- one full day
+		DayShare = 0.7, -- 70% of the cycle is daytime (06:00-18:00), nights pass faster
+	},
 
 	-- ===== Sea / sailing lane =====
 	SeaLevel = 0,

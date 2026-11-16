@@ -61,6 +61,8 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   The sea is animated on the client by `Controllers/Ocean.lua` (scrolling wave/foam/glitter Textures + shore foam rings).
 - World props: `Kit` builds trees/bushes (Model tagged `EnvProp`, attrs Kind/Base/Height) and boulders/cliff slabs (Part tagged
   `EnvPart`, attr Kind) as placeholders; `AssetService.DressWorld` swaps them for `Assets.Env/<Kind>_<n>` meshes at server start.
+  Ground: `World/Greenery.lua` lays Terrain grass (Terrain.Decoration = swaying blades) on big Grass parts, carves it off
+  paths/plazas, and scatters plants (GrassTuft/Flowers/Fern/LeafPlant/Mushroom/Bush) on Terrain grass. No Grass MaterialVariant override.
   Mesas are invisible collision cylinders + a ring of cliff slabs. Bump `WorldBuilder.WORLD_VERSION` when world code changes:
   a baked World with an older version is destroyed and rebuilt at runtime (the owner's published place keeps a baked World).
 - Owner decisions on art: voxel style for pets, fruits and monsters; textured (SurfaceAppearance-like) stylized look for the map.

@@ -370,7 +370,112 @@ def cliff(variant):
         facet_rock((rng.uniform(-4.5, 4.5), -2.4 + rng.uniform(-0.3, 0.3), 0.4), (rng.uniform(0.6, 1.0), 0.7, 0.55), mat, 300 + variant * 5 + k, subdiv=1, jitter=0.25)
 
 
+# ---------------------------------------------------------------- ground cover (reference: stylized plant pack)
+def blade(base, lean_dir, height, width, mat, curl=0.35, segs=4):
+    """a grass blade / leaf strip: tapered, curved, two-sided (thin box-like strip so Roblox never culls it away)"""
+    base = Vector(base)
+    d = Vector(lean_dir).normalized()
+    tip = base + Vector((0, 0, height)) + d * height * curl
+    mid = base + Vector((0, 0, height * 0.6)) + d * height * curl * 0.25
+    return frond(base, mid, tip, width, mat, segs=segs)
+
+
+def grass_tuft(variant):
+    rng = random.Random(200 + variant)
+    g = foliage_mat("grass", "#1e5a2a", "#4a9a36", "#8cc83e", "#d6ec6a") if variant != 2 else foliage_mat("grass", "#3a6a24", "#7aa832", "#b8d24a", "#eef08a")
+    for k in range(16):
+        a = rng.uniform(0, math.tau)
+        r = rng.uniform(0, 0.35)
+        base = (math.cos(a) * r, math.sin(a) * r, 0)
+        blade(base, (math.cos(a), math.sin(a), 0), rng.uniform(1.2, 2.2), rng.uniform(0.09, 0.14), g, curl=rng.uniform(0.25, 0.55), segs=4)
+
+
+def fern(variant):
+    rng = random.Random(220 + variant)
+    g = foliage_mat("fern", "#174a26", "#3a8a34", "#7cc040", "#c8e46a") if variant == 1 else foliage_mat("fern", "#5a3a12", "#a86a22", "#e0a032", "#f6d27a")
+    for k in range(8):
+        a = k / 8 * math.tau + rng.uniform(-0.2, 0.2)
+        d = Vector((math.cos(a), math.sin(a), 0))
+        side = d.cross(Vector((0, 0, 1)))
+        L = rng.uniform(1.9, 2.6)
+        p0, p1, p2 = Vector((0, 0, 0.05)), d * L * 0.35 + Vector((0, 0, 1.9)), d * L + Vector((0, 0, 0.7))
+        # thin spine + pairs of narrow leaflets that shrink toward the tip (the feathery fern look)
+        tuft(p0, p1, p2, 0.04, g, n=4, rings=4)
+        for i in range(1, 13):
+            t = i / 13
+            c = (1 - t) ** 2 * p0 + 2 * (1 - t) * t * p1 + t * t * p2
+            tan = (2 * (1 - t) * (p1 - p0) + 2 * t * (p2 - p1)).normalized()
+            ln = 0.55 * (1 - t) ** 0.6 + 0.08
+            for sgn in (-1, 1):
+                out = (side * sgn * 0.85 + tan * 0.5).normalized()
+                frond(c, c + out * ln * 0.5 + Vector((0, 0, 0.06)), c + out * ln - Vector((0, 0, 0.05)), 0.07, g, segs=3)
+
+
+def leaf_plant(variant):
+    rng = random.Random(240 + variant)
+    g = foliage_mat("leaf", "#123d24", "#2a7a3a", "#5aaa46", "#a6d45e") if variant == 1 else foliage_mat("leaf", "#6a2a10", "#c05a1e", "#ee8a32", "#ffc46a")
+    for k in range(7):
+        a = k / 7 * math.tau + rng.uniform(-0.25, 0.25)
+        d = Vector((math.cos(a), math.sin(a), 0))
+        L = rng.uniform(1.6, 2.4)
+        frond((0, 0, 0.05), d * L * 0.3 + Vector((0, 0, 2.0)), d * L * 0.95 + Vector((0, 0, 1.1)), rng.uniform(0.42, 0.55), g, segs=8)
+
+
+PETALS = {1: ("#fffaf2", "#ffd23a"), 2: ("#ffd23a", "#c8641e"), 3: ("#a07aff", "#ffe27a"), 4: ("#7ac8ff", "#ffffff"), 5: ("#ff7aa8", "#ffe27a")}
+
+
+def flowers(variant):
+    rng = random.Random(260 + variant)
+    stem_m = foliage_mat("stem", "#1e5a2a", "#3f8e36", "#7cc040", "#a8d860")
+    pet, mid = PETALS[variant]
+    pet_m = CR.flat_mat("petal", pet)
+    mid_m = CR.flat_mat("center", mid)
+    for k in range(5):
+        a = rng.uniform(0, math.tau)
+        r = rng.uniform(0, 0.7)
+        base = Vector((math.cos(a) * r, math.sin(a) * r, 0))
+        h = rng.uniform(0.55, 1.0)
+        top = base + Vector((rng.uniform(-0.15, 0.15), rng.uniform(-0.15, 0.15), h))
+        tuft(base, base.lerp(top, 0.5) + Vector((0.05, 0, 0)), top, 0.04, stem_m, n=5, rings=2)
+        for j in range(5):
+            b = j / 5 * math.tau
+            CR.blob(0.16, top + Vector((math.cos(b) * 0.19, math.sin(b) * 0.19, 0.02)), pet_m, scale=(1.25, 0.8, 0.35), rot=(0, 0, b), seg=8)
+        CR.blob(0.1, top + Vector((0, 0, 0.06)), mid_m, scale=(1, 1, 0.6), seg=8)
+        # two leaves at the base of each stem
+        for j in (0, 1):
+            dd = Vector((math.cos(a + j * 3), math.sin(a + j * 3), 0))
+            frond(base, base + dd * 0.25 + Vector((0, 0, 0.3)), base + dd * 0.55 + Vector((0, 0, 0.12)), 0.14, stem_m, segs=4)
+
+
+def mushroom(variant):
+    rng = random.Random(280 + variant)
+    stem_m = CR.flat_mat("stem", "#f2eadc")
+    cap_m = CR.flat_mat("cap", "#e8322a" if variant == 1 else "#ff7a22")
+    dot_m = CR.flat_mat("dots", "#fffaf0")
+    for k in range(2 + variant):
+        a = rng.uniform(0, math.tau)
+        r = 0 if k == 0 else rng.uniform(0.5, 0.8)
+        base = Vector((math.cos(a) * r, math.sin(a) * r, 0))
+        s = 1.0 if k == 0 else rng.uniform(0.45, 0.7)
+        tuft(base, base + Vector((0, 0, 0.5 * s)), base + Vector((0.05, 0, 0.95 * s)), 0.17 * s, stem_m, n=10, rings=3)
+        top = base + Vector((0.05, 0, 0.95 * s))
+        CR.blob(0.55 * s, top, cap_m, scale=(1, 1, 0.55), seg=16)
+        for j in range(7):
+            b = j / 7 * math.tau + rng.uniform(-0.2, 0.2)
+            el = rng.uniform(0.35, 0.8)
+            p = top + Vector((math.cos(b) * math.cos(el) * 0.52 * s, math.sin(b) * math.cos(el) * 0.52 * s, math.sin(el) * 0.3 * s))
+            CR.blob(0.07 * s, p, dot_m, scale=(1, 1, 0.5), seg=6)
+
+
 PROPS = {}
+for i in (1, 2):
+    PROPS[f"GrassTuft_{i}"] = (grass_tuft, i, 2.2)
+    PROPS[f"Fern_{i}"] = (fern, i, 3)
+    PROPS[f"LeafPlant_{i}"] = (leaf_plant, i, 3)
+    PROPS[f"Mushroom_{i}"] = (mushroom, i, 1.4)
+for i in (1, 2, 3, 4, 5):
+    PROPS[f"Flowers_{i}"] = (flowers, i, 1.6)
+
 for i in (1, 2, 3):
     PROPS[f"BroadTree_{i}"] = (broad_tree, i, 14)
 for i in (1, 2):

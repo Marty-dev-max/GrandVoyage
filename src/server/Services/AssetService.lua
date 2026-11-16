@@ -11,6 +11,7 @@ local InsertService = game:GetService("InsertService")
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Models = require(ReplicatedStorage.Shared.Config.Models)
+local Greenery = require(script.Parent.Parent.World.Greenery)
 
 local AS = {}
 
@@ -280,6 +281,14 @@ function AS.DressWorld()
 		end
 	end
 	print(string.format("[AssetService] dressed %d props + %d cliff/rock parts (%.2fs)", props, parts, os.clock() - t0))
+	-- living ground: Terrain grass (swaying blades) on the island grass + scattered stylized plants
+	local world = workspace:FindFirstChild("World")
+	if world and not world:FindFirstChild("Greenery") then
+		local t1 = os.clock()
+		local fills = Greenery.GrassTerrain(world)
+		local plants = Greenery.Scatter(world, variants, 110)
+		print(string.format("[AssetService] terrain grass on %d parts, %d plants scattered (%.2fs)", fills, plants, os.clock() - t1))
+	end
 end
 
 -- dev: line every loaded model up in front of a player for a minute (Dev tab -> "Model Gallery")

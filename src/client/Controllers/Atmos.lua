@@ -18,15 +18,15 @@ local Atmos = {}
 local C = Color3.fromRGB
 -- light recipes by clock time; the last entry wraps to the first
 local KEYS = {
-	{ t = 0, bright = 1.1, amb = C(46, 56, 92), out = C(70, 84, 132), top = C(120, 150, 225), atm = C(52, 70, 120), decay = C(18, 26, 64), dens = 0.32, haze = 1.1, glare = 0, tint = C(188, 204, 255), sat = 0.08, con = 0.14, cb = -0.03, bloom = 0.9, rays = 0, cloud = C(80, 92, 135) },
-	{ t = 5, bright = 1.2, amb = C(56, 62, 100), out = C(84, 92, 140), top = C(140, 150, 220), atm = C(70, 80, 130), decay = C(30, 34, 80), dens = 0.33, haze = 1.3, glare = 0.1, tint = C(200, 205, 255), sat = 0.1, con = 0.12, cb = -0.02, bloom = 0.85, rays = 0, cloud = C(110, 110, 150) },
+	{ t = 0, bright = 1.8, amb = C(74, 86, 130), out = C(100, 116, 170), top = C(150, 175, 240), atm = C(62, 82, 138), decay = C(24, 34, 78), dens = 0.3, haze = 1.0, glare = 0, tint = C(200, 214, 255), sat = 0.1, con = 0.1, cb = 0.02, bloom = 0.9, rays = 0, cloud = C(96, 108, 152) },
+	{ t = 5, bright = 1.8, amb = C(78, 84, 128), out = C(104, 112, 166), top = C(140, 150, 220), atm = C(70, 80, 130), decay = C(30, 34, 80), dens = 0.33, haze = 1.3, glare = 0.1, tint = C(200, 205, 255), sat = 0.1, con = 0.12, cb = -0.02, bloom = 0.85, rays = 0, cloud = C(110, 110, 150) },
 	{ t = 6.3, bright = 2.1, amb = C(122, 100, 112), out = C(172, 130, 122), top = C(255, 168, 110), atm = C(255, 188, 150), decay = C(180, 110, 122), dens = 0.34, haze = 2.0, glare = 0.6, tint = C(255, 226, 202), sat = 0.3, con = 0.1, cb = 0.01, bloom = 0.75, rays = 0.13, cloud = C(255, 200, 182) },
 	{ t = 9, bright = 3.0, amb = C(115, 115, 135), out = C(155, 155, 175), top = C(255, 240, 222), atm = C(200, 230, 255), decay = C(120, 170, 220), dens = 0.28, haze = 1.4, glare = 0.3, tint = C(255, 250, 240), sat = 0.28, con = 0.08, cb = 0.03, bloom = 0.5, rays = 0.06, cloud = C(255, 255, 255) },
 	{ t = 13, bright = 3.2, amb = C(118, 118, 136), out = C(160, 160, 178), top = C(255, 250, 240), atm = C(200, 232, 255), decay = C(120, 172, 222), dens = 0.27, haze = 1.3, glare = 0.25, tint = C(255, 252, 244), sat = 0.28, con = 0.08, cb = 0.03, bloom = 0.45, rays = 0.05, cloud = C(255, 255, 255) },
 	{ t = 16.5, bright = 2.8, amb = C(122, 110, 120), out = C(172, 150, 140), top = C(255, 202, 140), atm = C(255, 214, 170), decay = C(190, 140, 120), dens = 0.3, haze = 1.8, glare = 0.5, tint = C(255, 236, 212), sat = 0.32, con = 0.09, cb = 0.02, bloom = 0.6, rays = 0.1, cloud = C(255, 232, 205) },
 	{ t = 18.2, bright = 2.0, amb = C(120, 94, 120), out = C(170, 118, 140), top = C(255, 138, 108), atm = C(255, 158, 150), decay = C(140, 80, 130), dens = 0.34, haze = 2.4, glare = 0.8, tint = C(255, 214, 210), sat = 0.35, con = 0.1, cb = 0.0, bloom = 0.8, rays = 0.14, cloud = C(255, 168, 160) },
-	{ t = 19.4, bright = 1.4, amb = C(70, 70, 110), out = C(92, 96, 150), top = C(150, 140, 222), atm = C(110, 110, 172), decay = C(50, 50, 100), dens = 0.32, haze = 1.6, glare = 0.2, tint = C(210, 210, 255), sat = 0.2, con = 0.12, cb = -0.02, bloom = 0.85, rays = 0.02, cloud = C(140, 128, 182) },
-	{ t = 21, bright = 1.1, amb = C(46, 56, 92), out = C(70, 84, 132), top = C(120, 150, 225), atm = C(52, 70, 120), decay = C(18, 26, 64), dens = 0.32, haze = 1.1, glare = 0, tint = C(188, 204, 255), sat = 0.08, con = 0.14, cb = -0.03, bloom = 0.9, rays = 0, cloud = C(80, 92, 135) },
+	{ t = 19.4, bright = 1.8, amb = C(84, 84, 126), out = C(108, 112, 166), top = C(150, 140, 222), atm = C(110, 110, 172), decay = C(50, 50, 100), dens = 0.32, haze = 1.6, glare = 0.2, tint = C(210, 210, 255), sat = 0.2, con = 0.12, cb = -0.02, bloom = 0.85, rays = 0.02, cloud = C(140, 128, 182) },
+	{ t = 21, bright = 1.8, amb = C(74, 86, 130), out = C(100, 116, 170), top = C(150, 175, 240), atm = C(62, 82, 138), decay = C(24, 34, 78), dens = 0.3, haze = 1.0, glare = 0, tint = C(200, 214, 255), sat = 0.1, con = 0.1, cb = 0.02, bloom = 0.9, rays = 0, cloud = C(96, 108, 152) },
 }
 local CALM = { atm = C(170, 190, 200), dens = 0.45, haze = 2.5 }
 
@@ -246,6 +246,9 @@ function Atmos.Start()
 		clouds.Parent = workspace.Terrain
 	end
 	task.delay(4, collectLamps)
+	pcall(function()
+		workspace.Terrain.Decoration = true -- swaying grass blades on the island Terrain grass
+	end)
 
 	local acc = 0
 	local leafAcc = 0

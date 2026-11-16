@@ -61,11 +61,12 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   The sea is animated on the client by `Controllers/Ocean.lua` (scrolling wave/foam/glitter Textures + shore foam rings).
 - World props: `Kit` builds trees/bushes (Model tagged `EnvProp`, attrs Kind/Base/Height) and boulders/cliff slabs (Part tagged
   `EnvPart`, attr Kind) as placeholders; `AssetService.DressWorld` swaps them for `Assets.Env/<Kind>_<n>` meshes at server start.
-  Ground: Grass parts keep the painted GV_Grass texture; `Controllers/GrassField.lua` lays 3D grass-blade patches
-  (Env GrassPatch_n) on a 4-stud grid around the camera (pooled, swaying via BulkMoveTo); `World/Greenery.lua` scatters plants
-  (GrassTuft/Flowers/Fern/LeafPlant/Mushroom/Bush) on Grass parts. Do NOT use Terrain for ground: its 4-stud voxels swallowed
+  Ground: Grass parts keep the painted GV_Grass texture; `World/Greenery.lua` scatters a modest number of plants
+  (GrassTuft/Flowers/Fern/LeafPlant/Mushroom/Bush) on Grass parts; `Controllers/GrassField.lua` sways only the plants near the
+  camera (BulkMoveTo). A dense 3D grass carpet lagged (v0.10.1): owner wants few plants, AV-like soft look. Do NOT use Terrain for ground: its 4-stud voxels swallowed
   paths/houses and left ridges (tried in v0.10.0).
-  Mesas are invisible collision cylinders + a ring of cliff slabs. Bump `WorldBuilder.WORLD_VERSION` when world code changes:
+  Mesas: rock cylinder + grass cap (collision, hidden once dressed via MesaId) + one organic grassy ledge mesh (Env Mesa_n)
+  per lobe; overlapping lobes read as connected hills (owner reference: AV-style soft grassy ledges). Bump `WorldBuilder.WORLD_VERSION` when world code changes:
   a baked World with an older version is destroyed and rebuilt at runtime (the owner's published place keeps a baked World).
 - Owner decisions on art: voxel style for pets, fruits and monsters; textured (SurfaceAppearance-like) stylized look for the map.
 - VFX are ParticleEmitter/Beam based with our own textures (`Config/Textures`); see the toolkit at the top of `Controllers/VFX.lua`.

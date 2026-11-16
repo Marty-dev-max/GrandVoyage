@@ -280,7 +280,26 @@ function AS.DressWorld()
 			end
 		end
 	end
-	print(string.format("[AssetService] dressed %d props + %d cliff/rock parts (%.2fs)", props, parts, os.clock() - t0))
+	-- organic ledges replace the mesa's visible cylinder + grass cap (both stay as invisible collision)
+	local dressedMesa = {}
+	for _, p in ipairs(CollectionService:GetTagged("EnvPart")) do
+		if p:GetAttribute("Kind") == "Mesa" and p:GetAttribute("Dressed") then
+			dressedMesa[p:GetAttribute("MesaId")] = true
+		end
+	end
+	if next(dressedMesa) then
+		local world = workspace:FindFirstChild("World")
+		for _, d in ipairs(world and world:GetDescendants() or {}) do
+			if d:IsA("BasePart") and not CollectionService:HasTag(d, "EnvPart") then
+				local id = d:GetAttribute("MesaId")
+				if id and dressedMesa[id] then
+					d.Transparency = 1
+					d.CastShadow = false
+				end
+			end
+		end
+	end
+	print(string.format("[AssetService] dressed %d props + %d cliff/rock/ledge parts (%.2fs)", props, parts, os.clock() - t0))
 	-- scattered stylized plants on the island grass (grass blades: client GrassField)
 	local world = workspace:FindFirstChild("World")
 	if world and not world:FindFirstChild("Greenery") then

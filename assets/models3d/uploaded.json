@@ -107,6 +107,18 @@
   "id": "124125301561924",
   "sha1": "bd4c220a678dbe7fdb38360f7d0e9e2dbbbcfaf1"
  },
+ "Env_Mesa_1": {
+  "id": "90292262978742",
+  "sha1": "a5724dfed0ce7edeefd047dc5308fb957e337440"
+ },
+ "Env_Mesa_2": {
+  "id": "93185887562032",
+  "sha1": "7e1db0be4bbf4986c7ca7054b3f15a06bc930ca4"
+ },
+ "Env_Mesa_3": {
+  "id": "102544810368949",
+  "sha1": "29236be85ecb64c22895b714e6efcd23410a4fed"
+ },
  "Env_Mushroom_1": {
   "id": "137370413269471",
   "sha1": "9f3a53e0bcbd995de34c5a719e8e4c21ef367e1f"

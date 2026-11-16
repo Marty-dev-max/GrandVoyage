@@ -521,6 +521,105 @@ def grass_patch(variant):
         p.use_smooth = False
 
 
+def ledge_mat(name, grass_dark, grass, grass_light, dirt, dirt_dark):
+    """grassy ledge: grass on the top and draping unevenly over the rim, painted earth sides with horizontal strokes,
+    darker toward the foot, AO in the creases (reference: soft stylized grass ledges)"""
+    m, nt, em = _nodes(name)
+    tc = nt.nodes.new("ShaderNodeTexCoord")
+    sep = nt.nodes.new("ShaderNodeSeparateXYZ")
+    nt.links.new(tc.outputs["Object"], sep.inputs[0])
+    # uneven grass line: height threshold + noise
+    edge_n = _noise(nt, 4.0, 3)
+    th = nt.nodes.new("ShaderNodeMath")
+    th.operation = "MULTIPLY_ADD"
+    nt.links.new(edge_n, th.inputs[0])
+    th.inputs[1].default_value = 0.16
+    th.inputs[2].default_value = 0.78
+    gm = nt.nodes.new("ShaderNodeMath")
+    gm.operation = "GREATER_THAN"
+    nt.links.new(sep.outputs["Z"], gm.inputs[0])
+    nt.links.new(th.outputs[0], gm.inputs[1])
+    # grass color: light on top (normal Z), mottled
+    gcol = _ramp(nt, _normal_z(nt), [(0.5, grass_dark), (0.8, grass), (1.0, grass_light)])
+    gcol = _mix(nt, gcol, _ramp(nt, _noise(nt, 6.0, 4), [(0.3, "#d8e6c0"), (0.7, "#ffffff")]))
+    # earth: horizontal painterly strokes, darker at the foot
+    mp = nt.nodes.new("ShaderNodeMapping")
+    mp.inputs["Scale"].default_value = (2.0, 2.0, 14.0)
+    nt.links.new(tc.outputs["Object"], mp.inputs[0])
+    sn = nt.nodes.new("ShaderNodeTexNoise")
+    sn.inputs["Scale"].default_value = 2.0
+    sn.inputs["Detail"].default_value = 5
+    nt.links.new(mp.outputs[0], sn.inputs["Vector"])
+    dcol = _ramp(nt, sn.outputs["Fac"], [(0.35, dirt_dark), (0.65, dirt)])
+    foot = _ramp(nt, sep.outputs["Z"], [(0.0, "#8a8090"), (0.5, "#ffffff")])
+    dcol = _mix(nt, dcol, foot)
+    mx = nt.nodes.new("ShaderNodeMix")
+    mx.data_type = "RGBA"
+    nt.links.new(gm.outputs[0], mx.inputs["Factor"])
+    nt.links.new(dcol, mx.inputs[6])
+    nt.links.new(gcol, mx.inputs[7])
+    col = _mix(nt, mx.outputs[2], _ao(nt, 0.15, 0.45))
+    nt.links.new(col, em.inputs["Color"])
+    return m
+
+
+def mesa(variant):
+    """an organic grassy plateau in a unit-ish box (radius 1, height 1): wobbly outline, soft rounded rim with a grass
+    overhang, slightly flared skirt so neighbouring plateaus blend into each other and into the ground"""
+    rng = random.Random(500 + variant)
+    mat = ledge_mat("ledge", "#3e7a2e", "#68b04a", "#a6d65e", "#9a5a3a", "#5a321e")
+    seed = Vector((variant * 3.7, variant * 1.3, 0.5))
+    n = 72
+    # (height, radius factor) profile from the foot to the top rim and over onto the top
+    prof = [(0.0, 1.06), (0.18, 1.0), (0.45, 0.985), (0.7, 0.99), (0.86, 1.015), (0.94, 1.02), (0.985, 0.995), (1.0, 0.95)]
+    bm = bmesh.new()
+    rings = []
+    for h, rf in prof:
+        ring = []
+        for i in range(n):
+            a = i / n * math.tau
+            d = Vector((math.cos(a), math.sin(a), 0))
+            wob = noise.noise(d * 1.4 + seed) * 0.08 + noise.noise(d * 4.0 + seed + Vector((0, 0, h * 3))) * 0.025
+            ring.append(bm.verts.new((d.x * rf * (1 + wob), d.y * rf * (1 + wob), h)))
+        rings.append(ring)
+    for r in range(len(rings) - 1):
+        for i in range(n):
+            j = (i + 1) % n
+            bm.faces.new((rings[r][i], rings[r][j], rings[r + 1][j], rings[r + 1][i]))
+    # top: gentle dome inside the rim
+    inner = []
+    for k, (sc, hh) in enumerate(((0.8, 1.012), (0.5, 1.02), (0.22, 1.024))):
+        ring = []
+        for i in range(n):
+            v = rings[-1][i].co
+            ring.append(bm.verts.new((v.x * sc / 0.95, v.y * sc / 0.95, hh + noise.noise(Vector((v.x, v.y, 0)) * 2 + seed) * 0.01)))
+        inner.append(ring)
+    prev = rings[-1]
+    for ring in inner:
+        for i in range(n):
+            j = (i + 1) % n
+            bm.faces.new((prev[i], prev[j], ring[j], ring[i]))
+        prev = ring
+    center = bm.verts.new((0, 0, 1.026))
+    for i in range(n):
+        bm.faces.new((prev[i], prev[(i + 1) % n], center))
+    me = bpy.data.meshes.new("mesa")
+    bm.normal_update()
+    bm.to_mesh(me)
+    bm.free()
+    o = bpy.data.objects.new("mesa", me)
+    bpy.context.scene.collection.objects.link(o)
+    sub = o.modifiers.new("sub", "SUBSURF")
+    sub.levels = 1
+    K.apply_mods(o)
+    smooth(assign(o, mat))
+    # a few grass clumps hanging over the rim (the draping look)
+    for k in range(10):
+        a = rng.uniform(0, math.tau)
+        d = Vector((math.cos(a), math.sin(a), 0))
+        clump(d * 0.99 + Vector((0, 0, 0.93)), rng.uniform(0.05, 0.08), mat, 600 + k + variant * 20, squash=0.6, leafy=0.2)
+
+
 PROPS = {}
 for i in (1, 2):
     PROPS[f"GrassTuft_{i}"] = (grass_tuft, i, 2.2)
@@ -531,6 +630,8 @@ for i in (1, 2, 3, 4, 5):
     PROPS[f"Flowers_{i}"] = (flowers, i, 1.6)
 for i in (1, 2):
     PROPS[f"GrassPatch_{i}"] = (grass_patch, i, 4)
+for i in (1, 2, 3):
+    PROPS[f"Mesa_{i}"] = (mesa, i, 2)
 
 for i in (1, 2, 3):
     PROPS[f"BroadTree_{i}"] = (broad_tree, i, 14)

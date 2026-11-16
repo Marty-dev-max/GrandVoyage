@@ -18,10 +18,10 @@ end
 
 -- kind -> { weight, height range (studs) }
 local PLANTS = {
-	{ kind = "GrassTuft", weight = 44, h = { 1.4, 2.4 }, clump = { 3, 6 } },
+	{ kind = "GrassTuft", weight = 46, h = { 2.0, 3.4 }, clump = { 2, 4 } },
 	{ kind = "Flowers", weight = 22, h = { 1.1, 1.7 }, clump = { 1, 3 } },
 	{ kind = "Fern", weight = 12, h = { 2.0, 3.0 }, clump = { 1, 2 } },
-	{ kind = "LeafPlant", weight = 10, h = { 1.8, 2.8 }, clump = { 1, 2 } },
+	{ kind = "LeafPlant", weight = 12, h = { 2.4, 4.0 }, clump = { 1, 2 } },
 	{ kind = "Mushroom", weight = 6, h = { 0.9, 1.6 }, clump = { 1, 2 } },
 	{ kind = "Bush", weight = 6, h = { 3.0, 4.5 }, clump = { 1, 1 } },
 }

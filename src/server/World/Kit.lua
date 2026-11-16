@@ -578,6 +578,7 @@ function Kit.Drapes(center, radius, topY, grass, skipFn)
 	end
 end
 
+local mesaCount = 0
 -- A mesa: organic rock body + strata + grass cap with overhang + accent rim + draping grass + rocks at its foot.
 -- base = ground point under the center, h = height above base. Returns top Y.
 function Kit.Mesa(base, radius, h, grass, rock, rim, opts)
@@ -592,24 +593,19 @@ function Kit.Mesa(base, radius, h, grass, rock, rim, opts)
 	end
 	for _, l in ipairs(lobes) do
 		local c = Vector3.new(base.X + l[1], 0, base.Z + l[2])
-		-- collision body (invisible): the look comes from the cliff wall modules around it
-		Cyl(h + 2, l[3] * 2, rock, c + Vector3.new(0, base.Y + h / 2 - 1, 0), { material = M.Rock, transparency = 1, shadow = false })
-		-- cliff wall: a ring of slab modules facing outward (placeholder blocks -> stylized cliff meshes at runtime)
-		local circ = 2 * math.pi * l[3]
-		local n = math.max(5, math.ceil(circ / 11))
-		local w = circ / n * 1.22
-		local phase = rng:NextNumber(0, math.pi * 2)
-		for i = 0, n - 1 do
-			local a = phase + i / n * math.pi * 2
-			local dir = Vector3.new(math.cos(a), 0, math.sin(a))
-			local hh = h + 1.5 + rng:NextNumber(-0.8, 0.6)
-			local depth = 5
-			local center = c + dir * (l[3] - depth * 0.3 + rng:NextNumber(-0.3, 0.4)) + Vector3.new(0, base.Y + hh / 2 - 0.8, 0)
-			local slab = P(Vector3.new(w, hh, depth), rock:Lerp(dark, rng:NextNumber(0, 0.5)), CFrame.lookAt(center, center + dir) * CFrame.Angles(0, 0, rng:NextNumber(-0.03, 0.03)), { material = M.Rock, collide = false })
-			slab:SetAttribute("Kind", "Cliff")
-			CollectionService:AddTag(slab, "EnvPart")
-		end
-		Cyl(2.2, l[3] * 2 + 3, grass, c + Vector3.new(0, top - 0.1, 0), { material = M.Grass })
+		-- collision body + grass cap (visible fallback); hidden once the organic ledge mesh is in place (same MesaId)
+		mesaCount += 1
+		local body = Cyl(h + 2, l[3] * 2, rock, c + Vector3.new(0, base.Y + h / 2 - 1, 0), { material = M.Rock })
+		body:SetAttribute("MesaId", mesaCount)
+		-- organic grassy ledge (Env Mesa_n): fills this box; its rim lands just outside the collision cylinder
+		local half = (l[3] + 1) * 1.15
+		local boxH = top - base.Y + 2
+		local box = P(Vector3.new(half * 2, boxH, half * 2), rock, CFrame.new(c.X, base.Y - 1 + boxH / 2, c.Z) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0), { material = M.Rock, collide = false, transparency = 1, shadow = false })
+		box.CanQuery = false
+		box:SetAttribute("Kind", "Mesa")
+		box:SetAttribute("MesaId", mesaCount)
+		CollectionService:AddTag(box, "EnvPart")
+		Cyl(2.2, l[3] * 2 + 3, grass, c + Vector3.new(0, top - 0.1, 0), { material = M.Grass }):SetAttribute("MesaId", mesaCount)
 	end
 	for i = 1, math.floor(radius / 5) do
 		local a = rng:NextNumber(0, math.pi * 2)

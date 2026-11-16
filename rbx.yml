@@ -1,0 +1,29 @@
+---
+base: luau
+globals:
+  game: {any: true}
+  workspace: {any: true}
+  script: {any: true}
+  Instance: {any: true}
+  Vector3: {any: true}
+  Vector2: {any: true}
+  CFrame: {any: true}
+  Color3: {any: true}
+  ColorSequence: {any: true}
+  ColorSequenceKeypoint: {any: true}
+  NumberSequence: {any: true}
+  NumberSequenceKeypoint: {any: true}
+  NumberRange: {any: true}
+  UDim: {any: true}
+  UDim2: {any: true}
+  Enum: {any: true}
+  TweenInfo: {any: true}
+  RaycastParams: {any: true}
+  PhysicalProperties: {any: true}
+  Random: {any: true}
+  task: {any: true}
+  typeof: {args: [{type: any}]}
+  warn: {args: [{type: "..."}]}
+  tick: {args: []}
+  time: {args: []}
+  Font: {any: true}

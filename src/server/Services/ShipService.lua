@@ -1,0 +1,944 @@
+-- ShipService: sailing (wind / Doldrums / Crimson Wall), cannons, 3-tier Marine+Pirate NPC ships, Leviathans
+-- Physics: ships are unanchored assemblies driven by LinearVelocity + AlignOrientation (server-owned)
+-- Players can walk the deck while the ship sails
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Shared = ReplicatedStorage.Shared
+local GameConfig = require(Shared.Config.GameConfig)
+local Islands = require(Shared.Config.Islands)
+local NPCShips = require(Shared.Config.NPCShips)
+local ShipParts = require(Shared.Config.ShipParts).Parts
+local ShipStats = require(Shared.Modules.ShipStats)
+local ShipModel = require(Shared.Modules.ShipModel)
+local SeaZones = require(Shared.Modules.SeaZones)
+local Net = require(Shared.Modules.Net)
+
+local Ship = {}
+local R
+local ships = {} -- id -> ship
+local nextId = 0
+local folder
+local cfg = GameConfig.Ship
+local G = cfg.GridSize
+local lastToast = {}
+
+function Ship.Init(registry)
+	R = registry
+	folder = Instance.new("Folder")
+	folder.Name = "Ships"
+	folder.Parent = workspace
+end
+
+local function flat(a, b)
+	return (Vector2.new(a.X, a.Z) - Vector2.new(b.X, b.Z)).Magnitude
+end
+
+local function wrapAngle(a)
+	return (a + math.pi) % (2 * math.pi) - math.pi
+end
+
+local function toast(player, text, kind, key)
+	key = player.UserId .. (key or text)
+	if lastToast[key] and os.clock() - lastToast[key] < 4 then
+		return
+	end
+	lastToast[key] = os.clock()
+	R.PlayerService.Notify(player, text, kind)
+end
+
+-- ===== Ship construction =====
+local function buildShip(design, cf, opts)
+	nextId += 1
+	local minV, maxV = ShipModel.Bounds(design)
+	local cx, cz = (minV.X + maxV.X) / 2, (minV.Z + maxV.Z) / 2
+	local width, length = (maxV.X - minV.X) * G, (maxV.Z - minV.Z) * G
+	local originCf = cf * CFrame.new(-cx * G, -minV.Y * G, cz * G)
+	local model = ShipModel.BuildDesign(design, originCf, opts.colorFn)
+	model.Name = opts.name
+
+	local root = Instance.new("Part")
+	root.Name = "ShipRoot"
+	root.Size = Vector3.new(math.max(width, 4), 2, math.max(length, 4))
+	root.CFrame = cf * CFrame.new(0, 1, 0)
+	root.Transparency = 1
+	root.CanCollide = false
+	root.CanQuery = false
+	root.RootPriority = 10
+	root.CustomPhysicalProperties = PhysicalProperties.new(2, 0.3, 0.5)
+	root.Parent = model
+	model.PrimaryPart = root
+
+	local cannonParts = {}
+	for _, child in ipairs(model:GetChildren()) do
+		if child:IsA("Model") then
+			local idx = child:GetAttribute("Index")
+			local pdef = idx and design.parts[idx] and ShipParts[design.parts[idx].id]
+			if pdef and pdef.cannon then
+				local barrel = child:FindFirstChild("Barrel", true)
+				table.insert(cannonParts, { model = child, muzzle = barrel and barrel:FindFirstChild("Muzzle"), damage = pdef.cannon.damage, range = pdef.cannon.range })
+			end
+		end
+	end
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("BasePart") and d ~= root then
+			d.Massless = true
+			local w = Instance.new("WeldConstraint")
+			w.Part0 = root
+			w.Part1 = d
+			w.Parent = d
+			d.Anchored = false
+		end
+	end
+	local att = Instance.new("Attachment")
+	att.Name = "RootAttachment"
+	att.Parent = root
+	local lv = Instance.new("LinearVelocity")
+	lv.Attachment0 = att
+	lv.MaxForce = math.huge
+	lv.VelocityConstraintMode = Enum.VelocityConstraintMode.Vector
+	lv.RelativeTo = Enum.ActuatorRelativeTo.World
+	lv.VectorVelocity = Vector3.zero
+	lv.Parent = root
+	local ao = Instance.new("AlignOrientation")
+	ao.Attachment0 = att
+	ao.Mode = Enum.OrientationAlignmentMode.OneAttachment
+	ao.MaxTorque = math.huge
+	ao.Responsiveness = 14
+	ao.CFrame = cf.Rotation
+	ao.Parent = root
+	root.Anchored = false
+	model.Parent = folder
+	pcall(function()
+		root:SetNetworkOwner(nil)
+	end)
+
+	local _, yaw = cf:ToOrientation()
+	local ship = {
+		id = nextId,
+		model = model,
+		root = root,
+		lv = lv,
+		ao = ao,
+		design = design,
+		radius = math.max(width, length) / 2,
+		width = width,
+		length = length,
+		yaw = yaw,
+		throttle = 0,
+		steer = 0,
+		speed = 0,
+		lastVolley = 0,
+		buffs = {},
+		damageBy = {},
+		seaKings = {},
+		cannons = cannonParts,
+		seat = model:FindFirstChild("HelmSeat", true),
+		calmTime = 0,
+		outCalmTime = 0,
+		lostParts = 0,
+	}
+	ships[ship.id] = ship
+	return ship
+end
+
+local function setAttrs(ship)
+	local m = ship.model
+	m:SetAttribute("HP", math.floor(ship.hp))
+	m:SetAttribute("MaxHP", ship.maxHp)
+	m:SetAttribute("Speed", math.floor(ship.speed))
+	m:SetAttribute("MaxSpeed", math.floor(ship.maxSpeed or 0))
+	m:SetAttribute("Zone", ship.zone or "Lane")
+	m:SetAttribute("Wind", ship.wind or 1)
+	m:SetAttribute("ReloadEnd", ship.reloadEnd or 0)
+	m:SetAttribute("Cannons", #ship.cannons)
+	m:SetAttribute("Manned", ship.stats and ship.stats.cannonsManned or 0)
+	m:SetAttribute("Crew", ship.stats and ship.stats.crew or 0)
+end
+
+function Ship.GetShipOf(player)
+	for _, s in pairs(ships) do
+		if s.owner == player and not s.sinking then
+			return s
+		end
+	end
+	return nil
+end
+
+local function shipUnder(player)
+	local root = R.PlayerService.Root(player)
+	if not root then
+		return nil
+	end
+	for _, s in pairs(ships) do
+		if not s.sinking and s.root and flat(root.Position, s.root.Position) <= s.radius + 4 and root.Position.Y > -12 and root.Position.Y < 80 then
+			return s
+		end
+	end
+	return nil
+end
+
+function Ship.IsOnShip(player)
+	return shipUnder(player) ~= nil
+end
+
+local function playersOn(ship)
+	local list = {}
+	for _, pl in ipairs(Players:GetPlayers()) do
+		local root = R.PlayerService.Root(pl)
+		if root and flat(root.Position, ship.root.Position) <= ship.radius + 6 and root.Position.Y > -15 then
+			table.insert(list, pl)
+		end
+	end
+	return list
+end
+
+local function despawn(ship)
+	ships[ship.id] = nil
+	for _, sk in ipairs(ship.seaKings) do
+		if not sk.dead then
+			R.MonsterService.Kill(sk)
+		end
+	end
+	if ship.model then
+		ship.model:Destroy()
+	end
+end
+
+function Ship.DespawnShipOf(player)
+	local s = Ship.GetShipOf(player)
+	if s then
+		despawn(s)
+	end
+end
+
+-- ===== Damage / sinking =====
+local function hostile(a, b)
+	if a == b then
+		return false
+	end
+	if a.owner and b.owner then
+		return R.PvPService.ShipsHostile(a.owner, b.owner)
+	end
+	if a.owner and b.npc then
+		return not (a.owner:GetAttribute("Faction") == "Marine" and b.npc.faction == "Marine")
+	end
+	if a.npc and b.owner then
+		return not (b.owner:GetAttribute("Faction") == "Marine" and a.npc.faction == "Marine")
+	end
+	if a.npc and b.npc then
+		return a.npc.faction ~= b.npc.faction
+	end
+	return false
+end
+
+local function breakRandomParts(ship, count)
+	local candidates = {}
+	for _, child in ipairs(ship.model:GetChildren()) do
+		if child:IsA("Model") and child.Name ~= "Helm" then
+			table.insert(candidates, child)
+		end
+	end
+	for _ = 1, math.min(count, #candidates - 6) do
+		local m = table.remove(candidates, math.random(1, #candidates))
+		for _, p in ipairs(m:GetDescendants()) do
+			if p:IsA("BasePart") then
+				for _, w in ipairs(p:GetChildren()) do
+					if w:IsA("WeldConstraint") then
+						w:Destroy()
+					end
+				end
+				p.Massless = false
+				p.CanCollide = false
+				p.Color = p.Color:Lerp(Color3.new(0.1, 0.1, 0.1), 0.6)
+				p.AssemblyLinearVelocity = Vector3.new(math.random(-20, 20), 30, math.random(-20, 20))
+			end
+		end
+		game:GetService("Debris"):AddItem(m, 6)
+		m.Parent = workspace
+	end
+end
+
+local sink
+
+function Ship.DamageShip(ship, dmg, srcShip, player)
+	if ship.sinking then
+		return
+	end
+	ship.hp -= dmg
+	local key = player or (srcShip and srcShip.owner)
+	if key then
+		ship.damageBy[key] = (ship.damageBy[key] or 0) + dmg
+	end
+	if srcShip and ship.npc and srcShip.owner and not ship.target then
+		ship.target = srcShip
+	end
+	Net.FX("ShipHit", { pos = ship.root.Position, amount = math.floor(dmg) }, ship.root.Position, 500)
+	local lostSteps = math.floor((1 - ship.hp / ship.maxHp) * 4)
+	if lostSteps > ship.lostParts then
+		ship.lostParts = lostSteps
+		breakRandomParts(ship, 2 + ship.lostParts)
+	end
+	setAttrs(ship)
+	if ship.hp <= 0 then
+		sink(ship)
+	end
+end
+
+sink = function(ship)
+	if ship.sinking then
+		return
+	end
+	ship.sinking = true
+	local top, topD = nil, 0
+	for pl, d in pairs(ship.damageBy) do
+		if pl.Parent and d > topD then
+			top, topD = pl, d
+		end
+	end
+	Net.FX("ShipSink", { pos = ship.root.Position, radius = ship.radius }, ship.root.Position, 800)
+	if ship.npc then
+		local def = ship.npc
+		if top then
+			R.PartyService.ShareExp(top, def.exp, def.exp * 0.6, ship.root.Position)
+			R.MonsterService.RollDrops(top, { drops = def.drops, beli = def.beli }, 1)
+			R.PvPService.OnShipSunk(top, def)
+			R.QuestService.Event(top, "Sink", nil)
+			local FruitsCfg = require(Shared.Config.Fruits)
+			R.FruitService.RollDrop(top, FruitsCfg.Drops.Ship[def.tier] or 0, def.name)
+			if def.tier >= 3 then
+				Net.PushAll("Announce", { text = "💥 " .. top.DisplayName .. " sank a " .. def.name .. "!", kind = "ship" })
+			end
+		end
+	elseif ship.owner then
+		local owner = ship.owner
+		local p = R.DataService.Get(owner)
+		if p then
+			p.shipSunk = true
+			R.PlayerService.MarkDirty(owner)
+		end
+		if top and top ~= owner then
+			R.PvPService.OnPlayerKilled(owner, top)
+		end
+		for _, pl in ipairs(playersOn(ship)) do
+			R.PlayerService.Notify(pl, "Your ship sank! Swimming back to shore...", "bad")
+			task.delay(2.5, function()
+				local pp = R.DataService.Get(pl)
+				if pp then
+					R.PlayerService.TeleportTo(pl, R.PlayerService.SpawnCFrame(pp.lastIsland))
+				end
+			end)
+		end
+	end
+	ship.lv.VectorVelocity = Vector3.new(0, -4, 0)
+	ship.ao.CFrame = CFrame.Angles(0, ship.yaw, 0) * CFrame.Angles(0.5, 0, 0.3)
+	ship.ao.Responsiveness = 2
+	task.delay(7, function()
+		despawn(ship)
+	end)
+end
+
+-- ===== Cannons =====
+local function impact(pos, damage, srcShip, player)
+	local hitSomething = false
+	for _, s in pairs(ships) do
+		if s ~= srcShip and not s.sinking and hostile(srcShip, s) and flat(pos, s.root.Position) <= s.radius * 0.75 + cfg.SplashRadius then
+			Ship.DamageShip(s, damage, srcShip, player)
+			hitSomething = true
+		end
+	end
+	if player then
+		for _, mob in ipairs(R.MonsterService.InRadius(pos, cfg.SplashRadius + 4)) do
+			R.MonsterService.Damage(mob, damage * 1.5, player, false)
+			hitSomething = true
+		end
+	end
+	Net.FX(hitSomething and "Explosion" or "Splash", { pos = Vector3.new(pos.X, math.max(pos.Y, 0), pos.Z), radius = cfg.SplashRadius }, pos, 600)
+end
+
+local function fireBall(from, target, damage, range, srcShip, player)
+	local dir = Vector3.new(target.X - from.X, 0, target.Z - from.Z)
+	local dist = dir.Magnitude
+	if dist < 1 then
+		return
+	end
+	if dist > range then
+		target = from + dir.Unit * range
+		target = Vector3.new(target.X, 0, target.Z)
+		dist = range
+	end
+	local t = dist / cfg.CannonballSpeed + 0.25
+	Net.FX("Cannonball", { from = from, to = target, t = t }, from, 700)
+	task.delay(t, impact, target, damage, srcShip, player)
+end
+
+local function volley(ship, target, count, damageMult, player, spread, fixedDamage)
+	local chosen = {}
+	for _, c in ipairs(ship.cannons) do
+		local main = c.model.PrimaryPart
+		if main and main.Parent then
+			local pos = c.muzzle and c.muzzle.WorldPosition or main.Position
+			local face = main.CFrame.LookVector
+			local to = Vector3.new(target.X - pos.X, 0, target.Z - pos.Z)
+			if to.Magnitude > 1 then
+				local dot = Vector3.new(face.X, 0, face.Z).Unit:Dot(to.Unit)
+				if dot > 0.25 then
+					table.insert(chosen, { c = c, pos = pos, dot = dot })
+				end
+			end
+		end
+	end
+	table.sort(chosen, function(a, b)
+		return a.dot > b.dot
+	end)
+	local fired = 0
+	for i = 1, math.min(count, #chosen) do
+		local item = chosen[i]
+		local err = spread and Vector3.new((math.random() - 0.5) * spread, 0, (math.random() - 0.5) * spread) or Vector3.zero
+		task.delay((i - 1) * 0.09, fireBall, item.pos, target + err, fixedDamage or item.c.damage * damageMult, item.c.range, ship, player)
+		fired += 1
+	end
+	return fired
+end
+
+-- ===== Player ships =====
+function Ship.Launch(player, slot)
+	local p = R.DataService.Get(player)
+	local design = p.ships[slot]
+	if not design then
+		return false, "No ship design in that slot"
+	end
+	local derived = R.PlayerService.Derived(player) or {}
+	local stats = ShipStats.Compute(design, p.crew, { shipSpeed = derived.shipSpeed, shipHp = derived.shipHp })
+	if not stats.valid then
+		return false, "A ship needs 1 helm and at least 1 sail or oar bench"
+	end
+	local dock = R.WorldBuilder.NearestDock(R.PlayerService.Root(player).Position)
+	if not dock or dock.distance > 160 then
+		return false, "Go to a dock or shipyard"
+	end
+	if p.shipSunk then
+		local cost = math.floor(stats.value * cfg.SinkRepairPct) + 200
+		if not R.PlayerService.AddBeli(player, -cost) then
+			return false, "Your ship is sunk. Repair costs 🪙" .. cost
+		end
+		p.shipSunk = false
+		R.PlayerService.Notify(player, "Ship repaired (🪙" .. cost .. ")", "info")
+	end
+	local ship = buildShip(design, dock.launchCf, { name = "Ship_" .. player.UserId })
+	ship.owner = player
+	ship.stats = stats
+	ship.maxHp = stats.hp
+	ship.hp = stats.hp
+	ship.model:SetAttribute("OwnerId", player.UserId)
+	ship.model:SetAttribute("ShipName", design.name)
+	ship.model:SetAttribute("Faction", p.faction)
+	local nameplate = Instance.new("BillboardGui")
+	nameplate.Size = UDim2.fromOffset(240, 40)
+	nameplate.StudsOffsetWorldSpace = Vector3.new(0, 30, 0)
+	nameplate.MaxDistance = 600
+	nameplate.Parent = ship.root
+	local t = Instance.new("TextLabel")
+	t.Size = UDim2.fromScale(1, 1)
+	t.BackgroundTransparency = 1
+	t.Font = Enum.Font.FredokaOne
+	t.TextScaled = true
+	t.TextStrokeTransparency = 0.4
+	t.TextColor3 = p.faction == "Marine" and Color3.fromRGB(140, 200, 255) or (p.faction == "Pirate" and Color3.fromRGB(255, 120, 120) or Color3.new(1, 1, 1))
+	t.Text = design.name .. " • " .. player.DisplayName
+	t.Parent = nameplate
+	setAttrs(ship)
+	task.delay(0.4, function()
+		local hum = R.PlayerService.Humanoid(player)
+		if ship.seat and hum then
+			R.PlayerService.TeleportTo(player, ship.seat.CFrame)
+			task.wait(0.15)
+			ship.seat:Sit(hum)
+		end
+	end)
+	return true
+end
+
+function Ship.Dock(player)
+	local ship = Ship.GetShipOf(player)
+	if not ship then
+		return false, "You have no ship out"
+	end
+	local dock = R.WorldBuilder.NearestDock(ship.root.Position)
+	if not dock or dock.distance > cfg.DockRange + ship.radius then
+		return false, "Sail closer to a dock"
+	end
+	local riders = playersOn(ship)
+	despawn(ship)
+	local island = Islands.ById[dock.islandId]
+	for _, pl in ipairs(riders) do
+		if island then
+			R.PlayerService.UnlockIsland(pl, dock.islandId)
+		end
+		R.PlayerService.TeleportTo(pl, dock.landCf)
+	end
+	return true, "Docked at " .. (island and island.name or "a sea fort")
+end
+
+function Ship.AddShipBuff(player, id, value, duration)
+	local s = shipUnder(player)
+	if not s then
+		return false
+	end
+	s.buffs[id] = { value = value, expires = os.clock() + duration }
+	Net.FX("Skill", { fx = "Wind", from = s.root.Position, to = s.root.Position, radius = s.radius }, s.root.Position, 400)
+	return true
+end
+
+function Ship.RepairNearby(player, pct)
+	local s = shipUnder(player)
+	if not s or s.sinking or (s.owner and s.owner ~= player and not R.PartyService.Same(s.owner, player)) then
+		return false
+	end
+	s.hp = math.min(s.maxHp, s.hp + s.maxHp * pct)
+	setAttrs(s)
+	Net.FX("Repair", { pos = s.root.Position, radius = s.radius }, s.root.Position, 400)
+	return true
+end
+
+function Ship.RepairOwned(player, pct)
+	local s = Ship.GetShipOf(player)
+	if not s or shipUnder(player) ~= s then
+		return false
+	end
+	return Ship.RepairNearby(player, pct)
+end
+
+-- ===== NPC ships =====
+local function npcDesign(def)
+	local parts = {}
+	local W, L = def.width, def.length
+	local hull = def.tier >= 3 and "OakBlock" or "PlankBlock"
+	for x = 0, W - 1 do
+		for z = 0, L - 1 do
+			table.insert(parts, { id = hull, x = x, y = 0, z = z, r = 0 })
+		end
+	end
+	for x = 1, W - 2 do
+		table.insert(parts, { id = "PlankWedge", x = x, y = 0, z = L, r = 0 })
+	end
+	table.insert(parts, { id = "Helm", x = math.floor(W / 2), y = 1, z = 1, r = 0 })
+	if def.tier >= 2 then
+		table.insert(parts, { id = "CrewCabin", x = math.floor(W / 2) - 1, y = 1, z = 2, r = 0 })
+	end
+	local mastId = def.faction == "Pirate" and "JollySail" or "MarineSail"
+	if def.tier == 1 then
+		mastId = "SmallMast"
+	end
+	for i = 1, def.masts do
+		local z = math.floor(L * (i / (def.masts + 1))) + 1
+		table.insert(parts, { id = mastId, x = math.floor(W / 2), y = 1, z = z, r = 0 })
+	end
+	local perSide = math.floor(def.cannons / 2)
+	for i = 1, perSide do
+		local z = math.floor((L - 2) * i / (perSide + 1)) + 1
+		table.insert(parts, { id = def.tier >= 3 and "HeavyCannon" or "LightCannon", x = 0, y = 1, z = z, r = 1 })
+		table.insert(parts, { id = def.tier >= 3 and "HeavyCannon" or "LightCannon", x = W - 1, y = 1, z = z, r = 3 })
+	end
+	return { name = def.name, parts = parts }
+end
+
+local function npcColor(def)
+	return function(p)
+		local pd = ShipParts[p.id]
+		if pd.category ~= "Hull" then
+			return nil
+		end
+		if def.faction == "Marine" then
+			return p.y == 0 and Color3.fromRGB(245, 245, 250) or Color3.fromRGB(70, 120, 220)
+		end
+		return Color3.fromRGB(110, 75, 50)
+	end
+end
+
+local function spawnNPC(defId, pos, segment)
+	local def = NPCShips.Ships[defId]
+	local design = npcDesign(def)
+	local yaw = math.random() * math.pi * 2
+	local ship = buildShip(design, CFrame.new(pos.X, GameConfig.SeaLevel - G * 0.5, pos.Z) * CFrame.Angles(0, yaw, 0), { name = "NPC_" .. defId, colorFn = npcColor(def) })
+	ship.npc = def
+	ship.segment = segment
+	ship.maxHp = def.hp
+	ship.hp = def.hp
+	ship.stats = { cannonsManned = def.cannons, crew = def.cannons }
+	ship.model:SetAttribute("NPC", true)
+	ship.model:SetAttribute("Faction", def.faction)
+	ship.model:SetAttribute("Tier", def.tier)
+	local bb = Instance.new("BillboardGui")
+	bb.Size = UDim2.fromOffset(260, 46)
+	bb.StudsOffsetWorldSpace = Vector3.new(0, 34, 0)
+	bb.MaxDistance = 700
+	bb.Parent = ship.root
+	local t = Instance.new("TextLabel")
+	t.Size = UDim2.fromScale(1, 1)
+	t.BackgroundTransparency = 1
+	t.Font = Enum.Font.FredokaOne
+	t.TextScaled = true
+	t.TextStrokeTransparency = 0.3
+	t.TextColor3 = def.faction == "Marine" and Color3.fromRGB(150, 200, 255) or Color3.fromRGB(255, 110, 110)
+	t.Text = string.rep("★", def.tier) .. " " .. def.name .. " Lv." .. def.level
+	t.Parent = bb
+	setAttrs(ship)
+	return ship
+end
+
+local function pickTier(weights)
+	local r = math.random()
+	local acc = 0
+	for i, w in ipairs(weights) do
+		acc += w
+		if r <= acc then
+			return i
+		end
+	end
+	return 1
+end
+
+local function segmentBounds(seg)
+	local a = Islands.List[seg]
+	local b = Islands.List[seg + 1]
+	local x1 = a.x + a.radius + 160
+	local x2 = b and (b.x - b.radius - 160) or (Islands.RedLine.x - 500)
+	return x1, x2
+end
+
+local function npcSpawner()
+	while true do
+		task.wait(NPCShips.SpawnInterval)
+		local counts = {}
+		for _, s in pairs(ships) do
+			if s.npc and s.segment then
+				counts[s.segment] = (counts[s.segment] or 0) + 1
+			end
+		end
+		for seg = 1, #Islands.List do
+			local x1, x2 = segmentBounds(seg)
+			local cx = (x1 + x2) / 2
+			local near = false
+			for _, pl in ipairs(Players:GetPlayers()) do
+				local root = R.PlayerService.Root(pl)
+				if root and math.abs(root.Position.X - cx) < 2600 then
+					near = true
+				end
+			end
+			if near and (counts[seg] or 0) < NPCShips.MaxPerSegment then
+				local tier = pickTier(NPCShips.SegmentTierWeights[seg] or { 1 })
+				local faction = math.random() < 0.5 and "Marine" or "Pirate"
+				local pos = Vector3.new(x1 + math.random() * (x2 - x1), 0, (math.random() * 2 - 1) * (GameConfig.Lane.HalfWidth - 120))
+				spawnNPC(faction .. tier, pos, seg)
+			end
+		end
+	end
+end
+
+local function npcThink(ship, now)
+	local def = ship.npc
+	local pos = ship.root.Position
+	-- Acquire target
+	if ship.target and (ship.target.sinking or not ships[ship.target.id] or flat(ship.target.root.Position, pos) > 520) then
+		ship.target = nil
+	end
+	if not ship.target then
+		local best, bestD = nil, 340
+		for _, s in pairs(ships) do
+			if s ~= ship and not s.sinking and (s.owner or s.npc) and hostile(ship, s) then
+				local d = flat(s.root.Position, pos)
+				if d < bestD then
+					best, bestD = s, d
+				end
+			end
+		end
+		ship.target = best
+	end
+	local desired
+	local throttle = 0.55
+	if ship.target then
+		local tp = ship.target.root.Position
+		local to = Vector3.new(tp.X - pos.X, 0, tp.Z - pos.Z)
+		local d = to.Magnitude
+		if d > 210 then
+			desired = to.Unit
+			throttle = 1
+		elseif d < 100 then
+			desired = -to.Unit
+			throttle = 1
+		else
+			-- Turn broadside to fire
+			local perp = Vector3.new(-to.Z, 0, to.X).Unit
+			local fwd = Vector3.new(-math.sin(ship.yaw), 0, -math.cos(ship.yaw))
+			desired = fwd:Dot(perp) >= 0 and perp or -perp
+			throttle = 0.7
+		end
+		if d < 270 and now - ship.lastVolley >= def.reload then
+			ship.lastVolley = now
+			local tv = ship.target.root.AssemblyLinearVelocity
+			local flight = d / cfg.CannonballSpeed + 0.25
+			local aim = tp + Vector3.new(tv.X, 0, tv.Z) * flight * 0.85
+			volley(ship, aim, math.max(1, math.ceil(def.cannons / 2)), 1, nil, 34 - def.tier * 6, def.damage)
+		end
+	else
+		if not ship.waypoint or flat(ship.waypoint, pos) < 60 then
+			local x1, x2 = segmentBounds(ship.segment or SeaZones.Segment(pos.X))
+			ship.waypoint = Vector3.new(x1 + math.random() * (x2 - x1), 0, (math.random() * 2 - 1) * (GameConfig.Lane.HalfWidth - 140))
+		end
+		desired = Vector3.new(ship.waypoint.X - pos.X, 0, ship.waypoint.Z - pos.Z).Unit
+	end
+	-- Avoid the Doldrums edge and islands
+	if math.abs(pos.Z) > GameConfig.Lane.HalfWidth - 70 then
+		desired = (desired + Vector3.new(0, 0, -math.sign(pos.Z) * 2)).Unit
+	end
+	local island, idist = SeaZones.NearestIsland(pos)
+	if island and idist < island.radius + 90 then
+		local away = Vector3.new(pos.X - island.x, 0, pos.Z).Unit
+		desired = (desired + away * 2).Unit
+	end
+	local desiredYaw = math.atan2(-desired.X, -desired.Z)
+	ship.steer = math.clamp(-wrapAngle(desiredYaw - ship.yaw) * 2, -1, 1)
+	ship.throttle = throttle
+end
+
+-- ===== Leviathans in the Doldrums =====
+local function updateSeaKings(ship, dt)
+	for i = #ship.seaKings, 1, -1 do
+		local sk = ship.seaKings[i]
+		if sk.dead or not sk.model.Parent then
+			table.remove(ship.seaKings, i)
+		else
+			sk.angle = (sk.angle or 0) + dt * 0.5
+			local r = ship.radius + 26
+			local base = ship.root.Position
+			local bob = math.sin(os.clock() * 2 + sk.uid) * 3
+			local p = Vector3.new(base.X + math.cos(sk.angle) * r, 6 + bob, base.Z + math.sin(sk.angle) * r)
+			sk.model:PivotTo(CFrame.lookAt(p, Vector3.new(base.X, p.Y, base.Z)))
+			sk.biteTimer = (sk.biteTimer or 2) - dt
+			if sk.biteTimer <= 0 then
+				sk.biteTimer = 3
+				Net.FX("MobAttack", { model = sk.model, to = base, from = p, ranged = false }, base, 400)
+				Ship.DamageShip(ship, GameConfig.CalmBelt.SeaKingDamagePerHit * (1 + ship.calmTime / 30), nil, nil)
+			end
+		end
+	end
+end
+
+local function calmBeltTick(ship)
+	if ship.zone == "CalmBelt" then
+		ship.calmTime += 1
+		ship.outCalmTime = 0
+		if ship.owner then
+			toast(ship.owner, "⚠️ You entered the Doldrums! No wind, and Leviathans are coming!", "bad", "calm")
+		end
+		if ship.calmTime % GameConfig.CalmBelt.SeaKingSpawnInterval == 0 and #ship.seaKings < GameConfig.CalmBelt.MaxSeaKingsPerShip then
+			local a = math.random() * math.pi * 2
+			local p = ship.root.Position + Vector3.new(math.cos(a) * 60, -10, math.sin(a) * 60)
+			local sk = R.MonsterService.Spawn("Leviathan", p, { static = true, noRespawn = true })
+			if sk then
+				for _, d in ipairs(sk.model:GetDescendants()) do
+					if d:IsA("BasePart") then
+						d.Anchored = true
+					end
+				end
+				sk.angle = a
+				table.insert(ship.seaKings, sk)
+				Net.FX("SeaKingRise", { pos = p }, p, 600)
+			end
+		end
+	else
+		ship.calmTime = 0
+		if #ship.seaKings > 0 then
+			ship.outCalmTime += 1
+			if ship.outCalmTime > 8 then
+				for _, sk in ipairs(ship.seaKings) do
+					if not sk.dead then
+						R.MonsterService.Kill(sk)
+					end
+				end
+				ship.seaKings = {}
+			end
+		end
+	end
+end
+
+-- ===== physics step =====
+local function stepShip(ship, dt, now)
+	local pos = ship.root.Position
+	local zone, wind = SeaZones.Get(pos)
+	ship.zone, ship.wind = zone, wind
+	local buff = 0
+	for id, b in pairs(ship.buffs) do
+		if b.expires > now then
+			buff += b.value
+		else
+			ship.buffs[id] = nil
+		end
+	end
+	local maxSpeed
+	if ship.npc then
+		maxSpeed = ship.npc.speed * math.max(wind, 0.2)
+	else
+		maxSpeed = ShipStats.Speed(ship.stats, wind, buff)
+		-- The captain must be seated at the helm
+		local hum = R.PlayerService.Humanoid(ship.owner)
+		if not ship.seat or not hum or ship.seat.Occupant ~= hum then
+			ship.throttle = 0
+			ship.steer = 0
+		end
+	end
+	ship.maxSpeed = maxSpeed
+	local targetSpeed = ship.throttle >= 0 and ship.throttle * maxSpeed or ship.throttle * math.min(maxSpeed, 10)
+	local accel = targetSpeed > ship.speed and 9 or 14
+	if ship.speed < targetSpeed then
+		ship.speed = math.min(targetSpeed, ship.speed + accel * dt)
+	else
+		ship.speed = math.max(targetSpeed, ship.speed - accel * dt)
+	end
+	local turnRate = ship.npc and 0.45 or ship.stats.turnRate
+	ship.yaw -= ship.steer * turnRate * dt * math.clamp(0.35 + math.abs(ship.speed) / 40, 0.35, 1)
+	local fwd = Vector3.new(-math.sin(ship.yaw), 0, -math.cos(ship.yaw))
+	local vel = fwd * ship.speed
+	-- World bounds
+	local W = GameConfig.World
+	if (pos.X < W.MinX and vel.X < 0) or (pos.X > W.MaxX and vel.X > 0) then
+		vel = Vector3.new(0, 0, vel.Z)
+	end
+	if math.abs(pos.Z) > W.HalfZ and math.sign(vel.Z) == math.sign(pos.Z) then
+		vel = Vector3.new(vel.X, 0, 0)
+	end
+	-- Red Line / Reverse Mountain
+	local rl = Islands.RedLine
+	if pos.X > rl.x - rl.thickness / 2 - 90 and vel.X > 0 then
+		vel = Vector3.new(-6, 0, vel.Z)
+		ship.speed = math.min(ship.speed, 5)
+		if ship.owner then
+			local lvl = ship.owner:GetAttribute("Level") or 1
+			if lvl < GameConfig.GrandLineLevel then
+				toast(ship.owner, "Backflow Peak: reach Lv." .. GameConfig.GrandLineLevel .. " to climb to the Grand Current", "bad", "redline")
+			elseif not GameConfig.GrandLineOpen then
+				toast(ship.owner, "🌊 The Grand Current opens in the next update! Ready your ship.", "info", "redline")
+			end
+		end
+	end
+	local targetY = GameConfig.SeaLevel - G * 0.5 + 1
+	local vy = math.clamp((targetY - pos.Y) * 4, -25, 25)
+	ship.lv.VectorVelocity = vel + Vector3.new(0, vy, 0)
+	local t = now + ship.id
+	local roll = math.sin(t * 1.2) * 0.025 + ship.steer * -0.05 * math.clamp(ship.speed / 40, 0, 1)
+	local pitch = math.sin(t * 0.8) * 0.018
+	ship.ao.CFrame = CFrame.Angles(0, ship.yaw, 0) * CFrame.Angles(pitch, 0, roll)
+end
+
+function Ship.Start()
+	Net.Handle("LaunchShip", function(player, data)
+		if Ship.GetShipOf(player) then
+			return false, "You already have a ship at sea"
+		end
+		R.ShipyardService.ExitBuild(player)
+		local p = R.DataService.Get(player)
+		return Ship.Launch(player, math.clamp(math.floor(tonumber(data.slot) or p.activeShip or 1), 1, 3))
+	end, 2)
+
+	Net.Handle("DockShip", function(player)
+		return Ship.Dock(player)
+	end, 1)
+
+	Net.Handle("FireCannons", function(player, data)
+		local ship = Ship.GetShipOf(player)
+		if not ship or shipUnder(player) ~= ship then
+			return false, "You must be aboard your own ship"
+		end
+		local target = typeof(data.target) == "Vector3" and data.target
+		if not target then
+			return false
+		end
+		local now = os.clock()
+		if now - ship.lastVolley < cfg.ReloadTime then
+			return false, "Reloading"
+		end
+		if ship.stats.cannonsManned <= 0 then
+			return false, "No crew to man the cannons (hire at a tavern)"
+		end
+		local d = R.PlayerService.Derived(player) or {}
+		local fired = volley(ship, target, ship.stats.cannonsManned, 1 + (d.cannonDamage or 0), player, 6)
+		if fired == 0 then
+			return false, "Target is outside your firing arcs (turn broadside)"
+		end
+		ship.lastVolley = now
+		ship.reloadEnd = workspace:GetServerTimeNow() + cfg.ReloadTime
+		setAttrs(ship)
+		return true
+	end, 0.3)
+
+	Net.Get("ShipInput").OnServerEvent:Connect(function(player, throttle, steer)
+		local ship = Ship.GetShipOf(player)
+		if not ship or type(throttle) ~= "number" or type(steer) ~= "number" then
+			return
+		end
+		if throttle ~= throttle or steer ~= steer then
+			return
+		end
+		ship.throttle = math.clamp(throttle, -0.4, 1)
+		ship.steer = math.clamp(steer, -1, 1)
+	end)
+
+	-- physics loop
+	RunService.Heartbeat:Connect(function(dt)
+		local now = os.clock()
+		for _, ship in pairs(ships) do
+			if not ship.sinking and ship.root.Parent then
+				local ok, err = pcall(stepShip, ship, dt, now)
+				if not ok then
+					warn("[ShipService]", err)
+				end
+				if #ship.seaKings > 0 then
+					updateSeaKings(ship, dt)
+				end
+			end
+		end
+	end)
+
+	-- AI + attributes + Doldrums (slower tick than physics)
+	task.spawn(function()
+		local acc = 0
+		while true do
+			task.wait(0.2)
+			acc += 0.2
+			local now = os.clock()
+			for _, ship in pairs(ships) do
+				if not ship.sinking then
+					if ship.npc then
+						pcall(npcThink, ship, now)
+					end
+					setAttrs(ship)
+				end
+			end
+			if acc >= 1 then
+				acc = 0
+				for _, ship in pairs(ships) do
+					if not ship.sinking then
+						if ship.owner then
+							calmBeltTick(ship)
+							-- Discover islands while sailing past
+							local island, d = SeaZones.NearestIsland(ship.root.Position)
+							if island and d < island.radius + 350 then
+								for _, pl in ipairs(playersOn(ship)) do
+									local p = R.DataService.Get(pl)
+									if p and not p.unlocked[island.id] then
+										R.PlayerService.UnlockIsland(pl, island.id)
+									end
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+	end)
+
+	task.spawn(npcSpawner)
+end
+
+return Ship

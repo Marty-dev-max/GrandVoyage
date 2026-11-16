@@ -1,0 +1,1 @@
+-- Disables Roblox auto HP regen (the game handles regen in CombatService)

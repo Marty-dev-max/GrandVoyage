@@ -1,0 +1,11 @@
+# build outputs (regenerate with tools/build.sh); the baked place file IS committed so Studio users can open it
+build/*
+!build/GrandVoyage.rbxl
+# local tool caches
+__pycache__/
+*.pyc
+node_modules/
+.DS_Store
+# secrets: never commit API keys
+.env
+*.key

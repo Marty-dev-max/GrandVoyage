@@ -1,0 +1,119 @@
+-- ShipStats: weight / speed / HP / cannons from a ship design
+-- design.parts = { { id="PlankBlock", x=0,y=0,z=0, r=0 }, ... }  (x,y,z = grid cell, r = 0..3 quarter turns)
+local Shared = script.Parent.Parent
+local GameConfig = require(Shared.Config.GameConfig)
+local ShipParts = require(Shared.Config.ShipParts).Parts
+
+local S = {}
+local cfg = GameConfig.Ship
+
+function S.Footprint(partDef, r)
+	local sz = partDef.size
+	if r % 2 == 1 then
+		return Vector3.new(sz.Z, sz.Y, sz.X)
+	end
+	return sz
+end
+
+-- List of cells a part occupies
+function S.Cells(p)
+	local def = ShipParts[p.id]
+	local fp = S.Footprint(def, p.r or 0)
+	local cells = {}
+	for dx = 0, fp.X - 1 do
+		for dy = 0, fp.Y - 1 do
+			for dz = 0, fp.Z - 1 do
+				table.insert(cells, Vector3.new(p.x + dx, p.y + dy, p.z + dz))
+			end
+		end
+	end
+	return cells
+end
+
+function S.CellKey(v)
+	return v.X .. "," .. v.Y .. "," .. v.Z
+end
+
+-- bonus = { shipSpeed=0.1, shipHp=0.15 } from cards/class
+function S.Compute(design, crew, bonus)
+	bonus = bonus or {}
+	local r = {
+		weight = 0,
+		hp = 0,
+		thrust = 0,
+		oars = 0,
+		oarPower = 0,
+		cannons = {},
+		crewCap = 0,
+		speedBonus = 0,
+		helm = 0,
+		partCount = 0,
+		value = 0,
+	}
+	for _, p in ipairs(design.parts or {}) do
+		local def = ShipParts[p.id]
+		if def then
+			r.partCount += 1
+			r.weight += def.weight
+			r.hp += def.hp
+			r.thrust += def.thrust or 0
+			if def.oar then
+				r.oars += 1
+				r.oarPower = def.oar
+			end
+			if def.cannon then
+				table.insert(r.cannons, { part = p, damage = def.cannon.damage, range = def.cannon.range })
+			end
+			r.crewCap += def.crew or 0
+			r.speedBonus += def.speedBonus or 0
+			if p.id == "Helm" then
+				r.helm += 1
+			end
+			r.value += (def.cost and def.cost.beli) or 0
+		end
+	end
+	r.hp = math.floor(r.hp * (1 + (bonus.shipHp or 0)))
+	r.crewCap = math.max(r.crewCap, cfg.BaseCrewCapacity)
+	r.crew = math.min(crew or 0, r.crewCap)
+	r.speedBonus += bonus.shipSpeed or 0
+	r.turnRate = cfg.BaseTurnRate * 300 / (300 + r.weight * 0.25)
+	r.cannonsManned = math.min(#r.cannons, r.crew)
+	r.valid = r.helm == 1 and r.thrust + r.oars > 0
+	return r
+end
+
+-- Top speed for a given wind (studs/s)
+function S.Speed(stats, windFactor, extraBonus)
+	local sail = stats.thrust * windFactor * (1 + stats.speedBonus + (extraBonus or 0))
+	local oarFactor = windFactor <= 0.01 and 0.4 or 1
+	local oar = math.min(stats.oars, stats.crew) * stats.oarPower * oarFactor
+	local t = sail + oar
+	if t <= 0 then
+		return 0
+	end
+	return cfg.MaxSpeed * t / (t + stats.weight * cfg.WeightDrag)
+end
+
+-- Starter ship for new players
+function S.StarterDesign()
+	local parts = {}
+	local function add(id, x, y, z, rr)
+		table.insert(parts, { id = id, x = x, y = y, z = z, r = rr or 0 })
+	end
+	for x = 2, 6 do
+		for z = 4, 14 do
+			add("PlankBlock", x, 0, z)
+		end
+	end
+	for x = 3, 5 do
+		add("PlankWedge", x, 0, 15)
+	end
+	add("Helm", 4, 1, 5)
+	add("SmallMast", 4, 1, 10)
+	add("LightCannon", 2, 1, 9, 1) -- r=1 faces port (-X)
+	add("LightCannon", 6, 1, 9, 3) -- r=3 faces starboard (+X)
+	add("OarBench", 3, 1, 12)
+	return { name = "Little Dinghy", parts = parts }
+end
+
+return S

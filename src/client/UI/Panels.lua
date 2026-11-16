@@ -25,6 +25,7 @@ local New = UI.New
 local Classes = ClassesCfg.Classes
 local COIN = UI.CurrencyIcon
 local FruitsCfg = require(ReplicatedStorage.Shared.Config.Fruits)
+local Tex = require(ReplicatedStorage.Shared.Config.Textures)
 local PearlsCfg = require(ReplicatedStorage.Shared.Config.Pearls)
 local PetsCfg = require(ReplicatedStorage.Shared.Config.Pets)
 local DailiesCfg = require(ReplicatedStorage.Shared.Config.Dailies)
@@ -128,7 +129,12 @@ local function itemTile(parent, entry, onClick, selected)
 	UI.Corner(b, 12)
 	local tier = UI.RarityStyle(b, def.rarity, selected)
 	UI.Tactile(b)
-	UI.Text(b, def.icon or kindIcon[def.kind] or "❔", 30, T.Text, "Display", { Size = UDim2.new(1, 0, 0.55, 0), Position = UDim2.fromOffset(0, 4), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 4 })
+	local iconId = UI.ItemIconId(def)
+	if iconId then
+		New("ImageLabel", { BackgroundTransparency = 1, Image = iconId, ScaleType = Enum.ScaleType.Fit, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 2), Size = UDim2.fromOffset(56, 56), ZIndex = 4, Parent = b })
+	else
+		UI.Text(b, def.icon or kindIcon[def.kind] or "❔", 30, T.Text, "Display", { Size = UDim2.new(1, 0, 0.55, 0), Position = UDim2.fromOffset(0, 4), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 4 })
+	end
 	UI.Text(b, def.name, 12, T.Text, "Bold", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 3, 1, -3), Size = UDim2.new(1, -6, 0, 28), TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Bottom, ZIndex = 4 })
 	if (entry.qty or 1) > 1 then
 		UI.Text(b, "x" .. entry.qty, 14, T.Text, "Number", { Position = UDim2.new(1, -44, 0, 2), Size = UDim2.fromOffset(40, 16), TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 4 })
@@ -181,13 +187,36 @@ function Panels.Inventory()
 		selectedUid = entry.uid
 		UI.List(right, nil, 8)
 		local tier = ItemDB.Rarity(def)
-		local head = New("Frame", { Size = UDim2.new(1, 0, 0, 96), Parent = right })
+		-- showcase (Anime Vanguards style): the item floats over spinning rarity-colored rays
+		local head = New("Frame", { Size = UDim2.new(1, 0, 0, 190), ClipsDescendants = true, Parent = right })
 		UI.Corner(head, 12)
 		UI.RarityStyle(head, def.rarity, true)
-		UI.Text(head, def.icon or kindIcon[def.kind] or "", 44, T.Text, "Display", { Size = UDim2.fromOffset(70, 96), Position = UDim2.fromOffset(6, 0), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 4 })
-		UI.Text(head, ItemDB.DisplayName(entry), 22, T.Text, "Display", { Position = UDim2.fromOffset(80, 14), Size = UDim2.new(1, -90, 0, 50), ZIndex = 4 })
-		UI.Text(head, string.upper(tier.id), 15, T.Text, "Bold", { Position = UDim2.fromOffset(80, 64), Size = UDim2.new(1, -90, 0, 20), ZIndex = 4 })
-		UI.Text(right, describe(entry, def), 16, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 200), TextYAlignment = Enum.TextYAlignment.Top })
+		local rays = New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.focuslines, ImageColor3 = tier.color:Lerp(Color3.new(1, 1, 1), 0.5), ImageTransparency = 0.45, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.fromOffset(300, 300), ZIndex = 3, Parent = head })
+		New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.glow, ImageColor3 = tier.color:Lerp(Color3.new(1, 1, 1), 0.3), ImageTransparency = 0.15, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.fromOffset(170, 170), ZIndex = 3, Parent = head })
+		local iconId = UI.ItemIconId(def)
+		local big
+		if iconId then
+			big = New("ImageLabel", { BackgroundTransparency = 1, Image = iconId, ScaleType = Enum.ScaleType.Fit, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.fromOffset(124, 124), ZIndex = 5, Parent = head })
+		else
+			big = UI.Text(head, def.icon or kindIcon[def.kind] or "", 64, T.Text, "Display", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.fromOffset(124, 124), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 5 })
+		end
+		UI.Pop(big, 0.5)
+		if tier.rank >= 4 then
+			Audio.Play("Rarity" .. tier.id)
+		end
+		local t0 = os.clock()
+		local conn
+		conn = RunService.RenderStepped:Connect(function(dt)
+			if not head.Parent then
+				conn:Disconnect()
+				return
+			end
+			rays.Rotation = (rays.Rotation + dt * 18) % 360
+			big.Position = UDim2.new(0.5, 0, 0.42, math.sin((os.clock() - t0) * 2.2) * 5)
+		end)
+		UI.Text(head, ItemDB.DisplayName(entry), 21, T.Text, "Display", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -22), Size = UDim2.new(1, -16, 0, 24), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 6, TextWrapped = false })
+		UI.Text(head, string.upper(tier.id), 14, tier.color:Lerp(Color3.new(1, 1, 1), 0.4), "Display", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -5), Size = UDim2.new(1, -16, 0, 16), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 6 })
+		UI.Text(right, describe(entry, def), 15, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 120), TextYAlignment = Enum.TextYAlignment.Top })
 		local row = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 110), Parent = right })
 		New("UIGridLayout", { CellSize = UDim2.fromOffset(150, 46), CellPadding = UDim2.fromOffset(8, 8), Parent = row })
 		if def.slot then

@@ -24,6 +24,8 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
 | Render UI snapshots to PNG | `node tools/ui_render.js build/ui docs/screenshots/daybreak.png` (needs Playwright) |
 | Lint | `selene src` (custom std in `rbx.yml`) |
 | Upload sounds | `ROBLOX_API_KEY=... python3 tools/upload_sfx.py --user 1527424396` (already done: ids are in `Config/Sounds.lua`) |
+| Icon pack (3D-rendered, Blender) | `python tools/blender/render_icons.py -- --out assets/icons` (bpy module or `blender -b -P`), then `ROBLOX_API_KEY=... python3 tools/upload_images.py assets/icons src/shared/Config/Icons.lua` |
+| VFX textures | `python3 tools/gen_vfx.py`, then `python3 tools/upload_images.py assets/vfx src/shared/Config/Textures.lua` |
 | Blender models | `blender -b -P tools/blender/generate_assets.py -- --out assets/models --preview` |
 
 ## Rules learned the hard way
@@ -38,6 +40,9 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   (one RemoteFunction `Request`, a `Push` RemoteEvent, unreliable `FX`). Validate every payload.
 - Quests: report progress with `R.QuestService.Event(player, kind, target)`; successful requests listed in
   `QuestService.ACTION_EVENTS` are picked up automatically via `Net.AfterHandle`.
+- Icons: pass an emoji or an icon name to `UI.Icon` / `UI.IconChip`; emoji with a rendered icon (see `EMOJI_ICON` in UIKit)
+  show the image automatically. Items use `UI.ItemIconId(def)`. New icon = builder in `render_icons.py` + render + upload.
+- VFX are ParticleEmitter/Beam based with our own textures (`Config/Textures`); see the toolkit at the top of `Controllers/VFX.lua`.
 - UI is built only from `src/client/UI/UIKit.lua` helpers (Window, Section, TabBar, IconChip, Button, Bar, Card, Toast, Notice...).
   Hover makes buttons "jump"; keep that for new buttons by using `UI.Button` / `UI.Tactile`.
 

@@ -86,6 +86,16 @@ function render(n, parentLayout) {
     st.push(`display:flex;flex-wrap:wrap;gap:${mods.grid.cellPad[1]}px ${mods.grid.cellPad[0]}px;align-content:flex-start`);
   }
   let inner = '';
+  if (n.Image) {
+    // rbxassetid -> local PNG (icons / VFX textures we uploaded ourselves)
+    const id = String(n.Image).replace('rbxassetid://', '');
+    const file = IMAGE_FILES[id];
+    if (file) {
+      const tint = n.ImageColor3 ? `filter:drop-shadow(0 0 0 transparent);` : '';
+      const op = 1 - (n.ImageTransparency || 0);
+      inner += `<img src="data:image/png;base64,${file}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:${op};${tint}">`;
+    }
+  }
   const isText = n.Text !== undefined && n.cls !== 'ScreenGui';
   if (isText) {
     const ctx = mods.strokes.find(s => s.mode === 'Contextual' && s.enabled !== false);
@@ -102,6 +112,19 @@ function render(n, parentLayout) {
   const childLayout = layoutKind === 'grid' ? { cell: mods.grid.cell } : layoutKind;
   for (const c of kids) inner += render(c, childLayout);
   return `<div data-name="${(n.name || '').replace(/"/g, '')}" style="${st.join(';')}">${inner}</div>`;
+}
+
+// map uploaded asset ids back to the local PNGs (assets/*/uploaded.json)
+const IMAGE_FILES = {};
+for (const folder of ['assets/icons', 'assets/vfx']) {
+  const p = path.join(__dirname, '..', folder, 'uploaded.json');
+  if (fs.existsSync(p)) {
+    const m = JSON.parse(fs.readFileSync(p, 'utf8'));
+    for (const [name, v] of Object.entries(m)) {
+      const f = path.join(__dirname, '..', folder, name + '.png');
+      if (fs.existsSync(f)) IMAGE_FILES[v.id] = fs.readFileSync(f).toString('base64');
+    }
+  }
 }
 
 (async () => {

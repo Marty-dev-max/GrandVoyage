@@ -344,6 +344,11 @@ local function dump(inst)
 		try("Rotation")
 		try("ClipsDescendants")
 		try("AutomaticSize", enumName)
+		if inst:IsA("ImageLabel") or inst:IsA("ImageButton") then
+			try("Image")
+			try("ImageColor3", color)
+			try("ImageTransparency")
+		end
 		if inst:IsA("TextLabel") or inst:IsA("TextButton") or inst:IsA("TextBox") then
 			try("Text")
 			try("TextColor3", color)

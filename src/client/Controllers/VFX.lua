@@ -549,11 +549,15 @@ handlers.PetHit = function(d)
 	VFX.Projectile(d.from, d.to, Color3.fromRGB(150, 255, 190), 0.6, 0.25, 2)
 end
 handlers.ChestOpen = function(d)
+	-- treasure! a golden light pillar shoots out of the chest, coins and sparkles burst, a ring rolls out
 	local Rarity = require(game:GetService("ReplicatedStorage").Shared.Modules.Rarity)
-	local c = Rarity.Get(d.rarity).color
-	VFX.Sparks(d.pos + Vector3.new(0, 3, 0), c, 26, 16)
-	VFX.Ring(d.pos, 8, c, 0.6, 0.4)
-	VFX.Burst(d.pos + Vector3.new(0, 2, 0), 6, Color3.new(1, 1, 1), 0.4)
+	local c = Rarity.Get(d.rarity).color:Lerp(Color3.fromRGB(255, 215, 90), 0.5)
+	local base = d.pos + Vector3.new(0, 1.5, 0)
+	emit(base, { Texture = Tex.glow, Color = ColorSequence.new(Color3.fromRGB(255, 245, 200), c), Size = seq(3.5, 0.5), Transparency = seq(0, 1), Lifetime = NumberRange.new(0.6, 1.1), Speed = NumberRange.new(28, 45), SpreadAngle = Vector2.new(6, 6), EmissionDirection = Enum.NormalId.Top, Brightness = 2 }, 40, 1.2)
+	emit(base, { Texture = Tex.sparkle, Color = ColorSequence.new(Color3.fromRGB(255, 230, 120)), Size = seq(1.6, 0), Lifetime = NumberRange.new(0.6, 1.2), Speed = NumberRange.new(10, 22), SpreadAngle = Vector2.new(40, 40), EmissionDirection = Enum.NormalId.Top, Acceleration = Vector3.new(0, -30, 0), RotSpeed = NumberRange.new(-300, 300) }, 26, 1.3)
+	VFX.Flash(base, c, 8)
+	VFX.Ring(d.pos - Vector3.new(0, 0.5, 0), 10, c, 0.6)
+	VFX.Focus(base, Color3.fromRGB(255, 240, 200))
 end
 handlers.JobChange = function(d)
 	for i = 0, 3 do

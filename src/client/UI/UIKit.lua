@@ -407,6 +407,67 @@ function UI.Card(parent, size, color)
 	return f
 end
 
+-- ===== 3D-rendered icon pack (tools/blender/render_icons.py -> Config/Icons) =====
+-- Code can keep passing emoji: the ones below map to rendered icons automatically, anything else stays text.
+local Icons = require(ReplicatedStorage.Shared.Config.Icons)
+UI.Icons = Icons
+local EMOJI_ICON = {
+	["🎒"] = "bag", ["📊"] = "stats", ["✨"] = "skills", ["⚓"] = "anchor", ["🏴"] = "flag", ["👥"] = "party",
+	["🗺️"] = "map", ["👑"] = "crown", ["📜"] = "scroll", ["🐾"] = "paw", ["🦪"] = "pearl", ["⚙️"] = "gear",
+	["🪙"] = "coin", ["☠"] = "skull", ["☠️"] = "skull", ["🏳"] = "whiteflag", ["🔨"] = "hammer", ["🃏"] = "card",
+	["🥚"] = "egg", ["🪺"] = "golden_egg", ["🪤"] = "bait", ["🧰"] = "chest", ["📘"] = "book", ["⛵"] = "ship",
+	["🧿"] = "charm", ["🍖"] = "meat", ["🪵"] = "wood", ["⚔️"] = "sword", ["👊"] = "knuckles", ["🛍️"] = "chest",
+	["🏆"] = "crown", ["📅"] = "scroll", ["🎁"] = "chest", ["📖"] = "book", ["🧑‍✈️"] = "party", ["🎓"] = "book",
+	["🛡️"] = "armor", ["💉"] = "medkit", ["🧭"] = "map", ["🎯"] = "slingshot", ["🍳"] = "boots",
+}
+function UI.IconId(icon)
+	if type(icon) ~= "string" or icon == "" then
+		return nil
+	end
+	if string.sub(icon, 1, 13) == "rbxassetid://" then
+		return icon
+	end
+	return Icons[EMOJI_ICON[icon] or icon]
+end
+
+-- icon name for an item definition (Config/Items)
+local ITEM_ICON = {
+	MeatOnBone = "meat", BigFeast = "meat", TangerineJuice = "juice", RepairKit = "repairkit", RefineGuard = "charm",
+	CaptainsLog = "book", SeaEgg = "egg", GoldenEgg = "golden_egg", SeaBait = "bait", Wood = "wood", TreasureWood = "wood",
+	SailCloth = "cloth", SteelOre = "ore", IronIngot = "ore", Gunpowder = "ore", TidecoreShard = "shard", PureTidecore = "shard",
+	LeviathanScale = "shard", TreasureMap = "map", WantedPoster = "scroll", MarineBadge = "charm", CompassCharm = "charm",
+	TangerinePin = "charm", SharkToothNecklace = "charm",
+}
+local WEAPON_ICON = { Sword = "sword", Knuckles = "knuckles", Slingshot = "slingshot", Shoes = "boots", StormBaton = "staff", MedKit = "medkit", Hammer = "hammer" }
+local KIND_ICON = { Armor = "armor", Headgear = "hat", Accessory = "charm", Card = "card", Egg = "egg", Consumable = "potion", Material = "ore" }
+function UI.ItemIconId(def)
+	if not def then
+		return nil
+	end
+	local name = ITEM_ICON[def.id]
+		or (def.fruit and ("fruit_" .. string.lower(def.fruit)))
+		or (def.weaponType and WEAPON_ICON[def.weaponType])
+		or KIND_ICON[def.kind]
+	return name and Icons[name] or nil
+end
+
+-- An icon that is a rendered image when one exists, emoji text otherwise. Returns the GuiObject.
+function UI.Icon(parent, icon, size, props)
+	local id = UI.IconId(icon)
+	local o
+	if id then
+		o = New("ImageLabel", { BackgroundTransparency = 1, Image = id, ScaleType = Enum.ScaleType.Fit, Size = UDim2.fromOffset(size, size), Parent = parent })
+	else
+		o = UI.Text(parent, icon or "", math.floor(size * 0.8), Color3.new(1, 1, 1), "Display", { Size = UDim2.fromOffset(size, size), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false })
+	end
+	if props then
+		for k, v in pairs(props) do
+			o[k] = v
+		end
+	end
+	return o
+end
+
 -- Rounded square icon chip (gradient + outline), the building block of section headers and tabs
 function UI.IconChip(parent, icon, color, size)
 	size = size or 34
@@ -416,7 +477,12 @@ function UI.IconChip(parent, icon, color, size)
 	UI.Gradient(chip, color:Lerp(Color3.new(1, 1, 1), 0.3), color:Lerp(Color3.new(0, 0, 0), 0.25), 90)
 	UI.Stroke(chip, T.Edge, 2.5)
 	New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.8, Size = UDim2.new(1, -6, 0.4, 0), Position = UDim2.fromOffset(3, 2), Parent = chip }, { New("UICorner", { CornerRadius = UDim.new(0, math.floor(size * 0.22)) }) })
-	UI.Text(chip, icon or "", math.floor(size * 0.62), Color3.new(1, 1, 1), "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false })
+	if UI.IconId(icon) then
+		-- rendered icons pop slightly out of the chip (Anime Vanguards style)
+		UI.Icon(chip, icon, math.floor(size * 1.12), { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.47), ZIndex = (chip.ZIndex or 1) + 1 })
+	else
+		UI.Text(chip, icon or "", math.floor(size * 0.62), Color3.new(1, 1, 1), "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false })
+	end
 	return chip
 end
 

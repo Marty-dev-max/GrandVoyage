@@ -112,6 +112,7 @@ Mobile: the thumbstick also steers the ship (VehicleSeat). There is a ⚔️ att
 | Readability: range rings, target ring, "!" aggro, level-colored names, compass, edge arrows, nav line | `client/Controllers/Readability` |
 | Graphics presets Low/Medium/High/Ultra, audio sliders, UI scale | `client/Controllers/Settings` |
 | UI: Anime Vanguards-style dark panels with slanted accent tabs and icon chips, icon section headers and tab bars, **Fredoka One** display font, rarity gradients, toggles, notice bars, hover-jump motion + sounds | `client/UI/UIKit` |
+| **3D-rendered icon pack** (46 icons, Blender) + anime-style particle VFX textures, auto-uploaded | `tools/blender/render_icons.py`, `tools/gen_vfx.py`, `tools/upload_images.py`, `Config/Icons`, `Config/Textures` |
 | **Daily quests, achievements, titles** (Quests window, key J) | `Config/Dailies`, `Config/Achievements`, `ProgressService` |
 | **Brawler** starting class, per-class progress, class switching at the Job Master | `Config/Classes`, `PlayerService` |
 | **Cursed Fruits**: 6 fruits, mastery, drops + natural spawns, Seastone | `Config/Fruits`, `FruitService` |

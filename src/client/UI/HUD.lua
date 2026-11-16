@@ -38,9 +38,18 @@ local function glass(parent, size, pos, anchor)
 	return f
 end
 
+-- swap a pill's icon (rendered image or emoji text)
+local function setPillIcon(obj, icon)
+	if obj:IsA("ImageLabel") then
+		obj.Image = UI.IconId(icon) or ""
+	else
+		obj.Text = icon
+	end
+end
+
 local function pill(parent, pos, icon, color)
 	local f = glass(parent, UDim2.fromOffset(240, 44), pos, Vector2.new(1, 0))
-	local ic = UI.Text(f, icon, 28, color, "Display", { Size = UDim2.fromOffset(40, 44), Position = UDim2.fromOffset(6, -2), TextXAlignment = Enum.TextXAlignment.Center })
+	local ic = UI.Icon(f, icon, 46, { Position = UDim2.fromOffset(0, -2), Name = "PillIcon" })
 	local label = UI.Text(f, "0", 24, color, "Number", { Size = UDim2.new(1, -56, 1, 0), Position = UDim2.fromOffset(46, 0), TextXAlignment = Enum.TextXAlignment.Right })
 	local _ = ic
 	return f, label
@@ -303,7 +312,7 @@ local function buildStatus()
 		return "<b>Doubloons</b>\nEarned from monsters, ships and bosses.", T.Gold
 	end)
 	local b, bl = pill(UI.Root, UDim2.new(1, -16, 0, 66), "☠", T.Pirate)
-	bounty = { frame = b, label = bl, icon = b:FindFirstChildOfClass("TextLabel") }
+	bounty = { frame = b, label = bl, icon = b:FindFirstChild("PillIcon") }
 	local pf, pl = pill(UI.Root, UDim2.new(1, -16, 0, 116), PearlsCfg.Icon, Color3.fromRGB(150, 225, 255))
 	HUD.pearls = pl
 	UI.Tooltip(pf, function()
@@ -348,7 +357,7 @@ local function menuTile(parent, it)
 	local stripes = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.88, Size = UDim2.new(0.5, 0, 1, 0), Position = UDim2.fromScale(0.5, 0), Parent = tile })
 	UI.Corner(stripes, 14)
 	New("UIGradient", { Rotation = 60, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.45, 1), NumberSequenceKeypoint.new(0.46, 0), NumberSequenceKeypoint.new(1, 0) }), Parent = stripes })
-	UI.Text(tile, it[1], 32, Color3.new(1, 1, 1), "Display", { Size = UDim2.new(1, 0, 0, 44), Position = UDim2.fromOffset(0, 4), TextXAlignment = Enum.TextXAlignment.Center })
+	UI.Icon(tile, it[1], 54, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 0) })
 	UI.Text(tile, string.upper(it[5]), 14, Color3.new(1, 1, 1), "Display", { AnchorPoint = Vector2.new(0, 1), Size = UDim2.new(1, 0, 0, 18), Position = UDim2.new(0, 0, 1, -4), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false })
 	if it[4] then
 		local key = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(6, 6), Size = UDim2.fromOffset(22, 22), BackgroundColor3 = T.PanelDeep, ZIndex = 3, Parent = tile })
@@ -580,15 +589,15 @@ local function refresh()
 	local pearls = player:GetAttribute("Pearls") or (prof and ((prof.pearls or 0) + (prof.pearlsBound or 0))) or 0
 	HUD.pearls.Text = UI.Format(pearls)
 	if faction == "Pirate" then
-		bounty.icon.Text = "☠"
+		setPillIcon(bounty.icon, "☠")
 		bounty.label.Text = UI.Short(player:GetAttribute("Bounty") or 0)
 		bounty.label.TextColor3 = T.Pirate
 	elseif faction == "Marine" then
-		bounty.icon.Text = "⚓"
+		setPillIcon(bounty.icon, "⚓")
 		bounty.label.Text = UI.Format(player:GetAttribute("Merit") or 0) .. " Merit"
 		bounty.label.TextColor3 = T.Marine
 	else
-		bounty.icon.Text = "🏳"
+		setPillIcon(bounty.icon, "🏳")
 		bounty.label.Text = "Civilian"
 		bounty.label.TextColor3 = T.TextSoft
 	end

@@ -75,6 +75,18 @@ function Settings.Apply()
 	local k = Settings.Knobs[v.quality] or Settings.Knobs.High
 	Lighting.GlobalShadows = k.shadows
 	setEnabled("Bloom", k.post)
+	-- anime look: lower threshold so additive VFX and neon glow (the baked map ships 1.6, too high for particles)
+	local bloom = game:GetService("Lighting"):FindFirstChild("Bloom")
+	if bloom then
+		bloom.Threshold = 1.05
+		bloom.Intensity = v.quality == "Ultra" and 0.85 or 0.7
+		bloom.Size = 26
+	end
+	local cc = game:GetService("Lighting"):FindFirstChild("Stylize")
+	if cc then
+		cc.Saturation = 0.32
+		cc.Contrast = 0.1
+	end
 	setEnabled("SunRays", k.post and v.quality ~= "Medium")
 	setEnabled("Stylize", true)
 	local dof = Lighting:FindFirstChild("UltraDOF")

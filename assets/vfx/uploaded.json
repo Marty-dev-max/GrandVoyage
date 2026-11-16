@@ -1,0 +1,46 @@
+{
+ "burst": {
+  "id": "131596201558088",
+  "sha1": "590a145e3675d35e5c0725416b5ac2ef659315ba"
+ },
+ "crack": {
+  "id": "96552388532690",
+  "sha1": "bb7110408df4d1080a0403f08cecfe6595d13adf"
+ },
+ "flame": {
+  "id": "97002980212489",
+  "sha1": "b9e5178f689b84dbe62e8c3fb0afc3ffd87411cf"
+ },
+ "focuslines": {
+  "id": "134938825303806",
+  "sha1": "a58fb739b805f2184b6e623cf063235e71fd3819"
+ },
+ "glow": {
+  "id": "75153249216307",
+  "sha1": "5c2775bc7d594fceb32132ba7555635b452a684b"
+ },
+ "lightning": {
+  "id": "87750500562597",
+  "sha1": "9733c2a63d2237af8840df27f0797aea7a59d97e"
+ },
+ "ring": {
+  "id": "82570570668357",
+  "sha1": "51624af8ecc7f93fda49126fcb5f206c207f7b8f"
+ },
+ "slash": {
+  "id": "83498327919546",
+  "sha1": "2d2eb54dc54e2675f6434973fa6f59fa76fbd8ee"
+ },
+ "smoke": {
+  "id": "135113423743602",
+  "sha1": "26aabf703f3eb1ba6bff7c3e5ab30e4c14a7cb28"
+ },
+ "sparkle": {
+  "id": "121346578428852",
+  "sha1": "5b303fd7ec8c380cba800c79bb731a6dfde8aff3"
+ },
+ "speedline": {
+  "id": "120443709779515",
+  "sha1": "94d00c520f3a01aaf9a9ee025b49b91c3ae8dfcb"
+ }
+}

@@ -1,6 +1,8 @@
 -- GameConfig: core constants. Tune game balance here.
 return {
 	GameName = "Grand Voyage",
+	-- bump on every change: shown bottom-right in game and printed in Output, so you can tell which code is running
+	Version = "0.6.4",
 	SagaName = "Azure East Saga",
 	DataStoreName = "GV_Player_v1",
 	GuildStoreName = "GV_Guild_v1",

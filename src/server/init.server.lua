@@ -45,4 +45,4 @@ for _, name in ipairs(order) do
 		warn("[GrandVoyage] " .. name .. ".Start failed: " .. tostring(err))
 	end
 end
-print("[GrandVoyage] server ready")
+print("[GrandVoyage] server ready  v" .. require(ReplicatedStorage.Shared.Config.GameConfig).Version)

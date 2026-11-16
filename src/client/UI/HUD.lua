@@ -12,6 +12,7 @@ local Rarity = require(Shared.Modules.Rarity)
 local FruitsCfg = require(Shared.Config.Fruits)
 local PearlsCfg = require(Shared.Config.Pearls)
 local PetsCfg = require(Shared.Config.Pets)
+local GameConfig = require(Shared.Config.GameConfig)
 local Net = require(Shared.Modules.Net)
 local UI = require(script.Parent.UIKit)
 local Panels = require(script.Parent.Panels)
@@ -313,6 +314,8 @@ local function buildStatus()
 	end)
 	pointsBtn.Parent.AnchorPoint = Vector2.new(1, 0)
 	pointsBtn.Parent.Position = UDim2.new(1, -16, 0, 168)
+	-- build stamp (bottom-right): tells you which version of the code Studio is running
+	UI.Text(UI.Root, "v" .. GameConfig.Version, 12, Color3.fromRGB(220, 220, 235), "Bold", { Name = "Version", AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -8, 1, -2), Size = UDim2.fromOffset(120, 14), TextXAlignment = Enum.TextXAlignment.Right, TextTransparency = 0.35 })
 	orbLayer = New("Frame", { Name = "OrbLayer", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 50, Parent = UI.Root })
 end
 
@@ -571,7 +574,10 @@ local function refresh()
 	bars.jobText.TextColor3 = ring.jobColor
 	ring.faceStroke.Color = faction == "Marine" and T.Marine or (faction == "Pirate" and T.Pirate or T.Gold)
 	money.Text = UI.Format(player:GetAttribute("Beli") or 0)
-	HUD.pearls.Text = UI.Format(player:GetAttribute("Pearls") or 0)
+	-- attribute (live) or the synced profile, whichever arrives first
+	local prof = State.profile
+	local pearls = player:GetAttribute("Pearls") or (prof and ((prof.pearls or 0) + (prof.pearlsBound or 0))) or 0
+	HUD.pearls.Text = UI.Format(pearls)
 	if faction == "Pirate" then
 		bounty.icon.Text = "☠"
 		bounty.label.Text = UI.Short(player:GetAttribute("Bounty") or 0)

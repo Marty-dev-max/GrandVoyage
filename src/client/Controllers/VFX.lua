@@ -206,10 +206,71 @@ end
 
 function VFX.Slash(cf, c, size)
 	size = size or 8
-	-- the crescent texture faces the camera; spin it so every slash looks a little different
+	-- two crescents (a white-hot core and a wider colored edge) that sweep a little apart, plus sparks off the blade
 	local rot = math.deg(select(3, cf:ToEulerAnglesXYZ()))
-	emit(cf.Position, { Texture = Tex.slash, Color = color(c), Size = seq(size * 0.9, size * 1.35), Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.5, 0.15), NumberSequenceKeypoint.new(1, 1) }), Lifetime = NumberRange.new(0.22), Speed = NumberRange.new(0), Rotation = NumberRange.new(rot - 30, rot + 30), RotSpeed = NumberRange.new(-420, -360), ZOffset = 2, Fixed = true }, 1, 0.25)
-	VFX.Sparks(cf.Position, c, 4, size * 0.6)
+	local spin = NumberRange.new(-460, -380)
+	emit(cf.Position, { Texture = Tex.slash, Color = color(c), Size = seq(size * 1.05, size * 1.6), Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(0.5, 0.35), NumberSequenceKeypoint.new(1, 1) }), Lifetime = NumberRange.new(0.26), Speed = NumberRange.new(0), Rotation = NumberRange.new(rot - 40, rot - 30), RotSpeed = spin, ZOffset = 1.5, Fixed = true }, 1, 0.3)
+	emit(cf.Position, { Texture = Tex.slash, Color = ColorSequence.new(Color3.new(1, 1, 1)), Size = seq(size * 0.8, size * 1.2), Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.4, 0.1), NumberSequenceKeypoint.new(1, 1) }), Lifetime = NumberRange.new(0.18), Speed = NumberRange.new(0), Rotation = NumberRange.new(rot - 20, rot - 10), RotSpeed = spin, ZOffset = 2.5, Fixed = true }, 1, 0.25)
+	VFX.Sparks(cf.Position, c, 5, size * 0.7)
+end
+
+-- melee impacts land on the strike frame of the CharAnim pose (seconds after the BasicAttack FX)
+local STRIKE = { JabR = 0.12, JabL = 0.12, Uppercut = 0.17, Kick = 0.15, SlashA = 0.15, SlashB = 0.14, Slam = 0.23, Shoot = 0.06 }
+local COMBO_CLIPS = { Knuckles = { "JabR", "JabL", "Uppercut" }, Shoes = { "Kick", "JabR", "Kick" }, Sword = { "SlashA", "SlashB" }, Hammer = { "Slam" } }
+VFX.IMPACT_DELAY = 0.12
+
+-- anime punch impact: a spiky white-hot star + colored glow, bigger with `size`
+function VFX.Impact(pos, c, size)
+	size = size or 4
+	emit(pos, { Texture = Tex.impact, Color = ColorSequence.new(Color3.new(1, 1, 1), c), Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, size * 0.4), NumberSequenceKeypoint.new(0.25, size * 1.3), NumberSequenceKeypoint.new(1, size * 1.5) }), Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.5, 0.2), NumberSequenceKeypoint.new(1, 1) }), Lifetime = NumberRange.new(0.14, 0.18), Rotation = NumberRange.new(-25, 25), Speed = NumberRange.new(0), ZOffset = 4, Fixed = true }, 1, 0.2)
+	emit(pos, { Texture = Tex.glow, Color = ColorSequence.new(c), Size = seq(size * 1.2, size * 2.2), Transparency = seq(0.25, 1), Lifetime = NumberRange.new(0.22), Speed = NumberRange.new(0), Fixed = true }, 1, 0.25)
+end
+
+-- shockwave ring that faces the direction of the blow (a vertical ring flying outward from the hit)
+function VFX.Shockwave(pos, dir, c, size)
+	size = size or 5
+	dir = (dir and dir.Magnitude > 0.01) and dir.Unit or Vector3.zAxis
+	local host = part(Vector3.new(0.2, 0.2, 0.2), Color3.new(1, 1, 1), CFrame.lookAt(pos, pos + dir), nil, nil, 1)
+	emit(pos, { Texture = Tex.ring, Color = color(c), Orientation = Enum.ParticleOrientation.VelocityPerpendicular, EmissionDirection = Enum.NormalId.Front, Speed = NumberRange.new(size * 1.2), SpreadAngle = Vector2.new(0, 0), Drag = 8, Size = seq(size * 0.3, size * 1.8), Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.05), NumberSequenceKeypoint.new(0.6, 0.4), NumberSequenceKeypoint.new(1, 1) }), Lifetime = NumberRange.new(0.28), Fixed = true }, 1, 0.3, host)
+	Debris:AddItem(host, 0.6)
+end
+
+-- speed lines streaking along a dash / kick (from -> to)
+function VFX.SpeedLines(from, to, c, count)
+	local dir = to - from
+	if dir.Magnitude < 0.1 then
+		return
+	end
+	local host = part(Vector3.new(2.5, 2.5, 0.2), Color3.new(1, 1, 1), CFrame.lookAt(from, to), nil, nil, 1)
+	emit(from, { Texture = Tex.speedline, Color = ColorSequence.new(c or Color3.new(1, 1, 1)), Orientation = Enum.ParticleOrientation.VelocityParallel, EmissionDirection = Enum.NormalId.Front, Shape = Enum.ParticleEmitterShape.Box, Speed = NumberRange.new(dir.Magnitude * 3, dir.Magnitude * 4.5), SpreadAngle = Vector2.new(3, 3), Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.2, 2.4), NumberSequenceKeypoint.new(1, 0) }), Rotation = NumberRange.new(90), Squash = seq(2.2, 2.2), Transparency = seq(0.15, 1), Lifetime = NumberRange.new(0.15, 0.25) }, count or 8, 0.3, host)
+	Debris:AddItem(host, 0.6)
+end
+
+-- a quick white frame over the whole screen (local player's crits, level up)
+local flashGui
+function VFX.ScreenFlash(c, strength, t)
+	if not flashGui then
+		local pg = game:GetService("Players").LocalPlayer:FindFirstChildOfClass("PlayerGui")
+		if not pg then
+			return
+		end
+		local g = Instance.new("ScreenGui")
+		g.Name = "GVScreenFlash"
+		g.IgnoreGuiInset = true
+		g.ResetOnSpawn = false
+		g.DisplayOrder = 50
+		local f = Instance.new("Frame")
+		f.Size = UDim2.fromScale(1, 1)
+		f.BorderSizePixel = 0
+		f.BackgroundTransparency = 1
+		f.Active = false
+		f.Parent = g
+		g.Parent = pg
+		flashGui = f
+	end
+	flashGui.BackgroundColor3 = c or Color3.new(1, 1, 1)
+	flashGui.BackgroundTransparency = 1 - (strength or 0.35)
+	tween(flashGui, t or 0.18, { BackgroundTransparency = 1 })
 end
 
 -- Damage number. Crits get a Hunting-Together-style red starburst behind the number.
@@ -310,13 +371,24 @@ function VFX.Beam(from, to, c, width, t, texture)
 	Debris:AddItem(h1, t + 0.1)
 end
 
-function VFX.Aura(char, c, t)
+function VFX.Aura(char, c, t, heal)
 	local root = char and char:FindFirstChild("HumanoidRootPart")
 	if not root then
 		return
 	end
 	t = t or 0.9
-	VFX.Ring(root.Position - Vector3.new(0, 2.8, 0), 5, c, 0.5)
+	local feet = root.Position - Vector3.new(0, 2.8, 0)
+	VFX.Ring(feet, 5, c, 0.5)
+	-- soft ground glow + three rings that rise up the body (buff "charging" look)
+	emit(feet + Vector3.new(0, 0.2, 0), flat({ Texture = Tex.glow, Color = ColorSequence.new(c), Size = seq(9, 11), Transparency = seq(0.35, 1), Lifetime = NumberRange.new(t), Fixed = true }), 1, t)
+	for i = 0, 2 do
+		task.delay(i * 0.12, function()
+			emit(feet + Vector3.new(0, 0.3, 0), { Texture = Tex.ring, Color = color(c), Orientation = Enum.ParticleOrientation.VelocityPerpendicular, EmissionDirection = Enum.NormalId.Top, Speed = NumberRange.new(9), SpreadAngle = Vector2.new(0, 0), Drag = 1.5, Size = seq(5.5, 3.5), Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(0.7, 0.4), NumberSequenceKeypoint.new(1, 1) }), Lifetime = NumberRange.new(0.55), Fixed = true }, 1, 0.6)
+		end)
+	end
+	if heal then
+		emit(root.Position, { Texture = Tex.plus, Color = ColorSequence.new(Color3.fromRGB(200, 255, 210), c), Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.15, 1.3), NumberSequenceKeypoint.new(1, 0.6) }), Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.7, 0.1), NumberSequenceKeypoint.new(1, 1) }), Lifetime = NumberRange.new(0.8, 1.2), Speed = NumberRange.new(3, 6), SpreadAngle = Vector2.new(50, 50), EmissionDirection = Enum.NormalId.Top, Shape = Enum.ParticleEmitterShape.Sphere, Drag = 1, Acceleration = Vector3.new(0, 2, 0) }, 10, 1.3)
+	end
 	-- a burst of rising glow motes and sparkles that follow the character
 	local att = Instance.new("Attachment")
 	att.Position = Vector3.new(0, -2, 0)
@@ -415,14 +487,20 @@ SkillFX.Smoke = function(d)
 	VFX.Ring(d.to - Vector3.new(0, 1.5, 0), r, Color3.fromRGB(220, 220, 230), 0.6)
 end
 SkillFX.Kick = function(d)
-	VFX.Slash(CFrame.lookAt(d.from, d.to) * CFrame.new(0, -1, -3) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(255, 170, 60), 9)
-	VFX.Burst(d.to, 4, Color3.fromRGB(255, 200, 80), 0.25)
+	local c = Color3.fromRGB(255, 170, 60)
+	VFX.SpeedLines(d.from, d.to, Color3.fromRGB(255, 220, 160), 10)
+	task.delay(STRIKE.Kick, function()
+		VFX.Slash(CFrame.lookAt(d.from, d.to) * CFrame.new(0, -1, -3) * CFrame.Angles(0, 0, math.pi / 2), c, 10)
+		VFX.Impact(d.to, c, 6)
+		VFX.Shockwave(d.to, d.to - d.from, Color3.fromRGB(255, 220, 140), 6)
+	end)
 end
 SkillFX.SpinKick = function(d)
 	VFX.Ring(d.from - Vector3.new(0, 1.5, 0), d.radius or 12, Color3.fromRGB(255, 170, 60), 0.35, 1.2)
 	VFX.Ring(d.from - Vector3.new(0, 0.5, 0), (d.radius or 12) * 0.7, Color3.fromRGB(255, 230, 120), 0.3, 0.8)
 end
 SkillFX.Food = function(d)
+	VFX.Aura(d.char, Color3.fromRGB(255, 200, 120), 0.7, true)
 	VFX.Sparks(d.from + Vector3.new(0, 3, 0), Color3.fromRGB(255, 220, 120), 16, 10)
 	VFX.Ring(d.from - Vector3.new(0, 2.5, 0), d.radius or 25, Color3.fromRGB(255, 200, 120), 0.7, 0.3)
 end
@@ -439,7 +517,7 @@ SkillFX.Lightning = function(d)
 end
 SkillFX.Heal = function(d)
 	VFX.Ring(d.from - Vector3.new(0, 2.5, 0), d.radius or 25, Color3.fromRGB(120, 255, 150), 0.7)
-	VFX.Aura(d.char, Color3.fromRGB(120, 255, 150), 0.7)
+	VFX.Aura(d.char, Color3.fromRGB(120, 255, 150), 0.7, true)
 	VFX.Sparks(d.from, Color3.fromRGB(150, 255, 170), 14, 8)
 end
 SkillFX.Burst = function(d)
@@ -447,7 +525,8 @@ SkillFX.Burst = function(d)
 end
 SkillFX.Smash = function(d)
 	local at = d.to or d.from
-	VFX.Flash(at, Color3.fromRGB(255, 220, 140), 7)
+	VFX.Impact(at, Color3.fromRGB(255, 200, 120), 8)
+	VFX.Shockwave(at, at - d.from, Color3.fromRGB(255, 230, 170), 8)
 	VFX.Focus(at, Color3.fromRGB(255, 240, 200))
 	VFX.Ring(at - Vector3.new(0, 2, 0), 9, Color3.fromRGB(255, 220, 140), 0.35)
 	VFX.Crack(at - Vector3.new(0, 2.4, 0), 6)
@@ -476,19 +555,62 @@ for name, color in pairs(auraColors) do
 	end
 end
 
+-- which hit of the combo this is (same 1.2 s window as CharAnim) -> later hits hit harder
+local comboState = setmetatable({}, { __mode = "k" })
+local function comboStep(char, weapon)
+	local list = COMBO_CLIPS[weapon]
+	if not list or typeof(char) ~= "Instance" then
+		return 1, list and list[1]
+	end
+	local st = comboState[char] or { n = 0, last = 0 }
+	comboState[char] = st
+	st.n = (os.clock() - st.last < 1.2) and (st.n % #list) + 1 or 1
+	st.last = os.clock()
+	return st.n, list[st.n]
+end
+
+local function hitPoint(d)
+	-- a little in front of the target, toward the attacker, at chest height
+	local dir = d.to - d.from
+	return d.to - (dir.Magnitude > 0.1 and dir.Unit * 1.2 or Vector3.zero), dir
+end
+
 local weaponFX = {
-	Sword = function(d)
-		VFX.Slash(CFrame.lookAt(d.from, d.to) * CFrame.new(0, 0, -3), Color3.new(1, 1, 1), 6)
+	Sword = function(d, n)
+		local cf = CFrame.lookAt(d.from, d.to) * CFrame.new(0, 0, -3)
+		VFX.Slash(n == 2 and cf * CFrame.Angles(0, 0, math.pi * 0.85) or cf, Color3.fromRGB(190, 230, 255), 7)
+		VFX.Impact(hitPoint(d), Color3.fromRGB(200, 230, 255), 3)
 	end,
 	Hammer = function(d)
-		VFX.Burst(d.to, 3, Color3.fromRGB(255, 220, 140), 0.2)
+		local at, dir = hitPoint(d)
+		VFX.Impact(at, Color3.fromRGB(255, 210, 130), 6)
+		VFX.Shockwave(at, dir, Color3.fromRGB(255, 230, 170), 6)
+		VFX.Ring(d.to - Vector3.new(0, 2.5, 0), 7, Color3.fromRGB(255, 210, 140), 0.35)
+		VFX.Smoke(d.to - Vector3.new(0, 2, 0), Color3.fromRGB(210, 195, 170), 4, 2.5)
 	end,
-	Knuckles = function(d)
-		VFX.Burst(d.to, 2.4, Color3.fromRGB(255, 150, 120), 0.15)
-		VFX.Sparks(d.to, Color3.fromRGB(255, 230, 200), 5, 8)
+	Knuckles = function(d, n)
+		-- jab, jab, then a big uppercut finisher with a shockwave and focus lines
+		local at, dir = hitPoint(d)
+		local c = Color3.fromRGB(255, 160, 110)
+		if n == 3 then
+			VFX.Impact(at + Vector3.new(0, 0.8, 0), c, 7)
+			VFX.Shockwave(at, dir + Vector3.new(0, dir.Magnitude * 0.6, 0), Color3.fromRGB(255, 220, 170), 7)
+			VFX.Focus(at, Color3.fromRGB(255, 235, 210))
+			VFX.Sparks(at, Color3.fromRGB(255, 230, 200), 10, 10)
+		else
+			VFX.Impact(at, c, 3.6)
+			VFX.Shockwave(at, dir, Color3.fromRGB(255, 220, 180), 3.5)
+			VFX.Sparks(at, Color3.fromRGB(255, 230, 200), 4, 7)
+		end
 	end,
-	Shoes = function(d)
-		VFX.Slash(CFrame.lookAt(d.from, d.to) * CFrame.new(0, -1.5, -3) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(255, 190, 90), 5)
+	Shoes = function(d, n)
+		local c = Color3.fromRGB(255, 190, 90)
+		VFX.Slash(CFrame.lookAt(d.from, d.to) * CFrame.new(0, -1.5, -3) * CFrame.Angles(0, 0, math.pi / 2), c, n == 3 and 8 or 6)
+		local at, dir = hitPoint(d)
+		VFX.Impact(at, c, n == 3 and 5.5 or 3.6)
+		if n == 3 then
+			VFX.Shockwave(at, dir, Color3.fromRGB(255, 220, 150), 6)
+		end
 	end,
 	Slingshot = function(d)
 		VFX.Projectile(d.from, d.to, Color3.fromRGB(255, 240, 160), 0.6, 0.18, 1)
@@ -500,11 +622,12 @@ local weaponFX = {
 		VFX.Projectile(d.from, d.to, Color3.fromRGB(255, 160, 200), 0.6, 0.2, 1)
 	end,
 }
+local MELEE = { Sword = true, Hammer = true, Knuckles = true, Shoes = true }
 
 -- ===== event handler =====
 local handlers = {}
 local localPlayer = game:GetService("Players").LocalPlayer
-handlers.Damage = function(d)
+local function damageFX(d)
 	local color = d.toPlayer and Color3.fromRGB(255, 90, 90) or (d.crit and Color3.new(1, 1, 1) or Color3.new(1, 1, 1))
 	VFX.Number(d.pos, tostring(d.amount), color, d.crit, d.crit and Color3.fromRGB(235, 40, 60) or nil)
 	-- every hit flashes; crits get focus lines and a shockwave (anime impact frame)
@@ -519,6 +642,17 @@ handlers.Damage = function(d)
 	if d.src == localPlayer.UserId then
 		local UI = require(script.Parent.Parent.UI.UIKit)
 		UI.ComboHit()
+		if d.crit then
+			VFX.ScreenFlash(Color3.new(1, 1, 1), 0.28, 0.16)
+		end
+	end
+end
+handlers.Damage = function(d)
+	-- a player's hit arrives with the swing: show it when the fist/blade actually connects
+	if d.src and not d.toPlayer then
+		task.delay(VFX.IMPACT_DELAY, damageFX, d)
+	else
+		damageFX(d)
 	end
 end
 handlers.Miss = function(d)
@@ -528,8 +662,16 @@ handlers.Heal = function(d)
 	VFX.Number(d.pos, "+" .. tostring(d.amount), Color3.fromRGB(110, 255, 140))
 end
 handlers.BasicAttack = function(d)
-	local f = weaponFX[d.weapon] or weaponFX.Sword
-	f(d)
+	local weapon = weaponFX[d.weapon] and d.weapon or "Sword"
+	local n, clip = comboStep(d.char, weapon)
+	if MELEE[weapon] then
+		if weapon == "Shoes" and clip == "Kick" then
+			VFX.SpeedLines(d.from, d.to, Color3.fromRGB(255, 230, 190), 5)
+		end
+		task.delay(STRIKE[clip or ""] or VFX.IMPACT_DELAY, weaponFX[weapon], d, n)
+	else
+		weaponFX[weapon](d, n)
+	end
 end
 handlers.Skill = function(d)
 	local f = SkillFX[d.fx]
@@ -538,12 +680,25 @@ handlers.Skill = function(d)
 	end
 end
 handlers.LevelUp = function(d)
-	local p = part(Vector3.new(6, 1, 6), Color3.fromRGB(255, 220, 80), CFrame.new(d.pos - Vector3.new(0, 3, 0)), Enum.PartType.Cylinder, Enum.Material.Neon, 0.2)
-	p.CFrame = CFrame.new(d.pos - Vector3.new(0, 3, 0)) * CFrame.Angles(0, 0, math.pi / 2)
-	tween(p, 0.8, { Size = Vector3.new(40, 6, 6), CFrame = CFrame.new(d.pos + Vector3.new(0, 17, 0)) * CFrame.Angles(0, 0, math.pi / 2), Transparency = 1 })
-	Debris:AddItem(p, 0.85)
-	VFX.Ring(d.pos - Vector3.new(0, 2.5, 0), 12, Color3.fromRGB(255, 230, 120), 0.7, 0.5)
-	VFX.Sparks(d.pos, Color3.fromRGB(255, 240, 150), 20, 14)
+	local gold, pale = Color3.fromRGB(255, 215, 80), Color3.fromRGB(255, 245, 200)
+	local feet = d.pos - Vector3.new(0, 3, 0)
+	local p = part(Vector3.new(6, 1, 6), gold, CFrame.new(feet), Enum.PartType.Cylinder, Enum.Material.Neon, 0.2)
+	p.CFrame = CFrame.new(feet) * CFrame.Angles(0, 0, math.pi / 2)
+	tween(p, 0.9, { Size = Vector3.new(60, 7, 7), CFrame = CFrame.new(feet + Vector3.new(0, 30, 0)) * CFrame.Angles(0, 0, math.pi / 2), Transparency = 1 })
+	Debris:AddItem(p, 0.95)
+	-- light rays behind the character + a column of glow motes shooting up
+	emit(d.pos + Vector3.new(0, 1, 0), { Texture = Tex.burst, Color = ColorSequence.new(pale, gold), Size = seq(6, 22), Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(0.6, 0.4), NumberSequenceKeypoint.new(1, 1) }), Lifetime = NumberRange.new(0.8), Speed = NumberRange.new(0), Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(40, 60), ZOffset = -1, Fixed = true }, 1, 0.9)
+	emit(feet, { Texture = Tex.glow, Color = ColorSequence.new(pale, gold), Size = seq(3, 0.4), Transparency = seq(0, 1), Lifetime = NumberRange.new(0.6, 1), Speed = NumberRange.new(30, 50), SpreadAngle = Vector2.new(4, 4), EmissionDirection = Enum.NormalId.Top, Shape = Enum.ParticleEmitterShape.Disc, ShapeInOut = Enum.ParticleEmitterShapeInOut.Outward }, 30, 1.1)
+	emit(d.pos, { Texture = Tex.sparkle, Color = ColorSequence.new(pale), Size = seq(1.8, 0), Lifetime = NumberRange.new(0.8, 1.4), Speed = NumberRange.new(14, 26), SpreadAngle = Vector2.new(35, 35), EmissionDirection = Enum.NormalId.Top, Acceleration = Vector3.new(0, -28, 0), RotSpeed = NumberRange.new(-300, 300) }, 26, 1.5)
+	for i = 0, 3 do
+		task.delay(i * 0.1, function()
+			emit(feet + Vector3.new(0, 0.4, 0), { Texture = Tex.ring, Color = color(gold), Orientation = Enum.ParticleOrientation.VelocityPerpendicular, EmissionDirection = Enum.NormalId.Top, Speed = NumberRange.new(14), SpreadAngle = Vector2.new(0, 0), Drag = 1.2, Size = seq(7, 4), Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(0.7, 0.4), NumberSequenceKeypoint.new(1, 1) }), Lifetime = NumberRange.new(0.6), Fixed = true }, 1, 0.7)
+		end)
+	end
+	VFX.Ring(feet + Vector3.new(0, 0.5, 0), 14, gold, 0.8)
+	if d.char == localPlayer.Character or (d.userId and d.userId == localPlayer.UserId) then
+		VFX.ScreenFlash(pale, 0.3, 0.4)
+	end
 end
 handlers.PetHit = function(d)
 	VFX.Projectile(d.from, d.to, Color3.fromRGB(150, 255, 190), 0.6, 0.25, 2)

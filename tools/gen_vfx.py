@@ -125,6 +125,15 @@ def main():
         d.line([(64, y0 + 6), (64 - 17, y0 - 4)], fill=(215, 215, 215, 255), width=2)
     L = L.rotate(35, resample=Image.BICUBIC)
     L.save(os.path.join(OUT, 'leaf.png'))
+    # heal plus: a chunky soft-edged cross (tinted green by the emitter)
+    plus = ((np.abs(xx - cx) < S * 0.12) & (np.abs(yy - cy) < S * 0.36)) | ((np.abs(yy - cy) < S * 0.12) & (np.abs(xx - cx) < S * 0.36))
+    save('plus', plus.astype(np.float32), blur=3)
+    # impact star: 4 long sharp spikes (anime punch impact), brighter core
+    spikes4 = np.zeros_like(r)
+    for a0 in (0, math.pi / 2, math.pi, 3 * math.pi / 2):
+        dd = np.abs(np.angle(np.exp(1j * (ang - a0))))
+        spikes4 = np.maximum(spikes4, np.clip(1 - dd / (0.16 * (1 - r) + 0.01), 0, 1) * (r < 1))
+    save('impact', np.maximum(spikes4, np.exp(-(r ** 2) * 14)), blur=1)
     print('wrote', sorted(os.listdir(OUT)))
 
 if __name__ == '__main__':

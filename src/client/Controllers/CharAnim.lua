@@ -1,6 +1,8 @@
 -- CharAnim (client): procedural attack poses for R15 characters + hit feel (hitstop, camera shake).
--- Poses are layered on the Motor6D.C0 of each joint (Roblox's walk/idle animation keeps writing Transform underneath),
--- so a punch plays while running. Every client poses every character from the server's FX (BasicAttack / Skill /
+-- Poses are layered on the joint's parent-side offset (Roblox's walk/idle animation keeps writing Transform underneath),
+-- so a punch plays while running. Two joint kinds exist: classic Motor6D (offset = C0) and, with Roblox's Avatar Joint
+-- Upgrade (default for new places), AnimationConstraint (offset = Attachment0.CFrame; setting C0 there errors).
+-- Every client poses every character from the server's FX (BasicAttack / Skill /
 -- Damage), so everyone sees the same moves. Avatars are uniform R15 (PlayerService.normalizeAvatar).
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
@@ -65,28 +67,51 @@ local SKILL_CLIPS = { Melee = "Uppercut", Dash = "JabR", Ranged = "Shoot", AoE =
 
 local chars = {} -- character -> { joints = {name = {motor, base}}, clip, start, combo, freezeUntil }
 
+-- a joint: { motor = Motor6D | AnimationConstraint, att = Attachment0 (constraints only), base = rest offset }
+local function jointOf(inst)
+	if inst:IsA("Motor6D") then
+		return { motor = inst, base = inst.C0 }
+	elseif inst:IsA("AnimationConstraint") and inst.Attachment0 then
+		return { motor = inst, att = inst.Attachment0, base = inst.Attachment0.CFrame }
+	end
+	return nil
+end
+
+local function setJoint(j, cf)
+	if j.att then
+		j.att.CFrame = j.base * cf
+	else
+		j.motor.C0 = j.base * cf
+	end
+end
+
+CharAnim.Stats = { posed = 0, kind = "none", lastClip = "-", lastFX = "-" }
+
 local function state(char)
 	local st = chars[char]
 	if st then
 		return st
 	end
 	st = { joints = {}, combo = 0, start = 0 }
-	for name, partName in pairs(JOINTS) do
-		local part = char:FindFirstChild(partName)
-		local m = part and part:FindFirstChild(name)
-		if m and m:IsA("Motor6D") then
-			st.joints[name] = { motor = m, base = m.C0 }
+	local n, kind = 0, "none"
+	for _, d in ipairs(char:GetDescendants()) do
+		if JOINTS[d.Name] and not st.joints[d.Name] then
+			local j = jointOf(d)
+			if j then
+				st.joints[d.Name] = j
+				n += 1
+				kind = d.ClassName
+			end
 		end
-	end
-	local n = 0
-	for _ in pairs(st.joints) do
-		n += 1
 	end
 	if n == 0 then
 		warn("[CharAnim] " .. char.Name .. " has no R15 joints (is the avatar type R15?)")
 		return nil
 	end
-	print("[CharAnim] posing " .. char.Name .. " with " .. n .. " R15 joints")
+	print("[CharAnim] posing " .. char.Name .. " with " .. n .. " R15 joints (" .. kind .. ")")
+	if char == Players.LocalPlayer.Character then
+		CharAnim.Stats.kind = kind .. " x" .. n
+	end
 	chars[char] = st
 	char.Destroying:Connect(function()
 		chars[char] = nil
@@ -112,6 +137,10 @@ function CharAnim.Play(char, clipName)
 	local clip = CLIPS[clipName]
 	if st and clip then
 		st.clip, st.start = clip, os.clock()
+		if char == Players.LocalPlayer.Character then
+			CharAnim.Stats.posed += 1
+			CharAnim.Stats.lastClip = clipName
+		end
 	end
 end
 
@@ -140,7 +169,7 @@ local function apply(st, now)
 	end
 	if t >= clip[#clip].t then
 		for _, j in pairs(st.joints) do
-			j.motor.C0 = j.base
+			setJoint(j, CFrame.identity)
 		end
 		st.clip = nil
 		return
@@ -148,7 +177,7 @@ local function apply(st, now)
 	local a, b, k = sample(clip, t)
 	for name, j in pairs(st.joints) do
 		local pa, pb = a[name] or CFrame.identity, b[name] or CFrame.identity
-		j.motor.C0 = j.base * pa:Lerp(pb, k)
+		setJoint(j, pa:Lerp(pb, k))
 	end
 end
 
@@ -163,6 +192,7 @@ function CharAnim.Start()
 		if type(d) ~= "table" then
 			return
 		end
+		CharAnim.Stats.lastFX = kind
 		if kind == "BasicAttack" and typeof(d.char) == "Instance" then
 			local list = WEAPON_CLIPS[d.weapon or "Knuckles"] or WEAPON_CLIPS.Knuckles
 			local st = state(d.char)

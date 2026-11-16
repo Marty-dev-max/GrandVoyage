@@ -13,6 +13,7 @@ local CreatureAnim = {}
 
 local RANGE = 160
 local rigs = {} -- model -> state
+CreatureAnim.Stats = { rigged = 0, plain = 0, animated = 0, attacks = 0, hits = 0 }
 
 local function getRig(model)
 	local st = rigs[model]
@@ -27,19 +28,34 @@ local function getRig(model)
 			if m:IsA("Motor6D") then
 				motors[m.Name] = { motor = m, base = m.C0 }
 				count += 1
+			elseif m:IsA("AnimationConstraint") and m.Attachment0 then
+				motors[m.Name] = { motor = m, att = m.Attachment0, base = m.Attachment0.CFrame }
+				count += 1
 			end
 		end
 	end
 	if count == 0 then
-		rigs[model] = false -- placeholder body: nothing to animate
+		-- placeholder body (nothing to animate), or its joints have not replicated yet: look again in a moment
+		if root then
+			rigs[model] = false
+			CreatureAnim.Stats.plain += 1
+			task.delay(2, function()
+				if rigs[model] == false then
+					rigs[model] = nil
+					CreatureAnim.Stats.plain -= 1
+				end
+			end)
+		end
 		return nil
 	end
+	CreatureAnim.Stats.rigged += 1
 	local h = model:GetAttribute("Height") or 6
 	local quad = motors.LegFL ~= nil
 	st = { root = root, motors = motors, h = h, quad = quad, phase = math.random() * 6, walk = 0, attackAt = -10, hitAt = -10, seed = math.random() * 10 }
 	rigs[model] = st
 	model.Destroying:Connect(function()
 		rigs[model] = nil
+		CreatureAnim.Stats.rigged -= 1
 	end)
 	return st
 end
@@ -48,7 +64,11 @@ end
 local function setT(st, name, cf)
 	local j = st.motors[name]
 	if j then
-		j.motor.C0 = j.base * cf
+		if j.att then
+			j.att.CFrame = j.base * cf
+		else
+			j.motor.C0 = j.base * cf
+		end
 	end
 end
 
@@ -166,10 +186,12 @@ function CreatureAnim.Start()
 		if kind == "MobAttack" then
 			if st then
 				st.attackAt = os.clock()
+				CreatureAnim.Stats.attacks += 1
 			end
 		elseif kind == "Damage" then
 			if st then
 				st.hitAt = os.clock()
+				CreatureAnim.Stats.hits += 1
 				-- hitstop: the monster freezes for a beat when struck (longer on crits)
 				st.freezeUntil = os.clock() + (d.crit and 0.09 or 0.05)
 			end
@@ -187,15 +209,18 @@ function CreatureAnim.Start()
 		local cam = workspace.CurrentCamera
 		local focus = cam and cam.Focus.Position or Vector3.zero
 		local t = os.clock()
+		local n = 0
 		for _, model in ipairs(folder:GetChildren()) do
 			local root = model:FindFirstChild("HumanoidRootPart")
 			if root and (root.Position - focus).Magnitude < RANGE then
 				local st = getRig(model)
 				if st and not (st.freezeUntil and t < st.freezeUntil) then
 					animate(st, dt, t)
+					n += 1
 				end
 			end
 		end
+		CreatureAnim.Stats.animated = n
 	end)
 end
 

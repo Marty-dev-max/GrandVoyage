@@ -79,8 +79,11 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   their joints and `Controllers/CreatureAnim.lua` drives Motor6D.Transform (walk, idle, attack, hit flash, death shatter);
   pets animate by part name in `Controllers/Pets.lua` (Hinge attribute). Avatars: uniform R15 via
   `PlayerService.normalizeAvatar` (GameConfig.NormalizeAvatars; Game Settings avatar type must be R15).
-  Player attack poses: `Controllers/CharAnim.lua` layers keyframed poses on R15 Motor6D.C0 from FX (BasicAttack combos per
-  weapon, Skill by kind, Hurt), plus hitstop and camera shake on the local player's hits.
+  Player attack poses: `Controllers/CharAnim.lua` layers keyframed poses on the R15 joints from FX (BasicAttack combos per
+  weapon, Skill by kind, Hurt), plus hitstop and camera shake on the local player's hits. Roblox's Avatar Joint Upgrade (default
+  in new places) gives players AnimationConstraint joints instead of Motor6D: setting C0 errors there, so poses go on
+  `Attachment0.CFrame` for those (both kinds handled; v0.13 only knew Motor6D and nothing moved). Dev tab -> Animation Check.
+  VFX: melee impacts fire on the CharAnim strike frame (`STRIKE` table in VFX.lua); combo finisher hits are bigger.
 - VFX are ParticleEmitter/Beam based with our own textures (`Config/Textures`); see the toolkit at the top of `Controllers/VFX.lua`.
 - Client controllers start through the protected `start()` in `init.client.lua` (core UI first, visuals in parallel):
   a controller that errors or yields must never block the others (it hid the quest tracker in v0.13.0).

@@ -19,6 +19,7 @@ local VFX = require(script.Controllers.VFX)
 local Readability = require(script.Controllers.Readability)
 local Swim = require(script.Controllers.Swim)
 local PetsCtl = require(script.Controllers.Pets)
+local Titles = require(script.Controllers.Titles)
 local Quest = require(script.UI.Quest)
 
 pcall(function()
@@ -84,6 +85,13 @@ local handlers = {
 	QuestDialog = function(d)
 		Quest.OnDialog(d)
 	end,
+	Notice = function(d)
+		UI.Notice(d.text, UI.Theme[d.color or "Green"] or UI.Theme.Green)
+	end,
+	Achievement = function(d)
+		UI.Banner("Achievement!", d.icon .. " " .. d.name .. (d.title and ("  •  title: " .. d.title) or ""), UI.Rarity.Get(d.rarity).color, d.rarity)
+		UI.Toast("🏆 " .. d.name .. " unlocked: claim it in Quests (J)", "good")
+	end,
 	PearlGain = function(d)
 		UI.Toast("+" .. d.amount .. " 🦪 Pearls" .. (d.capped and "  (daily cap reached)" or ""), "good")
 	end,
@@ -147,6 +155,7 @@ VFX.Start()
 Readability.Start()
 Swim.Start()
 PetsCtl.Start()
+Titles.Start()
 Quest.Start()
 Net.Request("GetState")
 task.spawn(Net.Request, "GetBossBoard")

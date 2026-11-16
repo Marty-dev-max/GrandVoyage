@@ -268,6 +268,8 @@ local profile = {
 	skillBar = { "OniSlash", "TornadoCut", "FlyingSlash", "IronBody", "FirstAid" },
 	autoSkills = { OniSlash = true, TornadoCut = true, F_FireFist = true },
 	fruit = { id = "Blaze", mastery = 27, exp = 40 },
+	daily = { day = "20261116", bonusClaimed = false, list = { { id = "HuntLocal", kind = "Kill", target = "MarineRifleman", targetName = "Marine Rifleman", count = 30, progress = 30, claimed = false }, { id = "Skills", kind = "Skill", count = 40, progress = 12, claimed = false }, { id = "Sink", kind = "Sink", count = 3, progress = 3, claimed = true } } },
+	ach = { counters = { Kill = 640, Sink = 12, Refine = 9 }, done = { Hunter1 = true, Sink1 = true, Fruit1 = true, Pet1 = true, Level30 = true, Crabs = true }, claimed = { Hunter1 = true, Fruit1 = true } }, title = "Crabs",
 	pets = { { uid = "pet1", species = "Lantern", level = 22, exp = 300, stage = 2 }, { uid = "pet2", species = "Hermit", level = 9, exp = 40, stage = 1 } }, activePet = "pet1",
 	classProgress = { Brawler = { jobLevel = 10, jobExp = 0 } }, classSwitches = 1,
 	inventory = {
@@ -423,6 +425,7 @@ step("VFX.Start", mod("Controllers.VFX").Start)
 local Quest = mod("UI.Quest")
 step("Swim.Start", mod("Controllers.Swim").Start)
 step("Pets.Start", mod("Controllers.Pets").Start)
+step("Titles.Start", mod("Controllers.Titles").Start)
 step("Quest.Start", Quest.Start)
 step("Quest.OnQuest", function()
 	Quest.OnQuest({ step = 2, total = 40, progress = 3, id = "T02", tutorial = true, speaker = "Old Salt Rowan", dialog = { "Beach Crabs keep pinching my nets. Clear a few out for me." } })
@@ -453,14 +456,14 @@ end
 local panels = {
 	{ "Inventory" }, { "Stats" }, { "Skills" }, { "JobMaster" }, { "Refine" }, { "Shop" }, { "Tavern" }, { "Shipwright" },
 	{ "Map" }, { "BossBoard" }, { "Guild" }, { "Dungeon", { dungeonId = "CircusTent" } }, { "Party" },
-	{ "Stall", { sellerId = 2 } }, { "StallSetup" }, { "PearlShop" }, { "Pets" }, { "Settings" },
+	{ "Stall", { sellerId = 2 } }, { "StallSetup" }, { "PearlShop" }, { "Pets" }, { "Quests" }, { "Quests", { tab = "Ach" } }, { "Quests", { tab = "Story" } }, { "Settings" },
 }
 for _, p in panels do
 	step("CloseAll", UI.CloseAll)
 	if step("Panel " .. p[1], function()
 		Panels.Open(p[1], p[2])
 	end) then
-		snapshot("panel_" .. p[1])
+		snapshot("panel_" .. p[1] .. ((p[2] and p[2].tab) and ("_" .. p[2].tab) or ""))
 	end
 end
 fs.writeFile(outDir .. "/index.json", serde.encode("json", { shots = shots, errors = errors, view = { VIEW.X, VIEW.Y }, topbar = TOPBAR }))

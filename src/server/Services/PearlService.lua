@@ -68,18 +68,21 @@ local function flush(userId)
 	end)
 end
 
--- Earn from a gameplay source (capped per day). Returns the amount actually granted.
-function PS.Earn(player, amount, source)
+-- Earn from a gameplay source (capped per day unless ignoreCap: one-time sources such as achievements).
+-- Returns the amount actually granted.
+function PS.Earn(player, amount, source, ignoreCap)
 	local p = prof(player)
 	if not p or amount <= 0 then
 		return 0
 	end
-	local room = Pearls.DailyCap - p.pearlDay.earned
+	local room = ignoreCap and amount or (Pearls.DailyCap - p.pearlDay.earned)
 	local got = math.max(0, math.min(amount, room))
 	if got <= 0 then
 		return 0
 	end
-	p.pearlDay.earned += got
+	if not ignoreCap then
+		p.pearlDay.earned += got
+	end
 	p.pearls += got
 	log(player, got, source, p)
 	sync(player, p)

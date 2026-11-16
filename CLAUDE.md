@@ -79,13 +79,16 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
 ## Status
 
 Done: Brawler + Sea Cook + per-class progress, all 6 Cursed Fruits, Pearls (shop, Pearl stalls, ledger, Robux receipts),
-Sea Companions (capture, eggs, evolution, follow/attack), quests + tutorial, chests, swimming.
+Sea Companions (capture, eggs, evolution, follow/attack), quests + tutorial, chests, swimming,
+daily quests + achievements + titles (`ProgressService`, fed by `QuestService.Event`).
+Bump `GameConfig.Version` on every change: the owner checks it bottom-right in game to confirm Rojo synced.
+The owner updates by double-clicking `update.bat` (git pull) on Windows, then Stop/Play in Studio.
 
 ## Next up
 
 1. Playtest in Studio and fix what breaks (fruit Dash feel, pet follow, swim animation, quest flow).
 2. (done) Robux developer products are live: ids in `Config/Pearls.lua` (`Products`). The game is published;
    Studio Access to API Services is on, so DataStores save in Studio playtests.
-3. Daily quests + achievements (Pearl sources), fruit skill VFX polish, Seastone gear items for Marines.
+3. Fruit skill VFX polish, Seastone gear items for Marines.
 4. Art pass: Blender models for pets/fruits/monsters (`ReplicatedStorage.Assets.Pets/<Species>_<stage>` overrides the
    placeholder bodies), icon set.

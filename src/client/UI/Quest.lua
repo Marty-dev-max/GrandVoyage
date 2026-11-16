@@ -258,6 +258,7 @@ end
 -- ===== push handlers (wired in init.client.lua) =====
 function Quest.OnQuest(d)
 	data = d
+	State.quest = d
 	refreshTracker()
 	if d.dialog then
 		local step = Quests.ById[d.id or ""]

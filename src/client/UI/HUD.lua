@@ -329,6 +329,7 @@ local MENU = {
 	{ "👥", "Party", T.Green, "P", "Party" },
 	{ "🗺️", "Map", T.Ocean, "M", "Map" },
 	{ "👑", "BossBoard", T.Red, "B", "Bosses" },
+	{ "📜", "Quests", T.Gold:Lerp(T.Orange, 0.4), "J", "Quests" },
 	{ "🐾", "Pets", T.Green:Lerp(T.Ocean, 0.3), "N", "Pets" },
 	{ "🦪", "PearlShop", Color3.fromRGB(80, 170, 220), nil, "Pearls" },
 	{ "⚙️", "Settings", T.Grey, "O", "Settings" },
@@ -685,7 +686,7 @@ function HUD.Layout()
 		menuFrame.Size = UDim2.fromOffset(326, 250)
 	else
 		menuScale.Scale = 1
-		menuFrame.Size = UDim2.fromOffset(158, 430)
+		menuFrame.Size = UDim2.fromOffset(158, 520)
 	end
 	if grid then
 		grid.HorizontalAlignment = Enum.HorizontalAlignment.Right

@@ -103,6 +103,10 @@ function QS.Event(player, kind, target, amount)
 	if not p then
 		return
 	end
+	-- dailies and achievements listen to the same events
+	if R.ProgressService then
+		R.ProgressService.Event(player, kind, target, amount)
+	end
 	local s = stepOf(p)
 	if not s or STATE_KINDS[s.goal.kind] or not matches(s.goal, kind, target) then
 		return

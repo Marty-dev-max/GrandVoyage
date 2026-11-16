@@ -208,6 +208,7 @@ local function die(mob, killer)
 		if def.isBoss then
 			R.FruitService.RollDrop(top, require(Shared.Config.Fruits).Drops.Boss, "MVP " .. def.name)
 			R.PearlService.Earn(top, require(Shared.Config.Pearls).Sources.MVP, "mvp")
+			R.QuestService.Event(top, "Boss", def.id)
 		end
 	end
 	Net.FX("MobDeath", { pos = mob.root.Position, color = def.style.color, boss = def.isBoss }, mob.root.Position, 300)

@@ -181,7 +181,18 @@ items held in escrow and returned when the stall closes or you leave.
   Pearl Shop; odds shown in game) or by taming: Sea Bait on a Beach Crab, Wild Boar or Leviathan below 35% HP (🪤 Capture
   button). The active pet follows you, attacks what you hit, earns 50% of your Base EXP and gives a stage-scaled bonus.
 
-## 13. Roadmap
+## 13. Daily quests, achievements and titles
+
+- **Dailies** (`Config/Dailies.lua`, `ProgressService`): 3 per day (reset 00:00 UTC), picked by level from a pool
+  (hunt a monster near your level, hunt anything, use skills, sink ships, refine, use fruit skills, clear a dungeon).
+  Each pays Doubloons (300 x Lv^0.85), 10% of a level's EXP and 10 Pearls; claiming all 3 adds a bonus (25 Pearls + 3 Sea Bait).
+- **Achievements** (`Config/Achievements.lua`): 23 one-time goals (hunting, MVPs, ship sinks, exploring, chests, fruit
+  mastery, pets, refining, story, levels, 7 daily streak days, 1M Doubloons). They pay Pearls outside the daily cap (they
+  are bounded) and some unlock a **title** shown above your head («Crab Crusher», «Legend of the Azure East», ...).
+- Every progress event goes through `QuestService.Event`, which forwards to `ProgressService` (one funnel).
+- UI: the **Quests** window (📜, key J) with Story / Daily / Achievements tabs and Claim buttons.
+
+## 14. Roadmap
 
 1. **Now (v0.4):** full systems, tiered low-poly islands, AV-style UI with split EXP/Job level ring, flying EXP orbs, hover-jump motion and icon-sectioned windows, audio pack + uploader, settings, readability, Blender asset generator, headless UI test + renderer.
 2. **Art pass:** Blender models (monsters, ship parts, landmarks), particle VFX, Figma icon set, real music.

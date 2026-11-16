@@ -94,6 +94,9 @@ function PS.SetAttributes(player)
 	if R and R.PetService then
 		R.PetService.SetAttributes(player, p)
 	end
+	if R and R.ProgressService then
+		R.ProgressService.SetAttributes(player, p)
+	end
 end
 
 function PS.MarkDirty(player)
@@ -134,6 +137,9 @@ local function sync(player)
 			pets = p.pets,
 			activePet = p.activePet,
 			perks = p.perks,
+			daily = p.daily,
+			ach = p.ach,
+			title = p.title,
 			pearls = p.pearls,
 			pearlsBound = p.pearlsBound,
 			expBoostUntil = p.expBoostUntil,
@@ -144,6 +150,9 @@ local function sync(player)
 	})
 	if R.QuestService then
 		task.spawn(R.QuestService.Check, player)
+	end
+	if R.ProgressService then
+		task.spawn(R.ProgressService.Check, player)
 	end
 end
 

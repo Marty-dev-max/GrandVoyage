@@ -27,6 +27,9 @@ local COIN = UI.CurrencyIcon
 local FruitsCfg = require(ReplicatedStorage.Shared.Config.Fruits)
 local PearlsCfg = require(ReplicatedStorage.Shared.Config.Pearls)
 local PetsCfg = require(ReplicatedStorage.Shared.Config.Pets)
+local DailiesCfg = require(ReplicatedStorage.Shared.Config.Dailies)
+local AchievementsCfg = require(ReplicatedStorage.Shared.Config.Achievements)
+local QuestsCfg = require(ReplicatedStorage.Shared.Config.Quests)
 
 local function req(action, payload, okSound)
 	local res = Net.Request(action, payload)
@@ -1269,6 +1272,242 @@ function Panels.Settings()
 end
 
 local windowIds = { Shipwright = "Shipyard", FastTravel = "Map", Map = "Map", BossBoard = "Boss", JobMaster = "Job", Refine = "Refine", Blacksmith = "Refine" }
+
+-- ===================== QUESTS JOURNAL (story / daily / achievements) =====================
+local function secondsToReset()
+	local t = os.date("!*t")
+	return 86400 - (t.hour * 3600 + t.min * 60 + t.sec)
+end
+
+local function achValue(p, a)
+	local st = p.ach or {}
+	if a.counter then
+		return (st.counters or {})[a.counter] or 0
+	end
+	local function count(t)
+		local n = 0
+		for _ in pairs(t or {}) do
+			n += 1
+		end
+		return n
+	end
+	local qstep = State.quest and State.quest.step or 1
+	if a.state == "islands" then
+		return count(p.unlocked)
+	elseif a.state == "chests" then
+		return count(p.chests)
+	elseif a.state == "fruit" then
+		return p.fruit and 1 or 0
+	elseif a.state == "mastery" then
+		return p.fruit and p.fruit.mastery or 0
+	elseif a.state == "pets" then
+		return #(p.pets or {})
+	elseif a.state == "petStage" then
+		local m = 0
+		for _, pet in ipairs(p.pets or {}) do
+			m = math.max(m, pet.stage or 1)
+		end
+		return m
+	elseif a.state == "tutorial" then
+		return qstep > QuestsCfg.TutorialEnd and 1 or 0
+	elseif a.state == "story" then
+		return qstep > #QuestsCfg.Main and 1 or 0
+	elseif a.state == "level" then
+		return p.baseLevel
+	elseif a.state == "beli" then
+		return p.beli
+	end
+	return 0
+end
+
+function Panels.Quests(args)
+	local win = UI.Window("Quests", "Quests", UDim2.fromOffset(880, 600), T.Gold, "📜")
+	local tab = args and args.tab or "Daily"
+	local tabs = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 46), Parent = win.body })
+	local body = UI.Scroll(win.body, UDim2.new(1, 0, 1, -52))
+	body.Position = UDim2.fromOffset(0, 52)
+	local render
+	render = function()
+		clear(tabs)
+		clear(body)
+		local p = State.profile
+		if not p then
+			return
+		end
+		UI.TabBar(tabs, { { "Story", "📖", "Story", T.Gold }, { "Daily", "📅", "Daily", T.Green }, { "Ach", "🏆", "Achievements", T.Purple } }, tab, function(id)
+			tab = id
+			render()
+		end, 40)
+		UI.List(body, nil, 8)
+		if tab == "Daily" then
+			local left = secondsToReset()
+			UI.Section(body, "📅", "Today's Dailies", T.Green, string.format("resets in %dh %02dm", left // 3600, (left % 3600) // 60))
+			local d = p.daily
+			if not d or not d.list then
+				UI.Text(body, "Loading today's dailies...", 15, T.TextSoft, "Semi")
+				return
+			end
+			local beli = math.floor(DailiesCfg.Reward.beliPerLevel * p.baseLevel ^ 0.85)
+			local allClaimed = true
+			for i, e in ipairs(d.list) do
+				local tpl
+				for _, t in ipairs(DailiesCfg.Pool) do
+					if t.id == e.id then
+						tpl = t
+					end
+				end
+				local done = e.progress >= e.count
+				allClaimed = allClaimed and e.claimed
+				local card = UI.Card(body, UDim2.new(1, -12, 0, 84), (done and T.Green or T.Panel):Lerp(T.Panel, done and 0.7 or 0))
+				local chip = UI.IconChip(card, tpl and tpl.icon or "📅", T.Green, 52)
+				chip.Position = UDim2.fromOffset(12, 16)
+				local text = tpl and string.format(tpl.text, e.count, e.targetName or "") or e.id
+				UI.Text(card, text, 19, T.Text, "Display", { Position = UDim2.fromOffset(76, 10), Size = UDim2.new(1, -250, 0, 24), TextWrapped = false })
+				local bar = UI.Bar(card, T.Green, UDim2.new(1, -250, 0, 16), e.progress .. " / " .. e.count)
+				bar.back.Position = UDim2.fromOffset(76, 38)
+				bar:Set(e.progress / e.count)
+				UI.Text(card, COIN .. " " .. UI.Format(beli) .. "   •   " .. PearlsCfg.Icon .. " " .. DailiesCfg.Reward.pearls .. "   •   EXP", 13, T.Gold, "Bold", { Position = UDim2.fromOffset(76, 58), Size = UDim2.new(1, -250, 0, 18) })
+				local label = e.claimed and "Claimed ✓" or (done and "Claim!" or "In progress")
+				local _, h = UI.Button(card, label, (done and not e.claimed) and T.Green or T.Grey, UDim2.fromOffset(150, 46), function()
+					if done and not e.claimed then
+						local res = req("DailyClaim", { index = i }, "Coin")
+						if res.ok then
+							render()
+						end
+					end
+				end)
+				h.AnchorPoint = Vector2.new(1, 0.5)
+				h.Position = UDim2.new(1, -16, 0.5, 0)
+			end
+			local bonus = UI.Card(body, UDim2.new(1, -12, 0, 64), T.Gold:Lerp(T.Panel, 0.75))
+			local chip = UI.IconChip(bonus, "🎁", T.Gold, 44)
+			chip.Position = UDim2.fromOffset(12, 10)
+			local items = {}
+			for _, it in ipairs(DailiesCfg.Bonus.items) do
+				local def = ItemDB.Get(it[1])
+				table.insert(items, it[2] .. "x " .. (def and def.name or it[1]))
+			end
+			UI.Text(bonus, "Daily bonus: claim all 3  →  " .. PearlsCfg.Icon .. " " .. DailiesCfg.Bonus.pearls .. " + " .. table.concat(items, ", "), 16, T.Text, "Display", { Position = UDim2.fromOffset(68, 0), Size = UDim2.new(1, -240, 1, 0) })
+			local ready = allClaimed and not d.bonusClaimed
+			local _, h = UI.Button(bonus, d.bonusClaimed and "Claimed ✓" or "Claim Bonus", ready and T.Gold or T.Grey, UDim2.fromOffset(150, 44), function()
+				if ready then
+					local res = req("DailyBonus", nil, "RarityEpic")
+					if res.ok then
+						render()
+					end
+				end
+			end)
+			h.AnchorPoint = Vector2.new(1, 0.5)
+			h.Position = UDim2.new(1, -16, 0.5, 0)
+		elseif tab == "Ach" then
+			local st = p.ach or {}
+			local done, claimedN = st.done or {}, st.claimed or {}
+			local n = 0
+			for _ in pairs(done) do
+				n += 1
+			end
+			UI.Section(body, "🏆", "Achievements", T.Purple, n .. " / " .. #AchievementsCfg.List)
+			-- title picker
+			local titleRow = UI.Card(body, UDim2.new(1, -12, 0, 54), T.Purple:Lerp(T.Panel, 0.75))
+			local cur = p.title and AchievementsCfg.ById[p.title]
+			UI.Text(titleRow, "Title shown above your head:  " .. (cur and ("« " .. cur.title .. " »") or "none"), 16, T.Text, "Display", { Position = UDim2.fromOffset(14, 0), Size = UDim2.new(1, -200, 1, 0) })
+			if cur then
+				local _, h = UI.Button(titleRow, "Hide title", T.Grey, UDim2.fromOffset(150, 40), function()
+					req("SetTitle", {})
+				end)
+				h.AnchorPoint = Vector2.new(1, 0.5)
+				h.Position = UDim2.new(1, -12, 0.5, 0)
+			end
+			-- unlocked & unclaimed first, then in progress, then claimed
+			local order = {}
+			for i, a in ipairs(AchievementsCfg.List) do
+				local rank = (done[a.id] and not claimedN[a.id]) and 0 or (done[a.id] and 2 or 1)
+				table.insert(order, { a = a, rank = rank, i = i })
+			end
+			table.sort(order, function(x, y)
+				if x.rank ~= y.rank then
+					return x.rank < y.rank
+				end
+				return x.i < y.i
+			end)
+			for _, o in ipairs(order) do
+				local a = o.a
+				local isDone = done[a.id] == true
+				local card = New("Frame", { Size = UDim2.new(1, -12, 0, 74), BackgroundColor3 = Color3.new(1, 1, 1), Parent = body })
+				UI.Corner(card, 12)
+				if isDone then
+					UI.RarityStyle(card, a.rarity or "Rare")
+				else
+					UI.Gradient(card, T.PanelTop, T.PanelDeep, 90)
+					UI.Stroke(card, T.Edge, 2.5)
+				end
+				local chip = UI.IconChip(card, a.icon, isDone and Rarity.Get(a.rarity or "Rare").color or T.Grey, 48)
+				chip.Position = UDim2.fromOffset(12, 13)
+				chip.ZIndex = 4
+				UI.Text(card, a.name .. (a.title and ('  <font color="#FFD54A">title: ' .. a.title .. "</font>") or ""), 18, T.Text, "Display", { Position = UDim2.fromOffset(72, 8), Size = UDim2.new(1, -250, 0, 22), ZIndex = 4, TextWrapped = false })
+				UI.Text(card, a.desc .. "   •   " .. PearlsCfg.Icon .. " " .. a.pearls, 13, T.Text, "Semi", { Position = UDim2.fromOffset(72, 32), Size = UDim2.new(1, -250, 0, 16), ZIndex = 4 })
+				local v = math.min(achValue(p, a), a.count)
+				if not isDone then
+					local bar = UI.Bar(card, T.Purple, UDim2.new(1, -250, 0, 12), UI.Format(v) .. " / " .. UI.Format(a.count))
+					bar.back.Position = UDim2.fromOffset(72, 52)
+					bar:Set(v / a.count)
+				end
+				local label, color, action
+				if isDone and not claimedN[a.id] then
+					label, color, action = "Claim " .. PearlsCfg.Icon .. a.pearls, T.Green, function()
+						req("AchievementClaim", { id = a.id }, "RarityEpic")
+					end
+				elseif isDone and a.title and p.title ~= a.id then
+					label, color, action = "Wear Title", T.Purple, function()
+						req("SetTitle", { id = a.id })
+					end
+				elseif isDone then
+					label, color = (p.title == a.id) and "Wearing ✓" or "Done ✓", T.Grey
+				else
+					label, color = "Locked", T.Grey
+				end
+				local _, h = UI.Button(card, label, color, UDim2.fromOffset(150, 42), function()
+					if action then
+						action()
+					end
+				end)
+				h.AnchorPoint = Vector2.new(1, 0.5)
+				h.Position = UDim2.new(1, -12, 0.5, 0)
+				h.ZIndex = 5
+			end
+		else
+			-- Story: chapters by island
+			local q = State.quest
+			local cur = q and q.step or 1
+			UI.Section(body, "📖", "Azure East Saga", T.Gold, math.min(cur - 1, #QuestsCfg.Main) .. " / " .. #QuestsCfg.Main .. " steps")
+			local chapters, orderIds = {}, {}
+			for i, s in ipairs(QuestsCfg.Main) do
+				if not chapters[s.island] then
+					chapters[s.island] = { first = i, last = i }
+					table.insert(orderIds, s.island)
+				end
+				chapters[s.island].last = i
+			end
+			for _, islandId in ipairs(orderIds) do
+				local ch = chapters[islandId]
+				local isl = Islands.ById[islandId]
+				local total = ch.last - ch.first + 1
+				local doneN = math.clamp(cur - ch.first, 0, total)
+				local state = doneN >= total and "✅" or (doneN > 0 or cur == ch.first) and "▶" or "🔒"
+				local card = UI.Card(body, UDim2.new(1, -12, 0, 64), (state == "▶" and T.Gold or T.Panel):Lerp(T.Panel, state == "▶" and 0.7 or 0))
+				UI.Text(card, state .. "  " .. (isl and isl.name or islandId) .. (islandId == "Daybreak" and "  (tutorial)" or ""), 20, T.Text, "Display", { Position = UDim2.fromOffset(16, 6), Size = UDim2.new(1, -32, 0, 24) })
+				local bar = UI.Bar(card, T.Gold, UDim2.new(1, -32, 0, 14), doneN .. " / " .. total)
+				bar.back.Position = UDim2.fromOffset(16, 38)
+				bar:Set(doneN / total)
+				if state == "▶" and QuestsCfg.Main[cur] then
+					UI.Text(body, "   Now: " .. QuestsCfg.Main[cur].title .. "  —  " .. QuestsCfg.Main[cur].text, 15, T.Gold, "Bold")
+				end
+			end
+		end
+	end
+	render()
+	onProfile(win, render)
+end
 
 -- ===================== PETS =====================
 function Panels.Pets()

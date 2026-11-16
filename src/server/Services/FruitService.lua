@@ -109,6 +109,7 @@ local lastCast = {}
 function FS.OnCast(player)
 	lastCast[player] = os.clock()
 	FS.GainMastery(player, M.ExpPerCast)
+	R.QuestService.Event(player, "FruitSkill")
 end
 
 -- kills count toward mastery if a fruit skill was used in the last 4 seconds

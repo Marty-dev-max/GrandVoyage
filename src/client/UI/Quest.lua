@@ -181,7 +181,8 @@ local function showLine()
 	end
 	dText.Text = text
 	dText.MaxVisibleGraphemes = 0
-	dNext.Text = lineIdx < #lines and "Next ▶" or "Got it!"
+	local verb = UI.IsMobile and "Tap" or "Click"
+	dNext.Text = lineIdx < #lines and ("▶ " .. verb .. " to continue") or ("✔ " .. verb .. " to close")
 	local myTyping = {}
 	typing = myTyping
 	task.spawn(function()
@@ -198,7 +199,8 @@ local function showLine()
 end
 
 local function buildDialog()
-	dialog = New("Frame", { Name = "QuestDialog", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -124), Size = UDim2.fromOffset(640, 128), BackgroundColor3 = Color3.new(1, 1, 1), Visible = false, ZIndex = 14, Parent = UI.Root })
+	-- the whole box is the "continue" button (big target, easy on phones); the rest of the screen stays playable
+	dialog = New("TextButton", { Name = "QuestDialog", Text = "", AutoButtonColor = false, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -124), Size = UDim2.fromOffset(640, 128), BackgroundColor3 = Color3.new(1, 1, 1), Visible = false, ZIndex = 14, Parent = UI.Root })
 	UI.Corner(dialog, 16)
 	UI.Gradient(dialog, T.PanelTop, T.PanelDeep, 90)
 	UI.Stroke(dialog, T.Edge, 4)
@@ -211,20 +213,33 @@ local function buildDialog()
 	UI.Stroke(tag, T.Edge, 3)
 	dName = UI.Text(tag, "", 19, Color3.new(1, 1, 1), "Display", { Position = UDim2.fromOffset(10, 0), Size = UDim2.new(1, -20, 1, 0), ZIndex = 32, TextWrapped = false })
 	dText = UI.Text(dialog, "", 17, T.Text, "Semi", { Position = UDim2.fromOffset(92, 22), Size = UDim2.new(1, -110, 0, 64), TextYAlignment = Enum.TextYAlignment.Top, ZIndex = 31 })
-	local btn, holder = UI.Button(dialog, "Next ▶", T.Green, UDim2.fromOffset(120, 36), function()
+	-- blinking hint instead of a button
+	dNext = UI.Text(dialog, "", 15, T.Gold, "Display", { AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -16, 1, -10), Size = UDim2.fromOffset(240, 20), TextXAlignment = Enum.TextXAlignment.Right, TextWrapped = false, ZIndex = 32 })
+	local function advance()
+		if not dialog.Visible then
+			return
+		end
 		local n = utf8.len(dText.Text) or 0
 		if dText.MaxVisibleGraphemes ~= -1 and dText.MaxVisibleGraphemes < n then
 			typing = nil
 			dText.MaxVisibleGraphemes = -1 -- first click finishes the line
 			return
 		end
+		Audio.Play("UIClick")
 		lineIdx += 1
 		showLine()
+	end
+	dialog.Activated:Connect(advance)
+	game:GetService("UserInputService").InputBegan:Connect(function(input, processed)
+		if not processed and (input.KeyCode == Enum.KeyCode.Return or input.KeyCode == Enum.KeyCode.KeypadEnter) then
+			advance()
+		end
 	end)
-	dNext = btn
-	holder.AnchorPoint = Vector2.new(1, 1)
-	holder.Position = UDim2.new(1, -14, 1, -12)
-	holder.ZIndex = 32
+	RunService.Heartbeat:Connect(function()
+		if dialog.Visible then
+			dNext.TextTransparency = 0.15 + (math.sin(os.clock() * 5) + 1) * 0.3
+		end
+	end)
 end
 
 function Quest.Dialog(speaker, newLines)

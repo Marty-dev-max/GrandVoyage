@@ -258,9 +258,31 @@ function PS.TeleportTo(player, cf)
 	end
 end
 
+-- every avatar gets the same R15 body (owner decision): classic proportions and default body parts, so attack
+-- poses and class outfits fit everyone; face, hair, accessories and clothing stay the player's own
+local function normalizeAvatar(hum)
+	if not GameConfig.NormalizeAvatars or hum.RigType ~= Enum.HumanoidRigType.R15 or hum:GetAttribute("Normalized") then
+		return
+	end
+	local ok, desc = pcall(function()
+		return hum:GetAppliedDescription()
+	end)
+	if not ok or not desc then
+		return
+	end
+	desc.HeightScale, desc.WidthScale, desc.DepthScale, desc.HeadScale = 1, 1, 1, 1
+	desc.BodyTypeScale, desc.ProportionScale = 0, 0
+	desc.Torso, desc.LeftArm, desc.RightArm, desc.LeftLeg, desc.RightLeg = 0, 0, 0, 0, 0
+	hum:SetAttribute("Normalized", true)
+	pcall(function()
+		hum:ApplyDescription(desc)
+	end)
+end
+
 local function onCharacter(player, char)
 	local hum = char:WaitForChild("Humanoid")
 	char:WaitForChild("HumanoidRootPart")
+	normalizeAvatar(hum)
 	local p = PS.Profile(player)
 	if not p then
 		return

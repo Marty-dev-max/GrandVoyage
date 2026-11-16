@@ -2,11 +2,15 @@
 return {
 	GameName = "Grand Voyage",
 	-- bump on every change: shown bottom-right in game and printed in Output, so you can tell which code is running
-	Version = "0.11.1",
+	Version = "0.12.0",
 	SagaName = "Azure East Saga",
 	DataStoreName = "GV_Player_v1",
 	GuildStoreName = "GV_Guild_v1",
 	AutoSaveInterval = 120,
+
+	-- every avatar is reset to the same R15 proportions + default body parts (face/hair/clothes kept); needs the
+	-- experience's Avatar type set to R15 in Game Settings
+	NormalizeAvatars = true,
 
 	-- ===== Day / night (client Controllers/Atmos.lua; same clock on every client via server time) =====
 	DayNight = {

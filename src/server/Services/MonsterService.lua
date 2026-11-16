@@ -212,7 +212,7 @@ local function die(mob, killer)
 			R.QuestService.Event(top, "Boss", def.id)
 		end
 	end
-	Net.FX("MobDeath", { pos = mob.root.Position, color = def.style.color, boss = def.isBoss }, mob.root.Position, 300)
+	Net.FX("MobDeath", { pos = mob.root.Position, color = def.style.color, boss = def.isBoss, model = mob.model }, mob.root.Position, 300)
 	if mob.opts.onDeath then
 		task.spawn(mob.opts.onDeath, mob, top)
 	end
@@ -255,7 +255,7 @@ function MS.Damage(mob, amount, player, crit)
 			mob.target = player
 		end
 	end
-	Net.FX("Damage", { pos = mob.root.Position + Vector3.new(0, 3, 0), amount = amount, crit = crit, src = player and player.UserId or 0 }, mob.root.Position, 250)
+	Net.FX("Damage", { pos = mob.root.Position + Vector3.new(0, 3, 0), amount = amount, crit = crit, src = player and player.UserId or 0, model = mob.model }, mob.root.Position, 250)
 	updateBar(mob)
 	if mob.hp <= 0 then
 		die(mob, player)

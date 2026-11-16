@@ -45,14 +45,17 @@ def hermit(st):
     P.ell((cx, cy - 3, 7), (9, 7, 5.5), body)
     k = [1.0, 1.25, 1.5][st - 1]
     for sx in (-1, 1):
+        g.set_part("Leg" + ("L" if sx < 0 else "R"))
         for j in range(3):
             P.tube([(cx + sx * 7, cy - 4 + j * 3, 5), (cx + sx * 12, cy - 4 + j * 3, 6), (cx + sx * 14, cy - 5 + j * 3, 0.5)], [1.1, 0.9, 0.7], shade(body, 0.85))
+        g.set_part("Arm" + ("L" if sx < 0 else "R"))
         P.tube([(cx + sx * 6, cy - 8, 7), (cx + sx * 10, cy - 13, 8)], [1.4, 1.8 * k], body)
         P.ell((cx + sx * 11, cy - 15, 9), (3.5 * k, 3.8 * k, 3.0 * k), shade(body, 1.1))
         P.box((cx + sx * 11.5, cy - 19 * (0.9 + 0.1 * k), 10), (1.2 * k, 1.8 * k, 0.8 * k), shade(body, 1.25))
         if st == 3:
             P.box((cx + sx * 11, cy - 13, 9), (3.6, 0.8, 3.2), GOLD, 0)
         # eye stalks
+        g.set_part("Body")
         P.tube([(cx + sx * 3, cy - 8, 10), (cx + sx * 3.5, cy - 9, 15)], [0.7, 0.6], body)
         P.ball((cx + sx * 3.5, cy - 9.5, 16.5), 2.3, WHITE, 0)
         P.box((cx + sx * 3.5, cy - 11.4, 16.6), (1.1, 0.5, 1.3), BLACK, 0)
@@ -88,8 +91,10 @@ def boarlet(st):
     P.ell((cx, 31, 9), (7, 9, 4.5), shade(fur, 1.2))
     for sx in (-1, 1):
         for yy in (24, 40):
+            g.set_part("Leg" + ("F" if yy < 30 else "B") + ("L" if sx < 0 else "R"))
             P.box((cx + sx * 5, yy, 3.5), (2.4, 2.6, 3.5), shade(fur, 0.7))
             P.box((cx + sx * 5, yy - 0.6, 0.8), (2.6, 3.0, 0.8), shade(fur, 0.4))
+    g.set_part("Body")
     P.rbox((cx, 17, 16), (8, 7.5, 7.5), fur, 2.6)
     P.rbox((cx, 9.8, 13.5), (4.2, 1.8, 3.0), rgb(250, 170, 160), 1.0)
     for sx in (-1, 1):
@@ -123,10 +128,13 @@ def gull(st):
     P.tube([(cx, cy - 6, 20), (cx, cy - 10, 19.5)], [1.6, 0.8], rgb(255, 170, 40))
     cute_eyes(P, cx, cy - 6.6, 22.5, gap=3.0, size=0.85)
     for sx in (-1, 1):
+        g.set_part("Leg" + ("L" if sx < 0 else "R"))
         P.box((cx + sx * 3, cy - 1, 1.5), (1.4, 2.2, 1.5), rgb(255, 170, 40), 0)
         w = 4 + span
+        g.set_part("Wing" + ("L" if sx < 0 else "R"))
         P.box((cx + sx * (6 + w / 2), cy + 1, 14), (w / 2, 3.0, 1.4), white)
         P.box((cx + sx * (6 + w * 0.85), cy + 1, 14.3), (w * 0.18 + 0.6, 2.6, 1.2), tip)
+    g.set_part("Body")
     if st >= 2:
         P.rbox((cx, cy - 1, 28), (6, 5.5, 1.6), rgb(50, 100, 210), 0.6)  # courier cap
         P.box((cx, cy - 6.8, 27), (3.5, 1.4, 0.4), rgb(40, 80, 170), 0)
@@ -162,8 +170,11 @@ def puffer(st):
     cute_eyes(P, cx, cy - r + 0.6, cz + 2.5, gap=3.6, size=1.05)
     P.ball((cx, cy - r + 0.5, cz - 2.8), 1.3, rgb(230, 80, 80), 0)
     for sx in (-1, 1):
+        g.set_part("Wing" + ("L" if sx < 0 else "R"))
         P.box((cx + sx * (r + 0.5), cy, cz - 1), (1.0, 3.0, 2.2), shade(body, 0.85))
+    g.set_part("Tail")
     P.box((cx, cy + r + 2, cz), (0.9, 3.0, 4.0), shade(body, 0.85))
+    g.set_part("Body")
     if st == 3:
         P.box((cx, cy, cz + r + 1.5), (4.0, 4.0, 1.4), GOLD, 0)
         for j in range(5):
@@ -191,9 +202,12 @@ def lantern(st):
         off = (j - (lures - 1) / 2) * 6
         P.tube([(cx + off * 0.3, 22, 27), (cx + off * 0.7, 18, 35), (cx + off, 12, 36)], [0.6, 0.5, 0.4], body)
         P.ball((cx + off, 11, 35), 2.4, glow, 0)
+    g.set_part("Tail")
     P.box((cx, 44, 18), (1.0, 4.5, 6.0), shade(body, 1.3))
     for sx in (-1, 1):
+        g.set_part("Wing" + ("L" if sx < 0 else "R"))
         P.box((cx + sx * 10.5, 28, 16), (1.0, 4.0, 2.6), shade(body, 1.3))
+    g.set_part("Body")
     if st >= 2:
         for k in range(5):
             P.box((cx, 22 + k * 3, 28.3 - k * 0.4), (0.8, 1.0, 1.6), shade(body, 1.4), 0)
@@ -236,8 +250,10 @@ def leviathan_pet(st):
         P.tube([(hx + sx * 3.5, hy + 2, hz + 5), (hx + sx * 4.5, hy + 4, hz + 5 + horn)], [1.0, 0.3], rgb(255, 245, 210))
         P.box((hx + sx * 7, hy + 1, hz), (0.8, 2.6, 2.0), rgb(255, 214, 100), 0)
         if st == 3:
+            g.set_part("Wing" + ("L" if sx < 0 else "R"))
             P.box((hx + sx * 12, 30, 22), (6, 4, 0.8), rgb(140, 220, 255))  # wings
             P.tube([(hx + sx * 5, 28, 16), (hx + sx * 17, 30, 24)], [0.8, 0.5], rgb(255, 214, 100))
+            g.set_part("Body")
     g.bake_ao(0.18)
     return g
 
@@ -303,8 +319,9 @@ def main():
         if ONLY and name not in ONLY:
             continue
         K.reset()
-        obj = V.mesh_grid(build(), name, 0.2)
-        K.export_glb(obj, os.path.join(OUT, name + ".glb"))
+        objs = V.mesh_grid(build(), name, 0.2, split=True)
+        V.export_parts(objs, os.path.join(OUT, name + ".glb"))
+        obj = objs
         if PREVIEW:
             V.preview(obj, os.path.join(OUT, "preview", name + ".png"))
         print("VOXEL", name)

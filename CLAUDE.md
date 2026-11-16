@@ -74,6 +74,11 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   a baked World with an older version is destroyed and rebuilt at runtime (the owner's published place keeps a baked World).
   Hand-made map edits in Studio belong in `workspace.Handmade` (never touched by rebuilds); layout changes go in World/*.lua.
 - Owner decisions on art: voxel style for pets, fruits and monsters; textured (SurfaceAppearance-like) stylized look for the map.
+- Creature animation is procedural (no animation assets): voxel models are exported in named parts (`Grid.set_part`:
+  Body/Head/LegL/LegR/LegFL../ArmL/ArmR/Tail/WingL/WingR); AssetService rigs monster parts to the root with Motor6Ds at
+  their joints and `Controllers/CreatureAnim.lua` drives Motor6D.Transform (walk, idle, attack, hit flash, death shatter);
+  pets animate by part name in `Controllers/Pets.lua` (Hinge attribute). Avatars: uniform R15 via
+  `PlayerService.normalizeAvatar` (GameConfig.NormalizeAvatars; Game Settings avatar type must be R15).
 - VFX are ParticleEmitter/Beam based with our own textures (`Config/Textures`); see the toolkit at the top of `Controllers/VFX.lua`.
 - UI is built only from `src/client/UI/UIKit.lua` helpers (Window, Section, TabBar, IconChip, Button, Bar, Card, Toast, Notice...).
   Hover makes buttons "jump"; keep that for new buttons by using `UI.Button` / `UI.Tactile`.

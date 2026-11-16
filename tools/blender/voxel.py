@@ -36,8 +36,16 @@ class Grid:
         self.P = np.stack([x, y, z], -1).astype(np.float32)
         self.fill = np.zeros(self.shape, bool)
         self.col = np.zeros(self.shape + (3,), np.float32)
-        self.tag = np.zeros(self.shape, np.int16)  # material ids (0 = none), used by colorers
+        self.tag = np.zeros(self.shape, np.int16)  # part index per voxel (see set_part)
         self.rng = np.random.default_rng(3)
+        self.part_names = ["Body"]
+        self.part = 0
+
+    def set_part(self, name):
+        """everything added from now on belongs to this part (exported as its own MeshPart, animated by the game)"""
+        if name not in self.part_names:
+            self.part_names.append(name)
+        self.part = self.part_names.index(name)
 
     # --- sdf primitives (negative = inside)
     def d_sphere(self, c, r):
@@ -72,10 +80,10 @@ class Grid:
             tpar = np.where(m, (i + h) / n, tpar)
         return best, tpar
 
-    def add(self, d, color_fn, tag=1):
+    def add(self, d, color_fn, tag=None):
         m = d <= 0
         self.fill |= m
-        self.tag[m] = tag
+        self.tag[m] = self.part if tag is None else tag
         c = color_fn(m)
         self.col[m] = c if np.ndim(c) == 1 else c[m]
 
@@ -107,7 +115,8 @@ def quantize(col, levels=12):
     return q[..., 0] * levels * levels + q[..., 1] * levels + q[..., 2]
 
 
-def mesh_grid(g, name, voxel=1.0, levels=16):
+def mesh_grid(g, name, voxel=1.0, levels=16, split=False):
+    """greedy-mesh the grid. split=True -> one object per part (named after the part), returned as a list"""
     fill = g.fill
     while True:
         cid = np.where(fill, quantize(g.col, levels), -1)
@@ -122,71 +131,84 @@ def mesh_grid(g, name, voxel=1.0, levels=16):
         r, gg, b = u // (levels * levels), (u // levels) % levels, u % levels
         pal.cell("#%02x%02x%02x" % tuple(int(round(v / (levels - 1) * 255)) for v in (r, gg, b)))
     colors = pal.colors
-    verts, faces, uvs = [], [], []
     nx, ny, nz = fill.shape
-    pad = np.pad(fill, 1)
-    for axis in range(3):
-        for sgn in (-1, 1):
-            # exposed faces: filled voxel whose neighbour along axis*sgn is empty
-            nb = np.roll(pad, -sgn, axis)[1:-1, 1:-1, 1:-1]
-            exposed = fill & ~nb
-            u_ax, v_ax = [a for a in range(3) if a != axis]
-            for s in range(fill.shape[axis]):
-                sl = [slice(None)] * 3
-                sl[axis] = s
-                mask = exposed[tuple(sl)]
-                if not mask.any():
-                    continue
-                ids = np.where(mask, cid[tuple(sl)], -1)
-                done = np.zeros_like(mask)
-                H, W = ids.shape
-                for i in range(H):
-                    for j in range(W):
-                        c = ids[i, j]
-                        if c < 0 or done[i, j]:
-                            continue
-                        w = 1
-                        while j + w < W and ids[i, j + w] == c and not done[i, j + w]:
-                            w += 1
-                        h = 1
-                        while i + h < H and np.all(ids[i + h, j:j + w] == c) and not done[i + h, j:j + w].any():
-                            h += 1
-                        done[i:i + h, j:j + w] = True
-                        plane = s + (1 if sgn > 0 else 0)
-                        quad = []
-                        for (a, b) in ((0, 0), (h, 0), (h, w), (0, w)):
-                            p = [0.0, 0.0, 0.0]
-                            p[axis] = plane
-                            p[u_ax] = i + a
-                            p[v_ax] = j + b
-                            quad.append(p)
-                        # winding so the normal points along axis*sgn
-                        nrm = np.cross(np.subtract(quad[1], quad[0]), np.subtract(quad[3], quad[0]))
-                        if (nrm[axis] > 0) != (sgn > 0):
-                            quad.reverse()
-                        base = len(verts)
-                        verts += quad
-                        faces.append((base, base + 1, base + 2, base + 3))
-                        uvs.append(pal.cell(colors[lut[int(c)]]))
-    me = bpy.data.meshes.new(name)
-    v = np.array(verts, np.float32)
-    v = (v - np.array([nx / 2, ny / 2, 0], np.float32)) * voxel
-    me.from_pydata(v.tolist(), [], faces)
-    me.update()
-    uvl = me.uv_layers.new(name="UVMap")
-    for poly, uv in zip(me.polygons, uvs):
-        for li in poly.loop_indices:
-            uvl.data[li].uv = uv
-    obj = bpy.data.objects.new(name, me)
-    bpy.context.scene.collection.objects.link(obj)
-    bpy.context.view_layer.objects.active = obj
-    obj.select_set(True)
-    # merge shared corners (smaller file, no cracks)
-    bm = bmesh.new()
-    bm.from_mesh(me)
-    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-4)
-    bm.to_mesh(me)
-    bm.free()
+
+    def build(mask, objname):
+        verts, faces, uvs = [], [], []
+        pad = np.pad(mask, 1)
+        for axis in range(3):
+            for sgn in (-1, 1):
+                # exposed faces: voxel of this part whose neighbour along axis*sgn is not in the part
+                # (faces between parts are kept so nothing opens up when a part moves)
+                nb = np.roll(pad, -sgn, axis)[1:-1, 1:-1, 1:-1]
+                exposed = mask & ~nb
+                u_ax, v_ax = [a for a in range(3) if a != axis]
+                for s_ in range(mask.shape[axis]):
+                    sl = [slice(None)] * 3
+                    sl[axis] = s_
+                    m2 = exposed[tuple(sl)]
+                    if not m2.any():
+                        continue
+                    ids = np.where(m2, cid[tuple(sl)], -1)
+                    done = np.zeros_like(m2)
+                    H, W = ids.shape
+                    for i in range(H):
+                        for j in range(W):
+                            c = ids[i, j]
+                            if c < 0 or done[i, j]:
+                                continue
+                            w = 1
+                            while j + w < W and ids[i, j + w] == c and not done[i, j + w]:
+                                w += 1
+                            h = 1
+                            while i + h < H and np.all(ids[i + h, j:j + w] == c) and not done[i + h, j:j + w].any():
+                                h += 1
+                            done[i:i + h, j:j + w] = True
+                            plane = s_ + (1 if sgn > 0 else 0)
+                            quad = []
+                            for (a, b) in ((0, 0), (h, 0), (h, w), (0, w)):
+                                p = [0.0, 0.0, 0.0]
+                                p[axis] = plane
+                                p[u_ax] = i + a
+                                p[v_ax] = j + b
+                                quad.append(p)
+                            nrm = np.cross(np.subtract(quad[1], quad[0]), np.subtract(quad[3], quad[0]))
+                            if (nrm[axis] > 0) != (sgn > 0):
+                                quad.reverse()
+                            base = len(verts)
+                            verts += quad
+                            faces.append((base, base + 1, base + 2, base + 3))
+                            uvs.append(pal.cell(colors[lut[int(c)]]))
+        me = bpy.data.meshes.new(objname)
+        v = np.array(verts, np.float32)
+        v = (v - np.array([nx / 2, ny / 2, 0], np.float32)) * voxel
+        me.from_pydata(v.tolist(), [], faces)
+        me.update()
+        uvl = me.uv_layers.new(name="UVMap")
+        for poly, uv in zip(me.polygons, uvs):
+            for li in poly.loop_indices:
+                uvl.data[li].uv = uv
+        o = bpy.data.objects.new(objname, me)
+        bpy.context.scene.collection.objects.link(o)
+        bm = bmesh.new()
+        bm.from_mesh(me)
+        bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-4)
+        bm.to_mesh(me)
+        bm.free()
+        return o, len(faces)
+
+    objs, total = [], 0
+    if split and len(g.part_names) > 1:
+        for pi, pn in enumerate(g.part_names):
+            mask = fill & (g.tag == pi)
+            if mask.any():
+                o, n = build(mask, pn)
+                objs.append(o)
+                total += n
+    else:
+        o, total = build(fill, name)
+        objs.append(o)
+    obj = objs[0]
     img = pal.image(name + "_pal")
     m = bpy.data.materials.new(name + "_mat")
     m.use_nodes = True
@@ -197,9 +219,21 @@ def mesh_grid(g, name, voxel=1.0, levels=16):
     tex.image = img
     tex.interpolation = "Closest"
     nt.links.new(tex.outputs["Color"], b.inputs["Base Color"])
-    me.materials.append(m)
-    print("VOXELS", name, int(fill.sum()), "faces", len(faces), "colors", len(colors))
-    return obj
+    for o in objs:
+        o.data.materials.append(m)
+    bpy.context.view_layer.objects.active = obj
+    print("VOXELS", name, int(fill.sum()), "faces", total, "colors", len(colors), "parts", len(objs))
+    return objs if split else obj
+
+
+def export_parts(objs, path):
+    """several part objects -> one GLB (Roblox imports one MeshPart per object, named after it)"""
+    bpy.ops.object.select_all(action="DESELECT")
+    for o in objs:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = objs[0]
+    bpy.ops.export_scene.gltf(filepath=path, export_format="GLB", use_selection=True, export_apply=True,
+                              export_yup=True, export_materials="EXPORT", export_image_format="AUTO")
 
 
 # ---------------------------------------------------------------- creatures
@@ -291,6 +325,27 @@ CREATURES = {"BaySerpent": bay_serpent}
 
 
 def preview(obj, path, size=512):
+    if isinstance(obj, (list, tuple)):
+        # frame the joined parts: preview a temporary joined copy
+        copies = []
+        for o in obj:
+            c = o.copy()
+            c.data = o.data.copy()
+            bpy.context.scene.collection.objects.link(c)
+            copies.append(c)
+        bpy.ops.object.select_all(action="DESELECT")
+        for c in copies:
+            c.select_set(True)
+        bpy.context.view_layer.objects.active = copies[0]
+        bpy.ops.object.join()
+        joined = bpy.context.object
+        for o in obj:
+            o.hide_render = True
+        preview(joined, path, size)
+        for o in obj:
+            o.hide_render = False
+        bpy.data.objects.remove(joined)
+        return
     sc = bpy.context.scene
     sc.render.engine = "CYCLES"
     sc.cycles.samples = 32

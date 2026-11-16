@@ -131,16 +131,34 @@ local function monsterRig(m)
 	root.Size = Vector3.new(math.max(2, ext.X * 0.6), 2, math.max(2, ext.Z * 0.6))
 	root.CFrame = CFrame.new(cf.Position)
 	root.Parent = m
+	-- every voxel part hangs off the root on a Motor6D at its natural joint, so the client can animate it
+	-- (Controllers/CreatureAnim sets Motor6D.Transform: legs swing from the hip, head nods from the neck...)
 	for _, p in ipairs(m:GetChildren()) do
 		if p:IsA("BasePart") and p ~= root then
 			p.Anchored = false
 			p.CanQuery = true -- click-to-target hits the mesh
-			local w = Instance.new("WeldConstraint")
-			w.Part0 = root
-			w.Part1 = p
-			w.Parent = root
+			local size, n = p.Size, p.Name
+			local hinge = Vector3.zero
+			if string.sub(n, 1, 3) == "Leg" or string.sub(n, 1, 3) == "Arm" then
+				hinge = Vector3.new(0, size.Y / 2, 0) -- hip / shoulder
+			elseif n == "Head" then
+				hinge = Vector3.new(0, -size.Y / 2, 0) -- neck
+			elseif string.sub(n, 1, 4) == "Wing" then
+				hinge = Vector3.new((p.Position.X > cf.Position.X) and -size.X / 2 or size.X / 2, 0, 0)
+			elseif n == "Tail" then
+				hinge = Vector3.new(0, 0, -size.Z / 2) -- where it meets the body (front end)
+			end
+			local hingeCF = CFrame.new((p.CFrame * CFrame.new(hinge)).Position)
+			local motor = Instance.new("Motor6D")
+			motor.Name = n
+			motor.Part0 = root
+			motor.Part1 = p
+			motor.C0 = root.CFrame:ToObjectSpace(hingeCF)
+			motor.C1 = p.CFrame:ToObjectSpace(hingeCF)
+			motor.Parent = root
 		end
 	end
+	m:SetAttribute("Height", ext.Y)
 	m.PrimaryPart = root
 	local hum = Instance.new("Humanoid")
 	hum.RigType = Enum.HumanoidRigType.R15

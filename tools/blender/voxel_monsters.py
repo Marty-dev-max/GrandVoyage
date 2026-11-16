@@ -87,9 +87,11 @@ def humanoid(spec):
     boss = spec.get("boss", False)
     # legs + boots
     for sx in (-1, 1):
+        g.set_part("Leg" + ("L" if sx < 0 else "R"))
         P.box((cx + sx * 3.2, cy, 3.2), (2.6, 3.0, 3.2), boots)
         P.box((cx + sx * 3.2, cy, 10.5), (2.4, 2.4, 4.6), pants)
     # torso
+    g.set_part("Body")
     P.rbox((cx, cy, 22.5), (7.2, 4.6, 8.0), outfit, 1.4)
     P.box((cx, cy, 15.4), (7.4, 4.8, 1.0), rgb(70, 46, 30))  # belt
     P.box((cx, cy - 4.7, 28.4), (2.2, 0.3, 1.6), skin, 0)  # open collar
@@ -100,10 +102,12 @@ def humanoid(spec):
     P.box((cx, cy - 4.8, 15.4), (1.2, 0.4, 1.0), rgb(255, 210, 80), 0)  # buckle
     # arms (slightly forward) + hands
     for sx in (-1, 1):
+        g.set_part("Arm" + ("L" if sx < 0 else "R"))
         P.rbox((cx + sx * 9.6, cy - 0.5, 23.0), (2.3, 2.3, 6.0), outfit, 0.8)
         P.box((cx + sx * 9.6, cy - 0.8, 15.8), (2.0, 2.0, 1.6), skin)
     # head (big, chibi)
     hz = 37.5
+    g.set_part("Head")
     P.rbox((cx, cy, hz), (7.0, 6.2, 7.0), skin, 1.6)
     eyes(P, cx, cy - 6.4, hz + 0.5, angry=spec.get("angry", True), glow=spec.get("glow"))
     P.box((cx, cy - 6.3, hz - 3.4), (1.8, 0.4, 0.4), shade(skin, 0.6), 0)  # mouth
@@ -114,7 +118,9 @@ def humanoid(spec):
         P.rbox((cx, cy, hz + 7.0), (7.4, 6.6, 1.8), WHITE, 0.6)
         P.box((cx, cy, hz + 5.6), (7.5, 6.7, 0.7), rgb(60, 110, 220), 0)
         P.box((cx, cy - 7.4, hz + 5.2), (5.0, 1.6, 0.5), rgb(40, 60, 120), 0)  # visor
+        g.set_part("Body")
         P.box((cx, cy - 4.8, 21.0), (2.0, 0.3, 4.0), rgb(60, 110, 220), 0)  # collar tie
+        g.set_part("Head")
     elif hat == "bandana":
         P.rbox((cx, cy, hz + 5.4), (7.3, 6.5, 2.2), rgb(210, 50, 50), 0.6)
         P.box((cx, cy + 7.6, hz + 4.6), (1.2, 1.6, 1.6), rgb(210, 50, 50), 0)
@@ -135,14 +141,18 @@ def humanoid(spec):
             for k in range(2):
                 P.box((cx + sx * 7.8, cy - 6.0, hz - 1.4 + k * 1.2), (1.8, 0.3, 0.2), WHITE, 0)  # whiskers
         P.rbox((cx, cy, hz + 6.2), (7.2, 6.4, 1.2), shade(outfit, 0.7), 0.4)
+        g.set_part("Tail")
         P.tube([(cx, cy + 5, 16), (cx + 3, cy + 10, 14), (cx + 6, cy + 12, 22)], [1.4, 1.2, 0.9], shade(outfit, 0.7))
+        g.set_part("Head")
     elif hat == "helmet":
         P.rbox((cx, cy, hz + 4.6), (7.8, 7.0, 3.8), rgb(170, 175, 190), 0.8)
         P.box((cx, cy, hz + 9.0), (1.0, 6.0, 1.6), rgb(220, 60, 60), 0)  # crest
         P.box((cx, cy - 7.2, hz + 1.0), (6.0, 0.6, 0.6), rgb(120, 125, 140), 0)
+        g.set_part("Body")
         for sx in (-1, 1):
             P.rbox((cx + sx * 9.6, cy - 0.5, 28.6), (3.2, 3.2, 1.8), rgb(160, 165, 180), 0.6)  # pauldrons
         P.box((cx, cy - 4.9, 23.0), (5.6, 0.6, 5.0), rgb(150, 155, 170))  # breastplate
+        g.set_part("Head")
     elif hat is None and spec.get("hair") is not None:
         P.rbox((cx, cy + 1, hz + 5.2), (7.4, 6.0, 2.4), spec["hair"], 0.8)
     if spec.get("swirl"):  # hypnotized eyes
@@ -152,6 +162,7 @@ def humanoid(spec):
     # weapons (right hand, +X)
     w = spec.get("weapon")
     hx, hy = cx + 9.6, cy - 1.5
+    g.set_part("ArmR")
     if w == "sword":
         P.box((hx, hy - 1, 16.0), (0.8, 0.8, 2.0), rgb(90, 60, 40), 0)
         P.box((hx, hy - 1, 18.6), (2.2, 0.8, 0.5), rgb(220, 190, 80), 0)
@@ -171,6 +182,7 @@ def humanoid(spec):
         for k in (-1, 0, 1):
             P.box((hx + k * 0.9, hy - 3.0, 15.4), (0.3, 1.8, 0.3), rgb(230, 230, 240), 0)
     # bosses: cape, epaulettes, bigger presence
+    g.set_part("Body")
     if boss:
         cape = spec.get("cape", rgb(160, 30, 40))
         P.box((cx, cy + 5.3, 20.0), (8.0, 0.8, 10.5), cape, 0.04)
@@ -179,6 +191,7 @@ def humanoid(spec):
             for k in range(3):
                 P.box((cx + sx * (8.0 + k * 1.3), cy - 0.5, 27.8), (0.4, 2.4, 1.0), rgb(255, 210, 90), 0)
         if spec.get("crown"):
+            g.set_part("Head")
             for k in range(5):
                 P.box((cx - 4 + k * 2, cy, hz + 9 + (k % 2) * 1.2), (0.8, 5.0, 1.8 + (k % 2)), rgb(255, 205, 60), 0)
     g.bake_ao(0.22)
@@ -192,6 +205,7 @@ def fishfolk(spec):
     kind = spec["fish"]
     c = spec["color"]
     belly = shade(c, 1.5)
+    g.set_part("Head")
     if kind == "shark":
         P.box((cx, cy + 1, hz + 9.5), (0.9, 3.2, 3.0), shade(c, 0.85))  # dorsal fin
         P.box((cx, cy + 3, hz + 12.0), (0.8, 1.6, 1.2), shade(c, 0.85))
@@ -212,6 +226,7 @@ def fishfolk(spec):
             a = -0.8 + k * 0.32
             x0 = cx + math.sin(a) * 4.5
             P.tube([(x0, cy - 5.5, hz - 2.5), (x0 + math.sin(a) * 2, cy - 6.5, hz - 7), (x0 + math.sin(a) * 3.5, cy - 5.5, hz - 11)], [1.1, 0.8, 0.5], shade(c, 0.9))
+    g.set_part("Body")
     P.box((cx, cy - 4.8, 22.0), (5.0, 0.4, 6.0), belly)
     g.bake_ao(0.2)
     return g
@@ -225,15 +240,19 @@ def crab(c):
     P.ell((cx, cy, 9), (13, 10, 6.5), c)
     P.ell((cx, cy - 1, 12.5), (10, 7.5, 3.0), shade(c, 1.15))
     for sx in (-1, 1):
+        g.set_part("Leg" + ("L" if sx < 0 else "R"))
         for k in range(3):
             P.tube([(cx + sx * 10, cy - 3 + k * 4, 6), (cx + sx * 17, cy - 3 + k * 4, 8), (cx + sx * 20, cy - 4 + k * 4, 0.5)], [1.4, 1.2, 0.8], shade(c, 0.85))
+        g.set_part("Arm" + ("L" if sx < 0 else "R"))
         P.tube([(cx + sx * 8, cy - 8, 9), (cx + sx * 15, cy - 15, 11)], [1.8, 2.2], c)
         P.ell((cx + sx * 16, cy - 17, 12), (4.5, 5.0, 3.8), shade(c, 1.1))
         P.box((cx + sx * 16 + sx * 1.6, cy - 22, 13.5), (1.6, 2.4, 1.0), shade(c, 1.25))
         P.box((cx + sx * 16 + sx * 1.6, cy - 22, 10.2), (1.4, 2.2, 0.9), shade(c, 1.25))
+        g.set_part("Head")
         P.tube([(cx + sx * 3.5, cy - 7, 13), (cx + sx * 4, cy - 9, 18)], [0.8, 0.7], c)
         P.ball((cx + sx * 4, cy - 9.5, 19.2), 1.8, WHITE, 0)
         P.box((cx + sx * 4, cy - 11.2, 19.4), (0.8, 0.4, 0.9), BLACK, 0)
+    g.set_part("Body")
     P.box((cx, cy - 10.2, 7.5), (3.0, 0.4, 0.5), shade(c, 0.5), 0)
     g.bake_ao(0.35)
     return g
@@ -251,12 +270,14 @@ def quadruped(c, kind):
     P.ell((cx, 33, body_z - 4), (7.5, 12, 4.5), belly)
     for sx in (-1, 1):
         for yy in (24, 44):
+            g.set_part("Leg" + ("F" if yy < 30 else "B") + ("L" if sx < 0 else "R"))
             P.box((cx + sx * 5.5, yy, 5.5), (2.6, 2.8, 5.5), dark if kind == "boar" else c)
             P.box((cx + sx * 5.5, yy - 0.8, 1.2), (2.9, 3.4, 1.2), shade(c, 0.45))
             if kind in ("cat", "lion", "wolf"):
                 for k in (-1, 0, 1):
                     P.box((cx + sx * 5.5 + k * 1.2, yy - 4.0, 0.8), (0.35, 0.8, 0.5), WHITE, 0)
     hy, hz = 16, body_z + 6
+    g.set_part("Head")
     if kind == "boar":
         P.rbox((cx, hy, hz - 1), (8, 8, 7), c, 2)
         P.rbox((cx, hy - 8.5, hz - 3), (4.6, 2.6, 3.4), rgb(240, 160, 150), 1)
@@ -264,8 +285,10 @@ def quadruped(c, kind):
             P.box((cx + sx * 1.6, hy - 11.2, hz - 2.6), (0.7, 0.3, 0.8), shade(c, 0.4), 0)
             P.tube([(cx + sx * 4.2, hy - 8, hz - 4), (cx + sx * 5.6, hy - 11, hz + 0.5)], [1.0, 0.4], WHITE)
             P.box((cx + sx * 6.5, hy + 2, hz + 7), (1.4, 1.2, 2.0), dark)
+        g.set_part("Body")
         for k in range(9):
             P.box((cx, hy + 4 + k * 3.2, body_z + 8.5 + (2 if k < 4 else 0)), (1.1, 1.4, 2.4 - k * 0.15), shade(c, 0.35), 0)
+        g.set_part("Head")
         eyes(P, cx, hy - 8.1, hz + 2.5, gap=3.6, angry=True)
     elif kind in ("wolf", "lion", "cat"):
         head_r = (7, 7.5, 6.5) if kind != "lion" else (7.5, 7.5, 7.0)
@@ -285,10 +308,12 @@ def quadruped(c, kind):
                 a = k / 22 * math.tau
                 P.ball((cx + math.cos(a) * 9.5, hy + 2.5, hz + 1 + math.sin(a) * 9.0), 3.2, shade(rgb(190, 90, 40), 0.9 + 0.2 * (k % 2)))
         if kind == "wolf":
+            g.set_part("Body")
             for k in range(10):
                 P.box((cx, hy + 6 + k * 2.6, body_z + 8.2 - k * 0.2), (2.4 - k * 0.12, 1.4, 2.0), dark, 0.03)
         # tail
         tail_c = dark if kind != "lion" else c
+        g.set_part("Tail")
         P.tube([(cx, 48, body_z + 3), (cx, 55, body_z + 7), (cx + (3 if kind == "cat" else 0), 60, body_z + (14 if kind == "cat" else 6))], [2.2 if kind == "wolf" else 1.2, 1.8, 1.0], tail_c)
         if kind == "lion":
             P.ball((cx, 60.5, body_z + 6), 2.4, rgb(150, 70, 30))
@@ -304,16 +329,22 @@ def monkey(c):
     P.ell((cx, cy, 18), (8.5, 7, 10), c)
     P.ell((cx, cy - 4, 17), (5.5, 3.5, 7), face)
     for sx in (-1, 1):
+        sd = "L" if sx < 0 else "R"
+        g.set_part("Arm" + sd)
         P.tube([(cx + sx * 7, cy, 25), (cx + sx * 12, cy - 2, 16), (cx + sx * 12, cy - 4, 6)], [2.2, 2.0, 2.0], c)
         P.ball((cx + sx * 12, cy - 4.5, 4.5), 2.6, face)
+        g.set_part("Leg" + sd)
         P.tube([(cx + sx * 4, cy, 10), (cx + sx * 5, cy - 1, 3)], [2.6, 2.4], c)
         P.box((cx + sx * 5, cy - 2, 1.2), (2.6, 3.4, 1.2), face)
+        g.set_part("Head")
         P.ball((cx + sx * 9.5, cy, 37), 3.0, c)
         P.ball((cx + sx * 9.8, cy - 0.8, 37), 1.8, face)
+    g.set_part("Head")
     P.rbox((cx, cy, 36), (8, 7, 7.5), c, 2.4)
     P.rbox((cx, cy - 5.2, 34.5), (5.5, 2.6, 5.0), face, 1.6)
     eyes(P, cx, cy - 7.9, 37, gap=2.4, angry=False)
     P.box((cx, cy - 7.9, 32.2), (2.2, 0.3, 0.4), shade(face, 0.5), 0)
+    g.set_part("Tail")
     P.tube([(cx, cy + 6, 12), (cx + 2, cy + 13, 18), (cx - 2, cy + 14, 28), (cx - 5, cy + 12, 31)], [1.4, 1.2, 1.1, 1.0], c)
     g.bake_ao(0.35)
     return g
@@ -402,8 +433,9 @@ def main():
             continue
         K.reset()
         g = fn()
-        obj = V.mesh_grid(g, "Mon_" + mid, 0.25)
-        K.export_glb(obj, os.path.join(OUT, "Mon_" + mid + ".glb"))
+        objs = V.mesh_grid(g, "Mon_" + mid, 0.25, split=True)
+        V.export_parts(objs, os.path.join(OUT, "Mon_" + mid + ".glb"))
+        obj = objs
         if PREVIEW:
             V.preview(obj, os.path.join(OUT, "preview", "Mon_" + mid + ".png"))
         print("MONSTER", mid)

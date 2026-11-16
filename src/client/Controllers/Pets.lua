@@ -105,6 +105,18 @@ local function build(key)
 				p.Anchored = true
 				p.CanCollide = false
 				p:SetAttribute("Offset", c:GetPivot():ToObjectSpace(p.CFrame))
+				-- joint for the voxel part animation (see place): hip/shoulder at the top, wing root on the inner edge...
+				local size, n = p.Size, p.Name
+				local hinge = Vector3.zero
+				if string.sub(n, 1, 3) == "Leg" or string.sub(n, 1, 3) == "Arm" then
+					hinge = Vector3.new(0, size.Y / 2, 0)
+				elseif string.sub(n, 1, 4) == "Wing" then
+					local side = c:GetPivot():PointToObjectSpace(p.Position).X
+					hinge = Vector3.new(side > 0 and -size.X / 2 or size.X / 2, 0, 0)
+				elseif n == "Tail" then
+					hinge = Vector3.new(0, 0, -size.Z / 2)
+				end
+				p:SetAttribute("Hinge", hinge)
 				p.Parent = m
 			end
 		end
@@ -116,10 +128,36 @@ local function build(key)
 	return m, sp
 end
 
-local function place(m, cf, t)
+-- voxel pet parts animate by name around their joint (Hinge): legs trot while moving, wings/fins flap,
+-- tails wag, claws snip
+local function partPose(name, t, move)
+	local pre = string.sub(name, 1, 3)
+	if pre == "Leg" then
+		local s = (string.sub(name, -1) == "L") ~= (string.sub(name, 4, 4) == "B") and 1 or -1
+		return CFrame.Angles(math.sin(t * 13) * 0.65 * move * s, 0, 0)
+	elseif pre == "Arm" then
+		return CFrame.Angles(0, math.sin(t * 3) * 0.12, 0)
+	elseif string.sub(name, 1, 4) == "Wing" then
+		local s = string.sub(name, -1) == "L" and 1 or -1
+		return CFrame.Angles(0, 0, math.sin(t * 10) * (0.35 + 0.35 * move) * s)
+	elseif name == "Tail" then
+		return CFrame.Angles(0, math.sin(t * 5) * 0.4, 0)
+	end
+	return nil
+end
+
+local function place(m, cf, t, move)
+	move = move or 0
 	for _, p in ipairs(m:GetChildren()) do
 		if p:IsA("BasePart") then
 			local off = p:GetAttribute("Offset") or CFrame.new()
+			local hinge = p:GetAttribute("Hinge")
+			if hinge then
+				local pose = partPose(p.Name, t, move)
+				if pose then
+					off = off * CFrame.new(hinge) * pose * CFrame.new(-hinge)
+				end
+			end
 			local wing = p:GetAttribute("Wing")
 			if wing then
 				off = off * CFrame.Angles(0, 0, wing * math.sin(t * 14) * 0.5)
@@ -180,7 +218,7 @@ function PetsCtl.Start()
 					local hop = flyer and math.sin(t * 3) * 0.4 or math.abs(math.sin(t * 8)) * 0.6 * math.clamp((goal - a.pos).Magnitude / 3, 0, 1)
 					local look = root.Position + root.CFrame.LookVector * 40
 					local cf = CFrame.lookAt(a.pos + Vector3.new(0, hop, 0), Vector3.new(look.X, a.pos.Y + hop, look.Z))
-					place(a.model, cf, t)
+					place(a.model, cf, t, math.clamp((goal - a.pos).Magnitude / 3, 0, 1))
 				end
 			end
 		end

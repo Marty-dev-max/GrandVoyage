@@ -79,7 +79,7 @@ function DataService.Init()
 	end)
 	if not ok then
 		useMemory = true
-		warn("[DataService] DataStore unavailable (enable Game Settings > Security > Studio Access to API Services). Using temporary data.")
+		warn("[DataService] DataStore unavailable: open the PUBLISHED place (File > Open from Roblox, not the local .rbxl) and enable Game Settings > Security > Studio Access to API Services. Using temporary data (nothing is saved).")
 	end
 end
 

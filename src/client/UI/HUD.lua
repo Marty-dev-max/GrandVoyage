@@ -259,6 +259,19 @@ local function updateOrbs()
 	end
 end
 
+-- color for a skill slot: its class color, or its fruit's color for Cursed Fruit skills
+local function skillColor(skill)
+	if not skill then
+		return T.Panel
+	end
+	local cls = Classes[skill.class]
+	if cls then
+		return cls.color
+	end
+	local f = skill.fruit and FruitsCfg.ById[skill.fruit]
+	return f and f.color or T.Accent
+end
+
 local function buildStatus()
 	-- the card sits behind the ring; the ring overlaps its left edge
 	local card = glass(UI.Root, UDim2.fromOffset(356, 128), UDim2.fromOffset(100, 22))
@@ -422,7 +435,8 @@ local function buildSkillBar()
 			if not s then
 				return nil
 			end
-			return string.format("<b>%s</b>  Lv.%d\n%s\nSP %d  •  Cooldown %ss", s.name, p.skills[s.id] or 0, s.desc or "", s.sp, s.cd), Classes[s.class].color
+			local lvText = s.fruit and ("Mastery " .. (p.fruit and p.fruit.mastery or 0)) or ("Lv." .. (p.skills[s.id] or 0))
+			return string.format("<b>%s</b>  %s\n%s\nSP %d  •  Cooldown %ss", s.name, lvText, s.desc or "", s.sp, s.cd), skillColor(s)
 		end)
 		skillSlots[i] = { slot = slot, name = name, cd = cd, cdText = cdText, auto = autoDot, sp = sp, grad = grad, stroke = stroke, key = key, base = base }
 	end
@@ -458,7 +472,8 @@ local function buildTarget()
 	local hp = UI.Bar(targetFrame, T.Red, UDim2.new(1, 0, 0, 20), "")
 	hp.back.Position = UDim2.fromOffset(0, 30)
 	HUD.targetHp = hp
-	HUD.highlight = New("Highlight", { FillTransparency = 0.85, FillColor = T.Red, OutlineColor = T.Red, OutlineTransparency = 0, DepthMode = Enum.HighlightDepthMode.Occluded, Parent = workspace })
+	-- Enabled only while there is a target: a Highlight with no Adornee outlines its Parent (the whole workspace!)
+	HUD.highlight = New("Highlight", { Enabled = false, FillTransparency = 0.85, FillColor = T.Red, OutlineColor = T.Red, OutlineTransparency = 0, DepthMode = Enum.HighlightDepthMode.Occluded, Parent = workspace })
 end
 
 local function buildLoot()
@@ -576,7 +591,7 @@ local function refresh()
 		local skill = id and ClassesCfg.SkillById[id]
 		s.name.Text = skill and skill.name or ""
 		s.sp.Text = skill and (skill.sp .. " SP") or ""
-		local c = skill and Classes[skill.class].color or T.Panel
+		local c = skillColor(skill)
 		s.grad.Color = skill and ColorSequence.new(c:Lerp(Color3.new(1, 1, 1), 0.15), c:Lerp(Color3.new(0, 0, 0), 0.45)) or ColorSequence.new(T.PanelTop, T.PanelDeep)
 		local left = id and ((State.cooldowns[id] or 0) - now) or 0
 		s.cd.Size = UDim2.new(1, 0, skill and left > 0 and math.clamp(left / skill.cd, 0, 1) or 0, 0)
@@ -606,9 +621,11 @@ local function refresh()
 		HUD.captureBtn.Visible = tameable and hasBait and hp / max <= PetsCfg.Capture.MaxHpRatio
 		HUD.captureBtn.Position = UDim2.new(0.5, 0, 0, targetFrame.Position.Y.Offset + targetFrame.Size.Y.Offset + 8)
 		HUD.highlight.Adornee = tgt
+		HUD.highlight.Enabled = true
 	else
 		targetFrame.Visible = false
 		HUD.captureBtn.Visible = false
+		HUD.highlight.Enabled = false
 		if HUD.highlight.Adornee ~= nil then
 			HUD.highlight.Adornee = nil
 		end

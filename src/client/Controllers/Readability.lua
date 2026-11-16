@@ -371,7 +371,8 @@ local function updateNav()
 				dir = Vector2.new(0, -1)
 			end
 			dir = dir.Unit
-			local edge = Vector2.new(vp.X / 2 - 70, vp.Y / 2 - 90)
+			-- keep arrows inside the play area: clear of the right-side menu and the left player card
+			local edge = Vector2.new(vp.X / 2 - 230 * scale, vp.Y / 2 - 130 * scale)
 			local k = math.min(math.abs(edge.X / dir.X), math.abs(edge.Y / dir.Y))
 			local p = Vector2.new(vp.X / 2, vp.Y / 2) + dir * k
 			local a = arrow(ai, t.text, t.color)

@@ -643,6 +643,7 @@ end)
 -- ===== Toasts (slide in from the right) =====
 local toastHolder = New("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -96, 0, 120), Size = UDim2.fromOffset(420, 400), BackgroundTransparency = 1, Parent = gui })
 local tl = UI.List(toastHolder, nil, 6, Enum.HorizontalAlignment.Right)
+UI.ToastHolder = toastHolder
 tl.VerticalAlignment = Enum.VerticalAlignment.Top
 local toastColors = { info = T.Ocean, good = T.Green, bad = T.Red, level = T.Gold, pvp = T.Purple, card = T.Gold, mvp = T.Orange }
 local toastIcons = { info = "💬", good = "✅", bad = "⚠️", level = "⬆️", pvp = "⚔️", card = "🃏", mvp = "👑" }

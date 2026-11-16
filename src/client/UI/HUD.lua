@@ -452,6 +452,24 @@ local function buildSkillBar()
 	end
 end
 
+function HUD.NewHighlight()
+	return New("Highlight", { FillTransparency = 0.85, FillColor = T.Red, OutlineColor = T.Red, OutlineTransparency = 0, DepthMode = Enum.HighlightDepthMode.Occluded })
+end
+
+-- the highlight dies with a monster model that gets destroyed; recreate it when that happens
+local function setHighlight(model)
+	if HUD.highlight.Parent == model then
+		return
+	end
+	local ok = pcall(function()
+		HUD.highlight.Parent = model
+	end)
+	if not ok then
+		HUD.highlight = HUD.NewHighlight()
+		HUD.highlight.Parent = model
+	end
+end
+
 local function buildTarget()
 	targetFrame = glass(UI.Root, UDim2.fromOffset(380, 70), UDim2.new(0.5, 0, 0, 88), Vector2.new(0.5, 0))
 	targetFrame.Visible = false
@@ -473,7 +491,9 @@ local function buildTarget()
 	hp.back.Position = UDim2.fromOffset(0, 30)
 	HUD.targetHp = hp
 	-- Enabled only while there is a target: a Highlight with no Adornee outlines its Parent (the whole workspace!)
-	HUD.highlight = New("Highlight", { Enabled = false, FillTransparency = 0.85, FillColor = T.Red, OutlineColor = T.Red, OutlineTransparency = 0, DepthMode = Enum.HighlightDepthMode.Occluded, Parent = workspace })
+	-- Lives INSIDE the target model (so it can only ever outline that model) and is unparented when there is no target.
+	-- Parented to workspace with no Adornee, a Highlight outlines the entire map.
+	HUD.highlight = HUD.NewHighlight()
 end
 
 local function buildLoot()
@@ -620,15 +640,11 @@ local function refresh()
 		end
 		HUD.captureBtn.Visible = tameable and hasBait and hp / max <= PetsCfg.Capture.MaxHpRatio
 		HUD.captureBtn.Position = UDim2.new(0.5, 0, 0, targetFrame.Position.Y.Offset + targetFrame.Size.Y.Offset + 8)
-		HUD.highlight.Adornee = tgt
-		HUD.highlight.Enabled = true
+		setHighlight(tgt)
 	else
 		targetFrame.Visible = false
 		HUD.captureBtn.Visible = false
-		HUD.highlight.Enabled = false
-		if HUD.highlight.Adornee ~= nil then
-			HUD.highlight.Adornee = nil
-		end
+		setHighlight(nil)
 	end
 end
 
@@ -688,6 +704,9 @@ function HUD.Layout()
 			list.VerticalAlignment = Enum.VerticalAlignment.Bottom
 		end
 	end
+	-- toasts sit just left of the menu column (they used to slide under the currency pills)
+	local menuW = compact and 326 * 0.8 or 158
+	UI.ToastHolder.Position = UDim2.new(1, -(menuW + 32), 0, 222)
 	if attackHolder then
 		attackHolder.Size = UDim2.fromOffset(compact and 120 or 110, compact and 120 or 110)
 	end

@@ -85,6 +85,9 @@ function PS.SetAttributes(player)
 	player:SetAttribute("StatPoints", p.statPoints)
 	player:SetAttribute("SkillPoints", p.skillPoints)
 	player:SetAttribute("Crew", p.crew)
+	-- set here (on load) so the HUD shows Pearls right away instead of 0 until the first purchase
+	player:SetAttribute("Pearls", (p.pearls or 0) + (p.pearlsBound or 0))
+	player:SetAttribute("PearlsTradable", p.pearls or 0)
 	if R and R.FruitService then
 		R.FruitService.SetAttributes(player, p)
 	end

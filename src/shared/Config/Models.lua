@@ -21,6 +21,7 @@ return {
 	Leviathan_1 = 95949609613848,
 	Leviathan_2 = 131223630990006,
 	Leviathan_3 = 99700717839919,
+	Mon_BaySerpent = 129684468906851,
 	Mon_GuardWolf = 122689761351580,
 	Puffer_1 = 117505242197074,
 	Puffer_2 = 120913356351385,

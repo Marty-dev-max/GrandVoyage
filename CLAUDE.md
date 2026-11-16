@@ -28,6 +28,7 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
 | VFX textures | `python3 tools/gen_vfx.py`, then `python3 tools/upload_images.py assets/vfx src/shared/Config/Textures.lua` |
 | Blender models (old map/monster/ship pack) | `blender -b -P tools/blender/generate_assets.py -- --out assets/models --preview` |
 | Detailed creatures v3 (skin-modifier body + fur tufts + baked texture) | `python tools/blender/creatures.py -- --out assets/models3d --preview` (or open it in Blender's Scripting tab and Run Script to build it in the open scene), then upload_models.py as below |
+| Voxel creatures (SDF shapes on a grid, per-voxel colors, greedy mesh) | `python tools/blender/voxel.py -- --out assets/models3d --preview` |
 | In-game 3D models v2 (pets x3 stages, fruits) | `python tools/blender/build_models.py -- --out assets/models3d --preview [--only Gull_2]`, then `ROBLOX_API_KEY=... python3 tools/upload_models.py assets/models3d src/shared/Config/Models.lua` |
 
 ## Rules learned the hard way

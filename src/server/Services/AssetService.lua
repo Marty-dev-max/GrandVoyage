@@ -16,7 +16,7 @@ local AS = {}
 local PET_SIZE = { 2.6, 3.3, 4.2 }
 local PET_SIZE_MULT = { Leviathan = 1.25, Puffer = 0.9 }
 local FRUIT_SIZE = 2.6
-local MONSTER_SIZE = { GuardWolf = 7.5 } -- default 7
+local MONSTER_SIZE = { GuardWolf = 7.5, BaySerpent = 40 } -- default 7
 -- if an import ever faces the wrong way, fix it here (radians around Y) instead of re-exporting everything
 local YAW_FIX = 0
 

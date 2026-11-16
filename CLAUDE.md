@@ -114,16 +114,19 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
 
 Done: Brawler + Sea Cook + per-class progress, all 6 Cursed Fruits, Pearls (shop, Pearl stalls, ledger, Robux receipts),
 Sea Companions (capture, eggs, evolution, follow/attack), quests + tutorial, chests, swimming,
-daily quests + achievements + titles (`ProgressService`, fed by `QuestService.Event`),
-3D-rendered icon pack, Blender models v2 for all pets (18) and fruits (6) loaded at runtime (`AssetService`).
+daily quests + achievements + titles (`ProgressService`, fed by `QuestService.Event`), 3D-rendered icon pack,
+models v2 for pets (18) and fruits (6) (`AssetService`), map art pass up to v0.10.3 (materials, animated ocean,
+day/night lighting, wind wisps + leaves, stylized env kit: trees/pines/palms/bushes/boulders, layered rock-cliff hills with
+grass caps, red Red Line cliffs, scattered plants with petal flowers, painted grass texture).
 Bump `GameConfig.Version` on every change: the owner checks it bottom-right in game to confirm Rojo synced.
 The owner updates by double-clicking `update.bat` (git pull) on Windows, then Stop/Play in Studio.
+The owner tests in Studio and sends screenshots; previews of new art are rendered in Blender (bpy) from the real GLBs
+(see docs/screenshots/*.png) before shipping. Owner feedback is visual and blunt: iterate until they say it is right.
 
 ## Next up
 
-1. Playtest in Studio and fix what breaks (fruit Dash feel, pet follow, swim animation, quest flow).
-2. (done) Robux developer products are live: ids in `Config/Pearls.lua` (`Products`). The game is published;
-   Studio Access to API Services is on, so DataStores save in Studio playtests.
-3. Fruit skill VFX polish, Seastone gear items for Marines.
-4. Art pass: Blender models for pets/fruits/monsters (`ReplicatedStorage.Assets.Pets/<Species>_<stage>` overrides the
-   placeholder bodies), icon set.
+1. Wait for the owner's verdict on v0.10.3 (hills/flowers/grass); fix what they point at.
+2. Voxel art pass (approved style): monsters (33 incl. bosses: start with animals + bosses), pets (18 stages), fruits (6)
+   with `tools/blender/voxel.py` (BaySerpent boss already done). Big bosses: segment them so the game can sway parts.
+3. Per-skill icons (render_icons.py), Seastone gear for Marines, fruit skill VFX polish.
+4. Playtest fixes (fruit Dash feel, pet follow, swim animation, quest flow). Friend playtest target: end of November 2026.

@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local ClassesCfg = require(Shared.Config.Classes)
 local ItemDB = require(Shared.Modules.ItemDB)
+local Reach = require(ReplicatedStorage.Shared.Modules.Reach)
 local Formulas = require(Shared.Modules.Formulas)
 local Net = require(Shared.Modules.Net)
 
@@ -118,12 +119,12 @@ local function resolveTarget(attacker, inst)
 	end
 	local mob = R.MonsterService.FromInstance(inst)
 	if mob and not mob.dead then
-		return { kind = "mob", mob = mob, pos = mob.root.Position }
+		return { kind = "mob", mob = mob, pos = mob.root.Position, model = mob.model }
 	end
 	local model = inst:IsA("Model") and inst or inst:FindFirstAncestorOfClass("Model")
 	local pl = model and Players:GetPlayerFromCharacter(model)
 	if pl and pl ~= attacker and alive(pl) and R.PvPService.CanFight(attacker, pl) then
-		return { kind = "player", player = pl, pos = R.PlayerService.Root(pl).Position }
+		return { kind = "player", player = pl, pos = R.PlayerService.Root(pl).Position, model = pl.Character }
 	end
 	return nil
 end
@@ -229,7 +230,7 @@ local function setup()
 		local root = R.PlayerService.Root(player)
 		local wType = weaponType(player)
 		local range = WeaponRange[wType] or 10
-		if (root.Position - target.pos).Magnitude > range + 6 then
+		if Reach.Gap(root.Position, target.model) > range + 4.5 then
 			return false, "Too far away"
 		end
 		lastAttack[player] = now
@@ -288,7 +289,7 @@ local function setup()
 			if not target then
 				return false, "No target"
 			end
-			if (root.Position - target.pos).Magnitude > (skill.range or 10) + 6 then
+			if Reach.Gap(root.Position, target.model) > (skill.range or 10) + 4.5 then
 				return false, "Too far away"
 			end
 			fxData.to = target.pos

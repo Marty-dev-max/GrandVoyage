@@ -2,6 +2,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
+local Reach = require(Shared.Modules.Reach)
 local Monsters = require(Shared.Config.Monsters)
 local Islands = require(Shared.Config.Islands)
 local ItemDB = require(Shared.Modules.ItemDB)
@@ -136,7 +137,7 @@ end
 function MS.InRadius(pos, radius)
 	local out = {}
 	for _, mob in pairs(mobs) do
-		if not mob.dead and mob.root and (mob.root.Position - pos).Magnitude <= radius + (mob.def.style.scale or 1) * 1.5 then
+		if not mob.dead and mob.root and Reach.Gap(pos, mob.model) <= radius then
 			table.insert(out, mob)
 		end
 	end
@@ -317,7 +318,7 @@ local function bossSpecial(mob)
 		Net.FX("Slam", { pos = mob.root.Position, radius = radius }, center, 300)
 		for _, pl in ipairs(Players:GetPlayers()) do
 			local root = R.PlayerService.Root(pl)
-			if root and (root.Position - mob.root.Position).Magnitude <= radius then
+			if root and Reach.Gap(root.Position, mob.model) <= radius then
 				R.CombatService.MonsterHit(mob, pl, 1.8)
 			end
 		end
@@ -347,8 +348,9 @@ local function step(mob, now)
 		end
 	end
 	if ok and troot then
-		local dist = (troot.Position - mob.root.Position).Magnitude
-		local reach = def.attackRange + (def.style.scale or 1) * 1.2
+		-- measured to the monster's body, so huge bosses can bite players standing at their feet
+		local dist = Reach.Gap(troot.Position, mob.model)
+		local reach = def.attackRange
 		if dist > reach then
 			if mob.hum and now - mob.lastMove > 0.35 then
 				mob.lastMove = now

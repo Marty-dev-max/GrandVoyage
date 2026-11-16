@@ -41,6 +41,8 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
 - IP safety: everything is original naming (islands, monsters, items, NPCs). Never use One Piece names, characters or logos.
 - All game logic and rewards are computed on the server. Client requests go through `Net.Handle(action, fn, minInterval)`
   (one RemoteFunction `Request`, a `Push` RemoteEvent, unreliable `FX`). Validate every payload.
+- Combat ranges are measured to the target's BODY with `Shared.Modules.Reach.Gap(pos, model)` (bounding box), never to
+  its root: huge voxel bosses have their HumanoidRootPart 20 studs up and were unreachable.
 - Quests: report progress with `R.QuestService.Event(player, kind, target)`; successful requests listed in
   `QuestService.ACTION_EVENTS` are picked up automatically via `Net.AfterHandle`.
 - Icons: pass an emoji or an icon name to `UI.Icon` / `UI.IconChip`; emoji with a rendered icon (see `EMOJI_ICON` in UIKit)

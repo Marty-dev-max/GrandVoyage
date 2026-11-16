@@ -8,6 +8,7 @@ local GameConfig = require(Shared.Config.GameConfig)
 local ClassesCfg = require(Shared.Config.Classes)
 local ItemDB = require(Shared.Modules.ItemDB)
 local Formulas = require(Shared.Modules.Formulas)
+local Reach = require(Shared.Modules.Reach)
 local Net = require(Shared.Modules.Net)
 local State = require(script.Parent.Parent.State)
 local UI = require(script.Parent.Parent.UI.UIKit)
@@ -104,10 +105,10 @@ function Combat.CastSkill(skillId, targetModel)
 		payload.pos = target.PrimaryPart.Position
 		local r = root()
 		local range = (skill.range or 10)
-		if r and (r.Position - target.PrimaryPart.Position).Magnitude > range + 3 then
+		if r and Reach.Gap(r.Position, target) > range + 2 then
 			local h = hum()
 			if h then
-				h:MoveTo(target.PrimaryPart.Position)
+				h:MoveTo(Reach.Closest(r.Position, target))
 			end
 			return false
 		end
@@ -189,7 +190,9 @@ local function engage(target, useSkills)
 	local wType = weaponType()
 	local range = WeaponRange[wType] or 9
 	local tpos = target.PrimaryPart.Position
-	local dist = (tpos - r.Position).Magnitude
+	-- distance to the target's BODY (big bosses have their root high up in the middle)
+	local near = Reach.Closest(r.Position, target)
+	local dist = Reach.Gap(r.Position, target)
 	-- Auto skills
 	if useSkills and State.profile then
 		for _, id in ipairs(State.profile.skillBar) do
@@ -218,8 +221,10 @@ local function engage(target, useSkills)
 			end
 		end
 	end
-	if dist > range then
-		h:MoveTo(tpos - (tpos - r.Position).Unit * (range * 0.6))
+	if dist > range - 1.5 then
+		local flat = Vector3.new(near.X, r.Position.Y, near.Z)
+		local away = r.Position - flat
+		h:MoveTo(away.Magnitude > 0.1 and (flat + away.Unit * math.min(range * 0.4, away.Magnitude)) or flat)
 		return true
 	end
 	local d = State.derived
@@ -243,7 +248,7 @@ local function shouldDrop(target)
 	if not r or not alive(target) then
 		return true
 	end
-	local d = (target.PrimaryPart.Position - r.Position).Magnitude
+	local d = Reach.Gap(r.Position, target)
 	if d > MAX_CHASE then
 		return true
 	end

@@ -1402,8 +1402,13 @@ function Panels.PearlShop()
 		UI.Text(body, string.format("Tradable %s   •   Shop-only %s   •   Earned today %d / %d", UI.Format(d.pearls), UI.Format(d.bound), d.earnedToday, d.cap), 14, T.TextSoft, "Semi")
 		UI.Text(body, d.canTrade and "✅ You can buy and sell items for Pearls in stalls." or ("🔒 " .. (d.tradeWhy or "")), 14, d.canTrade and T.Green or T.Gold, "Bold")
 		UI.Section(body, "🛍️", "Pearl Shop", T.Gold)
-		local grid = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 200), Parent = body })
-		New("UIGridLayout", { CellSize = UDim2.fromOffset(186, 194), CellPadding = UDim2.fromOffset(8, 8), Parent = grid })
+		-- one row of cards that always fits the window: card width follows the item count
+		local n = #PearlsCfg.Shop
+		local perRow = math.min(n, 5)
+		local cellW = math.floor((788 - (perRow - 1) * 8) / perRow)
+		local rows = math.ceil(n / perRow)
+		local grid = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, rows * 202 - 8), Parent = body })
+		New("UIGridLayout", { CellSize = UDim2.fromOffset(cellW, 194), CellPadding = UDim2.fromOffset(8, 8), Parent = grid })
 		for _, it in ipairs(PearlsCfg.Shop) do
 			local owned = it.once and d.perks and d.perks[it.perk]
 			local card = UI.Card(grid, nil, T.OceanDark:Lerp(T.Panel, 0.65))
@@ -1411,7 +1416,7 @@ function Panels.PearlShop()
 			UI.List(card, nil, 4, Enum.HorizontalAlignment.Center)
 			UI.IconChip(card, it.icon, T.Ocean, 48)
 			UI.Text(card, it.name, 16, T.Text, "Display", { TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false })
-			UI.Text(card, it.desc, 12, T.TextSoft, "Semi", { TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 30) })
+			UI.Text(card, it.desc, 11, T.TextSoft, "Semi", { TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 38) })
 			UI.Button(card, owned and "Owned" or (PearlsCfg.Icon .. " " .. it.price), owned and T.Grey or T.Ocean, UDim2.new(1, 0, 0, 38), function()
 				if owned then
 					return
@@ -1427,7 +1432,7 @@ function Panels.PearlShop()
 		UI.List(row, Enum.FillDirection.Horizontal, 8)
 		for _, prod in ipairs(d.products) do
 			local onSale = prod.productId ~= 0
-			UI.Button(row, prod.name .. "  " .. PearlsCfg.Icon .. prod.pearls, onSale and T.Purple or T.Grey, UDim2.fromOffset(240, 40), function()
+			UI.Button(row, (onSale and "" or "🔒 ") .. prod.name .. "  " .. PearlsCfg.Icon .. prod.pearls, onSale and T.Purple or T.Grey, UDim2.fromOffset(250, 40), function()
 				if not onSale then
 					UI.Toast("Coming soon", "info")
 					return

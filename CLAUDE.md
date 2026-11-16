@@ -79,6 +79,8 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   their joints and `Controllers/CreatureAnim.lua` drives Motor6D.Transform (walk, idle, attack, hit flash, death shatter);
   pets animate by part name in `Controllers/Pets.lua` (Hinge attribute). Avatars: uniform R15 via
   `PlayerService.normalizeAvatar` (GameConfig.NormalizeAvatars; Game Settings avatar type must be R15).
+  Player attack poses: `Controllers/CharAnim.lua` layers keyframed poses on R15 Motor6D.C0 from FX (BasicAttack combos per
+  weapon, Skill by kind, Hurt), plus hitstop and camera shake on the local player's hits.
 - VFX are ParticleEmitter/Beam based with our own textures (`Config/Textures`); see the toolkit at the top of `Controllers/VFX.lua`.
 - UI is built only from `src/client/UI/UIKit.lua` helpers (Window, Section, TabBar, IconChip, Button, Bar, Card, Toast, Notice...).
   Hover makes buttons "jump"; keep that for new buttons by using `UI.Button` / `UI.Tactile`.

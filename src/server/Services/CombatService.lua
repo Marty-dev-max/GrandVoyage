@@ -87,7 +87,7 @@ function Combat.DamagePlayer(player, amount, info)
 	end
 	hum.Health = math.max(0, hum.Health - amount)
 	lastHurt[player] = os.clock()
-	Net.FX("Damage", { pos = root.Position + Vector3.new(0, 3, 0), amount = amount, crit = info and info.crit, toPlayer = true }, root.Position, 200)
+	Net.FX("Damage", { pos = root.Position + Vector3.new(0, 3, 0), amount = amount, crit = info and info.crit, toPlayer = true, char = player.Character }, root.Position, 200)
 	if hum.Health <= 0 and info and info.killer then
 		R.PvPService.OnPlayerKilled(player, info.killer)
 	end

@@ -169,6 +169,8 @@ function CreatureAnim.Start()
 		elseif kind == "Damage" then
 			if st then
 				st.hitAt = os.clock()
+				-- hitstop: the monster freezes for a beat when struck (longer on crits)
+				st.freezeUntil = os.clock() + (d.crit and 0.09 or 0.05)
 			end
 			flash(d.model)
 		elseif kind == "MobDeath" then
@@ -188,7 +190,7 @@ function CreatureAnim.Start()
 			local root = model:FindFirstChild("HumanoidRootPart")
 			if root and (root.Position - focus).Magnitude < RANGE then
 				local st = getRig(model)
-				if st then
+				if st and not (st.freezeUntil and t < st.freezeUntil) then
 					animate(st, dt, t)
 				end
 			end

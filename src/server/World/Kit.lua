@@ -546,7 +546,7 @@ function Kit.Mesa(base, radius, h, grass, rock, rim, opts)
 		Cyl(h + 2, l[3] * 2, rock, c + Vector3.new(0, base.Y + h / 2 - 1, 0), { material = M.Rock })
 		Cyl(h * 0.45, l[3] * 2 + 1.6, dark, c + Vector3.new(0, base.Y + h * 0.22, 0), { material = M.Rock })
 		for k = 1, math.floor(h / 5) do
-			Cyl(0.7, l[3] * 2 + 0.6, (k % 2 == 0) and dark or rock:Lerp(Color3.new(1, 1, 1), 0.15), c + Vector3.new(0, base.Y + k * 5 - 1, 0), decor({ collide = false, shadow = false }))
+			Cyl(0.7, l[3] * 2 + 0.6, (k % 2 == 0) and dark or rock:Lerp(Color3.new(1, 1, 1), 0.15), c + Vector3.new(0, base.Y + k * 5 - 1, 0), decor({ collide = false, shadow = false, material = M.Rock }))
 		end
 		Cyl(2.2, l[3] * 2 + 3, grass, c + Vector3.new(0, top - 0.1, 0), { material = M.Grass })
 		if rim then

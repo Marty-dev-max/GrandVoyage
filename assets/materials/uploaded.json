@@ -1,0 +1,86 @@
+{
+ "Cobblestone_color": {
+  "id": "82075802118967",
+  "sha1": "3d8438bd2272c7f04de92ef2d147dcdd71743781"
+ },
+ "Cobblestone_normal": {
+  "id": "116926226459908",
+  "sha1": "873feae1aad7d10a26b92b99e7f94fc368e28689"
+ },
+ "Cobblestone_rough": {
+  "id": "72444459337414",
+  "sha1": "a3d51feb6636b017241a5426233ccaafb825cdec"
+ },
+ "Grass_color": {
+  "id": "117997584980690",
+  "sha1": "6209d578fb8fe3ac8afa888403a7a076d775e504"
+ },
+ "Grass_normal": {
+  "id": "111254171193253",
+  "sha1": "4cbd54808c2c9fcedb5a7301acf644b1fb4f5cdc"
+ },
+ "Grass_rough": {
+  "id": "75544856327959",
+  "sha1": "c854ca14df8ad5c68085997d8ca57698ff5d64c4"
+ },
+ "Rock_color": {
+  "id": "80964877926001",
+  "sha1": "ec26f2ec03b4e996e2218a09c4bab09762ba672c"
+ },
+ "Rock_normal": {
+  "id": "94135655765189",
+  "sha1": "d8d369b37e43f02951243f8b256dd812918b799c"
+ },
+ "Rock_rough": {
+  "id": "86203648333788",
+  "sha1": "d3a5c4e98a8e61ff8212a58ab43965d10a112d29"
+ },
+ "Sand_color": {
+  "id": "93880721908526",
+  "sha1": "db1ebebc5c4ed4c553712527e2a52bb2b7c8508a"
+ },
+ "Sand_normal": {
+  "id": "83254137358998",
+  "sha1": "d7576774f1bf3676d97f51a2581000d6284e6046"
+ },
+ "Sand_rough": {
+  "id": "114811338798215",
+  "sha1": "0a5e6b92dec19c040d9a7a2cf251bfa2bd073abb"
+ },
+ "Slate_color": {
+  "id": "91203954277794",
+  "sha1": "ab0ac89fd0d0250fc62b86e4f7354ccfb4b1d22e"
+ },
+ "Slate_normal": {
+  "id": "121573227265291",
+  "sha1": "c21746cd27265540798853280a3752adba117f6e"
+ },
+ "Slate_rough": {
+  "id": "123786897214159",
+  "sha1": "07d9319576aad7a2e23ebae344fab5e0c6d02ed6"
+ },
+ "WoodPlanks_color": {
+  "id": "86747188530534",
+  "sha1": "80f9355c2fde6e6264950341279852cf8be873d2"
+ },
+ "WoodPlanks_normal": {
+  "id": "103418702796139",
+  "sha1": "b1e29b5daa3deca3c3320261a663b9859688e855"
+ },
+ "WoodPlanks_rough": {
+  "id": "100442828853377",
+  "sha1": "2682f72a108c540414b29f356c298fbb73054208"
+ },
+ "Wood_color": {
+  "id": "99405883507242",
+  "sha1": "b13f2d60c245af5dfbc1b2d1e4ec0f1bd4c0abbc"
+ },
+ "Wood_normal": {
+  "id": "93292012080731",
+  "sha1": "e2d58be242d819111cad8320092007025b88c248"
+ },
+ "Wood_rough": {
+  "id": "114287815639479",
+  "sha1": "20f410b45dc067177e1555537839009f8a5646a3"
+ }
+}

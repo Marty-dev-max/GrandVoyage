@@ -28,6 +28,7 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
 | VFX textures | `python3 tools/gen_vfx.py`, then `python3 tools/upload_images.py assets/vfx src/shared/Config/Textures.lua` |
 | Blender models (old map/monster/ship pack) | `blender -b -P tools/blender/generate_assets.py -- --out assets/models --preview` |
 | Detailed creatures v3 (skin-modifier body + fur tufts + baked texture) | `python tools/blender/creatures.py -- --out assets/models3d --preview` (or open it in Blender's Scripting tab and Run Script to build it in the open scene), then upload_models.py as below |
+| Map materials (stylized PBR MaterialVariants) + water layers | `python3 tools/gen_materials.py`, upload `assets/materials` -> `Config/MaterialMaps.lua` and `assets/water` -> `Config/WaterTextures.lua` with upload_images.py, then `python3 tools/gen_materials.py --project` (writes MaterialService into default.project.json) |
 | Voxel creatures (SDF shapes on a grid, per-voxel colors, greedy mesh) | `python tools/blender/voxel.py -- --out assets/models3d --preview` |
 | In-game 3D models v2 (pets x3 stages, fruits) | `python tools/blender/build_models.py -- --out assets/models3d --preview [--only Gull_2]`, then `ROBLOX_API_KEY=... python3 tools/upload_models.py assets/models3d src/shared/Config/Models.lua` |
 
@@ -51,6 +52,10 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   faces Blender -Y). `AssetService` loads `Config/Models` ids with InsertService into `ReplicatedStorage.Assets.Pets/<Species>_<n>`
   `Assets.Fruits/<Id>` and `Assets.Monsters/<Id>` (from `Mon_<Id>`, wrapped in HumanoidRootPart + Humanoid) (normalized size + pivot);
   the owner does NOT want thick black outlines on models (outline=0); `UI.ModelView` shows them spinning in ViewportFrames. Dev tab -> Model Gallery.
+- Map look: MaterialService base-material overrides (GV_Grass, GV_Rock, ...) texture every Part of that Material (Part.Color still
+  tints them), so world code just picks semantic materials (Grass/Rock/Slate/Sand/Wood/WoodPlanks/Cobblestone, not SmoothPlastic).
+  The sea is animated on the client by `Controllers/Ocean.lua` (scrolling wave/foam/glitter Textures + shore foam rings).
+- Owner decisions on art: voxel style for pets, fruits and monsters; textured (SurfaceAppearance-like) stylized look for the map.
 - VFX are ParticleEmitter/Beam based with our own textures (`Config/Textures`); see the toolkit at the top of `Controllers/VFX.lua`.
 - UI is built only from `src/client/UI/UIKit.lua` helpers (Window, Section, TabBar, IconChip, Button, Bar, Card, Toast, Notice...).
   Hover makes buttons "jump"; keep that for new buttons by using `UI.Button` / `UI.Tactile`.

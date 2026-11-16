@@ -32,7 +32,8 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
 | Stylized environment kit (trees, pines, palms, bushes, boulders, cliff modules) | `python tools/blender/envkit.py -- --out assets/models3d --preview`, then upload_models.py |
 | Voxel creatures (SDF shapes on a grid, per-voxel colors, greedy mesh) | `python tools/blender/voxel.py -- --out assets/models3d --preview` |
 | Voxel monsters (all 32 + bosses, outfits/hats/weapons by spec) | `python tools/blender/voxel_monsters.py -- --out assets/models3d --preview [--only GuardWolf]`, then upload_models.py |
-| In-game 3D models v2 (pets x3 stages, fruits) | `python tools/blender/build_models.py -- --out assets/models3d --preview [--only Gull_2]`, then `ROBLOX_API_KEY=... python3 tools/upload_models.py assets/models3d src/shared/Config/Models.lua` |
+| Voxel pets (6 species x 3 stages) + fruits (6) | `python tools/blender/voxel_pets.py -- --out assets/models3d --preview`, then upload_models.py (same names as v2, they replace them) |
+| In-game 3D models v2 (pets x3 stages, fruits; superseded by voxel_pets.py) | `python tools/blender/build_models.py -- --out assets/models3d --preview [--only Gull_2]`, then `ROBLOX_API_KEY=... python3 tools/upload_models.py assets/models3d src/shared/Config/Models.lua` |
 
 ## Rules learned the hard way
 
@@ -129,7 +130,7 @@ The owner tests in Studio and sends screenshots; previews of new art are rendere
 
 1. Wait for the owner's verdict on v0.10.3 (hills/flowers/grass); fix what they point at.
 2. Voxel art pass: monsters DONE v0.11.0 (voxel_monsters.py; AssetService sizes = shape base x style.scale,
-   MonsterService.RefreshModels swaps placeholder island mobs). Still to do: pets (18 stages) + fruits (6) in voxel,
-   simple idle/walk bob for monsters, segmented sway for big serpents.
+   MonsterService.RefreshModels swaps placeholder island mobs). Pets + fruits DONE v0.11.1 (voxel_pets.py).
+   Still to do: animation + VFX week (see docs/PLAN-week.md).
 3. Per-skill icons (render_icons.py), Seastone gear for Marines, fruit skill VFX polish.
 4. Playtest fixes (fruit Dash feel, pet follow, swim animation, quest flow). Friend playtest target: end of November 2026.

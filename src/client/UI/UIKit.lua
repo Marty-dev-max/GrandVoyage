@@ -604,9 +604,7 @@ local function refreshDim()
 	Tween(dim, 0.2, { BackgroundTransparency = openCount > 0 and 0.55 or 1 })
 	Tween(blur, 0.25, { Size = openCount > 0 and 10 or 0 })
 end
-dim.Activated:Connect(function()
-	UI.CloseAll()
-end)
+-- the dim backdrop only blocks clicks: windows close with their red X (or Esc), never by a stray click (owner request)
 
 function UI.Window(id, title, size, color, icon)
 	if openWindows[id] then

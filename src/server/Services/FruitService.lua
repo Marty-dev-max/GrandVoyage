@@ -29,6 +29,26 @@ local function setAttrs(player, p)
 end
 FS.SetAttributes = setAttrs
 
+-- dev / testing: lose the fruit power (skills leave the bar), back to a normal swimmer
+function FS.RemoveFruit(player)
+	local p = R.PlayerService.Profile(player)
+	if not p or not p.fruit then
+		return false
+	end
+	local bar = {}
+	for _, id in ipairs(p.skillBar) do
+		if not string.match(id, "^F_") then
+			table.insert(bar, id)
+		end
+	end
+	p.skillBar = bar
+	p.fruit = nil
+	setAttrs(player, p)
+	R.PlayerService.Recompute(player)
+	R.PlayerService.MarkDirty(player)
+	return true
+end
+
 local function unlockedSkills(p)
 	local out = {}
 	local def = p.fruit and Fruits.ById[p.fruit.id]

@@ -82,6 +82,10 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   Player attack poses: `Controllers/CharAnim.lua` layers keyframed poses on R15 Motor6D.C0 from FX (BasicAttack combos per
   weapon, Skill by kind, Hurt), plus hitstop and camera shake on the local player's hits.
 - VFX are ParticleEmitter/Beam based with our own textures (`Config/Textures`); see the toolkit at the top of `Controllers/VFX.lua`.
+- Client controllers start through the protected `start()` in `init.client.lua` (core UI first, visuals in parallel):
+  a controller that errors or yields must never block the others (it hid the quest tracker in v0.13.0).
+- Windows close only with their red X or Esc; the dim backdrop just blocks clicks (owner request).
+- Fruit users in the sea drown (HP drains, `Fruits.DrownPerSecond`) instead of being washed ashore (owner request).
 - UI is built only from `src/client/UI/UIKit.lua` helpers (Window, Section, TabBar, IconChip, Button, Bar, Card, Toast, Notice...).
   Hover makes buttons "jump"; keep that for new buttons by using `UI.Button` / `UI.Tactile`.
 

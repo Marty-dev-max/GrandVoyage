@@ -156,6 +156,22 @@ function GW.Start()
 			p.statPoints += 100
 			p.skillPoints += 20
 			R.PlayerService.Recompute(player)
+		elseif data.cmd == "resetlevel" then
+			-- back to a fresh Lv 1 character (class, items, quests kept) to test early combat
+			local p = R.DataService.Get(player)
+			p.baseLevel, p.baseExp, p.jobLevel, p.jobExp = 1, 0, 1, 0
+			p.statPoints, p.skillPoints = 5, 1
+			p.stats = { STR = 1, AGI = 1, VIT = 1, INT = 1, DEX = 1, LUK = 1 }
+			for id in pairs(p.skills) do
+				p.skills[id] = 1
+			end
+			R.PlayerService.Recompute(player)
+			return true, "Reset to Lv 1"
+		elseif data.cmd == "removefruit" then
+			if not R.FruitService.RemoveFruit(player) then
+				return false, "No fruit to remove"
+			end
+			return true, "Fruit power removed"
 		elseif data.cmd == "beli" then
 			R.PlayerService.AddBeli(player, tonumber(data.value) or 1000000)
 		elseif data.cmd == "items" then

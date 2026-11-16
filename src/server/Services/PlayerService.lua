@@ -609,9 +609,18 @@ function PS.Start()
 			local inSea = root and hum and hum.Health > 0 and not onShip and root.Position.Y < GameConfig.SeaLevel + 0.5 and not nearIsland(root.Position)
 			swimTime[player] = inSea and (swimTime[player] or 0) + 0.5 or 0
 			local sank = root and hum and hum.Health > 0 and root.Position.Y < -8 and not onShip
-			-- Cursed Fruit users cannot swim at all: any water deeper than the shallows drags them under
-			local fruitSink = player:GetAttribute("Fruit") ~= nil and root and not onShip and root.Position.Y < GameConfig.SeaLevel - 1 and swimTime[player] >= FruitsCfg.SinkSeconds
-			if sank or fruitSink or swimTime[player] > SWIM.BreathSeconds + 2 then
+			-- Cursed Fruit users cannot swim: the sea drags them under and they DROWN (HP drains) until they get out or die
+			local drowning = player:GetAttribute("Fruit") ~= nil and inSea and root.Position.Y < GameConfig.SeaLevel - 1 and swimTime[player] >= FruitsCfg.SinkSeconds
+			if drowning then
+				hum.Health = math.max(0, hum.Health - hum.MaxHealth * FruitsCfg.DrownPerSecond * 0.5)
+				if not player:GetAttribute("Drowning") then
+					player:SetAttribute("Drowning", true)
+					PS.Notify(player, "You're drowning! Cursed Fruit users can't swim - get out of the water!", "bad")
+				end
+			else
+				player:SetAttribute("Drowning", nil)
+			end
+			if not drowning and (sank or swimTime[player] > SWIM.BreathSeconds + 2) then
 				local p = PS.Profile(player)
 				if p then
 					swimTime[player] = 0

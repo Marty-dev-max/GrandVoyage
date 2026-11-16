@@ -105,6 +105,7 @@ F.Drops = {
 
 -- Fruit users sink: they last this long in the sea before the waves drag them ashore
 F.SinkSeconds = 1.5
+F.DrownPerSecond = 0.07 -- fraction of max HP a fruit user loses every second under the sea (no wash-ashore)
 -- Seastone: Marine PvP hits have this chance to disable fruit skills for this long
 F.Seastone = { Chance = 0.2, Seconds = 3 }
 

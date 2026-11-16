@@ -78,9 +78,15 @@ local function state(char)
 			st.joints[name] = { motor = m, base = m.C0 }
 		end
 	end
-	if next(st.joints) == nil then
-		return nil -- not an R15 character
+	local n = 0
+	for _ in pairs(st.joints) do
+		n += 1
 	end
+	if n == 0 then
+		warn("[CharAnim] " .. char.Name .. " has no R15 joints (is the avatar type R15?)")
+		return nil
+	end
+	print("[CharAnim] posing " .. char.Name .. " with " .. n .. " R15 joints")
 	chars[char] = st
 	char.Destroying:Connect(function()
 		chars[char] = nil

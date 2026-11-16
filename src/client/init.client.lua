@@ -151,22 +151,27 @@ Net.OnPush(function(kind, data)
 	end
 end)
 
-Settings.Start()
-HUD.Start()
-Combat.Start()
-Sailing.Start()
-Builder.Start()
-VFX.Start()
-Readability.Start()
-Swim.Start()
-PetsCtl.Start()
-Titles.Start()
-Ocean.Start()
-Atmos.Start()
-GrassField.Start()
-CreatureAnim.Start()
-CharAnim.Start()
-Quest.Start()
+-- every controller starts protected: one that errors or waits (for a folder, an asset) can never block the rest
+-- (v0.13.0: the quest tracker vanished because it started after the animation controllers)
+local function start(name, mod)
+	local ok, err = pcall(mod.Start)
+	if not ok then
+		warn("[GrandVoyage] " .. name .. " failed to start: " .. tostring(err))
+	end
+end
+-- core gameplay UI first, in order
+start("Settings", Settings)
+start("HUD", HUD)
+start("Combat", Combat)
+start("Quest", Quest)
+-- the rest (visuals, world feel) in parallel
+for _, c in ipairs({
+	{ "Sailing", Sailing }, { "Builder", Builder }, { "VFX", VFX }, { "Readability", Readability }, { "Swim", Swim },
+	{ "Pets", PetsCtl }, { "Titles", Titles }, { "Ocean", Ocean }, { "Atmos", Atmos }, { "GrassField", GrassField },
+	{ "CreatureAnim", CreatureAnim }, { "CharAnim", CharAnim },
+}) do
+	task.spawn(start, c[1], c[2])
+end
 Net.Request("GetState")
 task.spawn(Net.Request, "GetBossBoard")
 

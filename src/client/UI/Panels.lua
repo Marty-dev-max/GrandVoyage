@@ -1289,12 +1289,13 @@ function Panels.Settings()
 					end)
 				end
 			end
-			devGrid("Player", "🧪", T.Accent, { { "Lv70", "level" }, { "Job Lv.10", "joblevel" }, { "+1M " .. COIN, "beli" }, { "Materials", "items" }, { "+1000 " .. PearlsCfg.Icon, "pearls" }, { "Next Quest", "questnext" } })
+			devGrid("Player", "🧪", T.Accent, { { "Reset Lv1", "resetlevel" }, { "Lv70", "level" }, { "Job Lv.10", "joblevel" }, { "+1M " .. COIN, "beli" }, { "Materials", "items" }, { "+1000 " .. PearlsCfg.Icon, "pearls" }, { "Next Quest", "questnext" } })
 			local fruitButtons = {}
 			for _, f in ipairs(FruitsCfg.List) do
 				table.insert(fruitButtons, { f.icon .. " " .. f.id, "fruit", f.id })
 			end
 			table.insert(fruitButtons, { "+Mastery", "mastery" })
+			table.insert(fruitButtons, { "Remove Fruit", "removefruit" })
 			table.insert(fruitButtons, { "Spawn Tree Fruit", "spawnfruit" })
 			devGrid("Cursed Fruits", "🍎", T.Pink, fruitButtons)
 			devGrid("Pets & World", "🐾", T.Green, { { "Eggs + Bait", "eggs" }, { "Pet +15 Lv", "petlevel" }, { "Reset Chests", "chestreset" }, { "Model Gallery", "models" }, { "Guild War", "gw_start" }, { "End War", "gw_end" } })

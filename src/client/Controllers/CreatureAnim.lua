@@ -1,6 +1,6 @@
 -- CreatureAnim (client): procedural animation for the voxel monsters (no animation assets).
 -- AssetService rigs every voxel part to the HumanoidRootPart with a Motor6D at its joint (Leg*, Arm*, Head, Tail,
--- Wing*, Body); here we drive Motor6D.Transform every frame for monsters near the camera:
+-- Wing*, Body); here we pose those joints (on C0) every frame for monsters near the camera:
 --   walk cycle (legs swing in pairs, arms counter-swing, body bounces), idle breathing, tail wag, head look-around,
 --   attack (wind-up -> strike, lunge for beasts), hit flinch + white flash, and a voxel shatter on death.
 local RunService = game:GetService("RunService")
@@ -25,7 +25,7 @@ local function getRig(model)
 	if root then
 		for _, m in ipairs(root:GetChildren()) do
 			if m:IsA("Motor6D") then
-				motors[m.Name] = m
+				motors[m.Name] = { motor = m, base = m.C0 }
 				count += 1
 			end
 		end
@@ -44,10 +44,11 @@ local function getRig(model)
 	return st
 end
 
+-- poses go on C0 (base * pose): the Humanoid's Animator rewrites Motor6D.Transform every frame, C0 it leaves alone
 local function setT(st, name, cf)
-	local m = st.motors[name]
-	if m then
-		m.Transform = cf
+	local j = st.motors[name]
+	if j then
+		j.motor.C0 = j.base * cf
 	end
 end
 

@@ -93,10 +93,10 @@ function Swim.Start()
 		local surface = GameConfig.SeaLevel
 		local inWater = root.Position.Y < surface + 0.5 and not hum.Sit and not groundBelow(root, hum)
 		if inWater and player:GetAttribute("Fruit") then
-			-- Cursed Fruit users sink like a stone (the server washes them ashore)
+			-- Cursed Fruit users sink like a stone and drown (the server drains their HP)
 			if not sinkWarned then
 				sinkWarned = true
-				UI.Notice("🍎 FRUIT USERS CAN'T SWIM!", T.Red)
+				UI.Notice("🍎 FRUIT USERS CAN'T SWIM! YOU'RE DROWNING!", T.Red)
 				Audio.Play("Splash", { pos = root.Position })
 			end
 			setSwimming(false, root, hum)

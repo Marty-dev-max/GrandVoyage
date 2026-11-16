@@ -49,7 +49,7 @@
       "$className": "MaterialService",
       "$properties": {
         "Use2022Materials": true,
-        "GrassName": "",
+        "GrassName": "GV_Grass",
         "RockName": "GV_Rock",
         "SlateName": "GV_Slate",
         "SandName": "GV_Sand",

@@ -297,7 +297,7 @@ def write_project():
         ms[vname] = {"$className": "MaterialVariant", "$properties": props}
         # base material override: every Part with this Material uses the variant (no world code changes).
         # Not for Grass: island ground is Terrain grass now, and Terrain only draws its swaying grass blades on the plain material.
-        ms["$properties"][base + "Name"] = vname if base != "Grass" else ""  # "" explicitly clears an older override
+        ms["$properties"][base + "Name"] = vname
     pj["tree"]["MaterialService"] = ms
     json.dump(pj, open(pj_path, "w"), indent=2)
     print("project: MaterialService with", len(VARIANTS), "variants")

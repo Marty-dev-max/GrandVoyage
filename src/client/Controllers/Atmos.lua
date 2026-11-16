@@ -246,9 +246,7 @@ function Atmos.Start()
 		clouds.Parent = workspace.Terrain
 	end
 	task.delay(4, collectLamps)
-	pcall(function()
-		workspace.Terrain.Decoration = true -- swaying grass blades on the island Terrain grass
-	end)
+
 
 	local acc = 0
 	local leafAcc = 0

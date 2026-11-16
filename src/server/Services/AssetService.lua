@@ -281,13 +281,12 @@ function AS.DressWorld()
 		end
 	end
 	print(string.format("[AssetService] dressed %d props + %d cliff/rock parts (%.2fs)", props, parts, os.clock() - t0))
-	-- living ground: Terrain grass (swaying blades) on the island grass + scattered stylized plants
+	-- scattered stylized plants on the island grass (grass blades: client GrassField)
 	local world = workspace:FindFirstChild("World")
 	if world and not world:FindFirstChild("Greenery") then
 		local t1 = os.clock()
-		local fills = Greenery.GrassTerrain(world)
 		local plants = Greenery.Scatter(world, variants, 110)
-		print(string.format("[AssetService] terrain grass on %d parts, %d plants scattered (%.2fs)", fills, plants, os.clock() - t1))
+		print(string.format("[AssetService] %d plants scattered (%.2fs)", plants, os.clock() - t1))
 	end
 end
 

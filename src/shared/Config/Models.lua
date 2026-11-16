@@ -21,6 +21,8 @@ return {
 	Env_Flowers_3 = 109815354846022,
 	Env_Flowers_4 = 89398552689283,
 	Env_Flowers_5 = 119009901657343,
+	Env_GrassPatch_1 = 130862604294054,
+	Env_GrassPatch_2 = 133948402835619,
 	Env_GrassTuft_1 = 106637108857895,
 	Env_GrassTuft_2 = 106178659535339,
 	Env_LeafPlant_1 = 127883612712653,

@@ -467,6 +467,60 @@ def mushroom(variant):
             CR.blob(0.07 * s, p, dot_m, scale=(1, 1, 0.5), seg=6)
 
 
+def grass_mat(name, base, mid, tip):
+    """blades: dark at the root -> bright sunny tips (by height), slight per-patch mottling"""
+    m, nt, em = _nodes(name)
+    tc = nt.nodes.new("ShaderNodeTexCoord")
+    sep = nt.nodes.new("ShaderNodeSeparateXYZ")
+    nt.links.new(tc.outputs["Object"], sep.inputs[0])
+    mr = nt.nodes.new("ShaderNodeMapRange")
+    mr.inputs["From Min"].default_value = 0.0
+    mr.inputs["From Max"].default_value = 1.0
+    nt.links.new(sep.outputs["Z"], mr.inputs["Value"])
+    col = _ramp(nt, mr.outputs[0], [(0.0, base), (0.45, mid), (1.0, tip)])
+    col = _mix(nt, col, _ramp(nt, _noise(nt, 1.5, 2), [(0.3, "#d8e0c8"), (0.7, "#ffffff")]))
+    nt.links.new(col, em.inputs["Color"])
+    return m
+
+
+def grass_patch(variant):
+    """a 4 x 4 stud patch of short stylized blades (two-sided thin triangles), placed densely around the player"""
+    rng = random.Random(400 + variant)
+    g = grass_mat("blades", "#1e4a1e", "#4c9a34", "#b8e05a")
+    bm = bmesh.new()
+    for k in range(48):
+        x, y = rng.uniform(-2, 2), rng.uniform(-2, 2)
+        h = rng.uniform(0.45, 1.0)
+        w = rng.uniform(0.07, 0.12)
+        a = rng.uniform(0, math.tau)
+        side = Vector((math.cos(a), math.sin(a), 0))
+        lean = Vector((-math.sin(a), math.cos(a), 0)) * rng.uniform(0.1, 0.35) * h
+        base = Vector((x, y, 0))
+        pts = [base - side * w, base + side * w, base + side * w * 0.55 + lean * 0.4 + Vector((0, 0, h * 0.55)),
+               base - side * w * 0.55 + lean * 0.4 + Vector((0, 0, h * 0.55)), base + lean + Vector((0, 0, h))]
+        for back in (False, True):
+            off = Vector((0, 0, 0)) if not back else (side.cross(Vector((0, 0, 1))) * 0.01)
+            vs = [bm.verts.new(p + off) for p in pts]
+            faces = [(vs[0], vs[1], vs[2], vs[3]), (vs[3], vs[2], vs[4])]
+            for f in faces:
+                bm.faces.new(tuple(reversed(f)) if back else f)
+    if variant == 2:
+        # a few tiny wild flowers in the patch
+        for k in range(4):
+            c = Vector((rng.uniform(-1.6, 1.6), rng.uniform(-1.6, 1.6), rng.uniform(0.5, 0.8)))
+            col = ["#fffaf0", "#ffe04a", "#c9a0ff", "#ff9ac0"][k % 4]
+            CR.blob(0.09, c, CR.flat_mat("fl%d" % k, col), scale=(1, 1, 0.5), seg=6)
+    me = bpy.data.meshes.new("blades")
+    bm.normal_update()
+    bm.to_mesh(me)
+    bm.free()
+    o = bpy.data.objects.new("blades", me)
+    bpy.context.scene.collection.objects.link(o)
+    assign(o, g)
+    for p in o.data.polygons:
+        p.use_smooth = False
+
+
 PROPS = {}
 for i in (1, 2):
     PROPS[f"GrassTuft_{i}"] = (grass_tuft, i, 2.2)
@@ -475,6 +529,8 @@ for i in (1, 2):
     PROPS[f"Mushroom_{i}"] = (mushroom, i, 1.4)
 for i in (1, 2, 3, 4, 5):
     PROPS[f"Flowers_{i}"] = (flowers, i, 1.6)
+for i in (1, 2):
+    PROPS[f"GrassPatch_{i}"] = (grass_patch, i, 4)
 
 for i in (1, 2, 3):
     PROPS[f"BroadTree_{i}"] = (broad_tree, i, 14)

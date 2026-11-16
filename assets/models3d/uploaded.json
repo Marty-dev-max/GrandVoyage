@@ -83,6 +83,14 @@
   "id": "119009901657343",
   "sha1": "aa6c6f453ea1b52ab7dfaeb681f1c3bebb8205da"
  },
+ "Env_GrassPatch_1": {
+  "id": "130862604294054",
+  "sha1": "f57f1383d954725f4dcbe17e26f026a0e97a8cc9"
+ },
+ "Env_GrassPatch_2": {
+  "id": "133948402835619",
+  "sha1": "d8f4e3c00629b3649927d16d042c7f229c3b17bf"
+ },
  "Env_GrassTuft_1": {
   "id": "106637108857895",
   "sha1": "4ea37d1d944aea8a0595f6f16d05a5ca3141f5a1"

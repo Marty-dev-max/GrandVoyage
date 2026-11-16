@@ -602,7 +602,7 @@ end
 -- ===== Public =====
 -- Bump when the world's code changes in a way the baked map must pick up: a baked World with another version is thrown
 -- away and rebuilt from code at server start (so the owner's published place updates through Rojo too).
-WB.WORLD_VERSION = 2
+WB.WORLD_VERSION = 3
 
 function WB.Build()
 	local old = workspace:FindFirstChild("World")

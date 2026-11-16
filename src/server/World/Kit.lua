@@ -610,9 +610,6 @@ function Kit.Mesa(base, radius, h, grass, rock, rim, opts)
 			CollectionService:AddTag(slab, "EnvPart")
 		end
 		Cyl(2.2, l[3] * 2 + 3, grass, c + Vector3.new(0, top - 0.1, 0), { material = M.Grass })
-		if rim then
-			Cyl(0.9, l[3] * 2 + 3.6, rim, c + Vector3.new(0, top - 1.1, 0), decor({ collide = false }))
-		end
 	end
 	for i = 1, math.floor(radius / 5) do
 		local a = rng:NextNumber(0, math.pi * 2)

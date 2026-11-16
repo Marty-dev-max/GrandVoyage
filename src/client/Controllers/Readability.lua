@@ -371,10 +371,13 @@ local function updateNav()
 				dir = Vector2.new(0, -1)
 			end
 			dir = dir.Unit
-			-- keep arrows inside the play area: clear of the right-side menu and the left player card
-			local edge = Vector2.new(vp.X / 2 - 230 * scale, vp.Y / 2 - 130 * scale)
-			local k = math.min(math.abs(edge.X / dir.X), math.abs(edge.Y / dir.Y))
-			local p = Vector2.new(vp.X / 2, vp.Y / 2) + dir * k
+			-- keep arrows inside the play area: below the player card / pills, above the skill bar, clear of the menu
+			local l, r = 230 * scale, vp.X - 230 * scale
+			local t, b = 330 * scale, vp.Y - 150 * scale
+			local c = Vector2.new((l + r) / 2, (t + b) / 2)
+			local half = Vector2.new((r - l) / 2, (b - t) / 2)
+			local k = math.min(math.abs(half.X / dir.X), math.abs(half.Y / dir.Y))
+			local p = c + dir * k
 			local a = arrow(ai, t.text, t.color)
 			a.Position = UDim2.fromOffset(p.X / scale, p.Y / scale)
 			a.Pointer.Position = UDim2.new(0.5, dir.X * 30, 0.5, dir.Y * 30)
@@ -432,7 +435,22 @@ local function updateNav()
 	end
 end
 
+-- NPC nameplates are fixed-pixel in the baked map, so far-away ones piled up into one unreadable label.
+-- Resize them in studs (they shrink with distance) and fade them out sooner.
+local function fixNpcPlate(m)
+	local plate = m.PrimaryPart and m.PrimaryPart:FindFirstChild("Nameplate")
+	if plate and plate:IsA("BillboardGui") then
+		plate.Size = UDim2.new(11, 0, 3, 0)
+		plate.MaxDistance = 120
+	end
+end
+
 function R.Start()
+	local CollectionService = game:GetService("CollectionService")
+	for _, m in ipairs(CollectionService:GetTagged("NPC")) do
+		fixNpcPlate(m)
+	end
+	CollectionService:GetInstanceAddedSignal("NPC"):Connect(fixNpcPlate)
 	buildCompass()
 	local acc = 0
 	RunService.RenderStepped:Connect(function(dt)

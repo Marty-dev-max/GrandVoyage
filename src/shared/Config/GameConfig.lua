@@ -2,7 +2,7 @@
 return {
 	GameName = "Grand Voyage",
 	-- bump on every change: shown bottom-right in game and printed in Output, so you can tell which code is running
-	Version = "0.6.4",
+	Version = "0.6.5",
 	SagaName = "Azure East Saga",
 	DataStoreName = "GV_Player_v1",
 	GuildStoreName = "GV_Guild_v1",

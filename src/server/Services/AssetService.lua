@@ -85,7 +85,9 @@ local function normalize(container, name, size, folder)
 		p.CanQuery = false
 		p.Massless = true
 		p.CastShadow = true
-		p.Material = Enum.Material.SmoothPlastic
+		-- matte: SmoothPlastic gave rocks and ledges a plastic sheen under Future lighting
+		p.Material = folder == "Env" and Enum.Material.Plastic or Enum.Material.SmoothPlastic
+		p.Reflectance = 0
 		if p:IsA("MeshPart") then
 			-- the toon outline is an inverted hull: it only works with back faces culled
 			pcall(function()
@@ -283,7 +285,8 @@ function AS.DressWorld()
 	-- organic ledges replace the mesa's visible cylinder + grass cap (both stay as invisible collision)
 	local dressedMesa = {}
 	for _, p in ipairs(CollectionService:GetTagged("EnvPart")) do
-		if p:GetAttribute("Kind") == "Mesa" and p:GetAttribute("Dressed") then
+		local kind = p:GetAttribute("Kind")
+		if (kind == "Mesa" or kind == "GrassCap") and p:GetAttribute("Dressed") then
 			dressedMesa[p:GetAttribute("MesaId")] = true
 		end
 	end

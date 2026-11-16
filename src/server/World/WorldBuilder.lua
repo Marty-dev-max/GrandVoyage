@@ -518,11 +518,29 @@ local function buildRedLine(world)
 		for i = 1, 7 do
 			P(Vector3.new(rl.thickness + 18, 22, wallLen), red:Lerp(Color3.fromRGB(255, 170, 120), (i % 2) * 0.45), CFrame.new(rl.x, i * 175, zc), { parent = f, material = Enum.Material.Rock })
 		end
-		-- Jagged sea-facing cliff pillars
+		-- Jagged sea-facing cliff pillars (-> stylized red cliff meshes, facing the sea)
 		for i = 1, 26 do
 			local z = sz * (half + 40 + rng:NextNumber(0, math.min(wallLen - 80, 2400)))
 			local h = rng:NextNumber(120, 700)
-			P(Vector3.new(rng:NextNumber(30, 70), h, rng:NextNumber(60, 160)), red:Lerp(Color3.fromRGB(150, 60, 45), rng:NextNumber(0, 0.5)), CFrame.new(x0 - 10, h / 2 - 20, z), { parent = f, material = Enum.Material.Rock })
+			local center = Vector3.new(x0 - 10, h / 2 - 20, z)
+			local pillar = P(Vector3.new(rng:NextNumber(60, 160), h, rng:NextNumber(30, 70)), red:Lerp(Color3.fromRGB(150, 60, 45), rng:NextNumber(0, 0.5)), CFrame.lookAt(center, center - Vector3.xAxis), { parent = f, material = Enum.Material.Rock })
+			pillar:SetAttribute("Kind", "CliffRed")
+			CollectionService:AddTag(pillar, "EnvPart")
+		end
+		-- red cliff face over the lower wall near the canal (where players actually look)
+		local zz = half + 6
+		while zz < half + 1500 do
+			local w = rng:NextNumber(60, 95)
+			local y = -30
+			while y < 400 do
+				local hh = rng:NextNumber(55, 85)
+				local center = Vector3.new(x0 - 4 - rng:NextNumber(0, 8), y + hh / 2, sz * (zz + w / 2))
+				local slab = P(Vector3.new(w * 1.15, hh * 1.08, 34), red:Lerp(Color3.fromRGB(150, 60, 45), rng:NextNumber(0, 0.4)), CFrame.lookAt(center, center - Vector3.xAxis), { parent = f, material = Enum.Material.Rock, collide = false })
+				slab:SetAttribute("Kind", "CliffRed")
+				CollectionService:AddTag(slab, "EnvPart")
+				y += hh
+			end
+			zz += w
 		end
 		P(Vector3.new(rl.thickness + 30, 40, wallLen), Color3.fromRGB(110, 190, 90), CFrame.new(rl.x, rl.height - 30, zc), { parent = f, material = Enum.Material.Grass })
 	end
@@ -602,7 +620,7 @@ end
 -- ===== Public =====
 -- Bump when the world's code changes in a way the baked map must pick up: a baked World with another version is thrown
 -- away and rebuilt from code at server start (so the owner's published place updates through Rojo too).
-WB.WORLD_VERSION = 4
+WB.WORLD_VERSION = 5
 
 function WB.Build()
 	local old = workspace:FindFirstChild("World")

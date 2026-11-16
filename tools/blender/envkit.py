@@ -349,25 +349,107 @@ def boulder(variant):
         facet_rock((math.cos(a) * 1.6, math.sin(a) * 1.6, 0.35), (0.65, 0.55, 0.45), mat, variant * 7 + 2 + k, subdiv=1, jitter=0.2)
 
 
-def cliff(variant):
-    """a cliff wall module: irregular columns of chunky faceted slabs, mossy tops, rubble at the foot"""
-    mat = stone_mat("cliff", "#3c3438", "#76686a", "#b4a69c", "#7aa850")
-    rng = random.Random(110 + variant)
-    x = -5.0
-    while x < 5.0:
-        w = rng.uniform(1.6, 3.4)
+TONES = {
+    # dark, mid, light, top-highlight (references: warm brown chunky cliffs, grey village rocks, the red wall)
+    "Brown": ("#4a2c1c", "#9a6242", "#cf9566", "#e9be8a"),
+    "Gray": ("#45464e", "#868892", "#bdbcb8", "#dedbd2"),
+    "Red": ("#561c16", "#a8442c", "#dd7450", "#f0a274"),
+}
+
+
+def chunk(center, size, mat, rng, jitter=0.16):
+    """an angular rock chunk: a box with chamfered edges whose corners are pushed around -> crisp painted facets"""
+    o = block(center, size, mat, (rng.uniform(-0.08, 0.08), rng.uniform(-0.1, 0.1), rng.uniform(-0.15, 0.15)), bevel=min(size) * 0.12)
+    for v in o.data.vertices:
+        v.co.x += rng.uniform(-jitter, jitter) * size[0]
+        v.co.z += rng.uniform(-jitter, jitter) * size[2] * 0.6
+    return o
+
+
+def cliff(variant, tone="Brown"):
+    """a cliff wall module (~10 wide x 10 high): stacked angular chunks in uneven columns, flat top so the grass layer
+    sits on it as a separate band, rubble at the foot"""
+    d0, m0, l0, t0 = TONES[tone]
+    mat = stone_mat("cliff", d0, m0, l0, t0)
+    rng = random.Random(110 + variant * 7 + len(tone))
+    x = -5.2
+    while x < 5.2:
+        w = rng.uniform(1.8, 3.6)
         z = 0.0
-        top = rng.uniform(8.0, 10.5)
-        while z < top:
-            h = rng.uniform(1.4, 4.2)
-            h = min(h, top - z + 0.6)
-            d = rng.uniform(2.4, 4.0)
-            facet = (rng.uniform(-0.12, 0.12), rng.uniform(-0.15, 0.15), rng.uniform(-0.2, 0.2))
-            block((x + w / 2 + rng.uniform(-0.2, 0.2), rng.uniform(-0.7, 0.5), z + h / 2), (w * rng.uniform(0.95, 1.15), d, h), mat, facet, bevel=0.3)
-            z += h * rng.uniform(0.85, 0.98)
-        x += w * rng.uniform(0.8, 0.95)
-    for k in range(4):
-        facet_rock((rng.uniform(-4.5, 4.5), -2.4 + rng.uniform(-0.3, 0.3), 0.4), (rng.uniform(0.6, 1.0), 0.7, 0.55), mat, 300 + variant * 5 + k, subdiv=1, jitter=0.25)
+        top = rng.uniform(9.3, 10.0)
+        while z < top - 0.3:
+            h = min(rng.uniform(2.0, 4.6), top - z)
+            d = rng.uniform(2.6, 4.2)
+            chunk((x + w / 2 + rng.uniform(-0.25, 0.25), rng.uniform(-0.9, 0.4), z + h / 2), (w * rng.uniform(0.95, 1.2), d, h), mat, rng)
+            z += h * rng.uniform(0.9, 1.0)
+        x += w * rng.uniform(0.78, 0.95)
+    for k in range(6):
+        facet_rock((rng.uniform(-4.8, 4.8), -2.6 + rng.uniform(-0.4, 0.4), 0.35), (rng.uniform(0.5, 1.1), rng.uniform(0.5, 0.8), rng.uniform(0.35, 0.6)), mat, 300 + variant * 11 + k, subdiv=1, jitter=0.25)
+
+
+def grass_cap(variant):
+    """the grass layer on top of a plateau (unit radius, top at z=1): flat painted top, a thick rounded lip that
+    overhangs the cliff and drips down unevenly - a clear grass band over the rock"""
+    rng = random.Random(700 + variant)
+    m, nt, em = _nodes("cap")
+    nz = _normal_z(nt)
+    col = _ramp(nt, nz, [(0.2, "#2a5a24"), (0.55, "#4f8f36"), (0.85, "#7cbc48"), (1.0, "#a6d65a")])
+    col = _mix(nt, col, _ramp(nt, _noise(nt, 9.0, 4), [(0.35, "#cfe0b8"), (0.65, "#ffffff")]))
+    col = _mix(nt, col, _ao(nt, 0.08, 0.5))
+    nt.links.new(col, em.inputs["Color"])
+    seed = Vector((variant * 2.3, 0.7, variant * 1.1))
+    n = 96
+    bm = bmesh.new()
+
+    def ring(rf, z, drip=0.0, wob=1.0):
+        out = []
+        for i in range(n):
+            a = i / n * math.tau
+            d = Vector((math.cos(a), math.sin(a), 0))
+            w = noise.noise(d * 1.4 + seed) * 0.07 * wob
+            dz = 0.0
+            if drip:
+                dd = max(0.0, noise.noise(d * 6.0 + seed * 2)) ** 0.8
+                dz = -drip * dd
+            out.append(bm.verts.new((d.x * rf * (1 + w), d.y * rf * (1 + w), z + dz)))
+        return out
+    rings = [ring(0.9, 0.42), ring(0.985, 0.25, drip=0.25), ring(1.03, 0.5, drip=0.12), ring(1.035, 0.82), ring(1.0, 0.97), ring(0.94, 1.0)]
+    for r in range(len(rings) - 1):
+        for i in range(n):
+            j = (i + 1) % n
+            bm.faces.new((rings[r][i], rings[r][j], rings[r + 1][j], rings[r + 1][i]))
+    prev = rings[-1]
+    for sc in (0.7, 0.4, 0.15):
+        cur = []
+        for i in range(n):
+            v = prev[i].co
+            k = sc / (Vector((v.x, v.y, 0)).length + 1e-6) * Vector((v.x, v.y, 0)).length
+            cur.append(bm.verts.new((v.x * sc / 0.94, v.y * sc / 0.94, 1.0 + noise.noise(Vector((v.x * 3, v.y * 3, 0)) + seed) * 0.008)))
+        for i in range(n):
+            j = (i + 1) % n
+            bm.faces.new((prev[i], prev[j], cur[j], cur[i]))
+        prev = cur
+    c = bm.verts.new((0, 0, 1.0))
+    for i in range(n):
+        bm.faces.new((prev[i], prev[(i + 1) % n], c))
+    # close the underside so it is solid from every angle
+    under = rings[0]
+    cu = bm.verts.new((0, 0, 0.45))
+    for i in range(n):
+        bm.faces.new((under[(i + 1) % n], under[i], cu))
+    me = bpy.data.meshes.new("cap")
+    bm.normal_update()
+    bm.to_mesh(me)
+    bm.free()
+    o = bpy.data.objects.new("cap", me)
+    bpy.context.scene.collection.objects.link(o)
+    smooth(assign(o, m))
+    # a few grass tufts sticking out of the lip
+    for k in range(14):
+        a = rng.uniform(0, math.tau)
+        d = Vector((math.cos(a), math.sin(a), 0))
+        base = d * 1.0 + Vector((0, 0, 0.9))
+        frond(base, base + d * 0.03 + Vector((0, 0, 0.12)), base + d * 0.06 + Vector((0, 0, 0.2)), 0.015, m, segs=3)
 
 
 # ---------------------------------------------------------------- ground cover (reference: stylized plant pack)
@@ -424,27 +506,60 @@ def leaf_plant(variant):
 PETALS = {1: ("#fffaf2", "#ffd23a"), 2: ("#ffd23a", "#c8641e"), 3: ("#a07aff", "#ffe27a"), 4: ("#7ac8ff", "#ffffff"), 5: ("#ff7aa8", "#ffe27a")}
 
 
+def petal(center, ang, length, width, lift, mat):
+    """one pointed petal: a two-sided strip from the flower center outward, curving up by `lift`"""
+    d = Vector((math.cos(ang), math.sin(ang), 0))
+    c = Vector(center)
+    return frond(c, c + d * length * 0.5 + Vector((0, 0, length * lift * 0.6)), c + d * length + Vector((0, 0, length * lift)), width, mat, segs=4)
+
+
+FLOWER_KINDS = {
+    1: ("daisy", "#fffaf2", "#ffcf2e"),
+    2: ("daisy", "#ffd23a", "#b8541a"),
+    3: ("tulip", "#ff4a5e", "#ffd86a"),
+    4: ("lupine", "#9a6aff", "#e6d8ff"),
+    5: ("star", "#6ab8ff", "#ffffff"),
+}
+
+
 def flowers(variant):
     rng = random.Random(260 + variant)
+    kind, pet, mid = FLOWER_KINDS[variant]
     stem_m = foliage_mat("stem", "#1e5a2a", "#3f8e36", "#7cc040", "#a8d860")
-    pet, mid = PETALS[variant]
     pet_m = CR.flat_mat("petal", pet)
     mid_m = CR.flat_mat("center", mid)
-    for k in range(5):
+    heads = 4 if kind != "lupine" else 3
+    for k in range(heads):
         a = rng.uniform(0, math.tau)
-        r = rng.uniform(0, 0.7)
+        r = rng.uniform(0, 0.6) if k else 0
         base = Vector((math.cos(a) * r, math.sin(a) * r, 0))
-        h = rng.uniform(0.55, 1.0)
-        top = base + Vector((rng.uniform(-0.15, 0.15), rng.uniform(-0.15, 0.15), h))
-        tuft(base, base.lerp(top, 0.5) + Vector((0.05, 0, 0)), top, 0.04, stem_m, n=5, rings=2)
-        for j in range(5):
-            b = j / 5 * math.tau
-            CR.blob(0.16, top + Vector((math.cos(b) * 0.19, math.sin(b) * 0.19, 0.02)), pet_m, scale=(1.25, 0.8, 0.35), rot=(0, 0, b), seg=8)
-        CR.blob(0.1, top + Vector((0, 0, 0.06)), mid_m, scale=(1, 1, 0.6), seg=8)
-        # two leaves at the base of each stem
-        for j in (0, 1):
-            dd = Vector((math.cos(a + j * 3), math.sin(a + j * 3), 0))
-            frond(base, base + dd * 0.25 + Vector((0, 0, 0.3)), base + dd * 0.55 + Vector((0, 0, 0.12)), 0.14, stem_m, segs=4)
+        h = rng.uniform(0.6, 1.0) * (1.6 if kind == "lupine" else 1.0)
+        top = base + Vector((rng.uniform(-0.12, 0.12), rng.uniform(-0.12, 0.12), h))
+        tuft(base, base.lerp(top, 0.5) + Vector((0.04, 0, 0)), top, 0.035, stem_m, n=5, rings=2)
+        rot = rng.uniform(0, math.tau)
+        if kind == "daisy":
+            for j in range(10):
+                petal(top, rot + j / 10 * math.tau, 0.24, 0.05, 0.15, pet_m)
+            CR.blob(0.07, top + Vector((0, 0, 0.03)), mid_m, scale=(1, 1, 0.5), seg=8)
+        elif kind == "star":
+            for j in range(5):
+                petal(top, rot + j / 5 * math.tau, 0.2, 0.08, 0.3, pet_m)
+            CR.blob(0.045, top + Vector((0, 0, 0.03)), mid_m, scale=(1, 1, 0.6), seg=6)
+        elif kind == "tulip":
+            # a cup: petals rising steeply around the center
+            for j in range(5):
+                petal(top - Vector((0, 0, 0.04)), rot + j / 5 * math.tau, 0.13, 0.09, 2.2, pet_m)
+            CR.blob(0.05, top + Vector((0, 0, 0.06)), mid_m, scale=(1, 1, 1.4), seg=6)
+        else:  # lupine spike: whorls of tiny petals up the top of the stem, shrinking to the tip
+            for t in range(9):
+                zc = top + Vector((0, 0, -0.45 + t * 0.06))
+                sz = 0.13 * (1 - t / 11)
+                for j in range(4):
+                    petal(zc, rot + j / 4 * math.tau + t * 0.6, sz, 0.05, 0.5, pet_m)
+        # leaves at the base of each stem
+        for j in (0, 1, 2):
+            dd = Vector((math.cos(a + j * 2.1), math.sin(a + j * 2.1), 0))
+            frond(base, base + dd * 0.22 + Vector((0, 0, 0.28)), base + dd * 0.5 + Vector((0, 0, 0.1)), 0.11, stem_m, segs=4)
 
 
 def mushroom(variant):
@@ -632,6 +747,9 @@ for i in (1, 2):
     PROPS[f"GrassPatch_{i}"] = (grass_patch, i, 4)
 for i in (1, 2, 3):
     PROPS[f"Mesa_{i}"] = (mesa, i, 2)
+    PROPS[f"GrassCap_{i}"] = (grass_cap, i, 2)
+    for tone in ("Brown", "Gray", "Red"):
+        PROPS[f"Cliff{tone}_{i}"] = ((lambda tn: (lambda v: cliff(v, tn)))(tone), i, 12)
 
 for i in (1, 2, 3):
     PROPS[f"BroadTree_{i}"] = (broad_tree, i, 14)

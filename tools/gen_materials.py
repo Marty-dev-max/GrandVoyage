@@ -124,16 +124,42 @@ def save(name, color, normal, rough):
 
 # ---------------------------------------------------------------- materials
 def grass():
-    big = fbm(2.8, seed=1)
+    """painted grass: thousands of short curved brush strokes (light tips, darker roots) over soft clumps, drawn on a
+    3x3 canvas and cropped so it tiles; near-neutral values (the part's green Color tints it)"""
+    from PIL import ImageDraw, ImageFilter
+    import math as _m
+    r = np.random.default_rng(41)
+    big = N * 3
+    base = (blur(fbm(2.6, seed=1), 4) * 0.25 + 0.58)
+    canvas = Image.fromarray((np.tile(np.clip(base, 0, 1), (3, 3)) * 255).astype(np.uint8), "L").convert("RGB")
+    d = ImageDraw.Draw(canvas)
     clumps = fbm(2.2, seed=2)
-    strokes = aniso(1.0, 0.25, 2.0, seed=3)  # short vertical strokes
-    blades = aniso(1.0, 0.12, 1.6, seed=26)
-    h = 0.45 * clumps + 0.3 * strokes + 0.15 * blades + 0.1 * fbm(1.4, seed=4)
-    lit = light_from_height(blur(h, 1), 9)
-    v = 0.6 + 0.2 * posterize(blur(big, 3), 5) + 0.24 * lit - 0.08 * (1 - clumps) + 0.06 * (blades - 0.5)
-    # sunny yellow tips in the lights, cool blue-green in the shadows
-    col = tint(np.clip(v, 0, 1), (1.04, 1.03, 0.86), (0.84, 0.96, 1.0))
-    save("Grass", col, normal_from_height(h, 5), 0.85 + 0.1 * strokes)
+    for _ in range(5200):
+        x, y = r.uniform(0, N), r.uniform(0, N)
+        cl = clumps[int(y) % N, int(x) % N]
+        ln = r.uniform(34, 70)
+        ang = _m.radians(-90 + r.uniform(-35, 35))
+        bend = r.uniform(-0.5, 0.5)
+        v = 0.45 + 0.5 * cl + r.uniform(-0.14, 0.14)
+        tip = min(1.0, v + 0.22)
+        for ox in (0, N, 2 * N):
+            for oy in (0, N, 2 * N):
+                px, py = x + ox, y + oy
+                pts = []
+                for k in range(4):
+                    t = k / 3
+                    a2 = ang + bend * t
+                    pts.append((px + _m.cos(a2) * ln * t, py + _m.sin(a2) * ln * t))
+                # root (dark) -> tip (light) in two segments, warm-yellow tips
+                c1 = tuple(int(255 * v * f) for f in (0.92, 0.97, 0.86))
+                c2 = tuple(int(255 * tip * f) for f in (1.0, 1.02, 0.84))
+                w0 = int(r.integers(5, 9))
+                d.line(pts[:3], fill=c1, width=w0)
+                d.line(pts[2:], fill=c2, width=max(2, w0 - 3))
+    canvas = canvas.filter(ImageFilter.GaussianBlur(0.7)).crop((N, N, 2 * N, 2 * N))
+    col = np.asarray(canvas).astype(np.float32) / 255.0
+    h = col.mean(-1)
+    save("Grass", col, normal_from_height(blur(h, 1), 4), 0.9 * np.ones_like(h))
 
 
 def rock():
@@ -268,7 +294,7 @@ def water_layers():
 
 # ---------------------------------------------------------------- Rojo project block
 VARIANTS = {  # MaterialVariant name -> (base material, color/normal/rough file prefix, studs per tile)
-    "GV_Grass": ("Grass", "Grass", 24),
+    "GV_Grass": ("Grass", "Grass", 18),
     "GV_Rock": ("Rock", "Rock", 28),
     "GV_Slate": ("Slate", "Slate", 10),
     "GV_Sand": ("Sand", "Sand", 26),

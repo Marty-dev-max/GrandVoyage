@@ -65,8 +65,10 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   (GrassTuft/Flowers/Fern/LeafPlant/Mushroom/Bush) on Grass parts; `Controllers/GrassField.lua` sways only the plants near the
   camera (BulkMoveTo). A dense 3D grass carpet lagged (v0.10.1): owner wants few plants, AV-like soft look. Do NOT use Terrain for ground: its 4-stud voxels swallowed
   paths/houses and left ridges (tried in v0.10.0).
-  Mesas: rock cylinder + grass cap (collision, hidden once dressed via MesaId) + one organic grassy ledge mesh (Env Mesa_n)
-  per lobe; overlapping lobes read as connected hills (owner reference: AV-style soft grassy ledges). Bump `WorldBuilder.WORLD_VERSION` when world code changes:
+  Mesas (owner wants clear layers + stylized 3D rock): rock cylinder + grass cylinder (collision, hidden once dressed via
+  MesaId) + a ring of angular rock cliff slabs (`Cliff<Tone>_n`, tone Brown/Gray from `Kit.RockTone`, Red on the Red Line)
+  + a separate grass layer mesh on top that overhangs the rim (`GrassCap_n`). Overlapping lobes read as connected hills.
+  The smooth `Mesa_n` ledge meshes were rejected (looked like plastic, layers blended). Bump `WorldBuilder.WORLD_VERSION` when world code changes:
   a baked World with an older version is destroyed and rebuilt at runtime (the owner's published place keeps a baked World).
 - Owner decisions on art: voxel style for pets, fruits and monsters; textured (SurfaceAppearance-like) stylized look for the map.
 - VFX are ParticleEmitter/Beam based with our own textures (`Config/Textures`); see the toolkit at the top of `Controllers/VFX.lua`.

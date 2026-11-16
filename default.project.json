@@ -62,10 +62,10 @@
         "$properties": {
           "BaseMaterial": "Grass",
           "MaterialPattern": "Organic",
-          "StudsPerTile": 24,
-          "ColorMap": "rbxassetid://117997584980690",
-          "NormalMap": "rbxassetid://111254171193253",
-          "RoughnessMap": "rbxassetid://75544856327959"
+          "StudsPerTile": 18,
+          "ColorMap": "rbxassetid://112393645424160",
+          "NormalMap": "rbxassetid://77335482909230",
+          "RoughnessMap": "rbxassetid://128512302849828"
         }
       },
       "GV_Rock": {

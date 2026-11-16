@@ -489,6 +489,57 @@ function UI.IconChip(parent, icon, color, size)
 	return chip
 end
 
+-- 3D model from ReplicatedStorage.Assets.<folder>.<key> (Blender models loaded by the server's AssetService) in a
+-- ViewportFrame, slowly turning (Anime Vanguards style inventory). Returns nil when that model is not loaded, so
+-- callers fall back to the 2D icon.
+function UI.ModelAsset(folder, key)
+	local assets = ReplicatedStorage:FindFirstChild("Assets")
+	local f = assets and assets:FindFirstChild(folder)
+	return f and f:FindFirstChild(key)
+end
+
+function UI.ModelView(parent, folder, key, size, spin, props)
+	local src = UI.ModelAsset(folder, key)
+	if not src then
+		return nil
+	end
+	local vp = New("ViewportFrame", {
+		BackgroundTransparency = 1,
+		Size = UDim2.fromOffset(size, size),
+		Ambient = Color3.fromRGB(170, 170, 190),
+		LightColor = Color3.fromRGB(255, 250, 240),
+		LightDirection = Vector3.new(-0.6, -1, -0.8),
+		Parent = parent,
+	})
+	for k, v in pairs(props or {}) do
+		vp[k] = v
+	end
+	local m = src:Clone()
+	m:PivotTo(CFrame.new())
+	m.Parent = vp
+	local _, ext = m:GetBoundingBox()
+	local cam = Instance.new("Camera")
+	cam.FieldOfView = 30
+	local dist = math.max(ext.X, ext.Y, ext.Z) * 0.62 / math.tan(math.rad(15))
+	cam.CFrame = CFrame.lookAt(Vector3.new(0, ext.Y * 0.12, -dist), Vector3.zero)
+	cam.Parent = vp
+	vp.CurrentCamera = cam
+	local yaw = math.rad(-25)
+	m:PivotTo(CFrame.Angles(0, yaw, 0))
+	if spin ~= false then
+		local conn
+		conn = RunService.RenderStepped:Connect(function(dt)
+			if not vp.Parent then
+				conn:Disconnect()
+				return
+			end
+			yaw += dt * (tonumber(spin) or 0.8)
+			m:PivotTo(CFrame.Angles(0, yaw, 0))
+		end)
+	end
+	return vp
+end
+
 -- Section header: icon chip + display title + accent rule, with optional right-aligned info text.
 -- Returns (frame, rightLabel)
 function UI.Section(parent, icon, title, color, rightText)

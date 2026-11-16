@@ -99,6 +99,7 @@ local function build(key)
 	custom = custom and custom:FindFirstChild(sp.id .. "_" .. stage)
 	if custom then
 		local c = custom:Clone()
+		m:SetAttribute("HalfHeight", c:GetAttribute("HalfHeight"))
 		for _, p in ipairs(c:GetDescendants()) do
 			if p:IsA("BasePart") then
 				p.Anchored = true
@@ -133,6 +134,19 @@ local function place(m, cf, t)
 end
 
 function PetsCtl.Start()
+	-- Blender models arrive from the server a few seconds after join (AssetService): rebuild pets that still use placeholders
+	task.spawn(function()
+		local assets = ReplicatedStorage:WaitForChild("Assets", 120)
+		local pets = assets and assets:WaitForChild("Pets", 120)
+		if pets then
+			pets.ChildAdded:Connect(function()
+				for pl, a in pairs(active) do
+					a.model:Destroy()
+					active[pl] = nil
+				end
+			end)
+		end
+	end)
 	RunService.RenderStepped:Connect(function(dt)
 		local t = os.clock()
 		for _, pl in ipairs(Players:GetPlayers()) do
@@ -155,7 +169,10 @@ function PetsCtl.Start()
 				if a then
 					-- follow behind-right of the owner, flyers hover higher
 					local flyer = a.sp.shape == "bird" or a.sp.shape == "lantern" or a.sp.shape == "serpent"
-					local goal = (root.CFrame * CFrame.new(3, flyer and 2.5 or -1.6, 3.5)).Position
+					-- Blender models know their height: walkers stand on the ground (root is ~3 studs above it)
+					local half = a.model:GetAttribute("HalfHeight")
+					local y = flyer and 2.5 or (half and (half - 2.9) or -1.6)
+					local goal = (root.CFrame * CFrame.new(3, y, 3.5)).Position
 					a.pos = a.pos:Lerp(goal, math.clamp(dt * 6, 0, 1))
 					if (a.pos - goal).Magnitude > 60 then
 						a.pos = goal

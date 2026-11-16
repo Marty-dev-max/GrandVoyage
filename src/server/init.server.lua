@@ -7,6 +7,7 @@ local registry = {
 	WorldBuilder = require(script.World.WorldBuilder),
 }
 local order = {
+	"AssetService",
 	"DataService",
 	"PlayerService",
 	"InventoryService",

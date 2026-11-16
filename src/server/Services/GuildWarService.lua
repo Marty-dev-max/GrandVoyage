@@ -174,6 +174,13 @@ function GW.Start()
 			R.FruitService.GainMastery(player, 5000)
 		elseif data.cmd == "spawnfruit" then
 			R.FruitService.SpawnTreeFruit()
+		elseif data.cmd == "models" then
+			local n = R.AssetService.Gallery(player)
+			local failed = {}
+			for name in pairs(R.AssetService.Failed) do
+				table.insert(failed, name)
+			end
+			return true, n .. " models" .. (#failed > 0 and ("  •  failed: " .. table.concat(failed, ", ")) or "")
 		elseif data.cmd == "eggs" then
 			R.InventoryService.AddItem(player, "SeaEgg", 3)
 			R.InventoryService.AddItem(player, "GoldenEgg", 2)

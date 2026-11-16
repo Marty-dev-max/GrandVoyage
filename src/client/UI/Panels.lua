@@ -195,7 +195,10 @@ function Panels.Inventory()
 		New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.glow, ImageColor3 = tier.color:Lerp(Color3.new(1, 1, 1), 0.3), ImageTransparency = 0.15, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.fromOffset(170, 170), ZIndex = 3, Parent = head })
 		local iconId = UI.ItemIconId(def)
 		local big
-		if iconId then
+		local model = def.kind == "Fruit" and UI.ModelView(head, "Fruits", def.fruit, 150, 0.9, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), ZIndex = 5 })
+		if model then
+			big = model
+		elseif iconId then
 			big = New("ImageLabel", { BackgroundTransparency = 1, Image = iconId, ScaleType = Enum.ScaleType.Fit, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.fromOffset(124, 124), ZIndex = 5, Parent = head })
 		else
 			big = UI.Text(head, def.icon or kindIcon[def.kind] or "", 64, T.Text, "Display", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.fromOffset(124, 124), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 5 })
@@ -1293,7 +1296,7 @@ function Panels.Settings()
 			table.insert(fruitButtons, { "+Mastery", "mastery" })
 			table.insert(fruitButtons, { "Spawn Tree Fruit", "spawnfruit" })
 			devGrid("Cursed Fruits", "🍎", T.Pink, fruitButtons)
-			devGrid("Pets & World", "🐾", T.Green, { { "Eggs + Bait", "eggs" }, { "Pet +15 Lv", "petlevel" }, { "Reset Chests", "chestreset" }, { "Guild War", "gw_start" }, { "End War", "gw_end" } })
+			devGrid("Pets & World", "🐾", T.Green, { { "Eggs + Bait", "eggs" }, { "Pet +15 Lv", "petlevel" }, { "Reset Chests", "chestreset" }, { "Model Gallery", "models" }, { "Guild War", "gw_start" }, { "End War", "gw_end" } })
 		end
 	end
 	sidebar()
@@ -1637,9 +1640,35 @@ function Panels.Pets()
 			return
 		end
 		local sp = PetsCfg.ById[pet.species]
-		local chip = UI.IconChip(right, sp.icon, sp.color, 96)
-		chip.Rotation = -5
+		-- 3D showcase of the Blender model (falls back to the icon chip until AssetService has loaded it)
+		local key = sp.id .. "_" .. pet.stage
+		if UI.ModelAsset("Pets", key) then
+			local head = New("Frame", { Size = UDim2.new(1, 0, 0, 170), ClipsDescendants = true, Parent = right })
+			UI.Corner(head, 12)
+			UI.RarityStyle(head, sp.rarity, true)
+			New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.glow, ImageColor3 = sp.color:Lerp(Color3.new(1, 1, 1), 0.4), ImageTransparency = 0.25, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(190, 190), ZIndex = 3, Parent = head })
+			UI.ModelView(head, "Pets", key, 170, 0.7, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), ZIndex = 5 })
+		else
+			local chip = UI.IconChip(right, sp.icon, sp.color, 96)
+			chip.Rotation = -5
+		end
 		UI.Text(right, sp.stages[pet.stage], 26, T.Text, "Display", { TextXAlignment = Enum.TextXAlignment.Center })
+		-- evolution line: small static models (current stage highlighted), names underneath
+		if UI.ModelAsset("Pets", sp.id .. "_1") then
+			local evo = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 58), Parent = right })
+			New("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 6), Parent = evo })
+			for st = 1, 3 do
+				local cell = New("Frame", { BackgroundColor3 = st == pet.stage and sp.color or T.Panel, BackgroundTransparency = st == pet.stage and 0.55 or 0.4, Size = UDim2.fromOffset(56, 56), LayoutOrder = st * 2, Parent = evo })
+				UI.Corner(cell, 10)
+				local vp = UI.ModelView(cell, "Pets", sp.id .. "_" .. st, 56, false)
+				if vp and st > pet.stage then
+					vp.ImageColor3 = Color3.fromRGB(40, 40, 60) -- not evolved yet: silhouette
+				end
+				if st < 3 then
+					UI.Text(evo, "➜", 18, T.TextSoft, "Display", { Size = UDim2.fromOffset(18, 56), LayoutOrder = st * 2 + 1, TextXAlignment = Enum.TextXAlignment.Center })
+				end
+			end
+		end
 		UI.Text(right, table.concat(sp.stages, "  ➜  "), 13, T.TextSoft, "Semi", { TextXAlignment = Enum.TextXAlignment.Center })
 		local need = PetsCfg.ExpToNext(pet.level)
 		local bar = UI.Bar(right, T.Green, UDim2.new(1, 0, 0, 18), pet.level >= PetsCfg.MaxLevel and "MAX" or ("Lv." .. pet.level .. "  " .. pet.exp .. "/" .. need))

@@ -179,25 +179,38 @@ local function fruitModel(f, pos)
 	body.CanCollide = false
 	body.CFrame = CFrame.new(pos + Vector3.new(0, 1.6, 0))
 	body.Parent = m
-	-- swirl rings: the classic "cursed fruit" look
-	for i = -1, 1 do
-		local ring = Instance.new("Part")
-		ring.Shape = Enum.PartType.Cylinder
-		ring.Size = Vector3.new(0.25, 2.5 - math.abs(i) * 0.7, 2.5 - math.abs(i) * 0.7)
-		ring.Color = f.swirl
-		ring.Material = Enum.Material.Neon
-		ring.Anchored = true
-		ring.CanCollide = false
-		ring.CFrame = body.CFrame * CFrame.new(0, i * 0.6, 0) * CFrame.Angles(0, 0, math.pi / 2)
-		ring.Parent = m
+	-- real Blender model (AssetService) when loaded; the ball stays as an invisible anchor for the prompt and light
+	local assets = ReplicatedStorage:FindFirstChild("Assets")
+	local custom = assets and assets:FindFirstChild("Fruits") and assets.Fruits:FindFirstChild(f.id)
+	if custom then
+		body.Transparency = 1
+		local c = custom:Clone()
+		c:PivotTo(body.CFrame)
+		for _, p in ipairs(c:GetChildren()) do
+			p.Parent = m
+		end
+		c:Destroy()
+	else
+		-- swirl rings: the classic "cursed fruit" look
+		for i = -1, 1 do
+			local ring = Instance.new("Part")
+			ring.Shape = Enum.PartType.Cylinder
+			ring.Size = Vector3.new(0.25, 2.5 - math.abs(i) * 0.7, 2.5 - math.abs(i) * 0.7)
+			ring.Color = f.swirl
+			ring.Material = Enum.Material.Neon
+			ring.Anchored = true
+			ring.CanCollide = false
+			ring.CFrame = body.CFrame * CFrame.new(0, i * 0.6, 0) * CFrame.Angles(0, 0, math.pi / 2)
+			ring.Parent = m
+		end
+		local stem = Instance.new("Part")
+		stem.Size = Vector3.new(0.25, 0.9, 0.25)
+		stem.Color = Color3.fromRGB(70, 120, 50)
+		stem.Anchored = true
+		stem.CanCollide = false
+		stem.CFrame = body.CFrame * CFrame.new(0, 1.5, 0) * CFrame.Angles(0, 0, 0.4)
+		stem.Parent = m
 	end
-	local stem = Instance.new("Part")
-	stem.Size = Vector3.new(0.25, 0.9, 0.25)
-	stem.Color = Color3.fromRGB(70, 120, 50)
-	stem.Anchored = true
-	stem.CanCollide = false
-	stem.CFrame = body.CFrame * CFrame.new(0, 1.5, 0) * CFrame.Angles(0, 0, 0.4)
-	stem.Parent = m
 	local light = Instance.new("PointLight")
 	light.Color = f.color
 	light.Range = 18

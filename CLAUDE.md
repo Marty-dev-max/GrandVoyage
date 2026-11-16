@@ -26,7 +26,8 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
 | Upload sounds | `ROBLOX_API_KEY=... python3 tools/upload_sfx.py --user 1527424396` (already done: ids are in `Config/Sounds.lua`) |
 | Icon pack (3D-rendered, Blender) | `python tools/blender/render_icons.py -- --out assets/icons` (bpy module or `blender -b -P`), then `ROBLOX_API_KEY=... python3 tools/upload_images.py assets/icons src/shared/Config/Icons.lua` |
 | VFX textures | `python3 tools/gen_vfx.py`, then `python3 tools/upload_images.py assets/vfx src/shared/Config/Textures.lua` |
-| Blender models | `blender -b -P tools/blender/generate_assets.py -- --out assets/models --preview` |
+| Blender models (old map/monster/ship pack) | `blender -b -P tools/blender/generate_assets.py -- --out assets/models --preview` |
+| In-game 3D models v2 (pets x3 stages, fruits) | `python tools/blender/build_models.py -- --out assets/models3d --preview [--only Gull_2]`, then `ROBLOX_API_KEY=... python3 tools/upload_models.py assets/models3d src/shared/Config/Models.lua` |
 
 ## Rules learned the hard way
 
@@ -42,6 +43,9 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   `QuestService.ACTION_EVENTS` are picked up automatically via `Net.AfterHandle`.
 - Icons: pass an emoji or an icon name to `UI.Icon` / `UI.IconChip`; emoji with a rendered icon (see `EMOJI_ICON` in UIKit)
   show the image automatically. Items use `UI.ItemIconId(def)`. New icon = builder in `render_icons.py` + render + upload.
+- 3D models: build with `tools/blender/gvkit.py` (one mesh, one 16x16 palette texture, inverted-hull outline baked in,
+  faces Blender -Y). `AssetService` loads `Config/Models` ids with InsertService into `ReplicatedStorage.Assets.Pets/<Species>_<n>`
+  and `Assets.Fruits/<Id>` (normalized size + pivot); `UI.ModelView` shows them spinning in ViewportFrames. Dev tab -> Model Gallery.
 - VFX are ParticleEmitter/Beam based with our own textures (`Config/Textures`); see the toolkit at the top of `Controllers/VFX.lua`.
 - UI is built only from `src/client/UI/UIKit.lua` helpers (Window, Section, TabBar, IconChip, Button, Bar, Card, Toast, Notice...).
   Hover makes buttons "jump"; keep that for new buttons by using `UI.Button` / `UI.Tactile`.
@@ -85,7 +89,8 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
 
 Done: Brawler + Sea Cook + per-class progress, all 6 Cursed Fruits, Pearls (shop, Pearl stalls, ledger, Robux receipts),
 Sea Companions (capture, eggs, evolution, follow/attack), quests + tutorial, chests, swimming,
-daily quests + achievements + titles (`ProgressService`, fed by `QuestService.Event`).
+daily quests + achievements + titles (`ProgressService`, fed by `QuestService.Event`),
+3D-rendered icon pack, Blender models v2 for all pets (18) and fruits (6) loaded at runtime (`AssetService`).
 Bump `GameConfig.Version` on every change: the owner checks it bottom-right in game to confirm Rojo synced.
 The owner updates by double-clicking `update.bat` (git pull) on Windows, then Stop/Play in Studio.
 

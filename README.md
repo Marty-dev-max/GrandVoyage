@@ -155,6 +155,18 @@ events (`shared/Modules/Net.lua`). Every action is validated and rate-limited on
 
 ## Art & audio pipeline
 
+### In-game 3D models v2 (automatic: Blender → Open Cloud → InsertService)
+
+![Models v2](docs/screenshots/models-v2.png)
+
+```
+python tools/blender/build_models.py -- --out assets/models3d --preview
+ROBLOX_API_KEY=... python3 tools/upload_models.py assets/models3d src/shared/Config/Models.lua
+```
+`AssetService` loads every id in `Config/Models` at server start into `ReplicatedStorage.Assets` (pets, fruits). Pets,
+the world fruit, the inventory showcase and the Pets window switch to the 3D models automatically. Dev tab → **Model Gallery**
+lines them all up in front of you.
+
 ### Models (Blender → Roblox, no code changes)
 
 `tools/blender/generate_assets.py` builds every monster (34), ship part (18) and 11 island props as flat-shaded

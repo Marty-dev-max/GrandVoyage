@@ -116,6 +116,25 @@ function Kit.Group(name, fn)
 	return m
 end
 
+-- ===== stylized 3D props =====
+-- Trees, bushes, boulders and cliff walls are built here as simple part placeholders and tagged; at runtime the server
+-- (AssetService.DressWorld) swaps them for the stylized Blender meshes (tools/blender/envkit.py). Parts marked with the
+-- "Collider" attribute stay as invisible collision. If the meshes are not loaded the placeholders remain visible.
+local function prop(kind, base, height, fn)
+	local m = Instance.new("Model")
+	m.Name = kind
+	m:SetAttribute("Kind", kind)
+	m:SetAttribute("Base", base)
+	m:SetAttribute("Height", height)
+	m.Parent = Kit.parent
+	local prev = Kit.parent
+	Kit.parent = m
+	fn()
+	Kit.parent = prev
+	CollectionService:AddTag(m, "EnvProp")
+	return m
+end
+
 -- ===== signs =====
 function Kit.Sign(text, cf, size, textColor, bg, opts)
 	local board = P(Vector3.new(size.X, size.Y, 0.6), bg or C.Wood, cf, { material = M.Wood })
@@ -153,6 +172,12 @@ end
 -- ===== nature =====
 function Kit.Palm(pos, height)
 	height = height or rng:NextNumber(16, 24)
+	return prop("Palm", pos, height + 2, function()
+		Kit._palm(pos, height)
+	end)
+end
+
+function Kit._palm(pos, height)
 	local lean = rng:NextNumber(-0.3, 0.3)
 	local yaw = rng:NextNumber(0, math.pi * 2)
 	local base = CFrame.new(pos) * CFrame.Angles(0, yaw, 0)
@@ -160,6 +185,9 @@ function Kit.Palm(pos, height)
 	for i = 0, 5 do
 		local seg = P(Vector3.new(1.7 - i * 0.14, height / 6 + 0.4, 1.7 - i * 0.14), C.Trunk:Lerp(Color3.fromRGB(110, 72, 40), (i % 2) * 0.45), base * CFrame.new(lean * i * 1.6, height / 6 * (i + 0.5), 0) * CFrame.Angles(0, 0, -lean * 0.35), { material = M.Wood })
 		top = seg.CFrame.Position + Vector3.new(0, height / 12, 0)
+		if i == 0 then
+			seg:SetAttribute("Collider", true)
+		end
 	end
 	for i = 0, 6 do
 		local a = i / 7 * math.pi * 2
@@ -172,8 +200,14 @@ end
 
 function Kit.RoundTree(pos, scale, color, fruit)
 	scale = scale or 1
+	return prop("BroadTree", pos, 14 * scale, function()
+		Kit._roundTree(pos, scale, color, fruit)
+	end)
+end
+
+function Kit._roundTree(pos, scale, color, fruit)
 	color = color or C.Leaf
-	P(Vector3.new(1.6, 7, 1.6) * scale, C.Trunk, CFrame.new(pos + Vector3.new(0, 3.5 * scale, 0)), { material = M.Wood })
+	P(Vector3.new(1.6, 7, 1.6) * scale, C.Trunk, CFrame.new(pos + Vector3.new(0, 3.5 * scale, 0)), { material = M.Wood }):SetAttribute("Collider", true)
 	local crown = pos + Vector3.new(0, 9 * scale, 0)
 	Ball(9 * scale, color, crown, decor({ material = M.Grass }))
 	Ball(6.5 * scale, color:Lerp(Color3.new(1, 1, 0.7), 0.15), crown + Vector3.new(2, 2.4, 1) * scale, decor({ collide = false, material = M.Grass }))
@@ -188,7 +222,13 @@ end
 
 function Kit.PineTree(pos, scale)
 	scale = scale or 1
-	P(Vector3.new(1.4, 5, 1.4) * scale, C.Trunk, CFrame.new(pos + Vector3.new(0, 2.5 * scale, 0)), { material = M.Wood })
+	return prop("Pine", pos, 17 * scale, function()
+		Kit._pine(pos, scale)
+	end)
+end
+
+function Kit._pine(pos, scale)
+	P(Vector3.new(1.4, 5, 1.4) * scale, C.Trunk, CFrame.new(pos + Vector3.new(0, 2.5 * scale, 0)), { material = M.Wood }):SetAttribute("Collider", true)
 	for i = 0, 3 do
 		local d = (9 - i * 2) * scale
 		Cyl(3.2 * scale, d, C.Pine:Lerp(C.Leaf2, i * 0.08), pos + Vector3.new(0, (5 + i * 2.8) * scale, 0), decor({ material = M.Grass }))
@@ -198,6 +238,12 @@ end
 
 function Kit.Bush(pos, size, color)
 	size = size or 4
+	return prop("Bush", pos, size * 1.15, function()
+		Kit._bush(pos, size, color)
+	end)
+end
+
+function Kit._bush(pos, size, color)
 	color = color or C.Leaf2
 	for i = 1, 3 do
 		Ball(size * rng:NextNumber(0.7, 1), color:Lerp(Color3.new(0, 0.25, 0), rng:NextNumber(0, 0.2)), pos + Vector3.new(rng:NextNumber(-1, 1) * size * 0.4, size * 0.25, rng:NextNumber(-1, 1) * size * 0.4), decor({ collide = false, material = M.Grass }))
@@ -215,7 +261,10 @@ function Kit.Flowers(pos, radius, count)
 end
 
 function Kit.Rock(pos, size, color)
-	return P(Vector3.new(size, size * 0.7, size * 0.9), color or C.DarkStone:Lerp(C.Stone, rng:NextNumber()), CFrame.new(pos) * CFrame.Angles(rng:NextNumber(0, 0.5), rng:NextNumber(0, 6.28), rng:NextNumber(0, 0.5)), { material = M.Slate })
+	local p = P(Vector3.new(size, size * 0.7, size * 0.9), color or C.DarkStone:Lerp(C.Stone, rng:NextNumber()), CFrame.new(pos) * CFrame.Angles(rng:NextNumber(0, 0.25), rng:NextNumber(0, 6.28), rng:NextNumber(0, 0.25)), { material = M.Slate })
+	p:SetAttribute("Kind", "Boulder")
+	CollectionService:AddTag(p, "EnvPart")
+	return p
 end
 
 function Kit.RockCluster(pos, size)
@@ -543,16 +592,27 @@ function Kit.Mesa(base, radius, h, grass, rock, rim, opts)
 	end
 	for _, l in ipairs(lobes) do
 		local c = Vector3.new(base.X + l[1], 0, base.Z + l[2])
-		Cyl(h + 2, l[3] * 2, rock, c + Vector3.new(0, base.Y + h / 2 - 1, 0), { material = M.Rock })
-		Cyl(h * 0.45, l[3] * 2 + 1.6, dark, c + Vector3.new(0, base.Y + h * 0.22, 0), { material = M.Rock })
-		for k = 1, math.floor(h / 5) do
-			Cyl(0.7, l[3] * 2 + 0.6, (k % 2 == 0) and dark or rock:Lerp(Color3.new(1, 1, 1), 0.15), c + Vector3.new(0, base.Y + k * 5 - 1, 0), decor({ collide = false, shadow = false, material = M.Rock }))
+		-- collision body (invisible): the look comes from the cliff wall modules around it
+		Cyl(h + 2, l[3] * 2, rock, c + Vector3.new(0, base.Y + h / 2 - 1, 0), { material = M.Rock, transparency = 1, shadow = false })
+		-- cliff wall: a ring of slab modules facing outward (placeholder blocks -> stylized cliff meshes at runtime)
+		local circ = 2 * math.pi * l[3]
+		local n = math.max(5, math.ceil(circ / 11))
+		local w = circ / n * 1.22
+		local phase = rng:NextNumber(0, math.pi * 2)
+		for i = 0, n - 1 do
+			local a = phase + i / n * math.pi * 2
+			local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+			local hh = h + 1.5 + rng:NextNumber(-0.8, 0.6)
+			local depth = 5
+			local center = c + dir * (l[3] - depth * 0.3 + rng:NextNumber(-0.3, 0.4)) + Vector3.new(0, base.Y + hh / 2 - 0.8, 0)
+			local slab = P(Vector3.new(w, hh, depth), rock:Lerp(dark, rng:NextNumber(0, 0.5)), CFrame.lookAt(center, center + dir) * CFrame.Angles(0, 0, rng:NextNumber(-0.03, 0.03)), { material = M.Rock, collide = false })
+			slab:SetAttribute("Kind", "Cliff")
+			CollectionService:AddTag(slab, "EnvPart")
 		end
 		Cyl(2.2, l[3] * 2 + 3, grass, c + Vector3.new(0, top - 0.1, 0), { material = M.Grass })
 		if rim then
 			Cyl(0.9, l[3] * 2 + 3.6, rim, c + Vector3.new(0, top - 1.1, 0), decor({ collide = false }))
 		end
-		Kit.Drapes(c + Vector3.new(0, 0, 0), l[3] + 1.4, top, grass)
 	end
 	for i = 1, math.floor(radius / 5) do
 		local a = rng:NextNumber(0, math.pi * 2)

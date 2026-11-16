@@ -600,12 +600,22 @@ local function setupLighting()
 end
 
 -- ===== Public =====
+-- Bump when the world's code changes in a way the baked map must pick up: a baked World with another version is thrown
+-- away and rebuilt from code at server start (so the owner's published place updates through Rojo too).
+WB.WORLD_VERSION = 2
+
 function WB.Build()
-	if workspace:FindFirstChild("World") then
-		return workspace.World
+	local old = workspace:FindFirstChild("World")
+	if old and old:GetAttribute("WorldVersion") == WB.WORLD_VERSION then
+		return old
+	end
+	if old then
+		print("[GrandVoyage] baked World is version " .. tostring(old:GetAttribute("WorldVersion")) .. ", rebuilding v" .. WB.WORLD_VERSION)
+		old:Destroy()
 	end
 	local world = Instance.new("Model")
 	world.Name = "World"
+	world:SetAttribute("WorldVersion", WB.WORLD_VERSION)
 	world.Parent = workspace
 	Kit.parent = world
 	buildOcean(world)

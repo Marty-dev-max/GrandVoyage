@@ -3,10 +3,12 @@
 -- looks for real models before building placeholder bodies:
 --   Pets/<Species>_<stage>   (client Controllers/Pets)
 --   Fruits/<FruitId>         (FruitService world fruit, inventory 3D showcase)
+--   Env/<Kind>_<n>           (stylized trees/bushes/boulders/cliffs; DressWorld swaps the World's placeholder props)
 --   Monsters/<MonsterId>     (ModelFactory.Monster; "Mon_<MonsterId>" models, wrapped in HumanoidRootPart + Humanoid)
 -- Every model is normalized here: one Model, anchored non-colliding parts, pivot at the bounding-box center,
 -- scaled so its largest side is SIZE studs. Loading needs the asset owner = the game owner (it is: Treezaa2).
 local InsertService = game:GetService("InsertService")
+local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Models = require(ReplicatedStorage.Shared.Config.Models)
 
@@ -39,7 +41,13 @@ local function assetsFolder(name)
 	return f
 end
 
+local ENV_HEIGHT = 10 -- Env models are normalized to this height with the pivot at the bottom center
+
 local function target(name)
+	local env = string.match(name, "^Env_(%w+_%d+)$")
+	if env then
+		return "Env", env, ENV_HEIGHT
+	end
 	local mon = string.match(name, "^Mon_(%w+)$")
 	if mon then
 		return "Monsters", mon, MONSTER_SIZE[mon] or 7
@@ -57,7 +65,7 @@ local function target(name)
 end
 
 -- InsertService result -> one clean Model
-local function normalize(container, name, size)
+local function normalize(container, name, size, folder)
 	local m = Instance.new("Model")
 	m.Name = name
 	local parts = {}
@@ -87,12 +95,18 @@ local function normalize(container, name, size)
 	end
 	local cf, ext = m:GetBoundingBox()
 	m.WorldPivot = CFrame.new(cf.Position)
-	local biggest = math.max(ext.X, ext.Y, ext.Z)
+	local biggest = folder == "Env" and ext.Y or math.max(ext.X, ext.Y, ext.Z)
 	if biggest > 0 then
 		m:ScaleTo(size / biggest)
 	end
 	m:PivotTo(CFrame.Angles(0, YAW_FIX, 0))
 	m.WorldPivot = CFrame.new(m.WorldPivot.Position) -- bake the fix so later PivotTo calls keep it
+	if folder == "Env" then
+		-- props stand on the ground: pivot at the bottom center
+		local c2, e2 = m:GetBoundingBox()
+		m.WorldPivot = CFrame.new(c2.Position - Vector3.new(0, e2.Y / 2, 0))
+		m:PivotTo(CFrame.new())
+	end
 	m:SetAttribute("HalfHeight", select(2, m:GetBoundingBox()).Y / 2)
 	return m
 end
@@ -137,7 +151,7 @@ local function load(name, id)
 		warn("[AssetService] could not load", name, id, res)
 		return
 	end
-	local m, err = normalize(res, key, size)
+	local m, err = normalize(res, key, size, folder)
 	res:Destroy()
 	if not m then
 		AS.Failed[name] = err
@@ -180,7 +194,92 @@ function AS.Start()
 			f += 1
 		end
 		print(string.format("[AssetService] %d models loaded, %d failed (%.1fs)", n, f, os.clock() - t0))
+		AS.DressWorld()
 	end)
+end
+
+-- ===== world dressing: placeholder props -> stylized meshes =====
+local function envVariants(kind)
+	local env = ReplicatedStorage:FindFirstChild("Assets") and ReplicatedStorage.Assets:FindFirstChild("Env")
+	local out = {}
+	for _, m in ipairs(env and env:GetChildren() or {}) do
+		if string.match(m.Name, "^(%w+)_%d+$") == kind then
+			table.insert(out, m)
+		end
+	end
+	table.sort(out, function(a, b)
+		return a.Name < b.Name
+	end)
+	return out
+end
+
+local function hashPos(p)
+	return math.abs(math.floor(p.X * 7.31 + p.Z * 13.17 + p.Y * 3.7))
+end
+
+function AS.DressWorld()
+	local t0 = os.clock()
+	local cache = {}
+	local function variants(kind)
+		cache[kind] = cache[kind] or envVariants(kind)
+		return cache[kind]
+	end
+	local props, parts = 0, 0
+	-- whole props (trees, palms, pines, bushes): Model with Kind/Base/Height attributes
+	for _, m in ipairs(CollectionService:GetTagged("EnvProp")) do
+		local list = variants(m:GetAttribute("Kind") or "")
+		local base, h = m:GetAttribute("Base"), m:GetAttribute("Height")
+		if m:IsA("Model") and #list > 0 and base and h and not m:GetAttribute("Dressed") then
+			local hv = hashPos(base)
+			local c = list[hv % #list + 1]:Clone()
+			c:PivotTo(CFrame.new(base) * CFrame.Angles(0, (hv % 628) / 100, 0))
+			c:ScaleTo(c:GetScale() * h / ENV_HEIGHT)
+			for _, p in ipairs(m:GetChildren()) do
+				if p:IsA("BasePart") then
+					if p:GetAttribute("Collider") then
+						p.Transparency = 1
+					else
+						p:Destroy()
+					end
+				end
+			end
+			for _, p in ipairs(c:GetChildren()) do
+				if p:IsA("BasePart") then
+					p.CanQuery = false -- clicks and ground raycasts pass through foliage
+					p.CanTouch = false
+					p.Parent = m
+				end
+			end
+			c:Destroy()
+			m:SetAttribute("Dressed", true)
+			props += 1
+		end
+	end
+	-- single-part replacements (cliff slabs, boulders): the mesh takes the part's exact box
+	for _, p in ipairs(CollectionService:GetTagged("EnvPart")) do
+		local list = variants(p:GetAttribute("Kind") or "")
+		if p:IsA("BasePart") and #list > 0 and not p:GetAttribute("Dressed") then
+			local src = list[hashPos(p.Position) % #list + 1]
+			local mesh = src:FindFirstChildWhichIsA("MeshPart")
+			if mesh then
+				local mp = mesh:Clone()
+				local rel = src:GetPivot():ToObjectSpace(mesh.CFrame)
+				local grow = p:GetAttribute("Kind") == "Boulder" and 1.15 or 1.0
+				mp.Size = p.Size * grow
+				mp.CFrame = p.CFrame * (rel - rel.Position)
+				mp.Anchored = true
+				mp.CanCollide = false
+				mp.CanQuery = false
+				mp.CanTouch = false
+				mp.Parent = p.Parent
+				p.Transparency = 1
+				p.CastShadow = false
+				p:SetAttribute("Dressed", true)
+				parts += 1
+			end
+		end
+	end
+	print(string.format("[AssetService] dressed %d props + %d cliff/rock parts (%.2fs)", props, parts, os.clock() - t0))
 end
 
 -- dev: line every loaded model up in front of a player for a minute (Dev tab -> "Model Gallery")

@@ -29,6 +29,7 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
 | Blender models (old map/monster/ship pack) | `blender -b -P tools/blender/generate_assets.py -- --out assets/models --preview` |
 | Detailed creatures v3 (skin-modifier body + fur tufts + baked texture) | `python tools/blender/creatures.py -- --out assets/models3d --preview` (or open it in Blender's Scripting tab and Run Script to build it in the open scene), then upload_models.py as below |
 | Map materials (stylized PBR MaterialVariants) + water layers | `python3 tools/gen_materials.py`, upload `assets/materials` -> `Config/MaterialMaps.lua` and `assets/water` -> `Config/WaterTextures.lua` with upload_images.py, then `python3 tools/gen_materials.py --project` (writes MaterialService into default.project.json) |
+| Stylized environment kit (trees, pines, palms, bushes, boulders, cliff modules) | `python tools/blender/envkit.py -- --out assets/models3d --preview`, then upload_models.py |
 | Voxel creatures (SDF shapes on a grid, per-voxel colors, greedy mesh) | `python tools/blender/voxel.py -- --out assets/models3d --preview` |
 | In-game 3D models v2 (pets x3 stages, fruits) | `python tools/blender/build_models.py -- --out assets/models3d --preview [--only Gull_2]`, then `ROBLOX_API_KEY=... python3 tools/upload_models.py assets/models3d src/shared/Config/Models.lua` |
 
@@ -58,6 +59,10 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   per-time-of-day recipes, night lamps, Clouds, soft wind wisps on Beams, drifting leaves on islands); Sailing calls
   `Atmos.Wind` / `Atmos.SetCalm`. Dev tab -> Time of Day buttons.
   The sea is animated on the client by `Controllers/Ocean.lua` (scrolling wave/foam/glitter Textures + shore foam rings).
+- World props: `Kit` builds trees/bushes (Model tagged `EnvProp`, attrs Kind/Base/Height) and boulders/cliff slabs (Part tagged
+  `EnvPart`, attr Kind) as placeholders; `AssetService.DressWorld` swaps them for `Assets.Env/<Kind>_<n>` meshes at server start.
+  Mesas are invisible collision cylinders + a ring of cliff slabs. Bump `WorldBuilder.WORLD_VERSION` when world code changes:
+  a baked World with an older version is destroyed and rebuilt at runtime (the owner's published place keeps a baked World).
 - Owner decisions on art: voxel style for pets, fruits and monsters; textured (SurfaceAppearance-like) stylized look for the map.
 - VFX are ParticleEmitter/Beam based with our own textures (`Config/Textures`); see the toolkit at the top of `Controllers/VFX.lua`.
 - UI is built only from `src/client/UI/UIKit.lua` helpers (Window, Section, TabBar, IconChip, Button, Bar, Card, Toast, Notice...).

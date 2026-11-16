@@ -538,4 +538,5 @@ def main():
         print("CREATURE", name)
 
 
-main()
+if __name__ == "__main__":
+    main()

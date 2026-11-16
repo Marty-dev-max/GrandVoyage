@@ -84,7 +84,8 @@ Sea Companions (capture, eggs, evolution, follow/attack), quests + tutorial, che
 ## Next up
 
 1. Playtest in Studio and fix what breaks (fruit Dash feel, pet follow, swim animation, quest flow).
-2. Create the Robux developer products and paste their ids into `Config/Pearls.lua` (`Products`).
+2. (done) Robux developer products are live: ids in `Config/Pearls.lua` (`Products`). The game is published;
+   Studio Access to API Services is on, so DataStores save in Studio playtests.
 3. Daily quests + achievements (Pearl sources), fruit skill VFX polish, Seastone gear items for Marines.
 4. Art pass: Blender models for pets/fruits/monsters (`ReplicatedStorage.Assets.Pets/<Species>_<stage>` overrides the
    placeholder bodies), icon set.

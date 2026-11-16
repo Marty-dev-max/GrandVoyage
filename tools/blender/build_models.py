@@ -310,7 +310,7 @@ def main():
         try:
             K.reset()
             fn(st)
-            obj = K.build_mesh(name, outline=0.06 * target / 3, target=target)
+            obj = K.build_mesh(name, outline=0, target=target)  # owner: no thick black outline on models
             K.export_glb(obj, os.path.join(OUT, name + ".glb"))
             if PREVIEW:
                 K.preview(obj, os.path.join(OUT, "preview", name + ".png"))

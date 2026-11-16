@@ -225,7 +225,7 @@ def make_hull(obj):
 
 
 def export_glb(obj, path):
-    """Export for Roblox (mesh + outline hull as ONE mesh). The model faces Blender -Y; it is turned to face Roblox -Z."""
+    """Export for Roblox (mesh + optional outline hull as ONE mesh). Models face Blender -Y, which imports as Roblox forward."""
     tmp = obj.copy()
     tmp.data = obj.data.copy()
     bpy.context.scene.collection.objects.link(tmp)
@@ -237,8 +237,7 @@ def export_glb(obj, path):
         o.select_set(True)
     bpy.context.view_layer.objects.active = tmp
     bpy.ops.object.join()
-    tmp.rotation_euler = (0, 0, math.pi)
-    bpy.ops.object.transform_apply(rotation=True)
+    # Blender -Y -> glTF +Z -> Roblox -Z (forward): no extra turn needed (a 180 turn here made pets walk backwards)
     bpy.ops.object.select_all(action="DESELECT")
     tmp.select_set(True)
     bpy.ops.export_scene.gltf(filepath=path, export_format="GLB", use_selection=True, export_apply=True,

@@ -9,3 +9,6 @@ node_modules/
 # secrets: never commit API keys
 .env
 *.key
+
+# rojo.exe downloaded by serve.bat
+tools/bin/

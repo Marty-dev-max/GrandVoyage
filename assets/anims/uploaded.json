@@ -1,0 +1,126 @@
+{
+ "Baton_Stance": {
+  "id": "113694728123108",
+  "sha1": "58dd1ceadf3db7d78e6c3c3fa3646da171221200"
+ },
+ "Baton_Strike": {
+  "id": "113150741446246",
+  "sha1": "e56fbb9ccee2c1a82913fa415c1fc5b5a4066a69"
+ },
+ "Brawler_Cross": {
+  "id": "100491937968135",
+  "sha1": "19d0cf3b345547596b187163e21189236448ec44"
+ },
+ "Brawler_Hook": {
+  "id": "139976960636423",
+  "sha1": "37052b615e7ca77962a9fd79dd58a9b2ff3d118f"
+ },
+ "Brawler_Jab": {
+  "id": "137070861760117",
+  "sha1": "09bb7e74c03beb6a970e8eefc9af899e5ab04e8e"
+ },
+ "Brawler_Stance": {
+  "id": "81962328856873",
+  "sha1": "50e4188e174260239b09c73d87bebee76d6c3b59"
+ },
+ "Brawler_Uppercut": {
+  "id": "127902060001382",
+  "sha1": "7388a5e300528cc0bb83381cb354f1d4e603a840"
+ },
+ "Cook_AxeKick": {
+  "id": "123569376452875",
+  "sha1": "b3943b2cdb607c33033225e52deda87efa4ec185"
+ },
+ "Cook_FrontKick": {
+  "id": "126489106049477",
+  "sha1": "62d57f4797406cd33aca0d6000e1b56120f9db23"
+ },
+ "Cook_Roundhouse": {
+  "id": "119152831847975",
+  "sha1": "ecd2ff61af020842a5678ee3b85de4e8e3d52751"
+ },
+ "Cook_Stance": {
+  "id": "118399182297694",
+  "sha1": "432def04ba984456eb1deea73f99978852ba4b85"
+ },
+ "Hammer_Smash": {
+  "id": "132918471770040",
+  "sha1": "c1ceb13d0775c74621ba58a3672cc4e8efb8577f"
+ },
+ "Hammer_Stance": {
+  "id": "73131770997449",
+  "sha1": "dd156edfac5982217537c019e032e2b7ec4ed2f2"
+ },
+ "Hammer_Sweep": {
+  "id": "115129035768081",
+  "sha1": "70e5943eb230334c93625f06a781d668cb7ab2b3"
+ },
+ "Hurt": {
+  "id": "116524438371837",
+  "sha1": "d3ed9fb40a4e29dbc8a0ac128adb0aa74944591e"
+ },
+ "Med_Toss": {
+  "id": "117851938500908",
+  "sha1": "5db85404c771a20a0e6b88a84f6d86c4c22c7bc8"
+ },
+ "Mon_Attack": {
+  "id": "80187819193707",
+  "sha1": "8c4a75a0fa9b8273149782b4e68ec8b1a95320d6"
+ },
+ "Mon_Hit": {
+  "id": "120251683301700",
+  "sha1": "2b3dd6072c697e87ca0ad48a243e9ce24ba633fc"
+ },
+ "Mon_Idle": {
+  "id": "138523875386542",
+  "sha1": "fc77baee885f28c77cdc30e9ffd8edc7572a4417"
+ },
+ "Mon_Walk": {
+  "id": "118967884472792",
+  "sha1": "2a3d7cb14341dee938cf3450e9fe10e25a0256c8"
+ },
+ "Skill_Bless": {
+  "id": "99592825957569",
+  "sha1": "e6e778bd694ff01589caceb092f81c7d43220084"
+ },
+ "Skill_Cast": {
+  "id": "89459425171590",
+  "sha1": "50342610a61339376913c9353b92a66d5e39d3f3"
+ },
+ "Skill_GroundPunch": {
+  "id": "121110938650178",
+  "sha1": "7f4036aa12070f3461855a73b84a2aeda9235985"
+ },
+ "Skill_PowerUp": {
+  "id": "109899999392589",
+  "sha1": "51a2ee80d04614d1eecdb9c28b72efa3cf619956"
+ },
+ "Skill_Spin": {
+  "id": "112998981774637",
+  "sha1": "f2051adcf0f60a8465fbc793fa0c14ca48379136"
+ },
+ "Sling_Shoot": {
+  "id": "85377220453027",
+  "sha1": "93bdcc79116370bbdd70ae12cc1f16d74fae9e51"
+ },
+ "Sling_Stance": {
+  "id": "120907564291271",
+  "sha1": "869df96b9889906e1c2880a99c2365f88d5cfe2b"
+ },
+ "Sword_Backhand": {
+  "id": "131176702712229",
+  "sha1": "df71479ba4940faa412f2e68692d82791101d1f9"
+ },
+ "Sword_Slash": {
+  "id": "97095455471401",
+  "sha1": "8bd1aa68eb48ddf4af6c06bd0a2dffd84a14dc9a"
+ },
+ "Sword_Stance": {
+  "id": "112658631470294",
+  "sha1": "28d55c9e8724a5ee97c0911944235d74ec51ed8b"
+ },
+ "Sword_Thrust": {
+  "id": "132922411824606",
+  "sha1": "17c0e22359bfdc1baa38de13aa1100f53c933d31"
+ }
+}

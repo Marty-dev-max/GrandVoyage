@@ -46,9 +46,20 @@ local function assetsFolder(name)
 	return f
 end
 
+-- class weapons (tools/blender/voxel_weapons.py): longest side in studs, and where the hand grips it, as a fraction of
+-- the length from the handle end (+Z; the striking end points -Z). nil grip = the pivot stays at the center.
+AS.WEAPONS = {
+	Sword = { size = 4.6, grip = 0.13 }, Hammer = { size = 4.8, grip = 0.1 }, StormBaton = { size = 5.4, grip = 0.35 },
+	Slingshot = { size = 1.9, grip = 0.23 }, Knuckles = { size = 1.3 }, Shoes = { size = 1.55 }, MedKit = { size = 1.5 },
+}
+
 local ENV_HEIGHT = 10 -- Env models are normalized to this height with the pivot at the bottom center
 
 local function target(name)
+	local wep = string.match(name, "^Wep_(%w+)$")
+	if wep then
+		return "Weapons", wep, (AS.WEAPONS[wep] or { size = 3 }).size
+	end
 	local env = string.match(name, "^Env_(%w+_%d+)$")
 	if env then
 		return "Env", env, ENV_HEIGHT
@@ -114,6 +125,14 @@ local function normalize(container, name, size, folder)
 		-- props stand on the ground: pivot at the bottom center
 		local c2, e2 = m:GetBoundingBox()
 		m.WorldPivot = CFrame.new(c2.Position - Vector3.new(0, e2.Y / 2, 0))
+		m:PivotTo(CFrame.new())
+	end
+	if folder == "Weapons" then
+		-- pivot on the grip so WeaponService can put the pivot straight into the hand
+		local spec = AS.WEAPONS[name]
+		local c2, e2 = m:GetBoundingBox()
+		local z = spec and spec.grip and (e2.Z / 2 - spec.grip * e2.Z) or 0
+		m.WorldPivot = CFrame.new(c2.Position + Vector3.new(0, 0, z))
 		m:PivotTo(CFrame.new())
 	end
 	m:SetAttribute("HalfHeight", select(2, m:GetBoundingBox()).Y / 2)

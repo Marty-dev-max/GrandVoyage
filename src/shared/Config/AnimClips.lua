@@ -1,0 +1,247 @@
+-- Animation clips as plain data (no Roblox types), the single source for:
+--   tools/build_anims.luau -> assets/anims/<Name>.rbxm (KeyframeSequence) -> upload_models.py --type Animation -> Config/Animations
+--   Shared/Modules/Anim.lua at runtime (plays the uploaded ids; builds a local KeyframeSequence when an id is missing).
+--
+-- A pose value is { rx, ry, rz [, x, y, z] }: degrees, then an optional offset in studs. It is the joint's Transform,
+-- keyed by the name of the part the joint moves (R15: UpperTorso = waist, RightUpperArm = shoulder, RightLowerArm = elbow...).
+-- R15 axes (character faces -Z): +rx on an arm/leg swings it FORWARD; +rx on an elbow bends it; -rx on a knee bends it;
+-- -rx on UpperTorso leans forward; +ry on UpperTorso/LowerTorso turns the right side forward; +rz on the right arm lifts it
+-- outward, -rz on the left arm lifts it outward. Offsets on LowerTorso move the whole body (y down = crouch, -z = lunge).
+-- Parts a key leaves out return to rest (identity) at that key; parts never named in a clip are left to other animations.
+-- Monster clips ("Mon" rig) pose the voxel parts (Body, Head, LegL/LegR, LegFL/FR/BL/BR, ArmL/ArmR, Tail, WingL/WingR),
+-- which all hang off the HumanoidRootPart; a pose for a part a monster does not have is simply ignored.
+-- `strike` is when the blow lands (VFX and hitstop sync to it).
+
+local C = {}
+
+-- ===== Brawler (Knuckles): guard stance, jab -> cross -> hook -> uppercut =====
+local GUARD = {
+	RightUpperArm = { 40, 0, 18 }, RightLowerArm = { 115, 0, 0 },
+	LeftUpperArm = { 48, 0, -18 }, LeftLowerArm = { 115, 0, 0 },
+	UpperTorso = { -8, -15, 0 }, Head = { 6, 12, 0 },
+}
+local function with(base, over)
+	local t = table.clone(base)
+	for k, v in pairs(over or {}) do
+		t[k] = v
+	end
+	return t
+end
+
+C.Brawler_Stance = { rig = "R15", loop = true, priority = "Idle", length = 1.2, keys = {
+	{ t = 0, pose = GUARD },
+	{ t = 0.6, pose = with(GUARD, { UpperTorso = { -10, -15, 0 }, RightUpperArm = { 42, 0, 18 }, LeftUpperArm = { 50, 0, -18 } }) },
+	{ t = 1.2, pose = GUARD },
+} }
+C.Brawler_Jab = { rig = "R15", priority = "Action", strike = 0.07, keys = {
+	{ t = 0, pose = GUARD },
+	{ t = 0.07, pose = with(GUARD, { LeftUpperArm = { 88, 0, -4 }, LeftLowerArm = { 4, 0, 0 }, UpperTorso = { -10, -28, 0 } }) },
+	{ t = 0.24, pose = GUARD },
+} }
+C.Brawler_Cross = { rig = "R15", priority = "Action", strike = 0.09, keys = {
+	{ t = 0, pose = GUARD },
+	{ t = 0.04, pose = with(GUARD, { UpperTorso = { -6, -25, 0 } }) },
+	{ t = 0.09, pose = with(GUARD, { RightUpperArm = { 90, 0, 4 }, RightLowerArm = { 4, 0, 0 }, UpperTorso = { -12, 38, 0 }, LowerTorso = { 0, 12, 0 }, LeftUpperArm = { 40, 0, -22 } }) },
+	{ t = 0.28, pose = GUARD },
+} }
+C.Brawler_Hook = { rig = "R15", priority = "Action", strike = 0.12, keys = {
+	{ t = 0, pose = GUARD },
+	{ t = 0.06, pose = with(GUARD, { UpperTorso = { -4, 30, 0 }, LeftUpperArm = { 60, 0, -35 } }) },
+	{ t = 0.12, pose = with(GUARD, { LeftUpperArm = { 80, 0, -70 }, LeftLowerArm = { 85, 0, 0 }, UpperTorso = { -10, -45, 0 }, LowerTorso = { 0, -12, 0 } }) },
+	{ t = 0.32, pose = GUARD },
+} }
+C.Brawler_Uppercut = { rig = "R15", priority = "Action", strike = 0.18, keys = {
+	{ t = 0, pose = GUARD },
+	{ t = 0.09, pose = { RightUpperArm = { 10, 0, 15 }, RightLowerArm = { 105, 0, 0 }, LeftUpperArm = { 45, 0, -20 }, LeftLowerArm = { 110, 0, 0 },
+		UpperTorso = { 12, -28, 0 }, LowerTorso = { 0, 0, 0, 0, -0.55, 0 },
+		RightUpperLeg = { 28, 0, 0 }, RightLowerLeg = { -40, 0, 0 }, LeftUpperLeg = { 28, 0, 0 }, LeftLowerLeg = { -40, 0, 0 } } },
+	{ t = 0.18, pose = { RightUpperArm = { 160, 0, 0 }, RightLowerArm = { 35, 0, 0 }, LeftUpperArm = { 30, 0, -25 }, LeftLowerArm = { 100, 0, 0 },
+		UpperTorso = { 14, 32, 0 }, LowerTorso = { 0, 0, 0, 0, 0.35, 0 }, Head = { 14, 0, 0 } } },
+	{ t = 0.42, pose = GUARD },
+} }
+
+-- ===== Sea Cook (Shoes): hands in pockets, front kick -> roundhouse -> axe kick =====
+local POCKETS = { RightUpperArm = { -14, 0, 8 }, RightLowerArm = { 25, 0, 0 }, LeftUpperArm = { -14, 0, -8 }, LeftLowerArm = { 25, 0, 0 }, UpperTorso = { 4, 0, 0 } }
+C.Cook_Stance = { rig = "R15", loop = true, priority = "Idle", length = 1.6, keys = {
+	{ t = 0, pose = POCKETS },
+	{ t = 0.8, pose = with(POCKETS, { UpperTorso = { 6, 0, 0 }, Head = { -4, 0, 0 } }) },
+	{ t = 1.6, pose = POCKETS },
+} }
+C.Cook_FrontKick = { rig = "R15", priority = "Action", strike = 0.16, keys = {
+	{ t = 0, pose = POCKETS },
+	{ t = 0.08, pose = with(POCKETS, { RightUpperLeg = { 70, 0, 0 }, RightLowerLeg = { -95, 0, 0 }, UpperTorso = { 10, 0, 0 } }) },
+	{ t = 0.16, pose = with(POCKETS, { RightUpperLeg = { 98, 0, 0 }, RightLowerLeg = { -4, 0, 0 }, UpperTorso = { 20, 0, 0 }, LowerTorso = { 0, 0, 0, 0, 0, -0.4 } }) },
+	{ t = 0.36, pose = POCKETS },
+} }
+C.Cook_Roundhouse = { rig = "R15", priority = "Action", strike = 0.17, keys = {
+	{ t = 0, pose = POCKETS },
+	{ t = 0.08, pose = with(POCKETS, { LowerTorso = { 0, -70, 0 }, RightUpperLeg = { 30, 0, 30 }, RightLowerLeg = { -70, 0, 0 } }) },
+	{ t = 0.17, pose = with(POCKETS, { LowerTorso = { 0, 35, 0 }, RightUpperLeg = { 25, 0, 80 }, RightLowerLeg = { -6, 0, 0 }, UpperTorso = { 0, 0, -18 } }) },
+	{ t = 0.4, pose = POCKETS },
+} }
+C.Cook_AxeKick = { rig = "R15", priority = "Action", strike = 0.21, keys = {
+	{ t = 0, pose = POCKETS },
+	{ t = 0.12, pose = with(POCKETS, { RightUpperLeg = { 135, 0, 10 }, RightLowerLeg = { -6, 0, 0 }, UpperTorso = { 22, 0, 0 } }) },
+	{ t = 0.21, pose = with(POCKETS, { RightUpperLeg = { 18, 0, 0 }, UpperTorso = { -16, 0, 0 }, LowerTorso = { 0, 0, 0, 0, -0.3, -0.3 } }) },
+	{ t = 0.44, pose = POCKETS },
+} }
+
+-- ===== Swordsman (Sword): blade forward, overhead slash -> backhand -> thrust =====
+local EN_GARDE = { RightUpperArm = { 35, 0, 12 }, RightLowerArm = { 40, 0, 0 }, LeftUpperArm = { 10, 0, -12 }, UpperTorso = { -4, 18, 0 } }
+C.Sword_Stance = { rig = "R15", loop = true, priority = "Idle", length = 1.4, keys = {
+	{ t = 0, pose = EN_GARDE },
+	{ t = 0.7, pose = with(EN_GARDE, { RightUpperArm = { 38, 0, 12 }, UpperTorso = { -6, 18, 0 } }) },
+	{ t = 1.4, pose = EN_GARDE },
+} }
+C.Sword_Slash = { rig = "R15", priority = "Action", strike = 0.16, keys = {
+	{ t = 0, pose = EN_GARDE },
+	{ t = 0.09, pose = { RightUpperArm = { 160, 0, 28 }, RightLowerArm = { 30, 0, 0 }, UpperTorso = { 6, -28, 0 }, LeftUpperArm = { 20, 0, -20 } } },
+	{ t = 0.16, pose = { RightUpperArm = { 45, 0, -38 }, RightLowerArm = { 6, 0, 0 }, UpperTorso = { -16, 38, 0 }, LeftUpperArm = { -10, 0, -25 } } },
+	{ t = 0.38, pose = EN_GARDE },
+} }
+C.Sword_Backhand = { rig = "R15", priority = "Action", strike = 0.15, keys = {
+	{ t = 0, pose = EN_GARDE },
+	{ t = 0.08, pose = { RightUpperArm = { 75, 0, -55 }, RightLowerArm = { 70, 0, 0 }, UpperTorso = { 0, 45, 0 } } },
+	{ t = 0.15, pose = { RightUpperArm = { 85, 0, 75 }, RightLowerArm = { 5, 0, 0 }, UpperTorso = { -10, -38, 0 }, LeftUpperArm = { 20, 0, -30 } } },
+	{ t = 0.36, pose = EN_GARDE },
+} }
+C.Sword_Thrust = { rig = "R15", priority = "Action", strike = 0.17, keys = {
+	{ t = 0, pose = EN_GARDE },
+	{ t = 0.1, pose = { RightUpperArm = { 55, 0, 12 }, RightLowerArm = { 95, 0, 0 }, UpperTorso = { 0, -22, 0 }, LeftUpperArm = { 35, 0, -15 } } },
+	{ t = 0.17, pose = { RightUpperArm = { 90, 0, 0 }, RightLowerArm = { 0, 0, 0 }, UpperTorso = { -16, 32, 0 }, LowerTorso = { 0, 0, 0, 0, -0.2, -0.7 },
+		RightUpperLeg = { 38, 0, 0 }, RightLowerLeg = { -25, 0, 0 }, LeftUpperLeg = { -22, 0, 0 }, LeftUpperArm = { -20, 0, -30 } } },
+	{ t = 0.42, pose = EN_GARDE },
+} }
+
+-- ===== Shipwright (Hammer): hammer on the shoulder, overhead smash -> sweep =====
+local SHOULDER = { RightUpperArm = { 55, 0, 25 }, RightLowerArm = { 125, 0, 0 }, UpperTorso = { 2, 8, 0 } }
+C.Hammer_Stance = { rig = "R15", loop = true, priority = "Idle", length = 1.6, keys = {
+	{ t = 0, pose = SHOULDER },
+	{ t = 0.8, pose = with(SHOULDER, { UpperTorso = { 4, 8, 0 } }) },
+	{ t = 1.6, pose = SHOULDER },
+} }
+C.Hammer_Smash = { rig = "R15", priority = "Action", strike = 0.26, keys = {
+	{ t = 0, pose = SHOULDER },
+	{ t = 0.15, pose = { RightUpperArm = { 170, 0, 8 }, RightLowerArm = { 30, 0, 0 }, LeftUpperArm = { 165, 0, -8 }, LeftLowerArm = { 30, 0, 0 }, UpperTorso = { 16, 0, 0 } } },
+	{ t = 0.26, pose = { RightUpperArm = { 55, 0, 0 }, RightLowerArm = { 5, 0, 0 }, LeftUpperArm = { 50, 0, 0 }, LeftLowerArm = { 5, 0, 0 }, UpperTorso = { -32, 0, 0 },
+		LowerTorso = { 0, 0, 0, 0, -0.6, 0 }, RightUpperLeg = { 30, 0, 0 }, RightLowerLeg = { -40, 0, 0 }, LeftUpperLeg = { 30, 0, 0 }, LeftLowerLeg = { -40, 0, 0 } } },
+	{ t = 0.56, pose = SHOULDER },
+} }
+C.Hammer_Sweep = { rig = "R15", priority = "Action", strike = 0.2, keys = {
+	{ t = 0, pose = SHOULDER },
+	{ t = 0.11, pose = { RightUpperArm = { 70, 0, -40 }, RightLowerArm = { 30, 0, 0 }, LeftUpperArm = { 70, 0, -10 }, LeftLowerArm = { 40, 0, 0 }, UpperTorso = { 0, 65, 0 } } },
+	{ t = 0.2, pose = { RightUpperArm = { 85, 0, 60 }, RightLowerArm = { 5, 0, 0 }, LeftUpperArm = { 80, 0, 30 }, LeftLowerArm = { 20, 0, 0 }, UpperTorso = { -8, -60, 0 }, LowerTorso = { 0, -15, 0 } } },
+	{ t = 0.46, pose = SHOULDER },
+} }
+
+-- ===== Sniper (Slingshot): draw and release =====
+local SLING_READY = { LeftUpperArm = { 40, 0, -10 }, LeftLowerArm = { 30, 0, 0 }, RightUpperArm = { 20, 0, 10 }, RightLowerArm = { 50, 0, 0 } }
+C.Sling_Stance = { rig = "R15", loop = true, priority = "Idle", length = 1.4, keys = { { t = 0, pose = SLING_READY }, { t = 0.7, pose = with(SLING_READY, { UpperTorso = { 3, 0, 0 } }) }, { t = 1.4, pose = SLING_READY } } }
+C.Sling_Shoot = { rig = "R15", priority = "Action", strike = 0.13, keys = {
+	{ t = 0, pose = SLING_READY },
+	{ t = 0.1, pose = { LeftUpperArm = { 90, 0, 0 }, LeftLowerArm = { 0, 0, 0 }, RightUpperArm = { 85, 0, -32 }, RightLowerArm = { 125, 0, 0 }, UpperTorso = { 0, -25, 0 }, Head = { 0, 20, 0 } } },
+	{ t = 0.13, pose = { LeftUpperArm = { 92, 0, 0 }, LeftLowerArm = { 0, 0, 0 }, RightUpperArm = { 70, 0, 25 }, RightLowerArm = { 50, 0, 0 }, UpperTorso = { 4, -25, 0 }, Head = { 0, 20, 0 } } },
+	{ t = 0.36, pose = SLING_READY },
+} }
+
+-- ===== Navigator (StormBaton): staff strike that throws lightning =====
+local STAFF = { RightUpperArm = { 25, 0, 10 }, RightLowerArm = { 70, 0, 0 } }
+C.Baton_Stance = { rig = "R15", loop = true, priority = "Idle", length = 1.6, keys = { { t = 0, pose = STAFF }, { t = 0.8, pose = with(STAFF, { RightUpperArm = { 28, 0, 10 } }) }, { t = 1.6, pose = STAFF } } }
+C.Baton_Strike = { rig = "R15", priority = "Action", strike = 0.18, keys = {
+	{ t = 0, pose = STAFF },
+	{ t = 0.1, pose = { RightUpperArm = { 140, 0, 12 }, RightLowerArm = { 35, 0, 0 }, UpperTorso = { 8, -15, 0 }, LeftUpperArm = { 30, 0, -30 } } },
+	{ t = 0.18, pose = { RightUpperArm = { 88, 0, 0 }, RightLowerArm = { 0, 0, 0 }, UpperTorso = { -12, 25, 0 }, LeftUpperArm = { 40, 0, -35 }, LeftLowerArm = { 30, 0, 0 } } },
+	{ t = 0.42, pose = STAFF },
+} }
+
+-- ===== Doctor (MedKit): underhand toss =====
+C.Med_Toss = { rig = "R15", priority = "Action", strike = 0.17, keys = {
+	{ t = 0 },
+	{ t = 0.1, pose = { RightUpperArm = { -45, 0, 12 }, RightLowerArm = { 15, 0, 0 }, UpperTorso = { 6, 18, 0 } } },
+	{ t = 0.17, pose = { RightUpperArm = { 75, 0, 0 }, RightLowerArm = { 20, 0, 0 }, UpperTorso = { -8, -12, 0 } } },
+	{ t = 0.38 },
+} }
+
+-- ===== skills (shared by every class) =====
+C.Skill_Spin = { rig = "R15", priority = "Action", strike = 0.2, keys = {
+	{ t = 0 },
+	{ t = 0.1, pose = { LowerTorso = { 0, -120, 0 }, RightUpperArm = { 0, 0, 85 }, LeftUpperArm = { 0, 0, -85 }, RightUpperLeg = { 0, 0, 25 } } },
+	{ t = 0.2, pose = { LowerTorso = { 0, -240, 0 }, RightUpperArm = { 0, 0, 85 }, LeftUpperArm = { 0, 0, -85 }, RightUpperLeg = { 0, 0, 25 } } },
+	{ t = 0.3, pose = { LowerTorso = { 0, -359, 0 }, RightUpperArm = { 0, 0, 85 }, LeftUpperArm = { 0, 0, -85 } } },
+	{ t = 0.45 },
+} }
+C.Skill_GroundPunch = { rig = "R15", priority = "Action", strike = 0.24, keys = {
+	{ t = 0 },
+	{ t = 0.14, pose = { RightUpperArm = { 175, 0, 15 }, RightLowerArm = { 20, 0, 0 }, UpperTorso = { 18, 0, 0 }, LowerTorso = { 0, 0, 0, 0, 0.4, 0 } } },
+	{ t = 0.24, pose = { RightUpperArm = { 70, 0, 0 }, RightLowerArm = { 0, 0, 0 }, UpperTorso = { -40, 0, 0 }, LowerTorso = { 0, 0, 0, 0, -1.0, 0 },
+		RightUpperLeg = { 45, 0, 0 }, RightLowerLeg = { -70, 0, 0 }, LeftUpperLeg = { 10, 0, 0 }, LeftLowerLeg = { -80, 0, 0 } } },
+	{ t = 0.55 },
+} }
+C.Skill_Cast = { rig = "R15", priority = "Action", strike = 0.3, keys = {
+	{ t = 0 },
+	{ t = 0.15, pose = { RightUpperArm = { 150, 0, 20 }, LeftUpperArm = { 150, 0, -20 }, UpperTorso = { 14, 0, 0 }, Head = { 14, 0, 0 } } },
+	{ t = 0.3, pose = { RightUpperArm = { 88, 0, 5 }, LeftUpperArm = { 88, 0, -5 }, UpperTorso = { -14, 0, 0 } } },
+	{ t = 0.58 },
+} }
+C.Skill_PowerUp = { rig = "R15", priority = "Action", strike = 0.2, keys = {
+	{ t = 0 },
+	{ t = 0.2, pose = { RightUpperArm = { 20, 0, 70 }, LeftUpperArm = { 20, 0, -70 }, RightLowerArm = { 100, 0, 0 }, LeftLowerArm = { 100, 0, 0 },
+		UpperTorso = { 12, 0, 0 }, LowerTorso = { 0, 0, 0, 0, -0.35, 0 }, RightUpperLeg = { 15, 0, 15 }, LeftUpperLeg = { 15, 0, -15 }, RightLowerLeg = { -20, 0, 0 }, LeftLowerLeg = { -20, 0, 0 } } },
+	{ t = 0.55, pose = { RightUpperArm = { 15, 0, 60 }, LeftUpperArm = { 15, 0, -60 }, RightLowerArm = { 110, 0, 0 }, LeftLowerArm = { 110, 0, 0 }, UpperTorso = { 16, 0, 0 }, Head = { 15, 0, 0 } } },
+	{ t = 0.8 },
+} }
+C.Skill_Bless = { rig = "R15", priority = "Action", strike = 0.25, keys = {
+	{ t = 0 },
+	{ t = 0.25, pose = { RightUpperArm = { 150, 0, 35 }, LeftUpperArm = { 150, 0, -35 }, RightLowerArm = { 10, 0, 0 }, LeftLowerArm = { 10, 0, 0 }, UpperTorso = { 10, 0, 0 }, Head = { 20, 0, 0 } } },
+	{ t = 0.6, pose = { RightUpperArm = { 140, 0, 45 }, LeftUpperArm = { 140, 0, -45 }, UpperTorso = { 8, 0, 0 }, Head = { 15, 0, 0 } } },
+	{ t = 0.85 },
+} }
+C.Hurt = { rig = "R15", priority = "Action2", keys = {
+	{ t = 0 },
+	{ t = 0.07, pose = { UpperTorso = { 18, 0, 6 }, Head = { 15, 0, 0 }, RightUpperArm = { -15, 0, 20 }, LeftUpperArm = { -15, 0, -20 } } },
+	{ t = 0.26 },
+} }
+
+-- ===== monsters (one universal set: every voxel monster has some of these parts) =====
+C.Mon_Idle = { rig = "Mon", loop = true, priority = "Idle", length = 2.4, keys = {
+	{ t = 0, pose = { Body = { 0, 0, 0 }, Head = { 0, 8, 0 }, Tail = { 0, 14, 0 }, WingL = { 0, 0, 12 }, WingR = { 0, 0, -12 }, ArmL = { 4, 0, 0 }, ArmR = { 4, 0, 0 } } },
+	{ t = 0.6, pose = { Body = { -2, 0, 0 }, Head = { 4, 0, 0 }, Tail = { 0, 0, 0 }, WingL = { 0, 0, -10 }, WingR = { 0, 0, 10 }, ArmL = { 0, 0, 0 }, ArmR = { 0, 0, 0 } } },
+	{ t = 1.2, pose = { Body = { 0, 0, 0 }, Head = { 0, -8, 0 }, Tail = { 0, -14, 0 }, WingL = { 0, 0, 12 }, WingR = { 0, 0, -12 }, ArmL = { 4, 0, 0 }, ArmR = { 4, 0, 0 } } },
+	{ t = 1.8, pose = { Body = { -2, 0, 0 }, Head = { 4, 0, 0 }, Tail = { 0, 0, 0 }, WingL = { 0, 0, -10 }, WingR = { 0, 0, 10 }, ArmL = { 0, 0, 0 }, ArmR = { 0, 0, 0 } } },
+	{ t = 2.4, pose = { Body = { 0, 0, 0 }, Head = { 0, 8, 0 }, Tail = { 0, 14, 0 }, WingL = { 0, 0, 12 }, WingR = { 0, 0, -12 }, ArmL = { 4, 0, 0 }, ArmR = { 4, 0, 0 } } },
+} }
+local function stride(s)
+	return { LegL = { 38 * s, 0, 0 }, LegR = { -38 * s, 0, 0 }, LegFL = { 34 * s, 0, 0 }, LegBR = { 34 * s, 0, 0 }, LegFR = { -34 * s, 0, 0 }, LegBL = { -34 * s, 0, 0 },
+		ArmL = { -28 * s, 0, 0 }, ArmR = { 28 * s, 0, 0 }, Body = { 0, 4 * s, 3 * s }, Head = { 0, -5 * s, 0 }, Tail = { 0, 22 * s, 0 },
+		WingL = { 0, 0, 38 * s }, WingR = { 0, 0, -38 * s } }
+end
+local PASS = { Body = { -3, 0, 0 }, Head = { 3, 0, 0 }, WingL = { 0, 0, -30 }, WingR = { 0, 0, 30 } }
+C.Mon_Walk = { rig = "Mon", loop = true, priority = "Movement", length = 0.6, keys = {
+	{ t = 0, pose = stride(1) }, { t = 0.15, pose = PASS }, { t = 0.3, pose = stride(-1) }, { t = 0.45, pose = PASS }, { t = 0.6, pose = stride(1) },
+} }
+C.Mon_Attack = { rig = "Mon", priority = "Action", strike = 0.24, keys = {
+	{ t = 0 },
+	{ t = 0.14, pose = { ArmR = { 150, 0, 0 }, ArmL = { 90, 0, 0 }, Body = { 10, 0, 0 }, Head = { 14, 0, 0 }, LegFL = { -35, 0, 0 }, LegFR = { -35, 0, 0 }, Tail = { 0, 35, 0 }, WingL = { 0, 0, 45 }, WingR = { 0, 0, -45 } } },
+	{ t = 0.24, pose = { ArmR = { 55, 0, 0 }, ArmL = { 35, 0, 0 }, Body = { -16, 0, 0 }, Head = { -24, 0, 0 }, LegFL = { 40, 0, 0 }, LegFR = { 40, 0, 0 }, Tail = { 0, -30, 0 }, WingL = { 0, 0, -40 }, WingR = { 0, 0, 40 } } },
+	{ t = 0.52 },
+} }
+C.Mon_Hit = { rig = "Mon", priority = "Action2", keys = {
+	{ t = 0 },
+	{ t = 0.07, pose = { Body = { 14, 0, 0 }, Head = { 18, 0, 0 }, ArmL = { -20, 0, 0 }, ArmR = { -20, 0, 0 }, Tail = { 0, 15, 0 } } },
+	{ t = 0.26 },
+} }
+
+-- weapon -> combo clips (in order), stance, and the clips each skill kind uses
+C.Weapons = {
+	Knuckles = { combo = { "Brawler_Jab", "Brawler_Cross", "Brawler_Hook", "Brawler_Uppercut" }, stance = "Brawler_Stance", Melee = "Brawler_Uppercut", AoE = "Skill_GroundPunch" },
+	Shoes = { combo = { "Cook_FrontKick", "Cook_Roundhouse", "Cook_AxeKick" }, stance = "Cook_Stance", Melee = "Cook_AxeKick", AoE = "Skill_Spin" },
+	Sword = { combo = { "Sword_Slash", "Sword_Backhand", "Sword_Thrust" }, stance = "Sword_Stance", Melee = "Sword_Thrust", AoE = "Skill_Spin" },
+	Hammer = { combo = { "Hammer_Smash", "Hammer_Sweep" }, stance = "Hammer_Stance", Melee = "Hammer_Smash", AoE = "Hammer_Smash" },
+	Slingshot = { combo = { "Sling_Shoot" }, stance = "Sling_Stance", Ranged = "Sling_Shoot", Melee = "Sling_Shoot" },
+	StormBaton = { combo = { "Baton_Strike" }, stance = "Baton_Stance", Ranged = "Baton_Strike", Melee = "Baton_Strike" },
+	MedKit = { combo = { "Med_Toss" }, Ranged = "Med_Toss", Melee = "Med_Toss" },
+}
+C.SkillKinds = { Melee = "Brawler_Uppercut", Dash = "Brawler_Cross", Ranged = "Skill_Cast", AoE = "Skill_GroundPunch", GroundAoE = "Skill_Cast",
+	Heal = "Skill_Bless", PartyHeal = "Skill_Bless", Buff = "Skill_PowerUp", PartyBuff = "Skill_PowerUp" }
+
+return C

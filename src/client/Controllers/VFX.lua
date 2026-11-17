@@ -214,9 +214,12 @@ function VFX.Slash(cf, c, size)
 	VFX.Sparks(cf.Position, c, 5, size * 0.7)
 end
 
--- melee impacts land on the strike frame of the CharAnim pose (seconds after the BasicAttack FX)
-local STRIKE = { JabR = 0.12, JabL = 0.12, Uppercut = 0.17, Kick = 0.15, SlashA = 0.15, SlashB = 0.14, Slam = 0.23, Shoot = 0.06 }
-local COMBO_CLIPS = { Knuckles = { "JabR", "JabL", "Uppercut" }, Shoes = { "Kick", "JabR", "Kick" }, Sword = { "SlashA", "SlashB" }, Hammer = { "Slam" } }
+-- impacts land on the strike frame of the attack animation (Config/AnimClips `strike`, seconds after the FX)
+local Anim = require(ReplicatedStorage.Shared.Modules.Anim)
+local AnimClips = Anim.Clips
+local function strikeOf(clip)
+	return Anim.Strike(clip or "")
+end
 VFX.IMPACT_DELAY = 0.12
 
 -- anime punch impact: a spiky white-hot star + colored glow, bigger with `size`
@@ -489,7 +492,7 @@ end
 SkillFX.Kick = function(d)
 	local c = Color3.fromRGB(255, 170, 60)
 	VFX.SpeedLines(d.from, d.to, Color3.fromRGB(255, 220, 160), 10)
-	task.delay(STRIKE.Kick, function()
+	task.delay(strikeOf("Cook_AxeKick"), function()
 		VFX.Slash(CFrame.lookAt(d.from, d.to) * CFrame.new(0, -1, -3) * CFrame.Angles(0, 0, math.pi / 2), c, 10)
 		VFX.Impact(d.to, c, 6)
 		VFX.Shockwave(d.to, d.to - d.from, Color3.fromRGB(255, 220, 140), 6)
@@ -558,7 +561,8 @@ end
 -- which hit of the combo this is (same 1.2 s window as CharAnim) -> later hits hit harder
 local comboState = setmetatable({}, { __mode = "k" })
 local function comboStep(char, weapon)
-	local list = COMBO_CLIPS[weapon]
+	local w = AnimClips.Weapons[weapon]
+	local list = w and w.combo
 	if not list or typeof(char) ~= "Instance" then
 		return 1, list and list[1]
 	end
@@ -578,8 +582,16 @@ end
 local weaponFX = {
 	Sword = function(d, n)
 		local cf = CFrame.lookAt(d.from, d.to) * CFrame.new(0, 0, -3)
-		VFX.Slash(n == 2 and cf * CFrame.Angles(0, 0, math.pi * 0.85) or cf, Color3.fromRGB(190, 230, 255), 7)
-		VFX.Impact(hitPoint(d), Color3.fromRGB(200, 230, 255), 3)
+		local at, dir = hitPoint(d)
+		if n == 3 then
+			-- thrust: a straight speed streak and a pierce flash
+			VFX.SpeedLines(d.from, d.to, Color3.fromRGB(210, 235, 255), 6)
+			VFX.Impact(at, Color3.fromRGB(200, 230, 255), 5)
+			VFX.Shockwave(at, dir, Color3.fromRGB(220, 240, 255), 5)
+		else
+			VFX.Slash(n == 2 and cf * CFrame.Angles(0, 0, math.pi * 0.85) or cf, Color3.fromRGB(190, 230, 255), 7)
+			VFX.Impact(at, Color3.fromRGB(200, 230, 255), 3)
+		end
 	end,
 	Hammer = function(d)
 		local at, dir = hitPoint(d)
@@ -589,10 +601,10 @@ local weaponFX = {
 		VFX.Smoke(d.to - Vector3.new(0, 2, 0), Color3.fromRGB(210, 195, 170), 4, 2.5)
 	end,
 	Knuckles = function(d, n)
-		-- jab, jab, then a big uppercut finisher with a shockwave and focus lines
+		-- jab, cross, hook, then a big uppercut finisher with a shockwave and focus lines
 		local at, dir = hitPoint(d)
 		local c = Color3.fromRGB(255, 160, 110)
-		if n == 3 then
+		if n == #AnimClips.Weapons.Knuckles.combo then
 			VFX.Impact(at + Vector3.new(0, 0.8, 0), c, 7)
 			VFX.Shockwave(at, dir + Vector3.new(0, dir.Magnitude * 0.6, 0), Color3.fromRGB(255, 220, 170), 7)
 			VFX.Focus(at, Color3.fromRGB(255, 235, 210))
@@ -647,10 +659,13 @@ local function damageFX(d)
 		end
 	end
 end
+local strikeAt = {} -- attacker UserId -> os.clock() when their current swing connects
 handlers.Damage = function(d)
 	-- a player's hit arrives with the swing: show it when the fist/blade actually connects
 	if d.src and not d.toPlayer then
-		task.delay(VFX.IMPACT_DELAY, damageFX, d)
+		local at = strikeAt[d.src]
+		local wait = (at and at - os.clock() > -0.3) and math.max(0, at - os.clock()) or VFX.IMPACT_DELAY
+		task.delay(wait, damageFX, d)
 	else
 		damageFX(d)
 	end
@@ -664,13 +679,18 @@ end
 handlers.BasicAttack = function(d)
 	local weapon = weaponFX[d.weapon] and d.weapon or "Sword"
 	local n, clip = comboStep(d.char, weapon)
+	local who = typeof(d.char) == "Instance" and game:GetService("Players"):GetPlayerFromCharacter(d.char)
+	if who then
+		strikeAt[who.UserId] = os.clock() + strikeOf(clip)
+	end
 	if MELEE[weapon] then
-		if weapon == "Shoes" and clip == "Kick" then
+		if weapon == "Shoes" then
 			VFX.SpeedLines(d.from, d.to, Color3.fromRGB(255, 230, 190), 5)
 		end
-		task.delay(STRIKE[clip or ""] or VFX.IMPACT_DELAY, weaponFX[weapon], d, n)
+		task.delay(strikeOf(clip), weaponFX[weapon], d, n)
 	else
-		weaponFX[weapon](d, n)
+		-- shots leave on the release frame of the draw / throw
+		task.delay(math.max(0, strikeOf(clip) - 0.02), weaponFX[weapon], d, n)
 	end
 end
 handlers.Skill = function(d)
@@ -736,7 +756,10 @@ handlers.MobAttack = function(d)
 	if d.ranged then
 		VFX.Projectile(d.from, d.to, Color3.fromRGB(255, 120, 120), 0.8, 0.28, 2)
 	else
-		VFX.Burst(d.to, 2.5, Color3.fromRGB(255, 160, 160), 0.18)
+		task.delay(strikeOf("Mon_Attack"), function()
+			VFX.Impact(d.to, Color3.fromRGB(255, 150, 150), 3)
+			VFX.Sparks(d.to, Color3.fromRGB(255, 200, 200), 4, 6)
+		end)
 	end
 end
 handlers.MobDeath = function(d)

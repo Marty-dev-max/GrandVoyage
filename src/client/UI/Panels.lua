@@ -1312,16 +1312,17 @@ function Panels.Settings()
 			end
 			-- animation self-check: what the animation controllers see (send a screenshot of this if poses do not play)
 			UI.Section(list, "🥊", "Animation Check", T.Pink)
-			local info = UI.Text(list, "", 15, T.Text, "Semi", { Size = UDim2.new(1, 0, 0, 66) })
+			local info = UI.Text(list, "", 15, T.Text, "Semi", { Size = UDim2.new(1, 0, 0, 84) })
 			local function refresh()
-				local c, m = CharAnim.Stats, CreatureAnim.Stats
-				info.Text = string.format("Me: joints %s, poses played %d (last %s), last FX %s\nMonsters: %d rigged, %d without joints, %d animating now, attacks %d, hits %d",
-					c.kind, c.posed, c.lastClip, c.lastFX, m.rigged, m.plain, m.animated, m.attacks, m.hits)
+				local c, m = CharAnim.Stats, CreatureAnim.Survey()
+				local a = require(game:GetService("ReplicatedStorage").Shared.Modules.Anim).Stats
+				info.Text = string.format("Me: %s, played %d (last %s), last FX %s\nAnims: loaded %d, local copies %d, failed %d\nMonsters near: %d rigged, %d plain, %d animating",
+					c.kind, c.posed, c.lastClip, c.lastFX, a.loaded, a.fallback, a.failed, m.rigged, m.plain, m.animated)
 			end
 			refresh()
 			local agrid = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 54), Parent = list })
 			New("UIGridLayout", { CellSize = UDim2.fromOffset(176, 46), CellPadding = UDim2.fromOffset(8, 8), Parent = agrid })
-			for _, c in ipairs({ { "Test Punch", "Uppercut" }, { "Test Kick", "Kick" }, { "Refresh", false } }) do
+			for _, c in ipairs({ { "Test Punch", "Brawler_Uppercut" }, { "Test Kick", "Cook_AxeKick" }, { "Refresh", false } }) do
 				UI.Button(agrid, c[1], T.Pink, nil, function()
 					if c[2] then
 						CharAnim.Play(game:GetService("Players").LocalPlayer.Character, c[2])

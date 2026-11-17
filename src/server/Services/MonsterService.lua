@@ -7,6 +7,7 @@ local Monsters = require(Shared.Config.Monsters)
 local Islands = require(Shared.Config.Islands)
 local ItemDB = require(Shared.Modules.ItemDB)
 local Net = require(Shared.Modules.Net)
+local Anim = require(Shared.Modules.Anim)
 local ModelFactory = require(script.Parent.Parent.World.ModelFactory)
 
 local MS = {}
@@ -115,6 +116,18 @@ function MS.Spawn(monsterId, position, opts)
 	end
 	makeBar(mob)
 	updateBar(mob)
+	-- voxel monsters animate with real animations played here on the server (they replicate to every client):
+	-- an idle loop underneath, a walk loop whose weight follows the speed, attack + hit one-shots
+	if hum and model:GetAttribute("RealModel") then
+		task.defer(function()
+			if mob.dead or not model.Parent then
+				return
+			end
+			Anim.Play(hum, "Mon_Idle", { fade = 0 })
+			mob.walkTrack = Anim.Play(hum, "Mon_Walk", { fade = 0, weight = 0.01 })
+			mob.walkW = 0
+		end)
+	end
 	mobs[mob.uid] = mob
 	byModel[model] = mob
 	return mob
@@ -256,6 +269,10 @@ function MS.Damage(mob, amount, player, crit)
 		end
 	end
 	Net.FX("Damage", { pos = mob.root.Position + Vector3.new(0, 3, 0), amount = amount, crit = crit, src = player and player.UserId or 0, model = mob.model }, mob.root.Position, 250)
+	if mob.walkTrack and os.clock() - (mob.hitAnimAt or 0) > 0.35 then
+		mob.hitAnimAt = os.clock()
+		task.delay(0.12, Anim.Play, mob.hum, "Mon_Hit", { fade = 0.03 })
+	end
 	updateBar(mob)
 	if mob.hp <= 0 then
 		die(mob, player)
@@ -355,6 +372,17 @@ local function step(mob, now)
 	end
 	local def = mob.def
 	syncTarget(mob)
+	-- walk cycle: blend in with the speed, play faster when running
+	if mob.walkTrack then
+		local v = mob.root.AssemblyLinearVelocity
+		local speed = Vector3.new(v.X, 0, v.Z).Magnitude
+		local w = math.clamp(speed / math.max(4, def.moveSpeed * 0.6), 0, 1)
+		if math.abs(w - mob.walkW) > 0.08 then
+			mob.walkW = w
+			mob.walkTrack:AdjustWeight(math.max(0.01, w), 0.2)
+			mob.walkTrack:AdjustSpeed(math.clamp(speed / 8, 0.6, 2))
+		end
+	end
 	local ok, troot = validTarget(mob, mob.target)
 	if not ok then
 		mob.target = nil
@@ -383,8 +411,12 @@ local function step(mob, now)
 			if now - mob.lastAttack >= def.attackSpeed then
 				mob.lastAttack = now
 				Net.FX("MobAttack", { model = mob.model, to = troot.Position, ranged = def.attackRange > 15, from = mob.root.Position }, mob.root.Position, 200)
+				if mob.walkTrack then
+					Anim.Play(mob.hum, "Mon_Attack", { fade = 0.05 })
+				end
 				local target = mob.target
-				task.delay(def.attackRange > 15 and 0.3 or 0.15, function()
+				-- the hit lands on the attack clip's strike frame
+				task.delay(def.attackRange > 15 and 0.3 or Anim.Strike("Mon_Attack"), function()
 					if not mob.dead and target then
 						R.CombatService.MonsterHit(mob, target, 1)
 					end

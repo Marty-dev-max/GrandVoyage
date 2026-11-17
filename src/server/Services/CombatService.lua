@@ -67,7 +67,12 @@ local function weaponType(player)
 	local p = R.DataService.Get(player)
 	local entry = p and p.equipment.weapon and Formulas.FindItem(p, p.equipment.weapon)
 	local def = entry and ItemDB.Get(entry.id)
-	return def and def.weaponType or "Sword"
+	if def and def.weaponType then
+		return def.weaponType
+	end
+	-- nothing equipped: fight with the class's own weapon style (a Brawler punches, a Sea Cook kicks)
+	local cls = p and ClassesCfg.Classes[p.class]
+	return cls and cls.weapons and cls.weapons[1] or "Knuckles"
 end
 
 local function alive(player)
@@ -235,6 +240,7 @@ local function setup()
 		end
 		lastAttack[player] = now
 		local magic = wType == "StormBaton"
+		R.WeaponService.Draw(player, wType)
 		Net.FX("BasicAttack", { from = root.Position, to = target.pos, weapon = wType, char = player.Character }, root.Position, 250)
 		hitTarget(player, target, 1, magic)
 		return true
@@ -393,6 +399,9 @@ local function setup()
 			R.FruitService.OnCast(player)
 		end
 		lastAttack[player] = now
+		if not skill.fruit and kind ~= "ShipBuff" and kind ~= "ShipRepair" then
+			R.WeaponService.Draw(player, weaponType(player))
+		end
 		Net.FX("Skill", fxData, root.Position, 350)
 		return { ok = true, data = { cd = skill.cd } }
 	end, 0.15)

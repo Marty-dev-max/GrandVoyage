@@ -1,184 +1,96 @@
--- CharAnim (client): procedural attack poses for R15 characters + hit feel (hitstop, camera shake).
--- Poses are layered on the joint's parent-side offset (Roblox's walk/idle animation keeps writing Transform underneath),
--- so a punch plays while running. Two joint kinds exist: classic Motor6D (offset = C0) and, with Roblox's Avatar Joint
--- Upgrade (default for new places), AnimationConstraint (offset = Attachment0.CFrame; setting C0 there errors).
--- Every client poses every character from the server's FX (BasicAttack / Skill /
--- Damage), so everyone sees the same moves. Avatars are uniform R15 (PlayerService.normalizeAvatar).
+-- CharAnim (client): the local player's combat animations + hit feel (hitstop, camera shake).
+-- Clips are real Roblox animations (Config/AnimClips -> uploaded ids, see Shared/Modules/Anim) played on the character's
+-- own Animator, so they blend with walk/idle, work with Motor6D and AnimationConstraint joints alike, and replicate:
+-- every other player sees them without extra code. (v0.13/v0.14 posed joints by hand from a script; nothing moved.)
+-- Per weapon (Config/AnimClips.Weapons): a combat stance while the weapon is out, a combo of basic attacks, and the
+-- clip each skill kind uses.
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Net = require(ReplicatedStorage.Shared.Modules.Net)
+local Anim = require(ReplicatedStorage.Shared.Modules.Anim)
 local ClassesCfg = require(ReplicatedStorage.Shared.Config.Classes)
 
 local CharAnim = {}
-
-local A = CFrame.Angles
-local JOINTS = {
-	Waist = "UpperTorso", Neck = "Head",
-	RightShoulder = "RightUpperArm", LeftShoulder = "LeftUpperArm", RightElbow = "RightLowerArm", LeftElbow = "LeftLowerArm",
-	RightHip = "RightUpperLeg", LeftHip = "LeftUpperLeg", RightKnee = "RightLowerLeg", LeftKnee = "LeftLowerLeg",
-}
-
--- a clip = keyframes { t (s), pose = { joint = CFrame } }; joints left out of a key go back to rest.
--- Axes (R15, character faces -Z): +X on a shoulder/hip swings the limb FORWARD, +Y on the waist turns the right side
--- forward, -X on the waist leans forward.
-local CLIPS = {
-	JabR = { { t = 0 }, { t = 0.06, pose = { RightShoulder = A(0.7, 0, 0.2), RightElbow = A(1.4, 0, 0), Waist = A(0, -0.25, 0) } },
-		{ t = 0.13, pose = { RightShoulder = A(1.55, 0, 0), RightElbow = A(0.05, 0, 0), Waist = A(-0.1, 0.45, 0), LeftShoulder = A(0.4, 0, 0) } },
-		{ t = 0.3 } },
-	JabL = { { t = 0 }, { t = 0.06, pose = { LeftShoulder = A(0.7, 0, -0.2), LeftElbow = A(1.4, 0, 0), Waist = A(0, 0.25, 0) } },
-		{ t = 0.13, pose = { LeftShoulder = A(1.55, 0, 0), LeftElbow = A(0.05, 0, 0), Waist = A(-0.1, -0.45, 0), RightShoulder = A(0.4, 0, 0) } },
-		{ t = 0.3 } },
-	Uppercut = { { t = 0 }, { t = 0.09, pose = { RightShoulder = A(0.2, 0, 0.3), RightElbow = A(1.8, 0, 0), Waist = A(0.15, -0.4, 0), RightHip = A(0.3, 0, 0), RightKnee = A(-0.5, 0, 0) } },
-		{ t = 0.18, pose = { RightShoulder = A(2.5, 0, 0), RightElbow = A(0.6, 0, 0), Waist = A(0.2, 0.4, 0), Neck = A(0.2, 0, 0) } },
-		{ t = 0.4 } },
-	Kick = { { t = 0 }, { t = 0.08, pose = { RightHip = A(0.6, 0, 0), RightKnee = A(-1.5, 0, 0), Waist = A(0.2, 0, 0), LeftShoulder = A(0.5, 0, -0.4) } },
-		{ t = 0.16, pose = { RightHip = A(1.5, 0, 0), RightKnee = A(-0.05, 0, 0), Waist = A(0.35, 0.2, 0), LeftShoulder = A(0.3, 0, -0.9), RightShoulder = A(-0.4, 0, 0.6) } },
-		{ t = 0.36 } },
-	SlashA = { { t = 0 }, { t = 0.09, pose = { RightShoulder = A(2.7, 0, 0.3), RightElbow = A(0.6, 0, 0), Waist = A(0.1, -0.5, 0) } },
-		{ t = 0.17, pose = { RightShoulder = A(0.6, 0, -0.5), RightElbow = A(0.1, 0, 0), Waist = A(-0.2, 0.55, 0), LeftShoulder = A(0.4, 0, 0) } },
-		{ t = 0.38 } },
-	SlashB = { { t = 0 }, { t = 0.08, pose = { RightShoulder = A(1.2, 0, 1.3), Waist = A(0, 0.5, 0) } },
-		{ t = 0.16, pose = { RightShoulder = A(1.3, 0, -0.6), Waist = A(-0.1, -0.5, 0) } },
-		{ t = 0.36 } },
-	Slam = { { t = 0 }, { t = 0.14, pose = { RightShoulder = A(2.9, 0, 0), LeftShoulder = A(2.9, 0, 0), Waist = A(0.3, 0, 0) } },
-		{ t = 0.24, pose = { RightShoulder = A(0.7, 0, 0), LeftShoulder = A(0.7, 0, 0), Waist = A(-0.45, 0, 0), RightHip = A(0.3, 0, 0), RightKnee = A(-0.6, 0, 0) } },
-		{ t = 0.5 } },
-	Shoot = { { t = 0 }, { t = 0.07, pose = { RightShoulder = A(1.6, 0, 0), LeftShoulder = A(1.4, 0, 0.5), Waist = A(0, 0.3, 0), Neck = A(0, -0.2, 0) } },
-		{ t = 0.14, pose = { RightShoulder = A(1.8, 0, 0), LeftShoulder = A(1.4, 0, 0.5), Waist = A(0.1, 0.3, 0) } },
-		{ t = 0.34 } },
-	Cast = { { t = 0 }, { t = 0.15, pose = { RightShoulder = A(2.6, 0, 0.3), LeftShoulder = A(2.6, 0, -0.3), Waist = A(0.2, 0, 0), Neck = A(0.25, 0, 0) } },
-		{ t = 0.3, pose = { RightShoulder = A(1.5, 0, 0), LeftShoulder = A(1.5, 0, 0), Waist = A(-0.15, 0, 0) } },
-		{ t = 0.55 } },
-	Buff = { { t = 0 }, { t = 0.18, pose = { RightShoulder = A(0.3, 0, 1.2), LeftShoulder = A(0.3, 0, -1.2), RightElbow = A(1.6, 0, 0), LeftElbow = A(1.6, 0, 0), Waist = A(0.15, 0, 0), RightHip = A(0, 0, 0.2), LeftHip = A(0, 0, -0.2) } },
-		{ t = 0.5, pose = { RightShoulder = A(0.2, 0, 1.0), LeftShoulder = A(0.2, 0, -1.0), RightElbow = A(1.8, 0, 0), LeftElbow = A(1.8, 0, 0), Neck = A(0.2, 0, 0) } },
-		{ t = 0.75 } },
-	Hurt = { { t = 0 }, { t = 0.07, pose = { Waist = A(0.3, 0, 0.1), Neck = A(0.25, 0, 0), RightShoulder = A(-0.3, 0, 0.3), LeftShoulder = A(-0.3, 0, -0.3) } }, { t = 0.25 } },
-}
-
-local WEAPON_CLIPS = {
-	Knuckles = { "JabR", "JabL", "Uppercut" }, -- Brawler 3-hit combo
-	Shoes = { "Kick", "JabR", "Kick" }, -- Sea Cook
-	Sword = { "SlashA", "SlashB" },
-	Hammer = { "Slam" },
-	Slingshot = { "Shoot" }, StormBaton = { "Shoot" }, MedKit = { "Shoot" },
-}
-local SKILL_CLIPS = { Melee = "Uppercut", Dash = "JabR", Ranged = "Shoot", AoE = "Slam", GroundAoE = "Cast", Heal = "Buff", PartyHeal = "Buff", Buff = "Buff", PartyBuff = "Buff" }
-
-local chars = {} -- character -> { joints = {name = {motor, base}}, clip, start, combo, freezeUntil }
-
--- a joint: { motor = Motor6D | AnimationConstraint, att = Attachment0 (constraints only), base = rest offset }
-local function jointOf(inst)
-	if inst:IsA("Motor6D") then
-		return { motor = inst, base = inst.C0 }
-	elseif inst:IsA("AnimationConstraint") and inst.Attachment0 then
-		return { motor = inst, att = inst.Attachment0, base = inst.Attachment0.CFrame }
-	end
-	return nil
-end
-
-local function setJoint(j, cf)
-	if j.att then
-		j.att.CFrame = j.base * cf
-	else
-		j.motor.C0 = j.base * cf
-	end
-end
+local Clips = Anim.Clips
+local player = Players.LocalPlayer
 
 CharAnim.Stats = { posed = 0, kind = "none", lastClip = "-", lastFX = "-" }
 
-local function state(char)
-	local st = chars[char]
-	if st then
-		return st
-	end
-	st = { joints = {}, combo = 0, start = 0 }
-	local n, kind = 0, "none"
-	for _, d in ipairs(char:GetDescendants()) do
-		if JOINTS[d.Name] and not st.joints[d.Name] then
-			local j = jointOf(d)
-			if j then
-				st.joints[d.Name] = j
-				n += 1
-				kind = d.ClassName
-			end
-		end
-	end
-	if n == 0 then
-		warn("[CharAnim] " .. char.Name .. " has no R15 joints (is the avatar type R15?)")
+local combo = { n = 0, last = 0 }
+local action -- the attack track playing now (for hitstop)
+local actionAt = 0
+local stanceName
+
+local function humanoid()
+	local char = player.Character
+	return char and char:FindFirstChildOfClass("Humanoid"), char
+end
+
+local function weaponOf(char, fallback)
+	return (char and char:GetAttribute("Weapon")) or fallback or "Knuckles"
+end
+
+local function play(name, opts)
+	local hum = humanoid()
+	if not hum or not Clips[name] then
 		return nil
 	end
-	print("[CharAnim] posing " .. char.Name .. " with " .. n .. " R15 joints (" .. kind .. ")")
-	if char == Players.LocalPlayer.Character then
-		CharAnim.Stats.kind = kind .. " x" .. n
+	local tr = Anim.Play(hum, name, opts)
+	if tr then
+		CharAnim.Stats.posed += 1
+		CharAnim.Stats.lastClip = name
 	end
-	chars[char] = st
-	char.Destroying:Connect(function()
-		chars[char] = nil
-	end)
-	return st
+	return tr
 end
 
-function CharAnim.Play(char, clipName)
-	if typeof(char) ~= "Instance" then
+-- Dev tab "Test" buttons (and anything else that wants a one-off clip on the local character)
+function CharAnim.Play(_, clipName)
+	local tr = play(clipName)
+	if tr then
+		action, actionAt = tr, os.clock()
+	end
+	return tr
+end
+
+-- the combat stance loop follows the server's WeaponOut attribute (weapon in hand)
+local function refreshStance()
+	local hum, char = humanoid()
+	if not hum then
 		return
 	end
-	local st = state(char)
-	if st then
-		-- the avatar body is rebuilt after spawn (uniform R15): its joints are new objects -> re-read them
-		for _, j in pairs(st.joints) do
-			if not j.motor.Parent then
-				chars[char] = nil
-				st = state(char)
-				break
-			end
-		end
+	local w = Clips.Weapons[weaponOf(char)]
+	local want = char:GetAttribute("WeaponOut") and w and w.stance or nil
+	if stanceName and stanceName ~= want then
+		Anim.Stop(hum, stanceName, 0.25)
+		stanceName = nil
 	end
-	local clip = CLIPS[clipName]
-	if st and clip then
-		st.clip, st.start = clip, os.clock()
-		if char == Players.LocalPlayer.Character then
-			CharAnim.Stats.posed += 1
-			CharAnim.Stats.lastClip = clipName
-		end
+	if want and stanceName ~= want then
+		stanceName = want
+		play(want, { fade = 0.25 })
 	end
 end
 
-local function sample(clip, t)
-	local prev, nxt = clip[1], clip[#clip]
-	for i = 1, #clip - 1 do
-		if t >= clip[i].t and t <= clip[i + 1].t then
-			prev, nxt = clip[i], clip[i + 1]
-			break
-		end
-	end
-	local span = nxt.t - prev.t
-	local k = span > 0 and math.clamp((t - prev.t) / span, 0, 1) or 1
-	k = k * k * (3 - 2 * k)
-	return prev.pose or {}, nxt.pose or {}, k
-end
-
-local function apply(st, now)
-	local clip = st.clip
-	if not clip then
+local function onCharacter(char)
+	stanceName = nil
+	combo.n = 0
+	local hum = char:WaitForChild("Humanoid", 10)
+	if not hum then
 		return
 	end
-	local t = now - st.start
-	if st.freezeUntil and now < st.freezeUntil then
-		t = st.frozenT or t -- hitstop: hold the pose
-	end
-	if t >= clip[#clip].t then
-		for _, j in pairs(st.joints) do
-			setJoint(j, CFrame.identity)
+	hum:WaitForChild("Animator", 10)
+	local joints = 0
+	local kind = "none"
+	for _, d in ipairs(char:GetDescendants()) do
+		if d:IsA("Motor6D") or d:IsA("AnimationConstraint") then
+			joints += 1
+			kind = d.ClassName
 		end
-		st.clip = nil
-		return
 	end
-	local a, b, k = sample(clip, t)
-	for name, j in pairs(st.joints) do
-		local pa, pb = a[name] or CFrame.identity, b[name] or CFrame.identity
-		setJoint(j, pa:Lerp(pb, k))
-	end
+	CharAnim.Stats.kind = kind .. " x" .. joints .. " (" .. tostring(hum.RigType.Name) .. ")"
+	char:GetAttributeChangedSignal("WeaponOut"):Connect(refreshStance)
+	char:GetAttributeChangedSignal("Weapon"):Connect(refreshStance)
+	refreshStance()
 end
 
 -- ===== camera shake (local player) =====
@@ -187,48 +99,54 @@ local function addShake(amount)
 	shake = math.min(1.2, shake + amount)
 end
 
+-- hitstop: freeze my swing for a beat when it connects (at the strike frame)
+local function hitstop(dur)
+	local tr = action
+	if not tr or not tr.IsPlaying then
+		return
+	end
+	local strike = Anim.Strike(CharAnim.Stats.lastClip)
+	local wait = math.max(0, strike - (os.clock() - actionAt))
+	task.delay(wait, function()
+		if tr.IsPlaying then
+			tr:AdjustSpeed(0.02)
+			task.delay(dur, function()
+				tr:AdjustSpeed(1)
+			end)
+		end
+	end)
+end
+
 function CharAnim.Start()
+	if player.Character then
+		task.spawn(onCharacter, player.Character)
+	end
+	player.CharacterAdded:Connect(onCharacter)
+
 	Net.OnFX(function(kind, d)
 		if type(d) ~= "table" then
 			return
 		end
 		CharAnim.Stats.lastFX = kind
-		if kind == "BasicAttack" and typeof(d.char) == "Instance" then
-			local list = WEAPON_CLIPS[d.weapon or "Knuckles"] or WEAPON_CLIPS.Knuckles
-			local st = state(d.char)
-			if st then
-				-- a combo: keep cycling while attacks come within 1.2 s
-				st.combo = (os.clock() - (st.lastHit or 0) < 1.2) and (st.combo % #list) + 1 or 1
-				st.lastHit = os.clock()
-				CharAnim.Play(d.char, list[st.combo])
-			end
-		elseif kind == "Skill" and typeof(d.char) == "Instance" then
+		local mine = typeof(d.char) == "Instance" and d.char == player.Character
+		if kind == "BasicAttack" and mine then
+			local w = Clips.Weapons[weaponOf(d.char, d.weapon)] or Clips.Weapons[d.weapon or ""] or Clips.Weapons.Knuckles
+			local list = w.combo
+			combo.n = (os.clock() - combo.last < 1.2) and (combo.n % #list) + 1 or 1
+			combo.last = os.clock()
+			action, actionAt = play(list[combo.n]), os.clock()
+		elseif kind == "Skill" and mine then
 			local sk = ClassesCfg.SkillById[d.skill or ""]
-			CharAnim.Play(d.char, SKILL_CLIPS[sk and sk.kind or ""] or "Cast")
+			local k = sk and sk.kind or ""
+			local w = Clips.Weapons[weaponOf(d.char)] or {}
+			action, actionAt = play(w[k] or Clips.SkillKinds[k] or "Skill_Cast"), os.clock()
 		elseif kind == "Damage" then
-			if d.toPlayer and typeof(d.char) == "Instance" then
-				CharAnim.Play(d.char, "Hurt")
-				if d.char == Players.LocalPlayer.Character then
-					addShake(0.35)
-				end
-			elseif d.src == Players.LocalPlayer.UserId then
-				-- my hit landed: hitstop (hold my pose a moment) + a small shake, bigger on crits
-				local st = Players.LocalPlayer.Character and chars[Players.LocalPlayer.Character]
-				if st and st.clip then
-					st.frozenT = os.clock() - st.start
-					st.freezeUntil = os.clock() + (d.crit and 0.09 or 0.05)
-					st.start += d.crit and 0.09 or 0.05
-				end
-				addShake(d.crit and 0.55 or 0.18)
-			end
-		end
-	end)
-
-	RunService.Stepped:Connect(function()
-		local now = os.clock()
-		for char, st in pairs(chars) do
-			if char.Parent then
-				apply(st, now)
+			if d.toPlayer and mine then
+				play("Hurt", { fade = 0.03 })
+				addShake(0.35)
+			elseif d.src == player.UserId then
+				hitstop(d.crit and 0.09 or 0.05)
+				task.delay(0.1, addShake, d.crit and 0.55 or 0.18)
 			end
 		end
 	end)

@@ -406,5 +406,33 @@
  "Puffer_3": {
   "id": "136221444560725",
   "sha1": "6c6abf7bb698374091dea0a45ce66ad96f0f9b79"
+ },
+ "Wep_Hammer": {
+  "id": "81214219279307",
+  "sha1": "7371fa79c6e589b41b95b938b5070d4668c9c73b"
+ },
+ "Wep_Knuckles": {
+  "id": "95909761190035",
+  "sha1": "bb05188d1aab43e7dc9d05bbbcfa4857b08ce791"
+ },
+ "Wep_MedKit": {
+  "id": "81141392958049",
+  "sha1": "c5e6f099b0845f1432d79038e689ed55134a391c"
+ },
+ "Wep_Shoes": {
+  "id": "105051046246422",
+  "sha1": "47b11624a364c57363650c93bea73fd357b8b9bd"
+ },
+ "Wep_Slingshot": {
+  "id": "107919839238729",
+  "sha1": "84c0b2f131ec0791ab3d4aa00b18fbc5e9ba51c3"
+ },
+ "Wep_StormBaton": {
+  "id": "132992700646624",
+  "sha1": "990c658e80630b9341288eb48844cd28cc222682"
+ },
+ "Wep_Sword": {
+  "id": "134693921108264",
+  "sha1": "40a12d0586f8bfcd0d3c2524559b803af2e106dd"
  }
 }

@@ -33,6 +33,8 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
 | Voxel creatures (SDF shapes on a grid, per-voxel colors, greedy mesh) | `python tools/blender/voxel.py -- --out assets/models3d --preview` |
 | Voxel monsters (all 32 + bosses, outfits/hats/weapons by spec) | `python tools/blender/voxel_monsters.py -- --out assets/models3d --preview [--only GuardWolf]`, then upload_models.py |
 | Voxel pets (6 species x 3 stages) + fruits (6) | `python tools/blender/voxel_pets.py -- --out assets/models3d --preview`, then upload_models.py (same names as v2, they replace them) |
+| Animations (players per weapon/class + monsters) | edit `src/shared/Config/AnimClips.lua`, `lune run tools/build_anims.luau`, then `ROBLOX_API_KEY=... python3 tools/upload_models.py assets/anims src/shared/Config/Animations.lua --type Animation` |
+| Voxel class weapons (Wep_Sword, Wep_Knuckles, ...) | `python tools/blender/voxel_weapons.py -- --out assets/models3d --preview`, then upload_models.py (grip/size in `AssetService.WEAPONS`) |
 | In-game 3D models v2 (pets x3 stages, fruits; superseded by voxel_pets.py) | `python tools/blender/build_models.py -- --out assets/models3d --preview [--only Gull_2]`, then `ROBLOX_API_KEY=... python3 tools/upload_models.py assets/models3d src/shared/Config/Models.lua` |
 
 ## Rules learned the hard way
@@ -74,16 +76,23 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   a baked World with an older version is destroyed and rebuilt at runtime (the owner's published place keeps a baked World).
   Hand-made map edits in Studio belong in `workspace.Handmade` (never touched by rebuilds); layout changes go in World/*.lua.
 - Owner decisions on art: voxel style for pets, fruits and monsters; textured (SurfaceAppearance-like) stylized look for the map.
-- Creature animation is procedural (no animation assets): voxel models are exported in named parts (`Grid.set_part`:
-  Body/Head/LegL/LegR/LegFL../ArmL/ArmR/Tail/WingL/WingR); AssetService rigs monster parts to the root with Motor6Ds at
-  their joints and `Controllers/CreatureAnim.lua` drives Motor6D.Transform (walk, idle, attack, hit flash, death shatter);
-  pets animate by part name in `Controllers/Pets.lua` (Hinge attribute). Avatars: uniform R15 via
+- Animation = real Roblox animations, never hand-posed joints. v0.13-v0.14 posed Motor6D.C0 / attachments from client
+  scripts and NOTHING moved in the owner's Studio (twice), so do not go back to that. Clips are data in
+  `Config/AnimClips.lua` (degrees per part, R15 part names for players, voxel part names for monsters), built to
+  KeyframeSequence .rbxm by `tools/build_anims.luau` (shared `Modules/AnimBuild`), uploaded as Animation assets owned by
+  the owner (`Config/Animations` ids), played through the Animator by `Shared/Modules/Anim` (which falls back to a
+  runtime-built copy via KeyframeSequenceProvider if an id is missing or does not load). Preview poses before uploading
+  (side/front renders of the strike frame) since nobody can watch them here.
+  Players: `Controllers/CharAnim.lua` plays the LOCAL character only (it replicates): per-weapon stance loop while
+  `WeaponOut`, combo of basic attacks, skill clip by kind, Hurt; hitstop = track:AdjustSpeed on the strike frame.
+  Monsters: MonsterService plays Mon_Idle + Mon_Walk (weight follows speed) + Mon_Attack / Mon_Hit on the server.
+  AssetService still rigs voxel monster parts to the root with Motor6Ds at their joints (names Body/Head/LegL...).
+  `Controllers/CreatureAnim.lua` only does the hit flash and death shatter. VFX timing reads each clip's `strike`.
+  Weapons: `WeaponService` welds `Assets.Weapons/<Type>` (voxel_weapons.py) to the hands (Knuckles both hands, Shoes
+  shin guards) on attack/skill and holsters after 8 s; sets char attributes Weapon / WeaponOut. Unarmed players fight
+  with their class's weapon type (CombatService.weaponType). Dev tab -> Animation Check; Studio shows an anim status line.
+  Pets animate by part name in `Controllers/Pets.lua` (Hinge attribute). Avatars: uniform R15 via
   `PlayerService.normalizeAvatar` (GameConfig.NormalizeAvatars; Game Settings avatar type must be R15).
-  Player attack poses: `Controllers/CharAnim.lua` layers keyframed poses on the R15 joints from FX (BasicAttack combos per
-  weapon, Skill by kind, Hurt), plus hitstop and camera shake on the local player's hits. Roblox's Avatar Joint Upgrade (default
-  in new places) gives players AnimationConstraint joints instead of Motor6D: setting C0 errors there, so poses go on
-  `Attachment0.CFrame` for those (both kinds handled; v0.13 only knew Motor6D and nothing moved). Dev tab -> Animation Check.
-  VFX: melee impacts fire on the CharAnim strike frame (`STRIKE` table in VFX.lua); combo finisher hits are bigger.
 - VFX are ParticleEmitter/Beam based with our own textures (`Config/Textures`); see the toolkit at the top of `Controllers/VFX.lua`.
 - Client controllers start through the protected `start()` in `init.client.lua` (core UI first, visuals in parallel):
   a controller that errors or yields must never block the others (it hid the quest tracker in v0.13.0).

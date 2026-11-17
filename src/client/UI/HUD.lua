@@ -358,6 +358,21 @@ local function buildStatus()
 	pointsBtn.Parent.Position = UDim2.new(1, -16, 0, 64)
 	-- build stamp (bottom-right): tells you which version of the code Studio is running
 	UI.Text(UI.Root, "v" .. GameConfig.Version, 12, Color3.fromRGB(220, 220, 235), "Bold", { Name = "Version", AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -8, 1, -2), Size = UDim2.fromOffset(120, 14), TextXAlignment = Enum.TextXAlignment.Right, TextTransparency = 0.35 })
+	-- Studio only: animation status under the version, so any screenshot the owner sends shows whether clips load and play
+	if game:GetService("RunService"):IsStudio() then
+		local animLine = UI.Text(UI.Root, "", 11, Color3.fromRGB(255, 230, 150), "Bold", { Name = "AnimStatus", AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -8, 1, -16), Size = UDim2.fromOffset(520, 14), TextXAlignment = Enum.TextXAlignment.Right, TextTransparency = 0.2 })
+		task.spawn(function()
+			local Anim = require(game:GetService("ReplicatedStorage").Shared.Modules.Anim)
+			local CharAnim = require(script.Parent.Parent.Controllers.CharAnim)
+			while animLine.Parent do
+				local a, c = Anim.Stats, CharAnim.Stats
+				local char = game:GetService("Players").LocalPlayer.Character
+				animLine.Text = string.format("anim: %s | played %d (%s) | loaded %d local %d failed %d | weapon %s",
+					c.kind, a.played, a.last, a.loaded, a.fallback, a.failed, char and tostring(char:GetAttribute("Weapon")) .. (char:GetAttribute("WeaponOut") and " out" or "") or "-")
+				task.wait(0.5)
+			end
+		end)
+	end
 	orbLayer = New("Frame", { Name = "OrbLayer", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 50, Parent = UI.Root })
 end
 

@@ -25,6 +25,7 @@ Settings.Values = {
 	damageNumbers = true,
 	rangeRings = true,
 	navGuide = true,
+	barExpanded = false, -- hotbar second row (skills 7-=, items F5-F8)
 }
 
 -- Per-preset knobs other systems read (VFX density, wind streaks, etc.)

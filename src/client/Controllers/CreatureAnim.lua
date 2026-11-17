@@ -73,7 +73,7 @@ function CreatureAnim.Start()
 			CreatureAnim.Stats.attacks += 1
 		elseif kind == "Damage" then
 			CreatureAnim.Stats.hits += 1
-			task.delay(0.12, flash, d.model) -- on the attacker's strike frame
+			flash(d.model) -- the server sends damage on the attacker's strike frame
 		elseif kind == "MobDeath" then
 			shatter(d.model, d.color, d.boss)
 		end

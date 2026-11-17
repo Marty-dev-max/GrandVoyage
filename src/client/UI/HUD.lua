@@ -257,7 +257,7 @@ local function updateOrbs()
 					table.remove(orbs, i)
 					ring.hold = 0
 					UI.Bounce(ring.frame)
-					Audio.Play("Coin", { pitch = it.half == "base" and 1.6 or 1.9, volume = 0.35 })
+					Audio.Play("Coin", { pitch = it.half == "base" and 0.95 or 1.08, volume = 0.22 })
 					if it.last then
 						floatLabel(it.label, it.color, it.p2 + Vector2.new(it.half == "base" and -150 or 18, it.half == "base" and -10 or 10))
 					end
@@ -269,38 +269,8 @@ local function updateOrbs()
 	end
 end
 
--- skill icon (uses the 3D icon pack until skills get their own renders): fruit skills show their fruit,
--- heals a potion, buffs a sparkle, ship skills a ship, everything else the class weapon
-local CLASS_ICON = { Brawler = "knuckles", Swordsman = "sword", Sniper = "slingshot", Cook = "boots", Navigator = "staff", Doctor = "medkit", Shipwright = "hammer", Common = "knuckles" }
-local function skillIconId(sk)
-	if sk.fruit then
-		return UI.IconId("fruit_" .. string.lower(sk.fruit))
-	end
-	local k = sk.kind
-	if k == "Heal" or k == "PartyHeal" then
-		return UI.IconId(sk.id == "HeartyMeal" and "meat" or "potion")
-	elseif k == "Buff" or k == "PartyBuff" then
-		return UI.IconId("skills")
-	elseif k == "ShipBuff" then
-		return UI.IconId("ship")
-	elseif k == "ShipRepair" then
-		return UI.IconId("repairkit")
-	end
-	return UI.IconId(CLASS_ICON[sk.class] or "sword")
-end
-
--- color for a skill slot: its class color, or its fruit's color for Cursed Fruit skills
-local function skillColor(skill)
-	if not skill then
-		return T.Panel
-	end
-	local cls = Classes[skill.class]
-	if cls then
-		return cls.color
-	end
-	local f = skill.fruit and FruitsCfg.ById[skill.fruit]
-	return f and f.color or T.Accent
-end
+local SkillLook = require(script.Parent.SkillLook)
+local skillIconId, skillColor = SkillLook.IconId, SkillLook.Color
 
 local function buildStatus()
 	-- the card sits behind the ring; the ring overlaps its left edge
@@ -384,7 +354,7 @@ local MENU = {
 	{ "📜", "Quests", T.Gold:Lerp(T.Orange, 0.4), "J", "Quests", main = true },
 	{ "🗺️", "Map", T.Ocean, "M", "Map", main = true },
 	{ "🐾", "Pets", T.Green:Lerp(T.Ocean, 0.3), "N", "Pets", main = true },
-	{ "🦪", "PearlShop", Color3.fromRGB(80, 170, 220), nil, "Pearls", main = true },
+	{ "🛍️", "PearlShop", Color3.fromRGB(80, 170, 220), "H", "Shop", main = true },
 	{ "📊", "Stats", T.Purple, "C", "Stats" },
 	{ "ship", "Shipwright", T.OceanDark, nil, "Ships" },
 	{ "🏴", "Guild", T.Pirate, "G", "Guild" },
@@ -454,60 +424,146 @@ local function buildMenu()
 	end)
 end
 
+-- one square slot (skills and quick items share the look): returns the parts refresh() updates
+local SLOT = 62
+local function makeSlot(parent, keyText, order)
+	local holder = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(SLOT, SLOT + 4), LayoutOrder = order, Parent = parent })
+	local base = New("Frame", { Name = "Shadow", BackgroundColor3 = T.Edge, Size = UDim2.fromOffset(SLOT, SLOT), Position = UDim2.fromOffset(0, 4), Parent = holder })
+	UI.Corner(base, 12)
+	local slot = New("TextButton", { Size = UDim2.fromOffset(SLOT, SLOT), BackgroundColor3 = Color3.new(1, 1, 1), Text = "", AutoButtonColor = false, Parent = holder })
+	UI.Corner(slot, 12)
+	local grad = New("UIGradient", { Color = ColorSequence.new(T.PanelTop, T.PanelDeep), Rotation = 90, Parent = slot })
+	local stroke = UI.Stroke(slot, T.Edge, 3)
+	local name = UI.Text(slot, "", 12, T.Text, "Bold", { Size = UDim2.new(1, -6, 1, -18), Position = UDim2.fromOffset(3, 14), TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Center })
+	local keyBox = New("Frame", { BackgroundColor3 = T.PanelDeep, BackgroundTransparency = 0.15, Position = UDim2.fromOffset(3, 3), Size = UDim2.fromOffset(#keyText > 1 and 24 or 18, 17), ZIndex = 7, Parent = slot })
+	UI.Corner(keyBox, 5)
+	local key = UI.Text(keyBox, keyText, 13, T.Gold, "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 8 })
+	local count = UI.Text(slot, "", 13, T.Text, "Number", { AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -4, 1, -1), Size = UDim2.fromOffset(44, 15), TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 7 })
+	local cd = New("Frame", { BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.35, Size = UDim2.new(1, 0, 0, 0), AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), ZIndex = 5, Parent = slot })
+	UI.Corner(cd, 12)
+	local cdText = UI.Text(slot, "", 24, T.Text, "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 6 })
+	local autoDot = New("Frame", { BackgroundColor3 = T.Green, Size = UDim2.fromOffset(12, 12), Position = UDim2.new(1, -15, 0, 3), Visible = false, ZIndex = 7, Parent = slot })
+	UI.Corner(autoDot, 6)
+	UI.Stroke(autoDot, T.Edge, 1.5)
+	UI.Tactile(slot)
+	local icon = New("ImageLabel", { BackgroundTransparency = 1, ScaleType = Enum.ScaleType.Fit, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(SLOT - 14, SLOT - 14), Visible = false, ZIndex = 2, Parent = slot })
+	return { slot = slot, holder = holder, icon = icon, name = name, cd = cd, cdText = cdText, auto = autoDot, sp = count, count = count, grad = grad, stroke = stroke, key = key, base = base }
+end
+
+local function row(parent, order)
+	local r = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(0, SLOT + 4), AutomaticSize = Enum.AutomaticSize.X, LayoutOrder = order, Parent = parent })
+	UI.List(r, Enum.FillDirection.Horizontal, 6, Enum.HorizontalAlignment.Center).VerticalAlignment = Enum.VerticalAlignment.Bottom
+	return r
+end
+
+-- Hotbar (like the quick bars of big MMOs): main row = AUTO, skills 1-6, quick items F1-F4, expand toggle;
+-- expanded row above = skills 7 8 9 0 - =, items F5-F8. Skills go in from the Skills window (Loadout tab).
+local itemSlots, barRows, expandBtn
+HUD.barExpanded = false
+local function setExpanded(on)
+	HUD.barExpanded = on
+	if barRows then
+		barRows.second.Visible = on
+	end
+	if expandBtn then
+		expandBtn.Text = on and "v" or "^"
+	end
+	pcall(function()
+		local Settings = require(script.Parent.Parent.Controllers.Settings)
+		Settings.Set("barExpanded", on)
+	end)
+end
+
 local function buildSkillBar()
-	local bar = New("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -14), Size = UDim2.fromOffset(780, 100), BackgroundTransparency = 1, Parent = UI.Root })
-	UI.List(bar, Enum.FillDirection.Horizontal, 8, Enum.HorizontalAlignment.Center).VerticalAlignment = Enum.VerticalAlignment.Bottom
-	autoBtn = UI.Button(bar, "AUTO", T.Grey, UDim2.fromOffset(104, 88), function()
+	local bar = New("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -12), Size = UDim2.fromOffset(900, 2 * (SLOT + 4) + 8), BackgroundTransparency = 1, Parent = UI.Root })
+	local vlist = UI.List(bar, Enum.FillDirection.Vertical, 6, Enum.HorizontalAlignment.Center)
+	vlist.VerticalAlignment = Enum.VerticalAlignment.Bottom
+	vlist.SortOrder = Enum.SortOrder.LayoutOrder
+	local second = row(bar, 1)
+	local main = row(bar, 2)
+	second.Visible = false
+	barRows = { main = main, second = second }
+	for _, r in ipairs({ second, main }) do
+		r:FindFirstChildOfClass("UIListLayout").SortOrder = Enum.SortOrder.LayoutOrder
+	end
+
+	autoBtn = UI.Button(main, "AUTO", T.Grey, UDim2.fromOffset(92, SLOT), function()
 		Combat.ToggleAuto()
 	end)
+	autoBtn.Parent.LayoutOrder = 0
 	UI.Tooltip(autoBtn, function()
-		return "<b>Auto Battle</b>  [T]\nFights nearby monsters, uses ticked skills and drinks potions.", T.Green
+		return "<b>Auto Battle</b>  [T]\nFights monsters within your search range (Skills -> Loadout), uses ticked skills and drinks potions.", T.Green
 	end)
+	-- the second row starts where the skills start (under it sits the AUTO button)
+	New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(92, SLOT), LayoutOrder = 0, Parent = second })
+
 	skillSlots = {}
-	for i = 1, 8 do
-		-- holder keeps the layout slot; the slot inside can hop on hover
-		local holder = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(72, 76), Parent = bar })
-		local base = New("Frame", { Name = "Shadow", BackgroundColor3 = T.Edge, Size = UDim2.fromOffset(72, 72), Position = UDim2.fromOffset(0, 4), Parent = holder })
-		UI.Corner(base, 14)
-		local slot = New("TextButton", { Size = UDim2.fromOffset(72, 72), BackgroundColor3 = Color3.new(1, 1, 1), Text = "", AutoButtonColor = false, Parent = holder })
-		UI.Corner(slot, 14)
-		local grad = New("UIGradient", { Color = ColorSequence.new(T.PanelTop, T.PanelDeep), Rotation = 90, Parent = slot })
-		local stroke = UI.Stroke(slot, T.Edge, 3)
-		local name = UI.Text(slot, "", 13, T.Text, "Bold", { Size = UDim2.new(1, -6, 1, -18), Position = UDim2.fromOffset(3, 14), TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Center })
-		local key = UI.Text(slot, tostring(i), 14, T.Gold, "Display", { Position = UDim2.fromOffset(5, 1), Size = UDim2.fromOffset(16, 16) })
-		local sp = UI.Text(slot, "", 12, Color3.fromRGB(150, 200, 255), "Number", { AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -4, 1, -1), Size = UDim2.fromOffset(40, 14), TextXAlignment = Enum.TextXAlignment.Right })
-		local cd = New("Frame", { BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.35, Size = UDim2.new(1, 0, 0, 0), AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), ZIndex = 5, Parent = slot })
-		UI.Corner(cd, 14)
-		local cdText = UI.Text(slot, "", 26, T.Text, "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 6 })
-		local autoDot = New("Frame", { BackgroundColor3 = T.Green, Size = UDim2.fromOffset(12, 12), Position = UDim2.new(1, -16, 0, 4), Visible = false, ZIndex = 7, Parent = slot })
-		UI.Corner(autoDot, 6)
-		UI.Stroke(autoDot, T.Edge, 1.5)
-		UI.Tactile(slot)
-		slot.Activated:Connect(function()
+	for i = 1, GameConfig.SkillBarSize do
+		local parent = i <= 6 and main or second
+		local s = makeSlot(parent, Combat.SKILL_KEY_LABELS[i], i)
+		skillSlots[i] = s
+		s.slot.Activated:Connect(function()
 			local p = State.profile
-			if p and p.skillBar[i] then
-				Combat.CastSkill(p.skillBar[i])
+			local id = p and p.skillBar[i]
+			if id and id ~= "" then
+				Combat.CastSkill(id)
+			else
+				Panels.Open("Skills", { tab = "Loadout" })
 			end
 		end)
-		slot.MouseEnter:Connect(function()
+		s.slot.MouseEnter:Connect(function()
 			local p = State.profile
-			Readability.HoverSkill = p and p.skillBar[i]
+			local id = p and p.skillBar[i]
+			Readability.HoverSkill = (id and id ~= "") and id or nil
 		end)
-		slot.MouseLeave:Connect(function()
+		s.slot.MouseLeave:Connect(function()
 			Readability.HoverSkill = nil
 		end)
-		UI.Tooltip(slot, function()
+		UI.Tooltip(s.slot, function()
 			local p = State.profile
-			local s = p and p.skillBar[i] and ClassesCfg.SkillById[p.skillBar[i]]
-			if not s then
-				return nil
+			local sk = p and p.skillBar[i] and ClassesCfg.SkillById[p.skillBar[i]]
+			if not sk then
+				return "Empty slot: click to set up skills", T.TextSoft
 			end
-			local lvText = s.fruit and ("Mastery " .. (p.fruit and p.fruit.mastery or 0)) or ("Lv." .. (p.skills[s.id] or 0))
-			return string.format("<b>%s</b>  %s\n%s\nSP %d  •  Cooldown %ss", s.name, lvText, s.desc or "", s.sp, s.cd), skillColor(s)
+			local lvText = sk.fruit and ("Mastery " .. (p.fruit and p.fruit.mastery or 0)) or ("Lv." .. (p.skills[sk.id] or 0))
+			return string.format("<b>%s</b>  %s\n%s\nSP %d  •  Cooldown %ss", sk.name, lvText, sk.desc or "", sk.sp, sk.cd), skillColor(sk)
 		end)
-		local icon = New("ImageLabel", { BackgroundTransparency = 1, ScaleType = Enum.ScaleType.Fit, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.46), Size = UDim2.fromOffset(56, 56), Visible = false, ZIndex = 2, Parent = slot })
-		skillSlots[i] = { slot = slot, holder = holder, icon = icon, name = name, cd = cd, cdText = cdText, auto = autoDot, sp = sp, grad = grad, stroke = stroke, key = key, base = base }
 	end
+	-- a little gap between skills and items
+	New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(8, 4), LayoutOrder = 50, Parent = main })
+	New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(8, 4), LayoutOrder = 50, Parent = second })
+	itemSlots = {}
+	for i = 1, GameConfig.ItemBarSize do
+		local s = makeSlot(i <= 4 and main or second, "F" .. i, 100 + i)
+		itemSlots[i] = s
+		s.slot.Activated:Connect(function()
+			local p = State.profile
+			local id = p and p.itemBar and p.itemBar[i]
+			if id and id ~= "" then
+				Combat.UseQuickItem(i)
+			else
+				Panels.Open("Skills", { tab = "Loadout" })
+			end
+		end)
+		UI.Tooltip(s.slot, function()
+			local p = State.profile
+			local def = p and p.itemBar and p.itemBar[i] and ItemDB.Get(p.itemBar[i])
+			if not def then
+				return "Empty quick slot: click to put a potion or food here", T.TextSoft
+			end
+			return "<b>" .. def.name .. "</b>  [F" .. i .. "]\n" .. (def.desc or ""), T.Ocean
+		end)
+	end
+	local eBtn, eh = UI.Button(main, "^", T.Ocean, UDim2.fromOffset(34, SLOT), function()
+		setExpanded(not HUD.barExpanded)
+	end)
+	expandBtn = eBtn
+	eh.LayoutOrder = 200
+	UI.Tooltip(eBtn, function()
+		return HUD.barExpanded and "Hide the second row" or "Show 6 more skill slots and F5-F8", T.Ocean
+	end)
+	New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(34, SLOT), LayoutOrder = 200, Parent = second })
+
 	if UI.IsMobile then
 		local atk = UI.Button(UI.Root, "⚔️", T.Red, UDim2.fromOffset(110, 110), function()
 			Combat.AttackNearest()
@@ -589,7 +645,11 @@ function HUD.Loot(data)
 	end
 	if data.beli and data.beli > 0 then
 		add("+" .. UI.Format(data.beli) .. " " .. UI.CurrencyIcon, "Legendary")
-		Audio.Play("Coin")
+		-- kill combo: each loot within 4 s of the last plays the coin a little higher (resets when you stop)
+		local now = os.clock()
+		HUD.killStreak = (now - (HUD.lastLootAt or 0) < 4) and math.min((HUD.killStreak or 0) + 1, 12) or 0
+		HUD.lastLootAt = now
+		Audio.Play("Coin", { pitch = 1 + HUD.killStreak * 0.06 })
 	end
 	for _, it in ipairs(data.items or {}) do
 		local def = ItemDB.Get(it.id)
@@ -675,27 +735,57 @@ local function refresh()
 			UI.Pop(b)
 		end
 	end
-	-- skill bar
+	-- skill bar (12 fixed slots; "" = empty)
 	local p = State.profile
+	if p and not HUD.expandSynced then
+		-- the saved hotbar layout arrives with the profile
+		HUD.expandSynced = true
+		local Settings = require(script.Parent.Parent.Controllers.Settings)
+		if (Settings.Values.barExpanded == true) ~= HUD.barExpanded then
+			setExpanded(Settings.Values.barExpanded == true)
+		end
+	end
 	local now = os.clock()
 	for i, s in ipairs(skillSlots) do
 		local id = p and p.skillBar[i]
-		local skill = id and ClassesCfg.SkillById[id]
+		local skill = id and id ~= "" and ClassesCfg.SkillById[id] or nil
 		local iconId = skill and skillIconId(skill)
 		s.icon.Image = iconId or ""
 		s.icon.Visible = iconId ~= nil
 		-- with an icon the name moves to the tooltip; without one it stays as text
 		s.name.Text = (skill and not iconId) and skill.name or ""
-		-- hide empty slots past the 4th so the bar only shows what you actually have
-		s.holder.Visible = i <= math.max(4, p and #p.skillBar or 0)
 		s.sp.Text = skill and (skill.sp .. " SP") or ""
+		s.sp.TextColor3 = Color3.fromRGB(150, 200, 255)
 		local c = skillColor(skill)
 		s.grad.Color = skill and ColorSequence.new(c:Lerp(Color3.new(1, 1, 1), 0.15), c:Lerp(Color3.new(0, 0, 0), 0.45)) or ColorSequence.new(T.PanelTop, T.PanelDeep)
-		local left = id and ((State.cooldowns[id] or 0) - now) or 0
+		s.slot.BackgroundTransparency = skill and 0 or 0.35
+		local left = skill and ((State.cooldowns[id] or 0) - now) or 0
 		s.cd.Size = UDim2.new(1, 0, skill and left > 0 and math.clamp(left / skill.cd, 0, 1) or 0, 0)
 		s.cdText.Text = (skill and left > 0) and string.format(left < 1 and "%.1f" or "%d", left) or ""
-		s.auto.Visible = id ~= nil and p.autoSkills[id] == true
+		s.auto.Visible = skill ~= nil and p.autoSkills[id] == true
 		s.stroke.Color = (skill and (player:GetAttribute("SP") or 0) < skill.sp) and T.Red or T.Edge
+	end
+	-- quick items: icon + how many are left in the bag
+	for i, s in ipairs(itemSlots or {}) do
+		local id = p and p.itemBar and p.itemBar[i]
+		local def = id and id ~= "" and ItemDB.Get(id) or nil
+		local qty = 0
+		if def then
+			for _, e in ipairs(p.inventory or {}) do
+				if e.id == id then
+					qty += e.qty or 1
+				end
+			end
+		end
+		local img = def and UI.ItemIconId(def)
+		s.icon.Image = img or ""
+		s.icon.Visible = img ~= nil
+		s.icon.ImageTransparency = (def and qty == 0) and 0.6 or 0
+		s.name.Text = (def and not img) and def.name or ""
+		s.count.Text = def and tostring(qty) or ""
+		s.count.TextColor3 = qty > 0 and T.Text or T.Red
+		s.grad.Color = def and ColorSequence.new(T.Ocean:Lerp(Color3.new(1, 1, 1), 0.1), T.Ocean:Lerp(Color3.new(0, 0, 0), 0.5)) or ColorSequence.new(T.PanelTop, T.PanelDeep)
+		s.slot.BackgroundTransparency = def and 0 or 0.35
 	end
 	UI.SetButtonColor(autoBtn, State.auto and T.Green or T.Grey)
 	autoBtn.Text = State.auto and "AUTO\nON" or "AUTO"

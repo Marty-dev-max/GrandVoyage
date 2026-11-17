@@ -93,6 +93,17 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   with their class's weapon type (CombatService.weaponType). Dev tab -> Animation Check; Studio shows an anim status line.
   Pets animate by part name in `Controllers/Pets.lua` (Hinge attribute). Avatars: uniform R15 via
   `PlayerService.normalizeAvatar` (GameConfig.NormalizeAvatars; Game Settings avatar type must be R15).
+- Hits land on the strike frame: CombatService picks the combo step (sent as `combo` in the BasicAttack FX so every client
+  plays the same clip) and applies damage with `hitLater(strike [+ shot flight])`; skills use their clip's strike too.
+  Never apply melee damage at request time again (monsters died before the fist arrived).
+- Hotbar: `p.skillBar` = 12 fixed slots (keys 1-6, 7 8 9 0 - =), `p.itemBar` = 8 quick items (F1-F8), "" = empty slot;
+  server helpers `PS.BarAdd` / `PS.BarRemoveIf` keep slot positions; each class keeps its own bar (`p.classBars`).
+  Set up in Skills -> Loadout (tap skill/item, then slot; tap two slots to swap; green tick = Auto Battle may use it;
+  per-player Auto Battle search range `settings.autoRadius`, read with `State.SearchRadius()`).
+- Big windows (Bag, Skills, Quests, Map, Pets, Shop) open full screen with a button next to the X to shrink them:
+  `UI.Window(id, title, size, color, icon, { fullscreen = true })`, layouts must stretch (scale sizes) and can listen to
+  `win.resized`. The Pearl shop is labelled "Shop" (owner). Coin/hit sounds were lowered in pitch (owner found them
+  shrill); kill streaks raise the coin / death pitch.
 - VFX are ParticleEmitter/Beam based with our own textures (`Config/Textures`); see the toolkit at the top of `Controllers/VFX.lua`.
 - Client controllers start through the protected `start()` in `init.client.lua` (core UI first, visuals in parallel):
   a controller that errors or yields must never block the others (it hid the quest tracker in v0.13.0).

@@ -241,7 +241,9 @@ local function engage(target, useSkills)
 end
 
 -- Give up on targets that are too far away or that we cannot get closer to (on a cliff, across water...)
-local MAX_CHASE = GameConfig.AutoBattle.SearchRadius + 30
+local function maxChase()
+	return State.SearchRadius() + 30
+end
 local chase = { target = nil, best = math.huge, since = 0 }
 local function shouldDrop(target)
 	local r = root()
@@ -249,7 +251,7 @@ local function shouldDrop(target)
 		return true
 	end
 	local d = Reach.Gap(r.Position, target)
-	if d > MAX_CHASE then
+	if d > maxChase() then
 		return true
 	end
 	local reach = (WeaponRange[weaponType()] or 9) + 2
@@ -348,9 +350,9 @@ local function tick()
 					end
 				else
 					if State.target and alive(State.target) and shouldDrop(State.target) then
-						Combat.SetTarget(findNearestMob(r.Position, GameConfig.AutoBattle.SearchRadius, State.target))
+						Combat.SetTarget(findNearestMob(r.Position, State.SearchRadius(), State.target))
 					elseif not alive(State.target) then
-						Combat.SetTarget(findNearestMob(r.Position, GameConfig.AutoBattle.SearchRadius))
+						Combat.SetTarget(findNearestMob(r.Position, State.SearchRadius()))
 					end
 					if State.target then
 						engage(State.target, true)
@@ -378,6 +380,29 @@ local function tick()
 	busy = false
 end
 
+local SKILL_KEYS = { Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four, Enum.KeyCode.Five, Enum.KeyCode.Six,
+	Enum.KeyCode.Seven, Enum.KeyCode.Eight, Enum.KeyCode.Nine, Enum.KeyCode.Zero, Enum.KeyCode.Minus, Enum.KeyCode.Equals }
+local ITEM_KEYS = { Enum.KeyCode.F1, Enum.KeyCode.F2, Enum.KeyCode.F3, Enum.KeyCode.F4, Enum.KeyCode.F5, Enum.KeyCode.F6, Enum.KeyCode.F7, Enum.KeyCode.F8 }
+Combat.SKILL_KEY_LABELS = { "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "=" }
+
+-- quick item slot i (F1-F8): use one of that item from the bag
+local lastItemUse = 0
+function Combat.UseQuickItem(i)
+	local p = State.profile
+	local id = p and p.itemBar and p.itemBar[i]
+	if not id or id == "" or os.clock() - lastItemUse < 0.25 then
+		return
+	end
+	lastItemUse = os.clock()
+	task.spawn(function()
+		local res = Net.Request("UseItem", { id = id })
+		if not res.ok and res.msg then
+			local UI = require(script.Parent.Parent.UI.UIKit)
+			UI.Toast(tostring(res.msg), "bad")
+		end
+	end)
+end
+
 function Combat.Start()
 	-- Click a monster to attack it (keeps attacking the same target)
 	UserInputService.InputBegan:Connect(function(input, processed)
@@ -391,14 +416,19 @@ function Combat.Start()
 		elseif input.KeyCode == Enum.KeyCode.Tab then
 			local r = root()
 			if r then
-				Combat.SetTarget(findNearestMob(r.Position, GameConfig.AutoBattle.SearchRadius))
+				Combat.SetTarget(findNearestMob(r.Position, State.SearchRadius()))
 				State.chasing = State.target ~= nil
 			end
 		else
-			local keys = { Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four, Enum.KeyCode.Five, Enum.KeyCode.Six, Enum.KeyCode.Seven, Enum.KeyCode.Eight }
-			local idx = table.find(keys, input.KeyCode)
-			if idx and State.profile and State.profile.skillBar[idx] then
-				Combat.CastSkill(State.profile.skillBar[idx])
+			-- skills: 1-6 on the main row, 7 8 9 0 - = on the second row; quick items: F1-F8
+			local idx = table.find(SKILL_KEYS, input.KeyCode)
+			local id = idx and State.profile and State.profile.skillBar[idx]
+			if id and id ~= "" then
+				Combat.CastSkill(id)
+			end
+			local f = table.find(ITEM_KEYS, input.KeyCode)
+			if f then
+				Combat.UseQuickItem(f)
 			end
 		end
 	end)

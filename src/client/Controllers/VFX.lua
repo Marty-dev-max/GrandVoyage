@@ -560,9 +560,13 @@ end
 
 -- which hit of the combo this is (same 1.2 s window as CharAnim) -> later hits hit harder
 local comboState = setmetatable({}, { __mode = "k" })
-local function comboStep(char, weapon)
+local function comboStep(char, weapon, given)
 	local w = AnimClips.Weapons[weapon]
 	local list = w and w.combo
+	if list and tonumber(given) then
+		local n = math.clamp(tonumber(given), 1, #list)
+		return n, list[n]
+	end
 	if not list or typeof(char) ~= "Instance" then
 		return 1, list and list[1]
 	end
@@ -664,7 +668,7 @@ handlers.Damage = function(d)
 	-- a player's hit arrives with the swing: show it when the fist/blade actually connects
 	if d.src and not d.toPlayer then
 		local at = strikeAt[d.src]
-		local wait = (at and at - os.clock() > -0.3) and math.max(0, at - os.clock()) or VFX.IMPACT_DELAY
+		local wait = (at and at - os.clock() > -0.3) and math.max(0, at - os.clock()) or 0
 		task.delay(wait, damageFX, d)
 	else
 		damageFX(d)
@@ -678,7 +682,7 @@ handlers.Heal = function(d)
 end
 handlers.BasicAttack = function(d)
 	local weapon = weaponFX[d.weapon] and d.weapon or "Sword"
-	local n, clip = comboStep(d.char, weapon)
+	local n, clip = comboStep(d.char, weapon, d.combo)
 	local who = typeof(d.char) == "Instance" and game:GetService("Players"):GetPlayerFromCharacter(d.char)
 	if who then
 		strikeAt[who.UserId] = os.clock() + strikeOf(clip)
@@ -838,7 +842,14 @@ local fxSounds = {
 		return "LevelUp", d.pos
 	end,
 	MobDeath = function(d)
-		return d.boss and "BossRoar" or "MonsterDie", d.pos
+		-- kill combo: deaths in quick succession climb in pitch
+		local now = os.clock()
+		VFX.killStreak = (now - (VFX.lastKillAt or 0) < 4) and math.min((VFX.killStreak or 0) + 1, 10) or 0
+		VFX.lastKillAt = now
+		return d.boss and "BossRoar" or "MonsterDie", d.pos, 1 + VFX.killStreak * 0.07
+	end,
+	ChestOpen = function(d)
+		return "ChestOpen", d.pos
 	end,
 	Telegraph = function(d)
 		return "BossRoar", d.pos
@@ -871,9 +882,9 @@ function VFX.Start()
 		local h = handlers[kind]
 		local snd = fxSounds[kind]
 		if snd and type(data) == "table" then
-			local ok, name, pos = pcall(snd, data)
+			local ok, name, pos, pitch = pcall(snd, data)
 			if ok and name then
-				Audio.Play(name, { pos = pos })
+				Audio.Play(name, { pos = pos, pitch = pitch })
 			end
 		end
 		if kind == "Damage" and not Settings.Values.damageNumbers then

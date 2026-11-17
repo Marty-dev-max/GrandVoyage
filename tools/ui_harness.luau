@@ -482,7 +482,7 @@ for _, d in UI.Root:GetDescendants() do
 end
 
 local panels = {
-	{ "Inventory" }, { "Stats" }, { "Skills" }, { "JobMaster" }, { "Refine" }, { "Shop" }, { "Tavern" }, { "Shipwright" },
+	{ "Inventory" }, { "Stats" }, { "Skills" }, { "Skills", { tab = "Loadout" } }, { "JobMaster" }, { "Refine" }, { "Shop" }, { "Tavern" }, { "Shipwright" },
 	{ "Map" }, { "BossBoard" }, { "Guild" }, { "Dungeon", { dungeonId = "CircusTent" } }, { "Party" },
 	{ "Stall", { sellerId = 2 } }, { "StallSetup" }, { "PearlShop" }, { "Pets" }, { "Quests" }, { "Quests", { tab = "Ach" } }, { "Quests", { tab = "Story" } }, { "MenuHub" }, { "Settings" },
 }

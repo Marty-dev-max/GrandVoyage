@@ -162,7 +162,7 @@ end
 
 -- ===================== INVENTORY =====================
 function Panels.Inventory()
-	local win = UI.Window("Inventory", "Inventory", UDim2.fromOffset(940, 580), T.Ocean, "🎒")
+	local win = UI.Window("Inventory", "Inventory", UDim2.fromOffset(940, 580), T.Ocean, "🎒", { fullscreen = true })
 	local left = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(0.6, -8, 1, 0), Parent = win.body })
 	local right = UI.Card(win.body, UDim2.new(0.4, 0, 1, 0))
 	right.Position = UDim2.new(0.6, 0, 0, 0)
@@ -392,82 +392,478 @@ function Panels.Stats()
 end
 
 -- ===================== SKILLS =====================
-function Panels.Skills()
-	local win = UI.Window("Skills", "Skills", UDim2.fromOffset(720, 580), T.Gold, "✨")
-	local list = UI.Scroll(win.body, UDim2.new(1, 0, 1, 0))
-	local function render()
-		clear(list)
+-- ===================== SKILLS (full screen: skill tree + loadout) =====================
+-- Skills tab: tiers (Basic / class / Cursed Fruit / next job) as a grid of skill nodes, the picked skill's details on the
+-- right with Learn. Loadout tab: tap a skill or an item, then a slot (tap two slots to swap): 12 skill slots
+-- (keys 1-6, 7-=), 8 quick items (F1-F8), which skills Auto Battle may use, and the Auto Battle search range.
+local SkillLook = require(script.Parent.SkillLook)
+local skillsView = { side = "Skills", tier = nil, pick = nil }
+
+local function skillNode(parent, sk, lv, maxLv, picked, locked, onClick)
+	local c = SkillLook.Color(sk)
+	local node = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(120, 150), Parent = parent })
+	local ring = New("TextButton", { Text = "", AutoButtonColor = false, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 6), Size = UDim2.fromOffset(92, 92), BackgroundColor3 = Color3.new(1, 1, 1), Parent = node })
+	UI.Corner(ring, 46)
+	New("UIGradient", { Color = ColorSequence.new(c:Lerp(Color3.new(1, 1, 1), 0.35), c:Lerp(Color3.new(0, 0, 0), 0.35)), Rotation = 90, Parent = ring })
+	UI.Stroke(ring, picked and T.Gold or T.Edge, picked and 5 or 3)
+	local img = SkillLook.IconId(sk)
+	if img then
+		New("ImageLabel", { BackgroundTransparency = 1, Image = img, ImageTransparency = locked and 0.55 or 0, ScaleType = Enum.ScaleType.Fit, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(70, 70), Parent = ring })
+	end
+	if locked then
+		UI.Text(ring, "🔒", 30, T.Text, "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center })
+	end
+	local badge = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, 98), Size = UDim2.fromOffset(64, 24), BackgroundColor3 = T.PanelDeep, Parent = node })
+	UI.Corner(badge, 12)
+	UI.Stroke(badge, T.Edge, 2)
+	UI.Text(badge, lv .. "/" .. maxLv, 15, lv > 0 and T.Gold or T.TextSoft, "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center })
+	UI.Text(node, sk.name, 14, T.Text, "Bold", { Position = UDim2.fromOffset(0, 114), Size = UDim2.new(1, 0, 0, 34), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = true })
+	UI.Tactile(ring)
+	ring.Activated:Connect(onClick)
+	return node
+end
+
+local function statLine(parent, label, value, order)
+	local r = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 22), LayoutOrder = order, Parent = parent })
+	UI.Text(r, "◆ " .. label, 15, T.TextSoft, "Semi", { Size = UDim2.new(0.6, 0, 1, 0) })
+	UI.Text(r, value, 15, T.Text, "Bold", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0), Size = UDim2.new(0.4, 0, 1, 0), TextXAlignment = Enum.TextXAlignment.Right })
+end
+
+-- the skills a tier tab shows: { skill, level, max, locked }
+local function tierSkills(p, tier)
+	local out = {}
+	if tier == "Fruit" then
+		local fruit = p.fruit and FruitsCfg.ById[p.fruit.id]
+		for _, s in ipairs(fruit and fruit.skills or {}) do
+			local open = p.fruit.mastery >= s.mastery
+			table.insert(out, { s, open and 1 or 0, 1, not open })
+		end
+	elseif tier == "Basic" then
+		for _, s in ipairs(Classes.Common.skills) do
+			table.insert(out, { s, p.skills[s.id] or 0, s.maxLevel, false })
+		end
+	elseif Classes[tier] then
+		for _, s in ipairs(Classes[tier].skills) do
+			table.insert(out, { s, p.skills[s.id] or 0, s.maxLevel, false })
+		end
+	end
+	return out
+end
+
+local function setBar(p, bar)
+	p.skillBar = bar -- optimistic: the hotbar redraws right away
+	State.Fire("profile")
+	task.spawn(req, "SetSkillBar", { bar = bar })
+end
+local function setItemBar(p, bar)
+	p.itemBar = bar
+	State.Fire("profile")
+	task.spawn(req, "SetItemBar", { bar = bar })
+end
+local function padded(bar, n)
+	local out = {}
+	for i = 1, n do
+		out[i] = (bar and bar[i]) or ""
+	end
+	return out
+end
+
+function Panels.Skills(args)
+	if args and args.tab then
+		skillsView.side = args.tab
+	end
+	local win = UI.Window("Skills", "Skills", UDim2.fromOffset(1000, 620), T.Gold, "✨", { fullscreen = true })
+	local side = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(0, 150, 1, 0), Parent = win.body })
+	UI.List(side, nil, 10)
+	local content = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(162, 0), Size = UDim2.new(1, -162, 1, 0), Parent = win.body })
+	local render
+
+	local function sidebar()
+		clear(side)
+		UI.List(side, nil, 10)
+		for i, it in ipairs({ { "Skills", "✨", "Skill Tree" }, { "Loadout", "⚔️", "Loadout" } }) do
+			local on = skillsView.side == it[1]
+			local _, h = UI.Button(side, it[2] .. " " .. it[3], on and T.Gold or T.Grey, UDim2.new(1, -6, 0, 50), function()
+				skillsView.side = it[1]
+				render()
+			end)
+			h.LayoutOrder = i
+		end
 		local p = State.profile
+		if p then
+			local pts = UI.Card(side, UDim2.new(1, -6, 0, 70), T.PanelDeep)
+			pts.LayoutOrder = 10
+			UI.Text(pts, "SKILL POINTS", 13, T.TextSoft, "Display", { Position = UDim2.fromOffset(10, 6), Size = UDim2.new(1, -20, 0, 18) })
+			UI.Text(pts, tostring(p.skillPoints or 0), 30, (p.skillPoints or 0) > 0 and T.Gold or T.Text, "Number", { Position = UDim2.fromOffset(10, 26), Size = UDim2.new(1, -20, 0, 36) })
+		end
+	end
+
+	-- ---------- skill tree ----------
+	local function renderTree(p)
+		local tiers = { { "Basic", "⚓", "Basic", T.Grey }, { p.class, Classes[p.class] and Classes[p.class].icon or "⚔️", Classes[p.class] and Classes[p.class].name or p.class, Classes[p.class] and Classes[p.class].color } }
+		if p.fruit then
+			local f = FruitsCfg.ById[p.fruit.id]
+			table.insert(tiers, { "Fruit", f and f.icon or "🍎", f and f.name or "Fruit", f and f.color })
+		end
+		table.insert(tiers, { "Next", "🔒", "Job 2", T.Grey })
+		local valid = false
+		for _, t in ipairs(tiers) do
+			valid = valid or t[1] == skillsView.tier
+		end
+		if not valid then
+			skillsView.tier = p.class
+		end
+		UI.TabBar(content, tiers, skillsView.tier, function(id)
+			skillsView.tier = id
+			skillsView.pick = nil
+			render()
+		end, 40)
+		local left = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 54), Size = UDim2.new(0.6, -10, 1, -54), Parent = content })
+		local right = UI.Card(content, UDim2.new(0.4, 0, 1, -54), T.Panel)
+		right.Position = UDim2.new(0.6, 0, 0, 54)
+		if skillsView.tier == "Next" then
+			local names = {}
+			for _, id in ipairs(ClassesCfg.SecondJobs[p.class] or {}) do
+				table.insert(names, id)
+			end
+			UI.Text(left, "🔒 Second jobs open with the Grand Current update.\n" .. (#names > 0 and ("Paths for your class: " .. table.concat(names, ", ")) or "Switch to a first job at the Job Master (Job Lv.10) to see its paths."), 18, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 120) })
+			UI.Pad(right, 14)
+			UI.Text(right, "Coming soon", 22, T.Text, "Display")
+			return
+		end
+		local list = tierSkills(p, skillsView.tier)
+		if not skillsView.pick or not ClassesCfg.SkillById[skillsView.pick] then
+			skillsView.pick = list[1] and list[1][1].id
+		end
+		local grid = UI.Scroll(left)
+		New("UIGridLayout", { CellSize = UDim2.fromOffset(120, 154), CellPadding = UDim2.fromOffset(14, 10), Parent = grid })
+		New("UIPadding", { PaddingTop = UDim.new(0, 6), PaddingLeft = UDim.new(0, 6), Parent = grid })
+		for _, e in ipairs(list) do
+			local sk, lv, maxLv, locked = e[1], e[2], e[3], e[4]
+			skillNode(grid, sk, lv, maxLv, sk.id == skillsView.pick, locked, function()
+				skillsView.pick = sk.id
+				render()
+			end)
+		end
+		-- detail panel
+		local sk = skillsView.pick and ClassesCfg.SkillById[skillsView.pick]
+		if not sk then
+			return
+		end
+		UI.Pad(right, 14)
+		local lv = sk.fruit and ((p.fruit and p.fruit.mastery >= (sk.mastery or 1)) and 1 or 0) or (p.skills[sk.id] or 0)
+		local maxLv = sk.fruit and 1 or sk.maxLevel
+		local head = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 84), Parent = right })
+		local chip = New("Frame", { Size = UDim2.fromOffset(78, 78), BackgroundColor3 = SkillLook.Color(sk), Parent = head })
+		UI.Corner(chip, 14)
+		UI.Stroke(chip, T.Edge, 3)
+		local img = SkillLook.IconId(sk)
+		if img then
+			New("ImageLabel", { BackgroundTransparency = 1, Image = img, Size = UDim2.fromScale(0.9, 0.9), Position = UDim2.fromScale(0.05, 0.05), ScaleType = Enum.ScaleType.Fit, Parent = chip })
+		end
+		UI.Text(head, sk.name, 24, T.Text, "Display", { Position = UDim2.fromOffset(90, 2), Size = UDim2.new(1, -90, 0, 30) })
+		UI.Text(head, (sk.fruit and ("Mastery " .. (sk.mastery or 1)) or ("Lv." .. lv .. " / " .. maxLv)) .. "   •   " .. (SkillLook.IsSupport(sk) and "Support" or "Attack") .. " • " .. sk.kind, 15, T.Gold, "Bold", { Position = UDim2.fromOffset(90, 36), Size = UDim2.new(1, -90, 0, 20) })
+		local info = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 92), Size = UDim2.new(1, 0, 1, -170), Parent = right })
+		UI.List(info, nil, 4)
+		UI.Text(info, sk.desc or "", 16, T.Text, "Semi", { Size = UDim2.new(1, 0, 0, 44), LayoutOrder = 0 })
+		local o = 1
+		local function line(a, b)
+			statLine(info, a, b, o)
+			o += 1
+		end
+		line("SP cost", tostring(sk.sp))
+		line("Cooldown", sk.cd .. " s")
+		if sk.range and sk.range > 0 then
+			line("Range", sk.range .. " studs")
+		end
+		if sk.radius then
+			line("Area", sk.radius .. " studs")
+		end
+		if sk.mult then
+			local now = sk.mult * (1 + 0.1 * math.max(lv - 1, 0))
+			line("Damage", string.format("x%.2f", now) .. ((not sk.fruit and lv < maxLv and lv > 0) and string.format("  ->  x%.2f", sk.mult * (1 + 0.1 * lv)) or ""))
+		end
+		if sk.duration then
+			line("Lasts", sk.duration .. " s")
+		end
+		if sk.hits then
+			line("Hits", tostring(sk.hits))
+		end
+		local btns = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.new(1, 0, 0, 60), Parent = right })
+		UI.List(btns, Enum.FillDirection.Horizontal, 10)
+		if not sk.fruit then
+			local can = lv < maxLv and (p.skillPoints or 0) > 0
+			UI.Button(btns, lv >= maxLv and "MAX" or (lv == 0 and "Learn" or "Level up +1"), can and T.Green or T.Grey, UDim2.new(0.5, -5, 0, 52), function()
+				if can then
+					req("LearnSkill", { skillId = sk.id }, "LevelUp")
+				else
+					UI.Toast(lv >= maxLv and "Already max level" or "No skill points left", "bad")
+				end
+			end)
+		end
+		if lv > 0 then
+			local onBar = table.find(p.skillBar, sk.id) ~= nil
+			UI.Button(btns, onBar and "On hotbar ✓" or "Put on hotbar", onBar and T.Grey or T.Ocean, UDim2.new(0.5, -5, 0, 52), function()
+				if not onBar then
+					local bar = padded(p.skillBar, GameConfig.SkillBarSize)
+					for i = 1, #bar do
+						if bar[i] == "" then
+							bar[i] = sk.id
+							setBar(p, bar)
+							return
+						end
+					end
+					UI.Toast("Hotbar is full: rearrange it in Loadout", "bad")
+				end
+			end)
+		end
+	end
+
+	-- ---------- loadout ----------
+	local sel -- { kind = "skill"|"item", id } or { kind = "slot", bar = "skill"|"item", i }
+	local function renderLoadout(p)
+		local left = UI.Scroll(content, UDim2.new(0.55, -10, 1, 0))
+		UI.List(left, nil, 8)
+		local right = New("Frame", { BackgroundTransparency = 1, Position = UDim2.new(0.55, 0, 0, 0), Size = UDim2.new(0.45, 0, 1, 0), Parent = content })
+		UI.List(right, nil, 10)
+
+		local function tile(parent, img, title, color, picked, onClick, extra)
+			local holder = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(96, 128), Parent = parent })
+			local b = New("TextButton", { Text = "", AutoButtonColor = false, Size = UDim2.fromOffset(96, 96), BackgroundColor3 = Color3.new(1, 1, 1), Parent = holder })
+			UI.Corner(b, 14)
+			New("UIGradient", { Color = ColorSequence.new(color:Lerp(Color3.new(1, 1, 1), 0.2), color:Lerp(Color3.new(0, 0, 0), 0.4)), Rotation = 90, Parent = b })
+			UI.Stroke(b, picked and T.Gold or T.Edge, picked and 5 or 3)
+			if img then
+				New("ImageLabel", { BackgroundTransparency = 1, Image = img, Size = UDim2.fromScale(0.8, 0.8), Position = UDim2.fromScale(0.1, 0.06), ScaleType = Enum.ScaleType.Fit, Parent = b })
+			end
+			UI.Text(holder, title, 13, T.Text, "Bold", { Position = UDim2.fromOffset(0, 98), Size = UDim2.new(1, 0, 0, 30), TextXAlignment = Enum.TextXAlignment.Center })
+			UI.Tactile(b)
+			b.Activated:Connect(onClick)
+			if extra then
+				extra(b)
+			end
+			return holder
+		end
+		local function gridIn(parent, n)
+			local rows = math.max(1, math.ceil(n / 5))
+			local g = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, -8, 0, rows * 136), Parent = parent })
+			New("UIGridLayout", { CellSize = UDim2.fromOffset(96, 128), CellPadding = UDim2.fromOffset(10, 8), Parent = g })
+			return g
+		end
+
+		-- skills you can put on the bar now
+		local attack, support = {}, {}
+		local function consider(s)
+			local usable = s.fruit and (p.fruit and p.fruit.id == s.fruit and p.fruit.mastery >= (s.mastery or 1)) or ((p.skills[s.id] or 0) > 0)
+			if usable then
+				table.insert(SkillLook.IsSupport(s) and support or attack, s)
+			end
+		end
+		for _, s in ipairs(Classes.Common.skills) do
+			consider(s)
+		end
+		for _, s in ipairs(Classes[p.class] and Classes[p.class].skills or {}) do
+			consider(s)
+		end
+		local fruit = p.fruit and FruitsCfg.ById[p.fruit.id]
+		for _, s in ipairs(fruit and fruit.skills or {}) do
+			consider(s)
+		end
+		for _, group in ipairs({ { "⚔️", "Attack skills", attack, T.Red }, { "✨", "Support skills", support, T.Green } }) do
+			UI.Section(left, group[1], group[2], group[4], "tap, then tap a slot")
+			local g = gridIn(left, #group[3])
+			for _, s in ipairs(group[3]) do
+				local picked = sel and sel.kind == "skill" and sel.id == s.id
+				tile(g, SkillLook.IconId(s), s.name, SkillLook.Color(s), picked, function()
+					sel = picked and nil or { kind = "skill", id = s.id }
+					render()
+				end, function(b)
+					-- auto toggle chip: may Auto Battle use this skill?
+					local on = p.autoSkills[s.id] == true
+					local chipBtn = New("TextButton", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 4, 0, -4), Size = UDim2.fromOffset(30, 30), BackgroundColor3 = on and T.Green or T.Grey, Text = on and "✓" or "✕", TextColor3 = Color3.new(1, 1, 1), FontFace = Font.new("rbxasset://fonts/families/FredokaOne.json"), TextSize = 18, AutoButtonColor = false, ZIndex = 4, Parent = b })
+					UI.Corner(chipBtn, 15)
+					UI.Stroke(chipBtn, T.Edge, 2)
+					chipBtn.Activated:Connect(function()
+						local a = table.clone(p.autoSkills)
+						a[s.id] = (not on) or nil
+						p.autoSkills = a
+						render()
+						task.spawn(req, "SetAutoSettings", { autoSkills = a })
+					end)
+					UI.Tooltip(chipBtn, function()
+						return on and "Auto Battle uses this skill (tap to stop)" or "Auto Battle skips this skill (tap to allow)", on and T.Green or T.Grey
+					end)
+				end)
+			end
+		end
+		-- consumables in the bag
+		local items, seen = {}, {}
+		for _, e in ipairs(p.inventory or {}) do
+			local def = ItemDB.Get(e.id)
+			if def and def.kind == "Consumable" and not def.special and not seen[e.id] then
+				seen[e.id] = true
+				table.insert(items, def)
+			end
+		end
+		UI.Section(left, "🍖", "Quick items", T.Ocean, #items == 0 and "no food or potions in your bag" or "tap, then tap an F slot")
+		local ig = gridIn(left, #items)
+		for _, def in ipairs(items) do
+			local picked = sel and sel.kind == "item" and sel.id == def.id
+			local qty = 0
+			for _, e in ipairs(p.inventory) do
+				if e.id == def.id then
+					qty += e.qty or 1
+				end
+			end
+			tile(ig, UI.ItemIconId(def), def.name .. " x" .. qty, T.Ocean, picked, function()
+				sel = picked and nil or { kind = "item", id = def.id }
+				render()
+			end)
+		end
+
+		-- the hotbar layout
+		local card = UI.Card(right, UDim2.new(1, 0, 0, 360), T.PanelDeep)
+		card.LayoutOrder = 1
+		UI.Pad(card, 12)
+		UI.Text(card, "HOTBAR", 20, T.Gold, "Display", { Size = UDim2.new(1, 0, 0, 24) })
+		UI.Text(card, "Tap a skill or item on the left, then a slot. Tap two slots to swap them.", 13, T.TextSoft, "Semi", { Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 0, 18) })
+		local Combat = require(script.Parent.Parent.Controllers.Combat)
+		local function slotRow(y, bar, from, to, keyFn, look)
+			local r = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, y), Size = UDim2.new(1, 0, 0, 60), Parent = card })
+			UI.List(r, Enum.FillDirection.Horizontal, 6)
+			for i = from, to do
+				local picked = sel and sel.kind == "slot" and sel.bar == bar and sel.i == i
+				local b = New("TextButton", { Text = "", AutoButtonColor = false, Size = UDim2.fromOffset(56, 56), BackgroundColor3 = Color3.new(1, 1, 1), Parent = r })
+				UI.Corner(b, 10)
+				local img, col = look(i)
+				New("UIGradient", { Color = ColorSequence.new(col:Lerp(Color3.new(1, 1, 1), 0.15), col:Lerp(Color3.new(0, 0, 0), 0.45)), Rotation = 90, Parent = b })
+				UI.Stroke(b, picked and T.Gold or T.Edge, picked and 4 or 2.5)
+				if img then
+					New("ImageLabel", { BackgroundTransparency = 1, Image = img, Size = UDim2.fromScale(0.8, 0.8), Position = UDim2.fromScale(0.1, 0.1), ScaleType = Enum.ScaleType.Fit, Parent = b })
+				end
+				UI.Text(b, keyFn(i), 12, T.Gold, "Display", { Position = UDim2.fromOffset(4, 1), Size = UDim2.fromOffset(24, 14) })
+				UI.Tactile(b)
+				b.Activated:Connect(function()
+					local list = bar == "skill" and padded(p.skillBar, GameConfig.SkillBarSize) or padded(p.itemBar, GameConfig.ItemBarSize)
+					local function commit()
+						sel = nil
+						if bar == "skill" then
+							setBar(p, list)
+						else
+							setItemBar(p, list)
+						end
+						render()
+					end
+					if sel and sel.kind == (bar == "skill" and "skill" or "item") then
+						-- place it (a skill lives in one slot only: move it)
+						for k = 1, #list do
+							if list[k] == sel.id then
+								list[k] = ""
+							end
+						end
+						list[i] = sel.id
+						commit()
+					elseif sel and sel.kind == "slot" and sel.bar == bar then
+						list[i], list[sel.i] = list[sel.i], list[i]
+						commit()
+					else
+						sel = { kind = "slot", bar = bar, i = i }
+						render()
+					end
+				end)
+			end
+		end
+		local function skillLook(i)
+			local s = ClassesCfg.SkillById[p.skillBar[i] or ""]
+			return s and SkillLook.IconId(s), s and SkillLook.Color(s) or T.Panel
+		end
+		local function itemLook(i)
+			local def = p.itemBar and ItemDB.Get(p.itemBar[i] or "")
+			return def and UI.ItemIconId(def), def and T.Ocean or T.Panel
+		end
+		UI.Text(card, "SKILLS", 14, T.Text, "Display", { Position = UDim2.fromOffset(0, 48), Size = UDim2.new(1, 0, 0, 16) })
+		slotRow(66, "skill", 1, 6, function(i)
+			return Combat.SKILL_KEY_LABELS[i]
+		end, skillLook)
+		slotRow(128, "skill", 7, 12, function(i)
+			return Combat.SKILL_KEY_LABELS[i]
+		end, skillLook)
+		UI.Text(card, "QUICK ITEMS", 14, T.Text, "Display", { Position = UDim2.fromOffset(0, 192), Size = UDim2.new(1, 0, 0, 16) })
+		slotRow(210, "item", 1, 4, function(i)
+			return "F" .. i
+		end, itemLook)
+		slotRow(272, "item", 5, 8, function(i)
+			return "F" .. i
+		end, itemLook)
+		-- clear the picked slot
+		if sel and sel.kind == "slot" then
+			local _, h = UI.Button(card, "Clear slot", T.Red, UDim2.fromOffset(130, 40), function()
+				local isSkill = sel.bar == "skill"
+				local list = isSkill and padded(p.skillBar, GameConfig.SkillBarSize) or padded(p.itemBar, GameConfig.ItemBarSize)
+				list[sel.i] = ""
+				sel = nil
+				if isSkill then
+					setBar(p, list)
+				else
+					setItemBar(p, list)
+				end
+				render()
+			end)
+			h.AnchorPoint = Vector2.new(1, 0)
+			h.Position = UDim2.new(1, 0, 0, 0)
+		end
+
+		-- Auto Battle range + potion threshold
+		local ab = GameConfig.AutoBattle
+		local auto = UI.Card(right, UDim2.new(1, 0, 0, 150), T.PanelDeep)
+		auto.LayoutOrder = 2
+		UI.Pad(auto, 12)
+		UI.Text(auto, "AUTO BATTLE", 20, T.Green, "Display", { Size = UDim2.new(1, 0, 0, 24) })
+		local function stepper(y, label, value, onStep, hint)
+			UI.Text(auto, label, 16, T.Text, "Bold", { Position = UDim2.fromOffset(0, y + 8), Size = UDim2.new(0.5, 0, 0, 24) })
+			UI.Text(auto, hint, 12, T.TextSoft, "Semi", { Position = UDim2.fromOffset(0, y + 30), Size = UDim2.new(0.5, 0, 0, 16) })
+			for k, d in ipairs({ -1, 1 }) do
+				local _, h = UI.Button(auto, d < 0 and "-" or "+", d < 0 and T.Pink or T.Green, UDim2.fromOffset(44, 40), function()
+					onStep(d)
+				end)
+				h.AnchorPoint = Vector2.new(1, 0)
+				h.Position = UDim2.new(1, k == 1 and -128 or 0, 0, y + 4)
+			end
+			UI.Text(auto, value, 22, T.Gold, "Number", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -50, 0, y + 8), Size = UDim2.fromOffset(74, 30), TextXAlignment = Enum.TextXAlignment.Center })
+		end
+		local radius = State.SearchRadius()
+		stepper(30, "Search range", radius .. "", function(d)
+			local v = math.clamp(radius + d * 5, ab.MinRadius, ab.SearchRadius)
+			p.settings = p.settings or {}
+			p.settings.autoRadius = v
+			State.Fire("profile")
+			task.spawn(req, "SetAutoSettings", { autoRadius = v })
+		end, "how far Auto Battle looks for monsters (studs)")
+		local pct = p.settings and p.settings.autoPotionPct or 35
+		stepper(86, "Eat below", pct .. "%", function(d)
+			local v = math.clamp(pct + d * 5, 0, 90)
+			p.settings.autoPotionPct = v
+			State.Fire("profile")
+			task.spawn(req, "SetAutoSettings", { autoPotionPct = v })
+		end, "HP % where Auto Battle eats food")
+	end
+
+	render = function()
+		local p = State.profile
+		sidebar()
+		clear(content)
 		if not p then
 			return
 		end
-		UI.List(list, nil, 8)
-		UI.Section(list, "✨", "Skill Tree", T.Gold, p.skillPoints .. " points")
-		UI.Text(list, "● Auto = Auto Battle uses this skill", 14, Color3.fromRGB(155, 231, 166), "Semi")
-		-- Cursed Fruit section
-		local fruit = p.fruit and FruitsCfg.ById[p.fruit.id]
-		if fruit then
-			UI.Section(list, fruit.icon, fruit.name, fruit.color, "Mastery " .. p.fruit.mastery .. "/" .. FruitsCfg.Mastery.Max)
-			local need = FruitsCfg.Mastery.Base + FruitsCfg.Mastery.PerLevel * p.fruit.mastery
-			local mb = UI.Bar(list, fruit.color, UDim2.new(1, -12, 0, 16), p.fruit.mastery >= FruitsCfg.Mastery.Max and "MAX" or (p.fruit.exp .. " / " .. need))
-			mb:Set(p.fruit.mastery >= FruitsCfg.Mastery.Max and 1 or p.fruit.exp / need)
-			UI.Text(list, fruit.type .. "  •  " .. fruit.passiveText .. "  •  Cannot swim", 13, T.TextSoft, "Semi")
-			for _, s in ipairs(fruit.skills) do
-				local open = p.fruit.mastery >= s.mastery
-				local card = UI.Card(list, UDim2.new(1, -12, 0, 70), fruit.color:Lerp(T.Panel, open and 0.7 or 0.88))
-				UI.Pad(card, 10)
-				UI.Text(card, (open and "" or "🔒 ") .. s.name .. '  <font color="#FFD54A">Mastery ' .. s.mastery .. "</font>", 19, open and T.Text or T.TextSoft, "Display", { Size = UDim2.new(1, -120, 0, 22) })
-				UI.Text(card, s.kind .. " • " .. s.sp .. " SP • " .. s.cd .. "s\n" .. (s.desc or ""), 13, T.TextSoft, "Semi", { Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, -120, 0, 32) })
-				if open then
-					local auto = p.autoSkills[s.id]
-					local _, h2 = UI.Button(card, auto and "● Auto" or "○ Auto", auto and T.Ocean or T.Grey, UDim2.fromOffset(100, 40), function()
-						local a = table.clone(p.autoSkills)
-						a[s.id] = not auto or nil
-						req("SetAutoSettings", { autoSkills = a })
-					end)
-					h2.Position = UDim2.new(1, -100, 0, 4)
-				end
-			end
+		if skillsView.side == "Loadout" then
+			renderLoadout(p)
 		else
-			local card = UI.Card(list, UDim2.new(1, -12, 0, 58), T.Panel)
-			UI.Pad(card, 10)
-			UI.Text(card, "🍎 No Cursed Fruit yet", 18, T.Text, "Display")
-			UI.Text(card, "Sink ships, open Captain's Chests, beat MVP bosses, or find one growing on an island.", 13, T.TextSoft, "Semi", { Position = UDim2.fromOffset(0, 22), Size = UDim2.new(1, 0, 0, 18) })
-		end
-		local classes = { p.class, "Common" }
-		for _, cid in ipairs(classes) do
-			UI.Section(list, Classes[cid].icon or "🧭", Classes[cid].name, Classes[cid].color)
-			for _, s in ipairs(Classes[cid].skills) do
-				local lv = p.skills[s.id] or 0
-				local card = UI.Card(list, UDim2.new(1, -12, 0, 84), Classes[cid].color:Lerp(T.Panel, 0.7))
-				UI.Pad(card, 10)
-				UI.Text(card, s.name .. '  <font color="#FFD54A">Lv.' .. lv .. "/" .. s.maxLevel .. "</font>", 20, T.Text, "Display", { Size = UDim2.new(1, -220, 0, 24) })
-				local info = s.kind .. " • " .. s.sp .. " SP • " .. s.cd .. "s"
-				if s.mult then
-					info ..= " • x" .. string.format("%.1f", s.mult * (1 + 0.1 * math.max(lv - 1, 0)))
-				end
-				if s.range and s.range > 0 then
-					info ..= " • range " .. s.range
-				end
-				UI.Text(card, info .. "\n" .. (s.desc or ""), 14, T.TextSoft, "Semi", { Position = UDim2.fromOffset(0, 26), Size = UDim2.new(1, -220, 0, 36) })
-				local _, h = UI.Button(card, "Learn +1", T.Green, UDim2.fromOffset(100, 40), function()
-					req("LearnSkill", { skillId = s.id })
-				end)
-				h.Position = UDim2.new(1, -208, 0, 10)
-				if lv > 0 then
-					local auto = p.autoSkills[s.id]
-					local _, h2 = UI.Button(card, auto and "● Auto" or "○ Auto", auto and T.Ocean or T.Grey, UDim2.fromOffset(100, 40), function()
-						local a = table.clone(p.autoSkills)
-						a[s.id] = not auto or nil
-						req("SetAutoSettings", { autoSkills = a })
-					end)
-					h2.Position = UDim2.new(1, -100, 0, 10)
-				end
-			end
+			renderTree(p)
 		end
 	end
 	render()
 	onProfile(win, render)
+	win.resized.Event:Connect(render)
 end
 
 -- ===================== JOB CHANGE =====================
@@ -778,7 +1174,7 @@ end
 
 -- ===================== MAP / FAST TRAVEL =====================
 function Panels.FastTravel()
-	local win = UI.Window("Map", Islands.SeaName, UDim2.fromOffset(1000, 480), T.Ocean, "🗺️")
+	local win = UI.Window("Map", Islands.SeaName, UDim2.fromOffset(1000, 480), T.Ocean, "🗺️", { fullscreen = true })
 	local strip = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), Size = UDim2.new(1, 0, 0, 280), Parent = win.body })
 	UI.Corner(strip, 16)
 	UI.Gradient(strip, Color3.fromRGB(110, 210, 245), Color3.fromRGB(50, 150, 210), 90)
@@ -1277,7 +1673,7 @@ function Panels.Settings()
 				end)
 				h.Position = UDim2.new(1, -184 + (i - 1) * 92, 0, 8)
 			end
-			UI.Text(list, "Press T or the AUTO button to toggle. Auto Battle fights within " .. GameConfig.AutoBattle.SearchRadius .. " studs and never wanders more than " .. GameConfig.AutoBattle.LeashRadius .. " studs from where it started. Pick which skills it uses in the Skills window (● Auto).", 15, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 80) })
+			UI.Text(list, "Press T or the AUTO button to toggle. Auto Battle fights within your search range (now " .. State.SearchRadius() .. " studs, change it in Skills -> Loadout) and never wanders more than " .. GameConfig.AutoBattle.LeashRadius .. " studs from where it started. Pick which skills it uses in Skills -> Loadout (green tick = Auto).", 15, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 80) })
 		elseif settingsCategory == "Developer" then
 			UI.Text(list, "Only works in Studio or for the game's owner.", 13, T.TextSoft, "Semi")
 			local function devGrid(title, icon, color, buttons)
@@ -1414,7 +1810,7 @@ local function achValue(p, a)
 end
 
 function Panels.Quests(args)
-	local win = UI.Window("Quests", "Quests", UDim2.fromOffset(880, 600), T.Gold, "📜")
+	local win = UI.Window("Quests", "Quests", UDim2.fromOffset(880, 600), T.Gold, "📜", { fullscreen = true })
 	local tab = args and args.tab or "Daily"
 	local tabs = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 46), Parent = win.body })
 	local body = UI.Scroll(win.body, UDim2.new(1, 0, 1, -52))
@@ -1604,7 +2000,7 @@ end
 
 -- ===================== PETS =====================
 function Panels.Pets()
-	local win = UI.Window("Pets", "Sea Companions", UDim2.fromOffset(880, 580), T.Green, "🐾")
+	local win = UI.Window("Pets", "Sea Companions", UDim2.fromOffset(880, 580), T.Green, "🐾", { fullscreen = true })
 	local selected
 	local left = UI.Scroll(win.body, UDim2.new(0.5, -6, 1, 0))
 	local right = UI.Card(win.body, UDim2.new(0.5, -6, 1, 0))
@@ -1745,7 +2141,7 @@ end
 
 -- ===================== PEARL SHOP =====================
 function Panels.PearlShop()
-	local win = UI.Window("PearlShop", "Pearls", UDim2.fromOffset(820, 580), T.Ocean, PearlsCfg.Icon)
+	local win = UI.Window("PearlShop", "Shop", UDim2.fromOffset(820, 580), T.Ocean, "🛍️", { fullscreen = true })
 	local body = win.body
 	local function render()
 		clear(body)

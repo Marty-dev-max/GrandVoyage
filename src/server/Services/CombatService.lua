@@ -15,6 +15,10 @@ local lastAttack = {}
 local skillCd = {} -- player -> { skillId -> time }
 local lastHurt = {}
 
+local AnimClips = require(Shared.Config.AnimClips)
+-- ranged basic attacks: the shot flies this long after the release frame (matches VFX.Projectile durations)
+local SHOT_FLIGHT = { Slingshot = 0.18, StormBaton = 0.22, MedKit = 0.2 }
+local combos = {} -- player -> { n, last }
 local WeaponRange = { Knuckles = 9, Sword = 10, Shoes = 9, Hammer = 10, Slingshot = 48, StormBaton = 34, MedKit = 26 }
 
 function Combat.Init(registry)
@@ -173,6 +177,42 @@ local function hitTarget(attacker, target, mult, magic, fx)
 	end
 end
 
+-- a hit that lands on the attack animation's strike frame (damage used to land before the fist/blade got there)
+local function hitLater(delay, attacker, target, mult, magic)
+	task.delay(delay, function()
+		if not attacker.Parent or not alive(attacker) then
+			return
+		end
+		if target.kind == "mob" and target.mob.dead then
+			return
+		end
+		if target.kind == "player" and not alive(target.player) then
+			return
+		end
+		hitTarget(attacker, target, mult, magic)
+	end)
+end
+
+-- which combo hit this basic attack is (the clients play the same clip: it is sent in the FX)
+local function comboStep(player, wType)
+	local w = AnimClips.Weapons[wType] or AnimClips.Weapons.Knuckles
+	local c = combos[player] or { n = 0, last = 0 }
+	combos[player] = c
+	local now = os.clock()
+	c.n = (now - c.last < 1.2) and (c.n % #w.combo) + 1 or 1
+	c.last = now
+	local clip = AnimClips[w.combo[c.n]]
+	return c.n, clip and clip.strike or 0.12
+end
+
+-- the clip a skill plays (same choice as the client's CharAnim) and its strike time
+local function skillStrike(player, skill)
+	local w = AnimClips.Weapons[weaponType(player)] or {}
+	local name = w[skill.kind] or AnimClips.SkillKinds[skill.kind] or "Skill_Cast"
+	local clip = AnimClips[name]
+	return clip and clip.strike or 0.15
+end
+
 local function inRadiusTargets(attacker, pos, radius)
 	local list = {}
 	for _, mob in ipairs(R.MonsterService.InRadius(pos, radius)) do
@@ -241,8 +281,9 @@ local function setup()
 		lastAttack[player] = now
 		local magic = wType == "StormBaton"
 		R.WeaponService.Draw(player, wType)
-		Net.FX("BasicAttack", { from = root.Position, to = target.pos, weapon = wType, char = player.Character }, root.Position, 250)
-		hitTarget(player, target, 1, magic)
+		local n, strike = comboStep(player, wType)
+		Net.FX("BasicAttack", { from = root.Position, to = target.pos, weapon = wType, char = player.Character, combo = n }, root.Position, 250)
+		hitLater(strike + (SHOT_FLIGHT[wType] or 0), player, target, 1, magic)
 		return true
 	end, 0.2)
 
@@ -289,6 +330,7 @@ local function setup()
 		end
 		local kind = skill.kind
 		local fxData = { fx = skill.fx, from = root.Position, char = player.Character, skill = skill.id }
+		local strike = skillStrike(player, skill)
 
 		if kind == "Melee" or kind == "Ranged" then
 			local target = resolveTarget(player, data.target)
@@ -299,20 +341,12 @@ local function setup()
 				return false, "Too far away"
 			end
 			fxData.to = target.pos
-			hitTarget(player, target, mult, magic)
-			for i = 2, skill.hits or 1 do
-				task.delay(0.09 * (i - 1), function()
-					if target.kind ~= "mob" or not target.mob.dead then
-						hitTarget(player, target, mult, magic)
-					end
-				end)
+			local land = strike + (kind == "Ranged" and 0.2 or 0)
+			for i = 1, skill.hits or 1 do
+				hitLater(land + 0.09 * (i - 1), player, target, mult, magic)
 			end
 			if skill.id == "OniSlash" then
-				task.delay(0.15, function()
-					if target.kind ~= "mob" or not target.mob.dead then
-						hitTarget(player, target, mult * 0.5, magic)
-					end
-				end)
+				hitLater(land + 0.15, player, target, mult * 0.5, magic)
 			end
 		elseif kind == "Dash" then
 			-- dash toward the target (or straight ahead), hitting everything along the way
@@ -339,7 +373,7 @@ local function setup()
 					local key = tt.mob or tt.player
 					if key and not seen[key] then
 						seen[key] = true
-						hitTarget(player, tt, mult, magic)
+						hitLater(0.08 + step / 60, player, tt, mult, magic)
 					end
 				end
 			end
@@ -347,7 +381,7 @@ local function setup()
 			fxData.to = root.Position
 			fxData.radius = skill.radius
 			for _, t in ipairs(inRadiusTargets(player, root.Position, skill.radius)) do
-				hitTarget(player, t, mult, magic)
+				hitLater(strike, player, t, mult, magic)
 			end
 		elseif kind == "GroundAoE" then
 			local pos = typeof(data.pos) == "Vector3" and data.pos or nil
@@ -360,7 +394,7 @@ local function setup()
 			end
 			fxData.to = pos
 			fxData.radius = skill.radius
-			task.delay(0.25, function()
+			task.delay(math.max(0.25, strike), function()
 				for _, t in ipairs(inRadiusTargets(player, pos, skill.radius)) do
 					hitTarget(player, t, mult, magic)
 				end
@@ -414,6 +448,7 @@ function Combat.Start()
 		lastAttack[pl] = nil
 		skillCd[pl] = nil
 		lastHurt[pl] = nil
+		combos[pl] = nil
 	end)
 	-- HP/SP regen + buff expiry
 	task.spawn(function()

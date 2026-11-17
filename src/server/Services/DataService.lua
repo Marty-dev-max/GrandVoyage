@@ -31,6 +31,8 @@ local function template()
 		skills = { Bash = 1, FirstAid = 1 },
 		skillBar = { "Bash", "FirstAid" },
 		autoSkills = { Bash = true },
+		itemBar = { "MeatOnBone" }, -- quick item slots F1-F8 (item ids, "" = empty)
+		classBars = {}, -- classId -> the skill bar you had in that class (restored when you switch back)
 		beli = GameConfig.StartBeli,
 		inventory = {
 			{ uid = "starter_w", id = "Knuckles_Plain", qty = 1, refine = 0, cards = {} },

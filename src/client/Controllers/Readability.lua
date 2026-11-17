@@ -472,7 +472,7 @@ function R.Start()
 				ring("player", radius, color):PivotTo(CFrame.new(root.Position.X, y, root.Position.Z) * CFrame.Angles(0, os.clock() * 0.4, 0))
 				-- outer ring: how far Auto Battle / Tab look for the next monster
 				local searchColor = State.auto and Color3.fromRGB(110, 235, 140) or Color3.fromRGB(120, 210, 255)
-				ring("search", GameConfig.AutoBattle.SearchRadius, searchColor, 0.7):PivotTo(CFrame.new(root.Position.X, y + 0.05, root.Position.Z) * CFrame.Angles(0, -os.clock() * 0.15, 0))
+				ring("search", State.SearchRadius(), searchColor, 0.7):PivotTo(CFrame.new(root.Position.X, y + 0.05, root.Position.Z) * CFrame.Angles(0, -os.clock() * 0.15, 0))
 			else
 				hideRing("player")
 				hideRing("search")

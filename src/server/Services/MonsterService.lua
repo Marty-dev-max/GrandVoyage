@@ -271,7 +271,7 @@ function MS.Damage(mob, amount, player, crit)
 	Net.FX("Damage", { pos = mob.root.Position + Vector3.new(0, 3, 0), amount = amount, crit = crit, src = player and player.UserId or 0, model = mob.model }, mob.root.Position, 250)
 	if mob.walkTrack and os.clock() - (mob.hitAnimAt or 0) > 0.35 then
 		mob.hitAnimAt = os.clock()
-		task.delay(0.12, Anim.Play, mob.hum, "Mon_Hit", { fade = 0.03 })
+		Anim.Play(mob.hum, "Mon_Hit", { fade = 0.03 })
 	end
 	updateBar(mob)
 	if mob.hp <= 0 then

@@ -35,13 +35,9 @@ function FS.RemoveFruit(player)
 	if not p or not p.fruit then
 		return false
 	end
-	local bar = {}
-	for _, id in ipairs(p.skillBar) do
-		if not string.match(id, "^F_") then
-			table.insert(bar, id)
-		end
-	end
-	p.skillBar = bar
+	R.PlayerService.BarRemoveIf(p, function(id)
+		return string.match(id, "^F_") ~= nil
+	end)
 	p.fruit = nil
 	setAttrs(player, p)
 	R.PlayerService.Recompute(player)
@@ -64,9 +60,7 @@ end
 
 local function addToBar(p)
 	for _, s in ipairs(unlockedSkills(p)) do
-		if not table.find(p.skillBar, s.id) and #p.skillBar < 8 then
-			table.insert(p.skillBar, s.id)
-		end
+		R.PlayerService.BarAdd(p, s.id)
 	end
 end
 
@@ -327,13 +321,9 @@ function FS.Start()
 		R.InventoryService.RemoveUid(player, entry.uid, 1)
 		-- the old fruit's power is gone for good; strip its skills from the bar
 		if old then
-			local bar = {}
-			for _, id in ipairs(p.skillBar) do
-				if not string.match(id, "^F_") then
-					table.insert(bar, id)
-				end
-			end
-			p.skillBar = bar
+			R.PlayerService.BarRemoveIf(p, function(id)
+				return string.match(id, "^F_") ~= nil
+			end)
 		end
 		p.fruit = { id = f.id, mastery = 1, exp = 0 }
 		addToBar(p)

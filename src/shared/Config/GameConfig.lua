@@ -2,7 +2,7 @@
 return {
 	GameName = "Grand Voyage",
 	-- bump on every change: shown bottom-right in game and printed in Output, so you can tell which code is running
-	Version = "0.15.0",
+	Version = "0.16.0",
 	SagaName = "Azure East Saga",
 	DataStoreName = "GV_Player_v1",
 	GuildStoreName = "GV_Guild_v1",
@@ -98,9 +98,13 @@ return {
 
 	-- ===== Auto Battle =====
 	AutoBattle = {
-		SearchRadius = 90,
+		SearchRadius = 90, -- the default; each player can set their own between MinRadius and SearchRadius
+		MinRadius = 15,
 		LeashRadius = 160,
 	},
+	-- hotbar: 12 skill slots (keys 1-6, then 7 8 9 0 - =) and 8 quick item slots (F1-F8); empty slot = ""
+	SkillBarSize = 12,
+	ItemBarSize = 8,
 
 	-- ===== Swimming =====
 	-- You can swim, but only so far: run out of breath and the waves carry you back ashore. Ships are still the way

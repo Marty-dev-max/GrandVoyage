@@ -14,6 +14,62 @@ local Net = require(Shared.Modules.Net)
 local Classes = ClassesCfg.Classes
 local PS = {}
 local R
+local ItemDB = require(Shared.Modules.ItemDB)
+
+-- ===== skill bar (12 fixed slots, "" = empty) =====
+-- can this profile put this skill on its bar right now? (learned + its class, Common, or an unlocked fruit skill)
+local function usableSkill(p, id)
+	local sk = ClassesCfg.SkillById[id]
+	if not sk then
+		return R.FruitService.CanSlot(p, id) == true
+	end
+	if sk.fruit then
+		return R.FruitService.CanSlot(p, id) == true
+	end
+	return (p.skills[id] or 0) > 0 and (sk.class == p.class or sk.class == "Common")
+end
+PS.UsableSkill = usableSkill
+
+-- drop trailing empty slots (keeps the saved profile small; gaps in the middle stay where the player put them)
+local function trimBar(bar)
+	local n = #bar
+	while n > 0 and (bar[n] == "" or bar[n] == nil) do
+		bar[n] = nil
+		n -= 1
+	end
+	for i = 1, n do
+		bar[i] = bar[i] or ""
+	end
+	return bar
+end
+PS.TrimBar = trimBar
+
+-- put a skill in the first free slot (no-op if it is already on the bar or the bar is full)
+function PS.BarAdd(p, id)
+	if table.find(p.skillBar, id) then
+		return true
+	end
+	for i = 1, GameConfig.SkillBarSize do
+		if p.skillBar[i] == nil or p.skillBar[i] == "" then
+			for j = #p.skillBar + 1, i - 1 do
+				p.skillBar[j] = ""
+			end
+			p.skillBar[i] = id
+			return true
+		end
+	end
+	return false
+end
+
+-- empty every slot whose skill matches `drop(id)` (slots keep their positions)
+function PS.BarRemoveIf(p, drop)
+	for i, id in ipairs(p.skillBar) do
+		if id ~= "" and drop(id) then
+			p.skillBar[i] = ""
+		end
+	end
+	trimBar(p.skillBar)
+end
 local derived = {}
 local dirty = {}
 
@@ -119,6 +175,7 @@ local function sync(player)
 			stats = p.stats,
 			skills = p.skills,
 			skillBar = p.skillBar,
+			itemBar = p.itemBar,
 			autoSkills = p.autoSkills,
 			inventory = p.inventory,
 			equipment = p.equipment,
@@ -384,25 +441,46 @@ local function setupHandlers()
 		end
 		p.skillPoints -= 1
 		p.skills[skill.id] = lv + 1
-		if lv == 0 and #p.skillBar < 8 then
-			table.insert(p.skillBar, skill.id)
+		if lv == 0 then
+			PS.BarAdd(p, skill.id)
 		end
 		PS.MarkDirty(player)
 		return true
 	end, 0.05)
 
+	-- the whole bar, slot by slot ("" = empty slot); a skill may sit in one slot only
 	Net.Handle("SetSkillBar", function(player, data)
 		local p = PS.Profile(player)
-		local bar = {}
-		if type(data.bar) == "table" then
-			for i = 1, math.min(8, #data.bar) do
-				local id = data.bar[i]
-				if type(id) == "string" and (p.skills[id] or R.FruitService.CanSlot(p, id)) then
-					table.insert(bar, id)
-				end
+		if type(data.bar) ~= "table" then
+			return false
+		end
+		local bar, seen = {}, {}
+		for i = 1, GameConfig.SkillBarSize do
+			local id = data.bar[i]
+			local okId = type(id) == "string" and id ~= "" and not seen[id] and usableSkill(p, id)
+			bar[i] = okId and id or ""
+			if okId then
+				seen[id] = true
 			end
 		end
-		p.skillBar = bar
+		p.skillBar = trimBar(bar)
+		PS.MarkDirty(player)
+		return true
+	end)
+
+	-- quick item slots F1-F8: consumable item ids ("" = empty)
+	Net.Handle("SetItemBar", function(player, data)
+		local p = PS.Profile(player)
+		if type(data.bar) ~= "table" then
+			return false
+		end
+		local bar = {}
+		for i = 1, GameConfig.ItemBarSize do
+			local id = data.bar[i]
+			local def = type(id) == "string" and id ~= "" and ItemDB.Get(id)
+			bar[i] = (def and def.kind == "Consumable" and not def.special) and id or ""
+		end
+		p.itemBar = trimBar(bar)
 		PS.MarkDirty(player)
 		return true
 	end)
@@ -420,6 +498,10 @@ local function setupHandlers()
 		end
 		if tonumber(data.autoPotionPct) then
 			p.settings.autoPotionPct = math.clamp(math.floor(data.autoPotionPct), 0, 90)
+		end
+		if tonumber(data.autoRadius) then
+			local ab = GameConfig.AutoBattle
+			p.settings.autoRadius = math.clamp(math.floor(data.autoRadius), ab.MinRadius, ab.SearchRadius)
 		end
 		PS.MarkDirty(player)
 		return true
@@ -476,6 +558,7 @@ local function setupHandlers()
 		end
 		local _ = usedVoucher
 		-- save the current class, load (or start) the target class
+		local oldClass = p.class
 		p.classProgress[p.class] = { jobLevel = p.jobLevel, jobExp = p.jobExp }
 		local saved = p.classProgress[data.class]
 		local fresh = saved == nil
@@ -495,20 +578,20 @@ local function setupHandlers()
 				p.equipment.weapon = nil
 			end
 		end
-		-- skills of other classes stay learned but cannot be used: drop them from the bar
+		-- each class keeps its own bar: save the old one, restore (or build) the new one. Skills of other classes stay
+		-- learned but cannot be used here; Common and fruit skills come along. Every learned skill of the class gets a slot.
+		p.classBars = p.classBars or {}
+		p.classBars[oldClass] = table.clone(p.skillBar)
 		local bar = {}
-		for _, id in ipairs(p.skillBar) do
-			local sk = ClassesCfg.SkillById[id]
-			if sk and (sk.class == p.class or sk.class == "Common") then
-				table.insert(bar, id)
-			end
+		for i, id in ipairs(p.classBars[p.class] or p.skillBar) do
+			bar[i] = (id ~= "" and usableSkill(p, id)) and id or ""
 		end
+		p.skillBar = trimBar(bar)
 		for _, sk in ipairs(target.skills) do
-			if (p.skills[sk.id] or 0) > 0 and not table.find(bar, sk.id) and #bar < 8 then
-				table.insert(bar, sk.id)
+			if (p.skills[sk.id] or 0) > 0 then
+				PS.BarAdd(p, sk.id)
 			end
 		end
-		p.skillBar = bar
 		PS.Recompute(player)
 		local root = PS.Root(player)
 		if root then

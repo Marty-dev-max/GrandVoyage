@@ -606,7 +606,11 @@ local function refreshDim()
 end
 -- the dim backdrop only blocks clicks: windows close with their red X (or Esc), never by a stray click (owner request)
 
-function UI.Window(id, title, size, color, icon)
+-- windows that can fill the screen (opts.fullscreen): they open full screen and a button next to the X shrinks them
+-- back to a normal window (and back); the choice is remembered per window for this session
+UI.FullPref = {}
+function UI.Window(id, title, size, color, icon, opts)
+	opts = opts or {}
 	if openWindows[id] then
 		openWindows[id]:Destroy()
 	end
@@ -692,7 +696,64 @@ function UI.Window(id, title, size, color, icon)
 	UI.Stroke(close, T.Edge, 3)
 	UI.Tactile(close)
 	local body = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(16, 58), Size = UDim2.new(1, -32, 1, -72), Parent = frame, ZIndex = 21 })
-	local win = { frame = frame, body = body, id = id, header = header }
+	local win = { frame = frame, body = body, id = id, header = header, resized = Instance.new("BindableEvent") }
+	local windowSize = size or UDim2.fromOffset(560, 520)
+	local restPos = UDim2.fromScale(0.5, 0.53)
+	if opts.fullscreen then
+		if UI.FullPref[id] == nil then
+			UI.FullPref[id] = true
+		end
+		local maxBtn = New("TextButton", {
+			AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, -42, 0, -12),
+			Size = UDim2.fromOffset(46, 46),
+			BackgroundColor3 = T.Gold,
+			Text = "",
+			AutoButtonColor = false,
+			ZIndex = 24,
+			Parent = header,
+		})
+		UI.Corner(maxBtn, 8)
+		UI.Stroke(maxBtn, T.Edge, 3)
+		UI.Tactile(maxBtn)
+		-- drawn icon: one big square = "make it full screen", two stacked squares = "back to a window"
+		local big = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(22, 18), BackgroundTransparency = 1, ZIndex = 25, Parent = maxBtn })
+		UI.Stroke(big, T.Edge, 3)
+		local back = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 4, 0.5, -4), Size = UDim2.fromOffset(16, 13), BackgroundTransparency = 1, ZIndex = 25, Parent = maxBtn })
+		UI.Stroke(back, T.Edge, 3)
+		local function apply(animate)
+			local full = UI.FullPref[id]
+			-- full screen stays below Roblox's own top-bar buttons (the header tab pokes 12px above the frame)
+			local inset = 0
+			pcall(function()
+				inset = game:GetService("GuiService").TopbarInset.Max.Y / math.max(0.01, rootScale.Scale)
+			end)
+			local top = math.max(inset, 44) + 18
+			local target = full and UDim2.new(1, -36, 1, -(top + 14)) or windowSize
+			restPos = full and UDim2.new(0.5, 0, 0.5, (top - 14) / 2) or UDim2.fromScale(0.5, 0.53)
+			win.full = full
+			big.Size = full and UDim2.fromOffset(16, 13) or UDim2.fromOffset(22, 18)
+			big.Position = full and UDim2.new(0.5, -3, 0.5, 3) or UDim2.fromScale(0.5, 0.5)
+			back.Visible = full
+			if animate then
+				Tween(frame, 0.22, { Size = target, Position = restPos })
+				task.delay(0.24, function()
+					win.resized:Fire(full)
+				end)
+			else
+				frame.Size = target
+			end
+		end
+		apply(false)
+		maxBtn.Activated:Connect(function()
+			UI.FullPref[id] = not UI.FullPref[id]
+			apply(true)
+		end)
+		UI.Tooltip(maxBtn, function()
+			return UI.FullPref[id] and "Shrink to a window" or "Full screen", T.Gold
+		end)
+		win.maxBtn = maxBtn
+	end
 	function win:Destroy()
 		if openWindows[id] == win then
 			openWindows[id] = nil
@@ -700,14 +761,15 @@ function UI.Window(id, title, size, color, icon)
 			refreshDim()
 		end
 		frame:Destroy()
+		win.resized:Destroy()
 	end
 	close.Activated:Connect(function()
 		win:Destroy()
 	end)
 	local sc = New("UIScale", { Scale = 0.8, Parent = frame })
-	frame.Position = UDim2.fromScale(0.5, 0.62)
+	frame.Position = restPos + UDim2.fromScale(0, 0.09)
 	Tween(sc, 0.3, { Scale = 1 }, Enum.EasingStyle.Back)
-	Tween(frame, 0.3, { Position = UDim2.fromScale(0.5, 0.53) }, Enum.EasingStyle.Back)
+	Tween(frame, 0.3, { Position = restPos }, Enum.EasingStyle.Back)
 	openWindows[id] = win
 	Audio.Play("UIOpen")
 	refreshDim()

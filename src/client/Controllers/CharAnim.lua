@@ -132,9 +132,12 @@ function CharAnim.Start()
 		if kind == "BasicAttack" and mine then
 			local w = Clips.Weapons[weaponOf(d.char, d.weapon)] or Clips.Weapons[d.weapon or ""] or Clips.Weapons.Knuckles
 			local list = w.combo
-			combo.n = (os.clock() - combo.last < 1.2) and (combo.n % #list) + 1 or 1
+			-- the server says which hit of the combo this is (its damage lands on that clip's strike frame)
+			combo.n = tonumber(d.combo) or ((os.clock() - combo.last < 1.2) and (combo.n % #list) + 1 or 1)
+			combo.n = math.clamp(combo.n, 1, #list)
 			combo.last = os.clock()
 			action, actionAt = play(list[combo.n]), os.clock()
+			hitstop(0.05)
 		elseif kind == "Skill" and mine then
 			local sk = ClassesCfg.SkillById[d.skill or ""]
 			local k = sk and sk.kind or ""
@@ -145,8 +148,8 @@ function CharAnim.Start()
 				play("Hurt", { fade = 0.03 })
 				addShake(0.35)
 			elseif d.src == player.UserId then
-				hitstop(d.crit and 0.09 or 0.05)
-				task.delay(0.1, addShake, d.crit and 0.55 or 0.18)
+				-- damage now arrives on the strike frame: just the shake (the hitstop already ran on the swing)
+				addShake(d.crit and 0.55 or 0.18)
 			end
 		end
 	end)

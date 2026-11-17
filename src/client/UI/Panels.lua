@@ -2807,7 +2807,7 @@ function Panels.Pets()
 		bar.Size = UDim2.new(1, -90, 1, 0)
 		UI.Text(top, #pets .. "/" .. PetsCfg.MaxPets, 18, T.Text, "Number", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 6), Size = UDim2.fromOffset(80, 24), TextXAlignment = Enum.TextXAlignment.Right })
 		if #pets == 0 then
-			local tip = UI.Text(left, "No companions yet.\n• Hatch eggs from chests (or the Shop)\n• Buy Sea Bait at the General Store, weaken a Beach Crab or Wild Boar below 35% HP, then press 🪤 Capture", 14, T.TextSoft, "Semi", { Size = UDim2.fromOffset(420, 90) })
+			local tip = UI.Text(left, "No companions yet.\n• Hatch eggs from chests (or the Shop)\n• Buy Sea Bait at the General Store, weaken a Wild Boar below 35% HP, then press 🪤 Capture", 14, T.TextSoft, "Semi", { Size = UDim2.fromOffset(420, 90) })
 			local _ = tip
 		end
 		local order = {}

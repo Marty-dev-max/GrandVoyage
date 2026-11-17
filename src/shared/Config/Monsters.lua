@@ -21,12 +21,14 @@ local function mob(id, def)
 end
 
 -- Daybreak Island (1-10)
-mob("BeachCrab", { name = "Beach Crab", level = 1, hp = 60, atk = 8, def = 2, exp = 12, jobExp = 8, beli = { 5, 12 },
-	style = { shape = "crab", color = Color3.fromRGB(255, 110, 90), scale = 1 },
-	drops = { { "CrabShell", 0.6, 1, 2 }, { "MeatOnBone", 0.15, 1, 1 } } })
-mob("ForestMonkey", { name = "Forest Monkey", level = 4, hp = 140, atk = 16, def = 4, exp = 30, jobExp = 20, beli = { 10, 25 },
+-- Story order from the jungle camp: Forest Monkey (1) -> Jungle Tiger (4) -> Wild Boar (6) -> Mountain Bandit (8)
+mob("ForestMonkey", { name = "Forest Monkey", level = 1, hp = 60, atk = 8, def = 2, exp = 12, jobExp = 8, beli = { 5, 12 },
 	style = { shape = "monkey", color = Color3.fromRGB(170, 110, 70), scale = 1 },
-	drops = { { "MonkeyFur", 0.5, 1, 2 }, { "Bandana", 0.02, 1, 1 } } })
+	-- monkeys hoard shells stolen from the shore (Crab Shell is the Hermit companion's evolution material)
+	drops = { { "MonkeyFur", 0.6, 1, 2 }, { "CrabShell", 0.2, 1, 1 }, { "MeatOnBone", 0.15, 1, 1 }, { "Bandana", 0.02, 1, 1 } } })
+mob("JungleTiger", { name = "Jungle Tiger", level = 4, hp = 150, atk = 17, def = 4, exp = 32, jobExp = 22, beli = { 10, 25 },
+	style = { shape = "cat", color = Color3.fromRGB(250, 160, 60), scale = 1.1 }, moveSpeed = 16,
+	drops = { { "TigerPelt", 0.5, 1, 2 }, { "MeatOnBone", 0.2, 1, 1 } } })
 mob("WildBoar", { name = "Wild Boar", level = 6, hp = 230, atk = 24, def = 8, exp = 50, jobExp = 34, beli = { 15, 35 },
 	style = { shape = "boar", color = Color3.fromRGB(140, 95, 75), scale = 1.2 }, aggro = true,
 	drops = { { "BoarTusk", 0.5, 1, 2 }, { "MeatOnBone", 0.3, 1, 2 } } })

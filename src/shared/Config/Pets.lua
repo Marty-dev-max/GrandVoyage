@@ -8,7 +8,7 @@ P.Species = {
 	{
 		id = "Hermit", rarity = "Common", icon = "🦀", shape = "crab", color = Color3.fromRGB(240, 120, 90), accent = Color3.fromRGB(230, 200, 150),
 		stages = { "Pinchy", "Shellguard", "Fortress Crab" }, bonus = { defPct = { 0.04, 0.08, 0.14 } }, bonusText = "DEF",
-		capture = { monster = "BeachCrab", chance = 0.35 }, material = "CrabShell",
+		material = "CrabShell", -- eggs only since Beach Crabs left Daybreak (v0.22); shells drop from Forest Monkeys
 	},
 	{
 		id = "Boarlet", rarity = "Uncommon", icon = "🐗", shape = "boar", color = Color3.fromRGB(150, 100, 70), accent = Color3.fromRGB(240, 230, 210),

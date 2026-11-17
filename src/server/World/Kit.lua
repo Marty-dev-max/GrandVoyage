@@ -6,8 +6,31 @@ local CollectionService = game:GetService("CollectionService")
 
 local Kit = {}
 Kit.parent = nil
-Kit.rng = Random.new(1234)
+-- Kit.rng is a thin proxy so one island can be built with its own stream (Kit.WithRng) without shifting the
+-- random layout of every island built after it.
+local rngInner = Random.new(1234)
+local rngProxy = {}
+function rngProxy:NextNumber(a, b)
+	if a == nil then
+		return rngInner:NextNumber()
+	end
+	return rngInner:NextNumber(a, b)
+end
+function rngProxy:NextInteger(a, b)
+	return rngInner:NextInteger(a, b)
+end
+Kit.rng = rngProxy
 local rng = Kit.rng
+
+function Kit.WithRng(r, fn)
+	local prev = rngInner
+	rngInner = r
+	local ok, err = pcall(fn)
+	rngInner = prev
+	if not ok then
+		error(err, 0)
+	end
+end
 
 local M = Enum.Material
 Kit.Colors = {
@@ -422,6 +445,31 @@ function Kit.House(cf, w, d, wall, roof, opts)
 						end
 					end
 				end
+			end
+		end
+	end
+	-- half-timbering (opts.timber): studs between the windows, a sill rail per floor and corner braces
+	if opts.timber then
+		local cols = math.max(1, math.floor(w / 7))
+		for f = 1, floors do
+			local y = 1.2 + fh * (f - 1)
+			for _, side in ipairs({ -1, 1 }) do
+				local zc = side * (d / 2 + 0.16)
+				for i = 1, cols - 1 do
+					local x = -w / 2 + w * i / cols
+					P(Vector3.new(0.6, fh, 0.25), trim, cf * CFrame.new(x, y + fh / 2, zc), decor({ material = M.Wood, collide = false }))
+				end
+				P(Vector3.new(w, 0.45, 0.25), trim, cf * CFrame.new(0, y + fh * 0.28, zc), decor({ material = M.Wood, collide = false }))
+				for _, sx in ipairs({ -1, 1 }) do
+					local len = math.sqrt(2.6 ^ 2 + (fh * 0.62) ^ 2)
+					local ang = math.atan2(fh * 0.62, 2.6)
+					P(Vector3.new(len, 0.45, 0.25), trim, cf * CFrame.new(sx * (w / 2 - 1.5), y + fh * 0.6, zc) * CFrame.Angles(0, 0, sx * ang), decor({ material = M.Wood, collide = false }))
+				end
+			end
+			for _, sx in ipairs({ -1, 1 }) do
+				local xc = sx * (w / 2 + 0.16)
+				P(Vector3.new(0.25, 0.45, d), trim, cf * CFrame.new(xc, y + fh * 0.28, 0), decor({ material = M.Wood, collide = false }))
+				P(Vector3.new(0.25, fh, 0.6), trim, cf * CFrame.new(xc, y + fh / 2, 0), decor({ material = M.Wood, collide = false }))
 			end
 		end
 	end

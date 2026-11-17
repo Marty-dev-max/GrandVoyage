@@ -11,7 +11,7 @@
 
 | # | Island | X | Levels | MVP boss | Highlights |
 |---|---|---|---|---|---|
-| 1 | Daybreak Island (Windmill Village) | 0 | 1–10 | Bay Serpent (sea arena) | 3 windmills, crop fields, pine forest, Grey Scrapyard, Sunrise Tavern, Job Master |
+| 1 | Daybreak Island (Windmill Village) | 0 | 1–10 | Bay Serpent (sea arena) | jungle camp start, Forest Monkey 1 → Jungle Tiger 4 → Wild Boar 6 → Mountain Bandit 8, 3 windmills on hills, plaza + fountain, lighthouse, 3-dock harbor (layout: `docs/Daybreak.md`) |
 | 2 | Conch Bay (Marine Outpost 135) | 1800 | 10–20 | Axe-Arm Captain | Walled marine compound, tower with a giant axe-captain statue, training yard |
 | 3 | Marmalade Town | 3600 | 20–30 | Captain Confetti | Orange-roofed empty streets, Big Top Pub with a circus tent on the roof, giant dog statue, rubble, bunting; dungeon *Big Top Nightmare* |
 | 4 | Honeyslope Village | 5400 | 30–40 | Silent Claw Captain | Hilltop manor on a plateau, the long slope, sheep pen, north cliffs, lookout tree |
@@ -182,7 +182,7 @@ items held in escrow and returned when the stall closes or you leave.
   Robux Pearls (developer products, ids in config) are shop-only and granted through an idempotent `ProcessReceipt`.
 - **Sea Companions** (`Config/Pets.lua`, `PetService`, client `Controllers/Pets`): Hermit, Boarlet, Gull, Puffer, Lantern,
   Leviathan, 3 stages each (evolve at Lv15/35 with Doubloons + a material). Get them by hatching Sea/Golden Eggs (chests,
-  Pearl Shop; odds shown in game) or by taming: Sea Bait on a Beach Crab, Wild Boar or Leviathan below 35% HP (🪤 Capture
+  Pearl Shop; odds shown in game) or by taming: Sea Bait on a Wild Boar or Leviathan below 35% HP (🪤 Capture
   button). The active pet follows you, attacks what you hit, earns 50% of your Base EXP and gives a stage-scaled bonus.
 
 ## 13. Daily quests, achievements and titles
@@ -192,7 +192,7 @@ items held in escrow and returned when the stall closes or you leave.
   Each pays Doubloons (300 x Lv^0.85), 10% of a level's EXP and 10 Pearls; claiming all 3 adds a bonus (25 Pearls + 3 Sea Bait).
 - **Achievements** (`Config/Achievements.lua`): 23 one-time goals (hunting, MVPs, ship sinks, exploring, chests, fruit
   mastery, pets, refining, story, levels, 7 daily streak days, 1M Doubloons). They pay Pearls outside the daily cap (they
-  are bounded) and some unlock a **title** shown above your head («Crab Crusher», «Legend of the Azure East», ...).
+  are bounded) and some unlock a **title** shown above your head («Tiger Tamer», «Legend of the Azure East», ...).
 - Every progress event goes through `QuestService.Event`, which forwards to `ProgressService` (one funnel).
 - UI: the **Quests** window (📜, key J) with Story / Daily / Achievements tabs and Claim buttons.
 

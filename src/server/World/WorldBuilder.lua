@@ -17,6 +17,7 @@ local ChestsCfg = require(Shared.Config.Chests)
 local Monsters = require(Shared.Config.Monsters)
 local Kit = require(script.Parent.Kit)
 local Layouts = require(script.Parent.IslandLayouts)
+local Daybreak = require(script.Parent.Daybreak)
 
 local WB = {}
 local R
@@ -49,13 +50,15 @@ local function foam(pos, diameter)
 end
 
 -- ===== NPCs =====
-local function npc(ctx, role, title, color, hat, x, z, extra)
+-- face (optional): local X/Z point the NPC looks at (default: the island center)
+local function npc(ctx, role, title, color, hat, x, z, extra, face)
 	local island = ctx.island
 	local ModelFactory = require(script.Parent.ModelFactory)
 	local m = ModelFactory.NPC(title, color, hat)
 	local pos = Vector3.new(island.x + x, 0, (island.z or 0) + z)
 	local ground = island.floating and 8 or 7.6 -- fixed so the map can be baked outside Studio
-	m:PivotTo(CFrame.lookAt(Vector3.new(pos.X, ground + 2.6, pos.Z), Vector3.new(island.x, ground + 2.6, 0)))
+	local look = face and Vector3.new(island.x + face.X, ground + 2.6, (island.z or 0) + face.Y) or Vector3.new(island.x, ground + 2.6, 0)
+	m:PivotTo(CFrame.lookAt(Vector3.new(pos.X, ground + 2.6, pos.Z), look))
 	m:SetAttribute("Role", role)
 	m:SetAttribute("Island", island.id)
 	if extra then
@@ -354,7 +357,9 @@ local function placeChests(ctx)
 	end
 end
 
-local function buildIsland(island)
+local addBannerAndArena
+
+local function buildIslandGeneric(island)
 	local f = folderOf(island.id, Kit.parent)
 	local prev = Kit.parent
 	Kit.parent = f
@@ -374,7 +379,13 @@ local function buildIsland(island)
 	local spawnPart = P(Vector3.new(8, 1, 8), Color3.fromRGB(255, 240, 160), CFrame.new(c + Vector3.new(r * 0.45, g + 0.2, 20)), { name = "SpawnPoint", material = M.Neon, transparency = 0.5, collide = false })
 	spawnPart:SetAttribute("Island", island.id)
 	CollectionService:AddTag(spawnPart, "IslandSpawn")
-	-- floating island title
+	addBannerAndArena(island, c)
+	Kit.parent = prev
+	return f
+end
+
+-- floating island title + the boss arena at sea
+function addBannerAndArena(island, c)
 	local banner = P(Vector3.new(1, 1, 1), Color3.new(1, 1, 1), CFrame.new(c + Vector3.new(0, 95, 0)), { transparency = 1, collide = false })
 	banner:SetAttribute("IslandBanner", island.id)
 	local bb = Instance.new("BillboardGui")
@@ -433,8 +444,28 @@ local function buildIsland(island)
 		bt.TextColor3 = Color3.fromRGB(255, 110, 110)
 		bt.Parent = bbb
 	end
-	Kit.parent = prev
-	return f
+end
+
+local function buildIsland(island)
+	if island.layout == "Daybreak" then
+		-- Advance the shared Kit random stream exactly as the previous Daybreak did (built into a detached model
+		-- that is thrown away), so every island after it keeps its layout; then build the new Daybreak on its own stream.
+		local scratch = Instance.new("Model")
+		local prev = Kit.parent
+		Kit.parent = scratch
+		buildIslandGeneric(Daybreak.LegacyIsland(island))
+		Kit.parent = prev
+		scratch:Destroy()
+		local f
+		Kit.WithRng(Random.new(20261117), function()
+			f = Daybreak.Build(island, {
+				folderOf = folderOf, npc = npc, makeCtx = makeCtx, foam = foam, chest = chestModel,
+				shipyard = buildShipyard, banner = addBannerAndArena,
+			})
+		end)
+		return f
+	end
+	return buildIslandGeneric(island)
 end
 
 local function buildForts()
@@ -622,7 +653,7 @@ end
 -- away and rebuilt from code at server start (so the owner's published place updates through Rojo too).
 -- Hand-built content made in Studio goes in workspace.Handmade (never touched by rebuilds). Kit props placed there
 -- (tagged EnvProp/EnvPart) are dressed with the stylized meshes like the generated ones.
-WB.WORLD_VERSION = 5
+WB.WORLD_VERSION = 6
 
 function WB.Build()
 	if not workspace:FindFirstChild("Handmade") then

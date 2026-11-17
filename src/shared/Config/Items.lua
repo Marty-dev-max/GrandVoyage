@@ -91,6 +91,7 @@ local mats = {
 	{ "TreasureWood", "Treasure-Tree Wood", 15000, "Legendary" },
 	{ "CrabShell", "Crab Shell", 10, "Common" },
 	{ "MonkeyFur", "Monkey Fur", 12, "Common" },
+	{ "TigerPelt", "Tiger Pelt", 16, "Common" },
 	{ "BoarTusk", "Boar Tusk", 15, "Common" },
 	{ "MarineBadge", "Marine Badge", 40, "Common" },
 	{ "ClownPaint", "Clown Paint", 60, "Common" },
@@ -114,7 +115,7 @@ end
 -- ===== Pets: eggs and bait =====
 add("SeaEgg", { name = "Sea Egg", desc = "Hatch it from your Bag. Hermit 40% / Boarlet 35% / Gull 20% / Puffer 5%.", kind = "Egg", rarity = "Uncommon", price = 2000, icon = "🥚" })
 add("GoldenEgg", { name = "Golden Egg", desc = "Hatch it from your Bag. Gull 40% / Puffer 35% / Lantern 22% / Leviathan 3%.", kind = "Egg", rarity = "Epic", price = 20000, icon = "🪺" })
-add("SeaBait", { name = "Sea Bait", desc = "Throw it at a weakened Beach Crab, Wild Boar or Leviathan (below 35% HP) to tame it.", kind = "Consumable", special = true, price = 300, stack = true, rarity = "Common", icon = "🪤" })
+add("SeaBait", { name = "Sea Bait", desc = "Throw it at a weakened Wild Boar or Leviathan (below 35% HP) to tame it.", kind = "Consumable", special = true, price = 300, stack = true, rarity = "Common", icon = "🪤" })
 
 -- ===== Ammo (slingshot classes, Config/Ammo) =====
 local Ammo = require(script.Parent.Ammo)

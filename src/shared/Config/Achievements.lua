@@ -8,7 +8,7 @@ A.List = {
 	{ id = "Hunter1", name = "First Blood", desc = "Defeat 100 monsters", counter = "Kill", count = 100, pearls = 10, icon = "⚔️" },
 	{ id = "Hunter2", name = "Veteran Hunter", desc = "Defeat 1,000 monsters", counter = "Kill", count = 1000, pearls = 30, icon = "⚔️", title = "Veteran Hunter" },
 	{ id = "Hunter3", name = "Legendary Hunter", desc = "Defeat 10,000 monsters", counter = "Kill", count = 10000, pearls = 100, icon = "⚔️", title = "Legendary Hunter", rarity = "Legendary" },
-	{ id = "Crabs", name = "Crab Crusher", desc = "Defeat 200 Beach Crabs", counter = "Kill:BeachCrab", count = 200, pearls = 10, icon = "🦀", title = "Crab Crusher" },
+	{ id = "Tigers", name = "Tiger Tamer", desc = "Defeat 200 Jungle Tigers", counter = "Kill:JungleTiger", count = 200, pearls = 10, icon = "🐯", title = "Tiger Tamer" },
 	{ id = "Boss1", name = "MVP!", desc = "Win an MVP boss fight", counter = "Boss", count = 1, pearls = 20, icon = "👑" },
 	{ id = "Boss2", name = "Boss Slayer", desc = "Win 25 MVP boss fights", counter = "Boss", count = 25, pearls = 80, icon = "👑", title = "Boss Slayer", rarity = "Epic" },
 	-- sea

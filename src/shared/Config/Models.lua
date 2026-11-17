@@ -83,6 +83,7 @@ return {
 	Mon_FortCore = 136252826518966,
 	Mon_GuardWolf = 99344225903535,
 	Mon_HypnoThug = 103944923229910,
+	Mon_JungleTiger = 113220429329627,
 	Mon_Leviathan = 113301614396750,
 	Mon_MarineElite = 96767183323644,
 	Mon_MarineRecruit = 111757228106955,

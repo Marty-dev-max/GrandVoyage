@@ -11,12 +11,17 @@ local Islands = {
 		levels = { 1, 10 },
 		palette = { sand = Color3.fromRGB(255, 228, 164), grass = Color3.fromRGB(124, 214, 92), dirt = Color3.fromRGB(160, 108, 70), accent = Color3.fromRGB(232, 96, 72), wall = Color3.fromRGB(255, 244, 222) },
 		theme = "Windmill",
+		-- hand-laid layout in World/Daybreak.lua (jungle camp in the west, windmill village, harbor in the east)
+		layout = "Daybreak",
 		townRadius = 90,
+		town = Vector2.new(60, 0), -- plaza center (offset from the island center)
+		plants = 260, -- denser ground plants (jungle floor)
+		-- story order from the jungle camp: monkeys -> tigers -> boars -> bandits
 		spawns = {
-			{ offset = Vector2.new(-120, 115), radius = 42, monster = "BeachCrab", count = 6 },
-			{ offset = Vector2.new(115, 120), radius = 38, monster = "ForestMonkey", count = 5 },
-			{ offset = Vector2.new(-110, -130), radius = 42, monster = "WildBoar", count = 5 },
-			{ offset = Vector2.new(70, -150), radius = 34, monster = "MountainBandit", count = 4 },
+			{ offset = Vector2.new(-150, 88), radius = 26, monster = "ForestMonkey", count = 6, area = "Monkey Grove" },
+			{ offset = Vector2.new(-145, -100), radius = 28, monster = "JungleTiger", count = 5, area = "Tiger Den" },
+			{ offset = Vector2.new(75, -155), radius = 30, monster = "WildBoar", count = 5, area = "Boar Meadow" },
+			{ offset = Vector2.new(-27, -100), radius = 17, monster = "MountainBandit", count = 5, area = "Bandit Hill" },
 		},
 		boss = { id = "BaySerpent", offset = Vector2.new(0, 340), respawn = 20 * 60, atSea = true },
 	},

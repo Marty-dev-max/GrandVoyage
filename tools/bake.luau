@@ -45,7 +45,7 @@ local function req(mod)
 	if cache[key] then return cache[key] end
 	local env = setmetatable({ script = mod, require = req, game = gameProxy, workspace = ws,
 		Vector3 = roblox.Vector3, Vector2 = roblox.Vector2, Color3 = roblox.Color3, CFrame = roblox.CFrame,
-		UDim2 = roblox.UDim2, UDim = roblox.UDim, Enum = roblox.Enum, Instance = roblox.Instance, Random = { new = function(seed) math.randomseed(seed) return { NextNumber = function(_, a, b) a = a or 0; b = b or 1; return a + math.random() * (b - a) end, NextInteger = function(_, a, b) return math.random(a, b) end } end },
+		UDim2 = roblox.UDim2, UDim = roblox.UDim, Enum = roblox.Enum, Instance = roblox.Instance, Random = { new = function(seed) local s = (math.floor(math.abs(seed or 1)) % 2147483646) + 1; local function nxt() s = (s * 48271) % 2147483647; return s / 2147483647 end; return { NextNumber = function(_, a, b) a = a or 0; b = b or 1; return a + nxt() * (b - a) end, NextInteger = function(_, a, b) return a + math.min(b - a, math.floor(nxt() * (b - a + 1))) end } end },
 		Font = roblox.Font,
 		ColorSequence = roblox.ColorSequence, NumberSequence = roblox.NumberSequence, NumberSequenceKeypoint = roblox.NumberSequenceKeypoint,
 		NumberRange = roblox.NumberRange, PhysicalProperties = roblox.PhysicalProperties }, { __index = getfenv() })

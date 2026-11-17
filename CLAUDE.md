@@ -154,6 +154,13 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   monster pops out of the frame, stars, RGB split from Mythic; intensity and pitch scale with rarity, tap skips).
 - Style meter = vertical tube middle-right (left of the menu column; `UI.PlaceStyleMeter` from HUD.Layout), liquid on a
   spring, letter rides the level. The UI harness pumps `task.wait` loops (`pump`) to play the card reveal through.
+- Daybreak (v0.22) is hand-laid in `World/Daybreak.lua` (island `layout = "Daybreak"`), layout spec + previews in
+  `docs/Daybreak.md`: jungle camp spawn (west) -> Monkey Grove Lv1 -> Tiger Den Lv4 -> winding trail -> plaza village
+  (Job Master) -> Boar Meadow Lv6 -> Bandit Hill Lv8 -> 3-dock harbor (east). Beach Crabs were removed (Hermit = eggs only).
+  To keep every other island identical, WorldBuilder burns the old Daybreak generation into a detached model to
+  advance the shared `Kit.rng`, then builds Daybreak inside `Kit.WithRng`. Never reorder rng calls of other islands.
+  Preview any island: `lune run tools/export_island.luau build/GrandVoyage.rbxl <IslandId> x.json`, then
+  `python tools/blender/render_island.py -- x.json assets/models3d /abs/out` (Cycles; Eevee needs EGL).
 - Client controllers start through the protected `start()` in `init.client.lua` (core UI first, visuals in parallel):
   a controller that errors or yields must never block the others (it hid the quest tracker in v0.13.0).
 - Windows close only with their red X or Esc; the dim backdrop just blocks clicks (owner request).

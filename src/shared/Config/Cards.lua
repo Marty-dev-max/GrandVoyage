@@ -9,8 +9,8 @@ local function card(monster, slot, bonus, desc, rarity)
 	C[id] = { id = id, monster = monster, slot = slot, bonus = bonus, desc = desc, rarity = rarity or "Epic" }
 end
 
-card("BeachCrab", "armor", { def = 4, maxHp = 50 }, "DEF +4, Max HP +50", "Rare")
 card("ForestMonkey", "accessory", { agi = 2, flee = 5 }, "AGI +2, FLEE +5", "Rare")
+card("JungleTiger", "armor", { str = 1, def = 3, maxHp = 50 }, "STR +1, DEF +3, Max HP +50", "Rare")
 card("WildBoar", "weapon", { str = 2, atk = 6 }, "STR +2, ATK +6", "Rare")
 card("MountainBandit", "weapon", { atk = 10, crit = 2 }, "ATK +10, CRIT +2", "Rare")
 card("MarineRecruit", "armor", { vit = 2, defPct = 0.03 }, "VIT +2, DEF +3%")

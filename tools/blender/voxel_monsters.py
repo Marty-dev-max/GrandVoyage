@@ -258,8 +258,19 @@ def crab(c):
     return g
 
 
+def paint(g, d, color, where=None):
+    """recolor voxels that are already filled (keeps their part)"""
+    m = (d <= 0) & g.fill
+    if where is not None:
+        m &= where
+    g.col[m] = np.array(color, np.float32) * g.noise(0.03)[m][..., None]
+
+
 def quadruped(c, kind):
-    """boar / wolf / lion / cat on four legs"""
+    """boar / wolf / lion / cat / tiger on four legs"""
+    big = kind == "tiger"
+    if big:
+        kind = "cat"
     g = Grid(40, 64, 46)
     P = Painter(g)
     cx = 20
@@ -301,7 +312,7 @@ def quadruped(c, kind):
         ear = 3.2 if kind != "lion" else 1.8
         for sx in (-1, 1):
             g.add(g.d_box((cx + sx * 4.4, hy + 1.5, hz + 8 + ear * 0.4), (1.8, 1.2, ear)), P.col(dark))
-        eyes(P, cx, hy - 7.9, hz + 2.6, gap=3.4, angry=True, glow=rgb(255, 210, 60) if kind == "cat" else None)
+        eyes(P, cx, hy - 7.9, hz + 2.6, gap=3.4, angry=True, glow=rgb(255, 210, 60) if kind == "cat" and not big else None)
         if kind == "lion":
             # mane: chunky ring of dark-orange tufts around the head
             for k in range(22):
@@ -317,6 +328,30 @@ def quadruped(c, kind):
         P.tube([(cx, 48, body_z + 3), (cx, 55, body_z + 7), (cx + (3 if kind == "cat" else 0), 60, body_z + (14 if kind == "cat" else 6))], [2.2 if kind == "wolf" else 1.2, 1.8, 1.0], tail_c)
         if kind == "lion":
             P.ball((cx, 60.5, body_z + 6), 2.4, rgb(150, 70, 30))
+    if big:
+        # tiger: black stripes over the back, flanks, legs, head and tail; white muzzle, cheeks and belly
+        stripe = rgb(30, 22, 20)
+        Z = g.P[..., 2]
+        for k, yy in enumerate(range(22, 48, 4)):
+            tilt = 0.25 if k % 2 == 0 else -0.25
+            paint(g, g.d_box((cx, yy, body_z + 4), (13, 0.75, 8), tilt), stripe, Z > body_z - 2.5)
+        for sx in (-1, 1):
+            for yy in (24, 44):
+                for zz in (4.5, 8):
+                    paint(g, g.d_box((cx + sx * 5.5, yy, zz), (3.2, 3.2, 0.55)), stripe)
+        for k in range(3):
+            paint(g, g.d_box((cx, hy - 2 + k * 2.4, hz + 7.6), (0.7, 0.6, 1.4 - k * 0.3)), stripe)
+        for sx in (-1, 1):
+            paint(g, g.d_box((cx + sx * 7, hy - 1, hz + 1.5), (0.6, 2.2, 0.6)), stripe)
+            paint(g, g.d_box((cx + sx * 7, hy + 1.5, hz + 3.5), (0.6, 2.0, 0.6)), stripe)
+            paint(g, g.d_ellipsoid((cx + sx * 4.6, hy - 6.5, hz - 2.0), (3.6, 3.4, 3.0)), WHITE, Z < hz + 0.5)
+            paint(g, g.d_box((cx + sx * 3.2, hy - 7.6, hz + 4.6), (1.0, 0.8, 0.6)), WHITE)
+        paint(g, g.d_ellipsoid((cx, hy - 8.5, hz - 1.8), (5.2, 4.6, 4.2)), WHITE, Z < hz + 0.2)
+        paint(g, g.d_ellipsoid((cx, 26, body_z - 2), (7.0, 5.0, 6.0)), WHITE, Z < body_z + 1)
+        paint(g, g.d_ellipsoid((cx, 33, body_z - 4.5), (6.5, 11, 3.5)), shade(WHITE, 0.95))
+        paint(g, g.d_box((cx, hy - 11.4, hz - 0.2), (1.4, 0.5, 1.0)), rgb(60, 36, 36))
+        for k in range(4):
+            paint(g, g.d_ellipsoid((cx, 50 + k * 2.6, body_z + 4 + k * 2.2), (2.4, 0.7, 2.4)), stripe)
     g.bake_ao(0.35)
     return g
 
@@ -396,6 +431,7 @@ ROSTER = {
     "GuardWolf": lambda: quadruped(cfg(150, 150, 165), "wolf"),
     "CircusLion": lambda: quadruped(cfg(240, 180, 80), "lion"),
     "ClawCat": lambda: quadruped(cfg(90, 70, 110), "cat"),
+    "JungleTiger": lambda: quadruped(cfg(250, 160, 60), "tiger"),
     "FortCore": lambda: conch(cfg(120, 200, 120)),
     "Leviathan": lambda: serpent(cfg(150, 90, 200)),
     "MountainBandit": lambda: humanoid({"color": cfg(120, 100, 80), "hat": "bandana", "weapon": "club", "beard": rgb(70, 50, 35)}),

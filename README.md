@@ -183,7 +183,7 @@ low-poly meshes, reading sizes and colors from the Lua configs. Each FBX shares 
 
 | Folder | Name | Notes |
 |---|---|---|
-| `ReplicatedStorage.Assets.Monsters` | monster id, e.g. `BeachCrab` | Model with `HumanoidRootPart` + `Humanoid` |
+| `ReplicatedStorage.Assets.Monsters` | monster id, e.g. `JungleTiger` | Model with `HumanoidRootPart` + `Humanoid` |
 | `ReplicatedStorage.Assets.ShipParts` | part id, e.g. `LargeMast` | PrimaryPart sized to the 4-stud grid, bow toward -Z |
 | `ReplicatedStorage.Assets.VFX` | skill fx name, e.g. `Firebird` | ParticleEmitters with an `EmitCount` attribute |
 | `workspace.World` | edit freely after baking | keep the `NPC` / `Dock` / `Plot` / `IslandSpawn` tags; tag pure decoration `Decor` so Low graphics can hide it |

@@ -43,7 +43,8 @@ function G.Scatter(world, variantsOf, perIsland)
 		local center = Vector3.new(isl.x, 0, isl.z or 0)
 		local tries = 0
 		local count = 0
-		while count < (perIsland or 110) and tries < (perIsland or 110) * 4 do
+		local want = isl.plants or perIsland or 110
+		while count < want and tries < want * 4 do
 			tries += 1
 			local a, r = rng:NextNumber(0, math.pi * 2), math.sqrt(rng:NextNumber()) * isl.radius * 0.95
 			local pos = center + Vector3.new(math.cos(a) * r, 0, math.sin(a) * r)

@@ -277,10 +277,10 @@ function VFX.ScreenFlash(c, strength, t)
 end
 
 -- Damage number. Crits get a Hunting-Together-style red starburst behind the number.
-function VFX.Number(pos, text, color, big, burst)
+function VFX.Number(pos, text, color, big, burst, scale)
 	local holder = part(Vector3.new(0.2, 0.2, 0.2), color, CFrame.new(pos + Vector3.new(math.random() * 2 - 1, 0, math.random() * 2 - 1)), nil, nil, 1)
 	local bb = Instance.new("BillboardGui")
-	bb.Size = UDim2.fromOffset(big and 170 or 110, big and 90 or 44)
+	bb.Size = UDim2.fromOffset((big and 170 or 110) * (scale or 1), (big and 90 or 44) * (scale or 1))
 	bb.AlwaysOnTop = true
 	bb.LightInfluence = 0
 	bb.MaxDistance = 220
@@ -658,14 +658,35 @@ local weaponFX = {
 		end)
 	end,
 }
-local MELEE = { Sword = true, Hammer = true, Knuckles = true, Shoes = true }
+weaponFX.Fists = function(d, n)
+	-- bare-handed punches: smaller impacts than real knuckles
+	local at, dir = hitPoint(d)
+	VFX.Impact(at, Color3.fromRGB(255, 220, 190), n == 2 and 3.2 or 2.6)
+	VFX.Shockwave(at, dir, Color3.fromRGB(255, 235, 210), 2.6)
+end
+local MELEE = { Sword = true, Hammer = true, Knuckles = true, Shoes = true, Fists = true }
 
 -- ===== event handler =====
 local handlers = {}
 local localPlayer = game:GetService("Players").LocalPlayer
+-- number colors by where the damage came from (server sends `kind`)
+local KIND_COLOR = {
+	fire = Color3.fromRGB(255, 140, 40), burn = Color3.fromRGB(255, 120, 30), poison = Color3.fromRGB(130, 230, 80),
+	ice = Color3.fromRGB(130, 220, 255), shock = Color3.fromRGB(255, 232, 80), pierce = Color3.fromRGB(210, 220, 235),
+	star = Color3.fromRGB(200, 130, 255), pet = Color3.fromRGB(150, 255, 190), cannon = Color3.fromRGB(255, 200, 90),
+	smoke = Color3.fromRGB(200, 200, 210), barrier = Color3.fromRGB(120, 230, 255), slash = Color3.fromRGB(240, 240, 255),
+	slick = Color3.fromRGB(255, 220, 120), rubber = Color3.fromRGB(255, 150, 200),
+}
+VFX.KindColor = KIND_COLOR
 local function damageFX(d)
-	local color = d.toPlayer and Color3.fromRGB(255, 90, 90) or (d.crit and Color3.new(1, 1, 1) or Color3.new(1, 1, 1))
-	VFX.Number(d.pos, tostring(d.amount), color, d.crit, d.crit and Color3.fromRGB(235, 40, 60) or nil)
+	local color = d.toPlayer and Color3.fromRGB(255, 90, 90) or KIND_COLOR[d.kind or ""] or Color3.new(1, 1, 1)
+	-- damage over time ticks (burn / poison) are small and do not bounce the combo flash
+	local tick = d.kind == "burn" or d.kind == "poison"
+	VFX.Number(d.pos + (tick and Vector3.new(math.random(-2, 2), -1, 0) or Vector3.zero), (tick and "" or "") .. tostring(d.amount), color, d.crit and not tick, d.crit and Color3.fromRGB(235, 40, 60) or nil, tick and 0.7 or nil)
+	if tick then
+		VFX.Sparks(d.pos - Vector3.new(0, 1, 0), color, 3, 3)
+		return
+	end
 	-- every hit flashes; crits get focus lines and a shockwave (anime impact frame)
 	local hitPos = d.pos - Vector3.new(0, 1.5, 0)
 	if d.crit then
@@ -677,7 +698,7 @@ local function damageFX(d)
 	end
 	if d.src == localPlayer.UserId then
 		local UI = require(script.Parent.Parent.UI.UIKit)
-		UI.ComboHit()
+		UI.ComboHit(d.amount, d.crit)
 		if d.crit then
 			VFX.ScreenFlash(Color3.new(1, 1, 1), 0.28, 0.16)
 		end
@@ -701,20 +722,22 @@ handlers.Heal = function(d)
 	VFX.Number(d.pos, "+" .. tostring(d.amount), Color3.fromRGB(110, 255, 140))
 end
 handlers.BasicAttack = function(d)
-	local weapon = weaponFX[d.weapon] and d.weapon or "Sword"
+	local weapon = weaponFX[d.weapon] and d.weapon or "Fists"
 	local n, clip = comboStep(d.char, weapon, d.combo)
+	local speed = tonumber(d.speed) or 1
+	local strike = strikeOf(clip) / speed
 	local who = typeof(d.char) == "Instance" and game:GetService("Players"):GetPlayerFromCharacter(d.char)
 	if who then
-		strikeAt[who.UserId] = os.clock() + strikeOf(clip)
+		strikeAt[who.UserId] = os.clock() + strike
 	end
 	if MELEE[weapon] then
 		if weapon == "Shoes" then
 			VFX.SpeedLines(d.from, d.to, Color3.fromRGB(255, 230, 190), 5)
 		end
-		task.delay(strikeOf(clip), weaponFX[weapon], d, n)
+		task.delay(strike, weaponFX[weapon], d, n)
 	else
 		-- shots leave on the release frame of the draw / throw
-		task.delay(math.max(0, strikeOf(clip) - 0.02), weaponFX[weapon], d, n)
+		task.delay(math.max(0, strike - 0.02), weaponFX[weapon], d, n)
 	end
 end
 handlers.Skill = function(d)
@@ -888,6 +911,9 @@ handlers.SeaKingRise = function(d)
 	VFX.Splash(d.pos, 20)
 end
 handlers.Repair = function(d)
+	if d.amount and d.amount > 0 then
+		VFX.Number(d.pos + Vector3.new(0, 18, 0), "+" .. d.amount, Color3.fromRGB(110, 255, 150))
+	end
 	VFX.Sparks(d.pos + Vector3.new(0, 6, 0), Color3.fromRGB(120, 255, 160), 24, d.radius or 15)
 	VFX.Ring(d.pos + Vector3.new(0, 4, 0), d.radius or 15, Color3.fromRGB(120, 255, 160), 0.6, 0.4)
 end

@@ -463,6 +463,16 @@ step("HUD.Loot", function()
 	HUD.Loot({ beli = 1250, items = { { id = "TidecoreShard", qty = 1 }, { id = "CaptainConfettiCard", qty = 1, card = true } } })
 end)
 snapshot("hud")
+-- the style meter climbs to S rank (fire) without errors
+step("UI.ComboHit", function()
+	for i = 1, 26 do
+		UI.ComboHit(1200 + i * 37, i % 5 == 0)
+	end
+	for _ = 1, 4 do
+		renderStepped:Fire(0.016)
+	end
+end)
+snapshot("hud_combo")
 -- the ammo picker builds without errors (it closes itself on the next refresh: the test hero is no slingshot user)
 step("HUD.AmmoPicker", function()
 	HUD.ToggleAmmoPicker()

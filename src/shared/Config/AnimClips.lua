@@ -68,10 +68,13 @@ local TKD = {
 	LeftUpperArm = { 62, 0, -12 }, LeftLowerArm = { 95, 0, 0 }, RightUpperArm = { 38, 0, 18 }, RightLowerArm = { 125, 0, 0 },
 	LeftUpperLeg = { 22, 0, -4 }, LeftLowerLeg = { -28, 0, 0 }, RightUpperLeg = { -14, 0, 6 }, RightLowerLeg = { -22, 0, 0 },
 }
+-- stances only pose the upper body (arms up in guard): the legs keep walking / idling normally (v0.19 posed the legs
+-- too and the character stood frozen in the stance even while running)
+local TKD_UPPER = { UpperTorso = { -4, 12, 0 }, Head = { 0, 8, 0 }, LeftUpperArm = { 62, 0, -12 }, LeftLowerArm = { 95, 0, 0 }, RightUpperArm = { 38, 0, 18 }, RightLowerArm = { 125, 0, 0 } }
 C.Cook_Stance = { rig = "R15", loop = true, priority = "Idle", length = 0.8, keys = {
-	{ t = 0, pose = TKD },
-	{ t = 0.4, pose = with(TKD, { LowerTorso = { 0, -35, 0, 0, -0.45, 0 }, LeftLowerLeg = { -38, 0, 0 }, RightLowerLeg = { -32, 0, 0 } }) },
-	{ t = 0.8, pose = TKD },
+	{ t = 0, pose = TKD_UPPER },
+	{ t = 0.4, pose = with(TKD_UPPER, { UpperTorso = { -6, 12, 0 }, LeftUpperArm = { 66, 0, -12 }, RightUpperArm = { 42, 0, 18 } }) },
+	{ t = 0.8, pose = TKD_UPPER },
 } }
 C.Cook_FrontKick = { rig = "R15", priority = "Action", strike = 0.15, keys = {
 	{ t = 0, pose = TKD },
@@ -259,6 +262,8 @@ C.Mon_Hit = { rig = "Mon", priority = "Action2", keys = {
 -- weapon -> combo clips (in order), stance, and the clips each skill kind uses
 C.Weapons = {
 	Knuckles = { combo = { "Brawler_Jab", "Brawler_Cross", "Brawler_Hook", "Brawler_Uppercut" }, stance = "Brawler_Stance", Melee = "Brawler_Uppercut", AoE = "Skill_GroundPunch" },
+	-- bare hands (no weapon equipped): simple jab-cross punches, no stance
+	Fists = { combo = { "Brawler_Jab", "Brawler_Cross" }, Melee = "Brawler_Uppercut", AoE = "Skill_GroundPunch" },
 	Shoes = { combo = { "Cook_FrontKick", "Cook_SideKick", "Cook_BackKick", "Cook_AxeKick" }, stance = "Cook_Stance", Melee = "Cook_FlyingKick", AoE = "Skill_Spin" },
 	Sword = { combo = { "Sword_Slash", "Sword_Backhand", "Sword_Thrust" }, stance = "Sword_Stance", Melee = "Sword_Thrust", AoE = "Skill_Spin" },
 	Hammer = { combo = { "Hammer_Smash", "Hammer_Sweep" }, stance = "Hammer_Stance", Melee = "Hammer_Smash", AoE = "Hammer_Smash" },

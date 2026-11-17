@@ -790,7 +790,97 @@ local function buildLoot()
 	UI.List(lootFeed, nil, 5, Enum.HorizontalAlignment.Left).VerticalAlignment = Enum.VerticalAlignment.Bottom
 end
 
+-- ===== loot that flies =====
+-- where a world point is on our UI canvas (the root ignores the top-bar inset, so viewport = screen)
+local function canvasPoint(pos)
+	local cam = workspace.CurrentCamera
+	if not cam then
+		return nil
+	end
+	local v, onScreen = cam:WorldToViewportPoint(pos)
+	if not onScreen then
+		return nil
+	end
+	local sc = UI.GetScale()
+	return Vector2.new(v.X / sc, v.Y / sc)
+end
+local function centerOf(gui)
+	local ok, p = pcall(function()
+		local sc = UI.GetScale()
+		return (gui.AbsolutePosition + gui.AbsoluteSize / 2) / sc
+	end)
+	return ok and p or nil
+end
+local function bump(gui)
+	if not gui then
+		return
+	end
+	local sc = gui:FindFirstChild("LootPop") or New("UIScale", { Name = "LootPop", Parent = gui })
+	sc.Scale = 1.25
+	UI.Tween(sc, 0.25, { Scale = 1 }, Enum.EasingStyle.Back)
+end
+-- an icon bursts out of `from`, hangs a moment, then swoops into `to`
+local function fly(icon, size, from, to, delay, onArrive, image)
+	local holder = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(from.X, from.Y), Size = UDim2.fromOffset(size, size), ZIndex = 70, Parent = UI.Root })
+	if image then
+		New("ImageLabel", { BackgroundTransparency = 1, Image = image, Size = UDim2.fromScale(1, 1), ScaleType = Enum.ScaleType.Fit, ZIndex = 71, Parent = holder })
+	else
+		local img = UI.Icon(holder, icon, size, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5) })
+		if img then
+			img.ZIndex = 71
+		end
+	end
+	local a = math.random() * math.pi * 2
+	local r = 40 + math.random() * 60
+	local burst = from + Vector2.new(math.cos(a) * r, math.sin(a) * r * 0.7 - 30)
+	UI.Tween(holder, 0.25, { Position = UDim2.fromOffset(burst.X, burst.Y) }, Enum.EasingStyle.Quad)
+	task.delay(0.3 + delay, function()
+		if not holder.Parent then
+			return
+		end
+		local t = UI.Tween(holder, 0.5, { Position = UDim2.fromOffset(to.X, to.Y), Size = UDim2.fromOffset(size * 0.6, size * 0.6) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+		t.Completed:Connect(function()
+			holder:Destroy()
+			if onArrive then
+				onArrive()
+			end
+		end)
+	end)
+end
+
+function HUD.FlyLoot(data)
+	local from = data.pos and canvasPoint(data.pos)
+	if not from then
+		return
+	end
+	if data.beli and data.beli > 0 and money then
+		local to = centerOf(money.Parent) or Vector2.new(0, 0)
+		local n = math.clamp(math.floor(math.log10(data.beli + 1) * 3), 3, 12)
+		for i = 1, n do
+			fly(UI.CurrencyIcon, 30, from, to, i * 0.035, function()
+				if i == 1 or i == n then
+					bump(money)
+				end
+				Audio.Play("Coin", { volume = 0.25, pitch = 0.9 + i * 0.03 })
+			end)
+		end
+	end
+	local bagTile = HUD.badges and HUD.badges.Inventory and HUD.badges.Inventory.Parent
+	local bagAt = bagTile and centerOf(bagTile)
+	for k, it in ipairs(data.items or {}) do
+		local def = ItemDB.Get(it.id)
+		local img = def and UI.ItemIconId(def)
+		if bagAt then
+			fly(def and def.icon or "📦", 50, from, bagAt, 0.25 + k * 0.12, function()
+				bump(bagTile)
+				Audio.Play("Equip", { volume = 0.4, pitch = 1.2 })
+			end, img)
+		end
+	end
+end
+
 function HUD.Loot(data)
+	pcall(HUD.FlyLoot, data)
 	local function add(text, rarityId)
 		local tier = Rarity.Get(rarityId)
 		local f = New("Frame", { Size = UDim2.fromOffset(0, 34), AutomaticSize = Enum.AutomaticSize.X, BackgroundColor3 = Color3.new(1, 1, 1), Parent = lootFeed })
@@ -814,7 +904,9 @@ function HUD.Loot(data)
 		local now = os.clock()
 		HUD.killStreak = (now - (HUD.lastLootAt or 0) < 4) and math.min((HUD.killStreak or 0) + 1, 12) or 0
 		HUD.lastLootAt = now
-		Audio.Play("Coin", { pitch = 1 + HUD.killStreak * 0.06 })
+		if not data.pos then
+			Audio.Play("Coin", { pitch = 1 + HUD.killStreak * 0.06 })
+		end
 	end
 	for _, it in ipairs(data.items or {}) do
 		local def = ItemDB.Get(it.id)
@@ -971,16 +1063,7 @@ local function refresh()
 	end
 	-- ammo button: only for slingshot users
 	if HUD.ammo and p then
-		local wEntry = p.equipment and p.equipment.weapon
-		local wType
-		for _, e in ipairs(p.inventory or {}) do
-			if e.uid == wEntry then
-				local wd = ItemDB.Get(e.id)
-				wType = wd and wd.weaponType
-			end
-		end
-		local cls = Classes[p.class]
-		wType = wType or (cls and cls.weapons and cls.weapons[1])
+		local wType = require(Shared.Modules.WeaponInfo).TypeOf(p)
 		local shoots = AmmoCfg.Weapons[wType or ""] == true
 		HUD.ammo.holder.Visible = shoots
 		HUD.ammo.spacer.Visible = shoots

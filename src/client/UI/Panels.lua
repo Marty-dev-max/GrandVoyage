@@ -522,9 +522,8 @@ function Panels.Inventory(args)
 				end
 			end
 		end
-		-- the statue holds the equipped weapon (or the class's own weapon style)
-		local cls = Classes[p.class]
-		local wType = (wdef and wdef.weaponType) or (cls and cls.weapons and cls.weapons[1]) or "Knuckles"
+		-- the statue holds the equipped weapon (bare hands when none)
+		local wType = (wdef and wdef.weaponType) or "Fists"
 		if wType ~= lastWeaponType or not charPanel:GetAttribute("Drawn") then
 			lastWeaponType = wType
 			charPanel:SetAttribute("Drawn", true)
@@ -654,7 +653,7 @@ function Panels.Stats()
 			drawn = true
 			local wEntry = p.equipment.weapon and Formulas.FindItem(p, p.equipment.weapon)
 			local wDef = wEntry and ItemDB.Get(wEntry.id)
-			refreshChar((wDef and wDef.weaponType) or (cls and cls.weapons and cls.weapons[1]) or "Knuckles")
+			refreshChar((wDef and wDef.weaponType) or "Fists")
 		end
 		local left = p.statPoints - planCost(p)
 

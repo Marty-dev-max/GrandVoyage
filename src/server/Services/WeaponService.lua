@@ -25,6 +25,7 @@ local DRAWN = {
 	MedKit = { { "RightHand", "MedKit", CFrame.new(0, -0.45, -0.1) } },
 	Knuckles = { { "RightHand", "Knuckles", CFrame.new(0, -0.1, 0) }, { "LeftHand", "Knuckles", CFrame.new(0, -0.1, 0) } },
 	Shoes = {},
+	Fists = {},
 }
 -- at rest (LowerTorso: x = right, -z = front; UpperTorso back = +z)
 local HOLSTERED = {
@@ -35,6 +36,7 @@ local HOLSTERED = {
 	Slingshot = {},
 	Knuckles = {},
 	Shoes = {},
+	Fists = {},
 }
 -- worn the whole time for these weapon types
 local WORN = {
@@ -142,7 +144,7 @@ function WS.Draw(player, wType)
 		return
 	end
 	lastUse[player] = os.clock()
-	wearGear(char, wType)
+	wearGear(char, WeaponInfo.ClassWeapon(R.DataService.Get(player)))
 	if char:GetAttribute("WeaponOut") and char:GetAttribute("Weapon") == wType then
 		return
 	end
@@ -187,7 +189,7 @@ function WS.Start()
 					elseif not t and (char:GetAttribute("Weapon") ~= wType or char:GetAttribute("WeaponOut") == nil) then
 						dress(char, wType, false) -- fresh character, class switch or new weapon equipped
 					end
-					pcall(wearGear, char, wType)
+					pcall(wearGear, char, WeaponInfo.ClassWeapon(R.DataService.Get(p)))
 				end
 			end
 		end

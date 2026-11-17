@@ -153,7 +153,7 @@ function PetS.Start()
 					local atk = d and math.max(d.atk, d.matk) or 10
 					local dmg = atk * (Pets.AttackScale.base + Pets.AttackScale.perLevel * pet.level) * (1 + 0.25 * (pet.stage - 1))
 					Net.FX("PetHit", { from = root.Position + Vector3.new(2, 3, 2), to = mob.root.Position, species = pet.species }, root.Position, 250)
-					R.MonsterService.Damage(mob, math.max(1, dmg), player, false)
+					R.MonsterService.Damage(mob, math.max(1, dmg), player, false, "pet")
 				end
 			end
 		end

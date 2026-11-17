@@ -133,7 +133,27 @@ local function resolveTarget(attacker, inst)
 	return nil
 end
 
--- opts (ammo effects): critBonus, ignoreDef, slow, splash
+-- damage over time: `ticks` hits of `perTick`, 0.6 s apart (burn / poison); a fresh one replaces the old of the same kind
+local dots = setmetatable({}, { __mode = "k" }) -- mob -> { [kind] = token }
+local function applyDot(attacker, mob, kind, perTick, ticks)
+	dots[mob] = dots[mob] or {}
+	local token = (dots[mob][kind] or 0) + 1
+	dots[mob][kind] = token
+	task.spawn(function()
+		for _ = 1, ticks do
+			task.wait(0.6)
+			if mob.dead or dots[mob][kind] ~= token then
+				return
+			end
+			R.MonsterService.Damage(mob, math.max(1, perTick), attacker.Parent and attacker or nil, false, kind)
+		end
+	end)
+end
+
+-- the element a fruit's skills hit with (colors the numbers; Blaze also burns)
+local FRUIT_ELEMENT = { Blaze = "fire", Haze = "smoke", Ward = "barrier", Split = "slash", Slick = "slick", Bounce = "rubber" }
+
+-- opts: critBonus, ignoreDef, slow, splash (ammo), element (number color), dot = { kind, pct, ticks }
 local function hitTarget(attacker, target, mult, magic, opts)
 	local d = R.PlayerService.Derived(attacker)
 	if not d then
@@ -158,8 +178,11 @@ local function hitTarget(attacker, target, mult, magic, opts)
 		end
 		local mdef = opts.ignoreDef and 0 or (magic and mob.def.def * 0.5 or mob.def.def)
 		local dmg, isCrit = Formulas.Damage(atk, mdef, mult * bonus, magic and 0 or crit)
-		R.MonsterService.Damage(mob, dmg, attacker, isCrit)
+		R.MonsterService.Damage(mob, dmg, attacker, isCrit, opts.element)
 		R.PetService.OnOwnerHit(attacker, mob)
+		if opts.dot and not mob.dead then
+			applyDot(attacker, mob, opts.dot[1], math.floor(dmg * opts.dot[2]), opts.dot[3])
+		end
 		if opts.slow and mob.hum and not mob.dead then
 			-- frost: slowed for 2 s (restored from the monster's own speed, so stacking cannot freeze it)
 			mob.hum.WalkSpeed = mob.def.moveSpeed * opts.slow
@@ -174,7 +197,7 @@ local function hitTarget(attacker, target, mult, magic, opts)
 			-- blast: everyone else nearby takes half (no chain explosions)
 			for _, other in ipairs(R.MonsterService.InRadius(mob.root.Position, opts.splash)) do
 				if other ~= mob and not other.dead then
-					hitTarget(attacker, { kind = "mob", mob = other, pos = other.root.Position, model = other.model }, mult * 0.5, magic, { critBonus = opts.critBonus })
+					hitTarget(attacker, { kind = "mob", mob = other, pos = other.root.Position, model = other.model }, mult * 0.5, magic, { critBonus = opts.critBonus, element = "fire" })
 				end
 			end
 		end
@@ -211,16 +234,20 @@ local function hitLater(delay, attacker, target, mult, magic, opts)
 	end)
 end
 
--- which combo hit this basic attack is (the clients play the same clip: it is sent in the FX)
+-- which combo hit this basic attack is (the clients play the same clip: it is sent in the FX), and how fast to play
+-- it: a swing longer than the attack interval is sped up to fit, so fast attackers never queue swings that lag behind
 local function comboStep(player, wType)
-	local w = AnimClips.Weapons[wType] or AnimClips.Weapons.Knuckles
+	local w = AnimClips.Weapons[wType] or AnimClips.Weapons.Fists
 	local c = combos[player] or { n = 0, last = 0 }
 	combos[player] = c
 	local now = os.clock()
 	c.n = (now - c.last < 1.2) and (c.n % #w.combo) + 1 or 1
 	c.last = now
 	local clip = AnimClips[w.combo[c.n]]
-	return c.n, clip and clip.strike or 0.12
+	local d = R.PlayerService.Derived(player)
+	local length = clip and clip.keys[#clip.keys].t or 0.3
+	local speed = math.clamp(length / math.max(0.15, (d and d.attackInterval or 0.6) * 0.9), 1, 2.5)
+	return c.n, (clip and clip.strike or 0.12) / speed, speed
 end
 
 -- the clip a skill plays (same choice as the client's CharAnim) and its strike time
@@ -299,7 +326,7 @@ local function setup()
 		lastAttack[player] = now
 		local magic = wType == "StormBaton"
 		R.WeaponService.Draw(player, wType)
-		local n, strike = comboStep(player, wType)
+		local n, strike, speed = comboStep(player, wType)
 		-- slingshots fire the picked ammo (1 per shot; out of it -> free Pebble Shot)
 		local ammo, mult = nil, 1
 		if AmmoCfg.Weapons[wType] then
@@ -313,8 +340,13 @@ local function setup()
 			end
 			mult = ammo.mult
 		end
-		Net.FX("BasicAttack", { from = root.Position, to = target.pos, weapon = wType, char = player.Character, combo = n, ammo = ammo and ammo.id }, root.Position, 250)
-		hitLater(strike + (SHOT_FLIGHT[wType] or 0), player, target, mult, magic, ammo and { critBonus = ammo.critBonus, ignoreDef = ammo.ignoreDef, slow = ammo.slow, splash = ammo.splash })
+		Net.FX("BasicAttack", { from = root.Position, to = target.pos, weapon = wType, char = player.Character, combo = n, speed = speed, ammo = ammo and ammo.id }, root.Position, 250)
+		local hopts = ammo and { critBonus = ammo.critBonus, ignoreDef = ammo.ignoreDef, slow = ammo.slow, splash = ammo.splash, element = ammo.element, dot = ammo.dot } or {}
+		if wType == "MedKit" then
+			-- the Doctor's stinging powder: a little poison on every throw
+			hopts.element, hopts.dot = "poison", { "poison", 0.15, 3 }
+		end
+		hitLater(strike + (SHOT_FLIGHT[wType] or 0), player, target, mult, magic, hopts)
 		return true
 	end, 0.2)
 
@@ -380,6 +412,11 @@ local function setup()
 		local kind = skill.kind
 		local fxData = { fx = skill.fx, from = root.Position, char = player.Character, skill = skill.id }
 		local strike = skillStrike(player, skill)
+		local skillOpts = nil
+		if skill.fruit then
+			local el = FRUIT_ELEMENT[skill.fruit]
+			skillOpts = { element = el, dot = el == "fire" and { "burn", 0.2, 3 } or nil }
+		end
 
 		if kind == "Melee" or kind == "Ranged" then
 			local target = resolveTarget(player, data.target)
@@ -392,7 +429,7 @@ local function setup()
 			fxData.to = target.pos
 			local land = strike + (kind == "Ranged" and 0.2 or 0)
 			for i = 1, skill.hits or 1 do
-				hitLater(land + 0.09 * (i - 1), player, target, mult, magic)
+				hitLater(land + 0.09 * (i - 1), player, target, mult, magic, skillOpts)
 			end
 			if skill.id == "OniSlash" then
 				hitLater(land + 0.15, player, target, mult * 0.5, magic)
@@ -422,7 +459,7 @@ local function setup()
 					local key = tt.mob or tt.player
 					if key and not seen[key] then
 						seen[key] = true
-						hitLater(0.08 + step / 60, player, tt, mult, magic)
+						hitLater(0.08 + step / 60, player, tt, mult, magic, skillOpts)
 					end
 				end
 			end
@@ -430,7 +467,7 @@ local function setup()
 			fxData.to = root.Position
 			fxData.radius = skill.radius
 			for _, t in ipairs(inRadiusTargets(player, root.Position, skill.radius)) do
-				hitLater(strike, player, t, mult, magic)
+				hitLater(strike, player, t, mult, magic, skillOpts)
 			end
 		elseif kind == "GroundAoE" then
 			local pos = typeof(data.pos) == "Vector3" and data.pos or nil
@@ -445,7 +482,7 @@ local function setup()
 			fxData.radius = skill.radius
 			task.delay(math.max(0.25, strike), function()
 				for _, t in ipairs(inRadiusTargets(player, pos, skill.radius)) do
-					hitTarget(player, t, mult, magic)
+					hitTarget(player, t, mult, magic, skillOpts)
 				end
 			end)
 		elseif kind == "Heal" then

@@ -381,13 +381,38 @@ function UI.Bar(parent, color, size, label)
 		Parent = back,
 	})
 	UI.Stroke(txt, T.Edge, 1.6, Enum.ApplyStrokeMode.Contextual)
-	local bar = { back = back, fill = fill, text = txt, ratio = 1 }
+	local pop = New("UIScale", { Parent = back })
+	local bar = { back = back, fill = fill, text = txt, ratio = 1, token = 0 }
 	function bar:Set(ratio, text)
 		ratio = math.clamp(ratio, 0, 1)
-		if ratio ~= self.ratio then
-			Tween(fill, 0.18, { Size = UDim2.new(ratio, 0, 1, 0) })
-			-- the white "ghost" trails behind on damage like action RPGs
-			Tween(ghost, 0.6, { Size = UDim2.new(ratio, 0, 1, 0) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+		if math.abs(ratio - self.ratio) > 0.0005 then
+			self.token += 1
+			local token = self.token
+			if ratio < self.ratio then
+				-- damage: the bar drops fast, the lost part stays as a red chunk for a beat, then drains away;
+				-- a big hit also punches the bar and flashes it white
+				local lost = self.ratio - ratio
+				ghost.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
+				ghost.BackgroundTransparency = 0.05
+				Tween(fill, 0.12, { Size = UDim2.new(ratio, 0, 1, 0) })
+				task.delay(0.28, function()
+					if self.token == token then
+						Tween(ghost, 0.45, { Size = UDim2.new(ratio, 0, 1, 0) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+					end
+				end)
+				if lost > 0.02 then
+					pop.Scale = 1 + math.min(0.12, lost * 0.6)
+					Tween(pop, 0.25, { Scale = 1 }, Enum.EasingStyle.Back)
+					hi.BackgroundTransparency = 0.1
+					Tween(hi, 0.2, { BackgroundTransparency = 0.75 })
+				end
+			else
+				-- healing: a pale band leads, the fill catches up smoothly
+				ghost.BackgroundColor3 = Color3.fromRGB(200, 255, 210)
+				ghost.BackgroundTransparency = 0.35
+				ghost.Size = UDim2.new(ratio, 0, 1, 0)
+				Tween(fill, 0.35, { Size = UDim2.new(ratio, 0, 1, 0) })
+			end
 			self.ratio = ratio
 		end
 		if text then
@@ -609,6 +634,7 @@ function UI.CharacterView(parent, props)
 			MedKit = { { "RightHand", CFrame.new(0, -0.45, -0.1) } },
 			Knuckles = { { "RightHand", CFrame.new(0, -0.1, 0) }, { "LeftHand", CFrame.new(0, -0.1, 0) } },
 			Shoes = {},
+			Fists = {},
 		}
 		local tpl = weaponType and UI.ModelAsset("Weapons", weaponType)
 		for _, h in ipairs(tpl and (HOLD[weaponType] or { { "RightHand", CFrame.new(0, -0.15, 0) } }) or {}) do
@@ -1222,32 +1248,124 @@ function UI.Notice(text, color)
 end
 
 -- Hunting-Together-style combo counter (right side)
-local combo = { count = 0, last = 0 }
-local comboFrame = New("Frame", { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0.5, 150, 0.4, 0), Size = UDim2.fromOffset(190, 70), BackgroundTransparency = 1, Visible = false, Parent = gui })
-local comboText = UI.Text(comboFrame, "x0", 46, Color3.fromRGB(255, 70, 90), "Display", { Size = UDim2.new(1, 0, 0, 50), TextXAlignment = Enum.TextXAlignment.Right })
-UI.Text(comboFrame, "COMBO", 16, T.Text, "Display", { Position = UDim2.fromOffset(0, 46), Size = UDim2.new(1, -66, 0, 18), TextXAlignment = Enum.TextXAlignment.Right })
-local comboBar = New("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 52), Size = UDim2.fromOffset(60, 8), BackgroundColor3 = T.PanelDeep, Parent = comboFrame })
-UI.Corner(comboBar, 4)
-local comboFill = New("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(255, 70, 90), Parent = comboBar })
-UI.Corner(comboFill, 4)
-function UI.ComboHit()
-	local now = os.clock()
-	if now - combo.last > 2.5 then
-		combo.count = 0
-	end
-	combo.count += 1
-	combo.last = now
-	comboText.Text = "x" .. combo.count
-	comboFrame.Visible = true
-	UI.Bounce(comboText)
+-- ===== Combo / style meter =====
+-- Every hit you land fills a style meter: ranks D C B A S SS SSS (each a full bar). It bounces on every hit, drains
+-- when you stop hitting (faster at high ranks), and catches fire from S up. Shows the hit count and the total damage
+-- of the current streak; the streak ends when the meter runs dry.
+local RANKS = {
+	{ "D", "DULL", Color3.fromRGB(170, 180, 200) },
+	{ "C", "COOL", Color3.fromRGB(110, 210, 255) },
+	{ "B", "BRAVO", Color3.fromRGB(120, 235, 140) },
+	{ "A", "AWESOME", Color3.fromRGB(255, 214, 70) },
+	{ "S", "STYLISH", Color3.fromRGB(255, 140, 50) },
+	{ "SS", "SAVAGE", Color3.fromRGB(255, 70, 80) },
+	{ "SSS", "SENSATIONAL", Color3.fromRGB(255, 90, 220) },
+}
+local PER_RANK = 100
+local combo = { points = 0, hits = 0, total = 0, last = 0, rank = 0 }
+local comboFrame = New("Frame", { Name = "StyleMeter", AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -28, 0.62, 0), Size = UDim2.fromOffset(250, 150), BackgroundTransparency = 1, Visible = false, Parent = gui })
+local flames = New("ImageLabel", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0, 70, 0, 92), Size = UDim2.fromOffset(150, 150), ImageTransparency = 1, ZIndex = 1, Parent = comboFrame })
+pcall(function()
+	flames.Image = require(ReplicatedStorage.Shared.Config.Textures).flame
+end)
+local letter = UI.Text(comboFrame, "D", 78, Color3.new(1, 1, 1), "Display", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(70, 48), Size = UDim2.fromOffset(140, 90), TextXAlignment = Enum.TextXAlignment.Center, Rotation = -8, ZIndex = 3, TextWrapped = false })
+local letterScale = New("UIScale", { Parent = letter })
+local rankName = UI.Text(comboFrame, "DULL", 16, Color3.new(1, 1, 1), "Display", { Position = UDim2.fromOffset(0, 90), Size = UDim2.fromOffset(140, 18), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 3 })
+local hitsText = UI.Text(comboFrame, "0", 34, Color3.new(1, 1, 1), "Number", { Position = UDim2.fromOffset(140, 14), Size = UDim2.fromOffset(110, 36), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 3, TextWrapped = false })
+local hitsScale = New("UIScale", { Parent = hitsText })
+UI.Text(comboFrame, "HITS", 14, T.TextSoft, "Display", { Position = UDim2.fromOffset(142, 48), Size = UDim2.fromOffset(100, 16), ZIndex = 3 })
+local totalText = UI.Text(comboFrame, "0", 18, T.Gold, "Number", { Position = UDim2.fromOffset(140, 66), Size = UDim2.fromOffset(110, 20), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 3, TextWrapped = false })
+UI.Text(comboFrame, "TOTAL DMG", 11, T.TextSoft, "Display", { Position = UDim2.fromOffset(142, 86), Size = UDim2.fromOffset(100, 14), ZIndex = 3 })
+local comboBar = New("Frame", { Position = UDim2.fromOffset(6, 116), Size = UDim2.fromOffset(238, 12), BackgroundColor3 = T.PanelDeep, ZIndex = 2, Parent = comboFrame })
+UI.Corner(comboBar, 6)
+UI.Stroke(comboBar, T.Edge, 2)
+local comboFill = New("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = Color3.new(1, 1, 1), ZIndex = 3, Parent = comboBar })
+UI.Corner(comboFill, 6)
+local fillGrad = New("UIGradient", { Parent = comboFill })
+local barScale = New("UIScale", { Parent = comboBar })
+
+local function rankOf(points)
+	return math.clamp(math.floor(points / PER_RANK) + 1, 1, #RANKS)
 end
-RunService.RenderStepped:Connect(function()
-	if comboFrame.Visible then
-		local left = 1 - (os.clock() - combo.last) / 2.5
-		comboFill.Size = UDim2.fromScale(math.clamp(left, 0, 1), 1)
-		if left <= 0 then
-			comboFrame.Visible = false
+
+local function paint(rank)
+	local r = RANKS[rank]
+	letter.Text = r[1]
+	letter.TextColor3 = r[3]
+	rankName.Text = r[2]
+	rankName.TextColor3 = r[3]:Lerp(Color3.new(1, 1, 1), 0.3)
+	fillGrad.Color = ColorSequence.new(r[3]:Lerp(Color3.new(1, 1, 1), 0.45), r[3])
+	letter.TextSize = 70 + #r[1] * 4
+end
+
+-- amount = damage dealt (for the total), crit adds extra style
+function UI.ComboHit(amount, crit)
+	local now = os.clock()
+	if combo.points <= 0 then
+		combo.hits, combo.total = 0, 0
+	end
+	combo.hits += 1
+	combo.total += tonumber(amount) or 0
+	combo.last = now
+	-- low ranks fill fast, high ranks need more; crits count extra
+	local rank = rankOf(combo.points)
+	combo.points = math.min(#RANKS * PER_RANK - 1, combo.points + (26 - rank * 2.4) + (crit and 14 or 0))
+	local newRank = rankOf(combo.points)
+	if newRank ~= combo.rank then
+		local up = newRank > combo.rank
+		combo.rank = newRank
+		paint(newRank)
+		if up then
+			letterScale.Scale = 1.8
+			Tween(letterScale, 0.35, { Scale = 1 }, Enum.EasingStyle.Back)
+			Audio.Play("Rarity" .. ({ "Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic", "Secret" })[newRank], { volume = 0.5 })
 		end
+	else
+		letterScale.Scale = 1.15
+		Tween(letterScale, 0.18, { Scale = 1 }, Enum.EasingStyle.Back)
+	end
+	hitsText.Text = tostring(combo.hits)
+	totalText.Text = UI.Format(math.floor(combo.total))
+	hitsScale.Scale = 1.35
+	Tween(hitsScale, 0.2, { Scale = 1 }, Enum.EasingStyle.Back)
+	barScale.Scale = 1.08
+	Tween(barScale, 0.2, { Scale = 1 })
+	-- jolt
+	letter.Position = UDim2.fromOffset(70 + math.random(-5, 5), 48 + math.random(-4, 4))
+	Tween(letter, 0.12, { Position = UDim2.fromOffset(70, 48) })
+	if not comboFrame.Visible then
+		comboFrame.Visible = true
+		UI.Pop(comboFrame)
+	end
+end
+RunService.RenderStepped:Connect(function(dt)
+	if not comboFrame.Visible then
+		return
+	end
+	local now = os.clock()
+	-- drain after a short grace; the higher the rank, the faster it drains
+	if now - combo.last > 0.9 then
+		combo.points -= dt * (18 + combo.rank * 9)
+	end
+	if combo.points <= 0 then
+		combo.points, combo.rank = 0, 0
+		comboFrame.Visible = false
+		return
+	end
+	local rank = rankOf(combo.points)
+	if rank ~= combo.rank then
+		combo.rank = rank
+		paint(rank)
+	end
+	comboFill.Size = UDim2.fromScale((combo.points % PER_RANK) / PER_RANK, 1)
+	-- on fire from S up: flickering flames behind the letter (SSS flames shift color)
+	if rank >= 5 then
+		flames.ImageTransparency = 0.15 + math.random() * 0.15
+		local f = 1 + math.sin(now * 18) * 0.06 + math.random() * 0.04
+		flames.Size = UDim2.fromOffset(150 * f, (130 + (rank - 5) * 25) * f)
+		flames.ImageColor3 = rank == 7 and Color3.fromHSV((now * 0.4) % 1, 0.7, 1) or RANKS[rank][3]
+	else
+		flames.ImageTransparency = 1
 	end
 end)
 

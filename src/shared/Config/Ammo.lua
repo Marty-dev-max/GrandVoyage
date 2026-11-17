@@ -6,12 +6,12 @@
 local A = {
 	List = {
 		{ id = "Pebble", name = "Pebble Shot", color = Color3.fromRGB(190, 180, 165), mult = 1, desc = "Plain pebbles. Free, never runs out." },
-		{ id = "Ember", name = "Ember Shot", color = Color3.fromRGB(255, 120, 40), mult = 1.15, rarity = "Uncommon", price = 8, desc = "+15% damage, burns on impact." },
-		{ id = "Frost", name = "Frost Shot", color = Color3.fromRGB(110, 210, 255), mult = 1.1, slow = 0.6, rarity = "Uncommon", price = 8, desc = "+10% damage, slows the target." },
-		{ id = "Spark", name = "Spark Shot", color = Color3.fromRGB(255, 225, 60), mult = 1.1, critBonus = 12, rarity = "Uncommon", price = 10, desc = "+10% damage, +12% crit chance." },
-		{ id = "Needle", name = "Needle Shot", color = Color3.fromRGB(205, 215, 230), mult = 1.15, ignoreDef = true, rarity = "Rare", price = 18, desc = "+15% damage and ignores DEF." },
-		{ id = "Blast", name = "Blast Shot", color = Color3.fromRGB(255, 70, 70), mult = 1.3, splash = 9, rarity = "Rare", price = 25, desc = "+30% damage, explodes: half damage around it." },
-		{ id = "Star", name = "Star Shot", color = Color3.fromRGB(190, 110, 255), mult = 1.6, critBonus = 8, rarity = "Epic", price = 120, desc = "+60% damage, +8% crit chance." },
+		{ id = "Ember", name = "Ember Shot", color = Color3.fromRGB(255, 120, 40), mult = 1.15, element = "fire", dot = { "burn", 0.12, 3 }, rarity = "Uncommon", price = 8, desc = "+15% damage, sets the target burning." },
+		{ id = "Frost", name = "Frost Shot", color = Color3.fromRGB(110, 210, 255), mult = 1.1, slow = 0.6, element = "ice", rarity = "Uncommon", price = 8, desc = "+10% damage, slows the target." },
+		{ id = "Spark", name = "Spark Shot", color = Color3.fromRGB(255, 225, 60), mult = 1.1, critBonus = 12, element = "shock", rarity = "Uncommon", price = 10, desc = "+10% damage, +12% crit chance." },
+		{ id = "Needle", name = "Needle Shot", color = Color3.fromRGB(205, 215, 230), mult = 1.15, ignoreDef = true, element = "pierce", rarity = "Rare", price = 18, desc = "+15% damage and ignores DEF." },
+		{ id = "Blast", name = "Blast Shot", color = Color3.fromRGB(255, 70, 70), mult = 1.3, splash = 9, element = "fire", rarity = "Rare", price = 25, desc = "+30% damage, explodes: half damage around it." },
+		{ id = "Star", name = "Star Shot", color = Color3.fromRGB(190, 110, 255), mult = 1.6, critBonus = 8, element = "star", rarity = "Epic", price = 120, desc = "+60% damage, +8% crit chance." },
 	},
 	ById = {},
 	Weapons = { Slingshot = true }, -- weapon types that shoot ammo

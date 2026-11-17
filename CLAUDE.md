@@ -124,7 +124,8 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
 - `Controllers/Interact.lua`: every ProximityPrompt uses our styled card (Style = Custom, tap/click works too) and NPC
   nameplates are restyled on the client (baked map untouched). Chests shake + rattle (`ChestShake` FX) 0.85 s before
   the server opens them.
-- Weapon type/range: `Shared/Modules/WeaponInfo` (TypeOf = equipped or class weapon; Range) for server and client alike.
+- Weapon type/range: `Shared/Modules/WeaponInfo` for server and client alike. TypeOf = the EQUIPPED weapon, else "Fists"
+  (plain jab-cross for every class until a weapon is equipped, owner's rule); ClassWeapon = the class style (worn gear).
 - Q = Dash (client-side LinearVelocity burst, server checks `GameConfig.Dash.Cooldown`, `Dash` FX). Hotbar order:
   Dash, skills 1-6, F1-F4, expand, [ammo], AUTO. Stats is a main menu tile with a red points badge (no long button).
 - Window buttons (X + full screen) sit in one holder frame that we move (UI.Tactile remembers button positions), windows
@@ -132,6 +133,14 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
 - Sea Cook = taekwondo (ready stance; front -> side -> spinning back -> axe kick combo; flying side kick skill).
   Doctor (renamed from Ship Doctor) throws medicinal powders (Powder Pouch weapon line, dust-cloud VFX), not a med kit.
   Stats window has an Auto upgrade toggle (`settings.autoStats`, PlayerService.AutoStats by class build).
+- Swing speed: CombatService sends `speed` (clip length fitted into the attack interval); the client plays the clip at
+  that speed and the server divides the strike delay by it. Stances pose the upper body only and soften while moving.
+- Hit juice: red Highlight flash on monsters, HP bars (UI.Bar and the overhead mob bars via CreatureAnim) drop fast and
+  leave a red chunk that drains after a beat, with a punch on big hits. Style meter (UI.ComboHit(amount, crit)): ranks
+  D C B A S SS SSS (Dull..Sensational), fills per hit, drains when idle, total damage, flames from S. Loot pushes carry
+  `pos`: coins burst out and fly to the money counter, items fly into the Bag tile (HUD.FlyLoot).
+- Damage FX `kind` colors numbers (fire, burn, poison, ice, shock, pierce, star, pet, cannon, fruit elements);
+  CombatService.applyDot does burn/poison ticks (Ember ammo, Blaze skills, Doctor powders). Ship repair shows +numbers.
 - VFX are ParticleEmitter/Beam based with our own textures (`Config/Textures`); see the toolkit at the top of `Controllers/VFX.lua`.
 - Client controllers start through the protected `start()` in `init.client.lua` (core UI first, visuals in parallel):
   a controller that errors or yields must never block the others (it hid the quest tracker in v0.13.0).

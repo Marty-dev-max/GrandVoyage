@@ -54,6 +54,7 @@ function CharAnim.Play(_, clipName)
 end
 
 -- the combat stance loop follows the server's WeaponOut attribute (weapon in hand)
+local movingWas -- last moving state the stance weight was set for
 local function refreshStance()
 	local hum, char = humanoid()
 	if not hum then
@@ -67,6 +68,7 @@ local function refreshStance()
 	end
 	if want and stanceName ~= want then
 		stanceName = want
+		movingWas = nil
 		play(want, { fade = 0.25 })
 	end
 end
@@ -105,13 +107,14 @@ local function hitstop(dur)
 	if not tr or not tr.IsPlaying then
 		return
 	end
-	local strike = Anim.Strike(CharAnim.Stats.lastClip)
+	local strike = Anim.Strike(CharAnim.Stats.lastClip) / (CharAnim.Stats.speed or 1)
 	local wait = math.max(0, strike - (os.clock() - actionAt))
 	task.delay(wait, function()
 		if tr.IsPlaying then
+			local back = CharAnim.Stats.speed or 1
 			tr:AdjustSpeed(0.02)
 			task.delay(dur, function()
-				tr:AdjustSpeed(1)
+				tr:AdjustSpeed(back)
 			end)
 		end
 	end)
@@ -136,20 +139,40 @@ function CharAnim.Start()
 			combo.n = tonumber(d.combo) or ((os.clock() - combo.last < 1.2) and (combo.n % #list) + 1 or 1)
 			combo.n = math.clamp(combo.n, 1, #list)
 			combo.last = os.clock()
-			action, actionAt = play(list[combo.n]), os.clock()
+			-- played at the server's speed so the fist lands exactly when the damage does
+			action, actionAt = play(list[combo.n], { speed = tonumber(d.speed) or 1, fade = 0.05 }), os.clock()
+			CharAnim.Stats.speed = tonumber(d.speed) or 1
 			hitstop(0.05)
 		elseif kind == "Skill" and mine then
 			local sk = ClassesCfg.SkillById[d.skill or ""]
 			local k = sk and sk.kind or ""
 			local w = Clips.Weapons[weaponOf(d.char)] or {}
+			CharAnim.Stats.speed = 1
 			action, actionAt = play(w[k] or Clips.SkillKinds[k] or "Skill_Cast"), os.clock()
 		elseif kind == "Damage" then
 			if d.toPlayer and mine then
 				play("Hurt", { fade = 0.03 })
 				addShake(0.35)
-			elseif d.src == player.UserId then
+			elseif d.src == player.UserId and d.kind ~= "burn" and d.kind ~= "poison" then
 				-- damage now arrives on the strike frame: just the shake (the hitstop already ran on the swing)
 				addShake(d.crit and 0.55 or 0.18)
+			end
+		end
+	end)
+
+	-- the combat stance softens while you run (arms swing a bit again) and comes back when you stop
+	RunService.Heartbeat:Connect(function()
+		local hum = humanoid()
+		if not hum or not stanceName then
+			movingWas = nil
+			return
+		end
+		local moving = hum.MoveDirection.Magnitude > 0.1
+		if moving ~= movingWas then
+			movingWas = moving
+			local tr = Anim.Track(hum, stanceName)
+			if tr and tr.IsPlaying then
+				tr:AdjustWeight(moving and 0.45 or 1, 0.2)
 			end
 		end
 	end)

@@ -349,7 +349,7 @@ local function impact(pos, damage, srcShip, player)
 	end
 	if player then
 		for _, mob in ipairs(R.MonsterService.InRadius(pos, cfg.SplashRadius + 4)) do
-			R.MonsterService.Damage(mob, damage * 1.5, player, false)
+			R.MonsterService.Damage(mob, damage * 1.5, player, false, "cannon")
 			hitSomething = true
 		end
 	end
@@ -495,9 +495,10 @@ function Ship.RepairNearby(player, pct)
 	if not s or s.sinking or (s.owner and s.owner ~= player and not R.PartyService.Same(s.owner, player)) then
 		return false
 	end
+	local before = s.hp
 	s.hp = math.min(s.maxHp, s.hp + s.maxHp * pct)
 	setAttrs(s)
-	Net.FX("Repair", { pos = s.root.Position, radius = s.radius }, s.root.Position, 400)
+	Net.FX("Repair", { pos = s.root.Position, radius = s.radius, amount = math.floor(s.hp - before) }, s.root.Position, 400)
 	return true
 end
 

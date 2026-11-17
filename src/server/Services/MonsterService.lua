@@ -157,7 +157,7 @@ function MS.InRadius(pos, radius)
 	return out
 end
 
-local function rollDrops(player, def, mult)
+local function rollDrops(player, def, mult, pos)
 	local d = R.PlayerService.Derived(player)
 	local got = {}
 	for _, drop in ipairs(def.drops or {}) do
@@ -182,7 +182,8 @@ local function rollDrops(player, def, mult)
 		beli = math.floor(beli * (1 + (d and d.beliPct or 0)))
 		R.PlayerService.AddBeli(player, beli)
 	end
-	Net.Push(player, "Loot", { items = got, beli = beli })
+	-- pos: where the loot bursts out on the client before flying into the HUD
+	Net.Push(player, "Loot", { items = got, beli = beli, pos = pos })
 	return got
 end
 MS.RollDrops = rollDrops
@@ -206,7 +207,7 @@ local function die(mob, killer)
 		end
 	end
 	if top then
-		rollDrops(top, def, 1)
+		rollDrops(top, def, 1, mob.root and mob.root.Position)
 		if def.isBoss then
 			Net.PushAll("Announce", { text = "👑 MVP! " .. top.DisplayName .. " defeated " .. def.name .. "!", kind = "mvp" })
 			R.PlayerService.GiveExp(top, def.exp * 0.3, def.jobExp * 0.3, mob.root.Position)
@@ -252,7 +253,8 @@ local function die(mob, killer)
 	end
 end
 
-function MS.Damage(mob, amount, player, crit)
+-- kind (optional) colors the number on clients: fire, burn, poison, ice, shock, pierce, pet, cannon
+function MS.Damage(mob, amount, player, crit, kind)
 	if mob.dead then
 		return
 	end
@@ -268,7 +270,7 @@ function MS.Damage(mob, amount, player, crit)
 			mob.target = player
 		end
 	end
-	Net.FX("Damage", { pos = mob.root.Position + Vector3.new(0, 3, 0), amount = amount, crit = crit, src = player and player.UserId or 0, model = mob.model }, mob.root.Position, 250)
+	Net.FX("Damage", { pos = mob.root.Position + Vector3.new(0, 3, 0), amount = amount, crit = crit, kind = kind, src = player and player.UserId or 0, model = mob.model }, mob.root.Position, 250)
 	if mob.walkTrack and os.clock() - (mob.hitAnimAt or 0) > 0.35 then
 		mob.hitAnimAt = os.clock()
 		Anim.Play(mob.hum, "Mon_Hit", { fade = 0.03 })

@@ -32,13 +32,13 @@ local function roll(def, level)
 	return beli, exp, items
 end
 
-local function give(player, beli, exp, items)
+local function give(player, beli, exp, items, pos)
 	R.PlayerService.AddBeli(player, beli)
 	R.PlayerService.GiveExp(player, exp, math.floor(exp * 0.5))
 	for _, it in ipairs(items) do
 		R.InventoryService.AddItem(player, it.id, it.qty)
 	end
-	Net.Push(player, "Loot", { beli = beli, items = items })
+	Net.Push(player, "Loot", { beli = beli, items = items, pos = pos })
 end
 
 local function countFound(p, islandId)
@@ -75,7 +75,7 @@ local function open(player, model)
 	p.chests[id] = true
 	R.PlayerService.MarkDirty(player)
 	local beli, exp, items = roll(def, islandLevel(islandId))
-	give(player, beli, exp, items)
+	give(player, beli, exp, items, model.PrimaryPart.Position)
 	R.PetService.RollChestEgg(player, tier)
 	if tier == "Captain" then
 		R.FruitService.RollDrop(player, require(Shared.Config.Fruits).Drops.CaptainChest, def.name)

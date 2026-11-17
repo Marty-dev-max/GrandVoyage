@@ -12,7 +12,7 @@ return {
 	Cook_FlyingKick = 139782402666259,
 	Cook_FrontKick = 75153928364897,
 	Cook_SideKick = 104329619375373,
-	Cook_Stance = 116498621034600,
+	Cook_Stance = 111398432202586,
 	Hammer_Smash = 132918471770040,
 	Hammer_Stance = 73131770997449,
 	Hammer_Sweep = 115129035768081,

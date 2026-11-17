@@ -601,12 +601,23 @@ function UI.CharacterView(parent, props)
 		if root then
 			copy.PrimaryPart = root
 		end
-		local hand = copy:FindFirstChild("RightHand")
+		-- the statue holds its weapon the way WeaponService draws it in a fight
+		local A = CFrame.Angles
+		local HOLD = {
+			Sword = { { "RightHand", CFrame.new(0, -0.15, 0) * A(math.rad(-35), 0, 0) } },
+			Slingshot = { { "LeftHand", CFrame.new(0, -0.15, 0) } },
+			MedKit = { { "RightHand", CFrame.new(0, -0.45, -0.1) } },
+			Knuckles = { { "RightHand", CFrame.new(0, -0.1, 0) }, { "LeftHand", CFrame.new(0, -0.1, 0) } },
+			Shoes = {},
+		}
 		local tpl = weaponType and UI.ModelAsset("Weapons", weaponType)
-		if hand and tpl then
-			local w = tpl:Clone()
-			w:PivotTo(hand.CFrame * CFrame.new(0, -0.15, 0))
-			w.Parent = copy
+		for _, h in ipairs(tpl and (HOLD[weaponType] or { { "RightHand", CFrame.new(0, -0.15, 0) } }) or {}) do
+			local limb = copy:FindFirstChild(h[1])
+			if limb then
+				local w = tpl:Clone()
+				w:PivotTo(limb.CFrame * h[2])
+				w.Parent = copy
+			end
 		end
 		copy.Parent = world
 		model = copy
@@ -615,26 +626,32 @@ function UI.CharacterView(parent, props)
 		cam.CFrame = CFrame.lookAt(cf.Position + Vector3.new(0, ext.Y * 0.04, -dist), cf.Position)
 		place()
 	end
-	-- drag to turn (pcall: the headless UI harness has no input events)
+	-- drag to turn: press on the statue, then follow the pointer anywhere (works with touch too; the viewport is
+	-- Active so a drag does not also spin the camera). pcall: the headless UI harness has no input events.
+	vp.Active = true
 	local dragging, lastX = false, 0
 	pcall(function()
-	vp.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			dragging, lastX = true, input.Position.X
-		end
-	end)
-	vp.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			dragging = false
-		end
-	end)
-	vp.InputChanged:Connect(function(input)
-		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-			yaw += (input.Position.X - lastX) * 0.012
-			lastX = input.Position.X
-			place()
-		end
-	end)
+		vp.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				dragging, lastX = true, input.Position.X
+			end
+		end)
+		local c1 = UserInputService.InputChanged:Connect(function(input)
+			if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+				yaw += (input.Position.X - lastX) * 0.012
+				lastX = input.Position.X
+				place()
+			end
+		end)
+		local c2 = UserInputService.InputEnded:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				dragging = false
+			end
+		end)
+		vp.Destroying:Connect(function()
+			c1:Disconnect()
+			c2:Disconnect()
+		end)
 	end)
 	return vp, refresh
 end

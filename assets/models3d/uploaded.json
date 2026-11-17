@@ -416,23 +416,39 @@
   "sha1": "bb05188d1aab43e7dc9d05bbbcfa4857b08ce791"
  },
  "Wep_MedKit": {
-  "id": "81141392958049",
-  "sha1": "c5e6f099b0845f1432d79038e689ed55134a391c"
+  "id": "123870336785434",
+  "sha1": "e1cb0d716fcc6851c5faa9e5dbdccd3beec20c8b"
+ },
+ "Wep_Scabbard": {
+  "id": "87782503392512",
+  "sha1": "b33abd6e0356637603c129d297af305bcd975eb3"
  },
  "Wep_Shoes": {
   "id": "105051046246422",
   "sha1": "47b11624a364c57363650c93bea73fd357b8b9bd"
+ },
+ "Wep_SlingBag": {
+  "id": "115120151280034",
+  "sha1": "cf0581a75fb5cc187fd11e82e11b720768a5f2d1"
  },
  "Wep_Slingshot": {
   "id": "107919839238729",
   "sha1": "84c0b2f131ec0791ab3d4aa00b18fbc5e9ba51c3"
  },
  "Wep_StormBaton": {
-  "id": "132992700646624",
-  "sha1": "990c658e80630b9341288eb48844cd28cc222682"
+  "id": "94072127817659",
+  "sha1": "1ee3a809697c1129ff2230b7db93cccc00c889dd"
+ },
+ "Wep_StormBatonPack": {
+  "id": "107034507769557",
+  "sha1": "1bf6d0fa7bb513b67129c800853b0f5aed7e968b"
  },
  "Wep_Sword": {
   "id": "134693921108264",
   "sha1": "40a12d0586f8bfcd0d3c2524559b803af2e106dd"
+ },
+ "Wep_SwordSheathed": {
+  "id": "132176050527372",
+  "sha1": "eabc838a8cfa56241702a2123feb28af6ccbd84b"
  }
 }

@@ -49,7 +49,7 @@ Sails do nothing in the Doldrums; only oar benches work (at 40%).
 | Sharpshooter | Ranged crits | Slingshot | Cannons +15% | Lead Pellet, Blaze Shot, Smoke Pellet, Eagle Eye |
 | Brawler Chef | Kick melee + support | Battle Boots | — | Hook Kick, Banquet Spin, Searing Leg, Hearty Meal |
 | Navigator | Weather magic + ship | Storm Baton | Ship speed +10% | Thunder Call, Cyclone Call, Mirage Veil, Tailwind |
-| Ship Doctor | Healer | Med Kit | — | Field Medicine, Adrenaline Shot, Burst Tonic |
+| Doctor | Healer (medicinal powders) | Powder Pouch | — | Field Medicine, Adrenaline Shot, Burst Tonic |
 | Shipwright | Utility / merchant | Hammer | Refine +5%, 12-slot stall, cannons +5% | Hammer Smash, Cannonball Drop, Field Repair |
 
 Class change at Job Lv.10. Second jobs are planned in `Classes.SecondJobs`.

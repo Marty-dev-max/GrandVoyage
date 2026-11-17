@@ -76,18 +76,32 @@ def hammer():
 
 
 def baton():
-    # navigator's storm baton: wooden staff, brass compass ring, glowing storm crystal
-    g = Grid(20, 70, 20)
+    # navigator's storm staff: three segments that lock together (brass joint rings), capped tips, no orb
+    g = Grid(14, 74, 14)
     P = Painter(g)
-    cx, cz = 10, 10
-    P.tube([(cx, 14, cz), (cx, 66, cz)], [1.1, 1.3], DARKWOOD)
-    for y in (16, 40, 64):
-        P.box((cx, y, cz), (1.6, 0.8, 1.6), BRASS, 0.02)
-    # compass ring around the crystal (in the x-y plane... seen from the side it is a ring)
-    ring = g.d_tube([(cx + 6 * math.cos(a), 8 + 6 * math.sin(a), cz) for a in np.linspace(0, 2 * math.pi, 25)], [0.9] * 25)[0]
-    g.add(ring, P.col(BRASS, 0.02))
-    P.ell((cx, 8, cz), (2.6, 3.4, 2.6), BLUE, 0.04)
-    P.box((cx, 8, cz), (0.6, 4.5, 0.6), EDGE, 0.0)  # bright crystal core
+    cx, cz = 7, 7
+    seg = [(4, 26), (26, 48), (48, 70)]
+    shades = [STEEL, shade(STEEL, 0.85), STEEL]
+    for (a, b), col in zip(seg, shades):
+        P.tube([(cx, a, cz), (cx, b, cz)], [1.3, 1.3], col)
+        P.tube([(cx, a + 2, cz), (cx, b - 2, cz)], [1.45, 1.45], shade(col, 0.75))  # grip groove band
+    for y in (4, 26, 48, 70):
+        P.box((cx, y, cz), (2.0, 1.0, 2.0), BRASS, 0.02)  # joint rings / caps
+    P.box((cx, 2.5, cz), (1.0, 1.2, 1.0), BLUE, 0.0)  # little storm-glass tip
+    g.bake_ao(0.25)
+    return g
+
+
+def baton_pack():
+    # the same staff folded up: three short segments strapped side by side (worn on the belt)
+    g = Grid(20, 30, 14)
+    P = Painter(g)
+    for i, x in enumerate((6, 10, 14)):
+        P.tube([(x, 4, 7), (x, 26, 7)], [1.4, 1.4], STEEL if i != 1 else shade(STEEL, 0.85))
+        for y in (4, 26):
+            P.box((x, y, 7), (1.9, 0.9, 1.9), BRASS, 0.02)
+    for y in (11, 19):
+        P.box((10, y, 7), (6.2, 1.1, 2.2), LEATHER, 0.02)  # straps
     g.bake_ao(0.25)
     return g
 
@@ -137,15 +151,58 @@ def shoes():
 
 
 def medkit():
-    # doctor's kit: white case with a red cross and a leather handle on top
-    g = Grid(26, 18, 26)
+    # doctor's powder pouch: a cloth drawstring bag of medicinal powders with a herb tag (thrown in pinches)
+    g = Grid(22, 22, 26)
     P = Painter(g)
-    P.rbox((13, 9, 11), (11, 7, 9), WHITE, r=1.5, n=0.015)
-    for sy in (1.5, 16.5):
-        P.box((13, sy, 11), (2, 0.8, 6.5), RED, 0.0)
-        P.box((13, sy, 11), (6.5, 0.8, 2), RED, 0.0)
-    P.tube([(8, 9, 20), (9, 9, 24), (17, 9, 24), (18, 9, 20)], [1.0, 1.0, 1.0, 1.0], LEATHER)
-    P.box((13, 9, 18.5), (11.4, 7.4, 0.7), shade(WHITE, 0.85), 0.0)  # lid seam
+    P.ell((11, 11, 9), (8, 8, 8), rgb(232, 214, 176), 0.03)            # cloth bag
+    P.box((11, 11, 16.5), (5.2, 5.2, 1.4), shade(rgb(232, 214, 176), 0.8), 0.02)  # gathered neck
+    P.tube([(6, 11, 16.5), (11, 4.5, 17), (16, 11, 16.5), (11, 17.5, 17), (6, 11, 16.5)], [0.7] * 5, RED)  # drawstring
+    P.ell((11, 11, 19.5), (3.4, 3.4, 2.4), rgb(150, 230, 170), 0.04)   # puff of green powder at the mouth
+    P.box((15.5, 4.2, 8), (2.4, 0.6, 3), rgb(120, 200, 110), 0.0)      # herb tag
+    P.box((15.5, 3.8, 8), (0.6, 0.4, 1.8), WHITE, 0.0)
+    g.bake_ao(0.3)
+    return g
+
+
+def sword_sheathed():
+    # cutlass in its scabbard (worn at the left hip): leather scabbard with brass tip and mouth, hilt sticking out
+    g = Grid(18, 64, 14)
+    P = Painter(g)
+    cx, cz = 9, 7
+    P.rbox((cx, 25, cz), (1.6, 21, 3.0), DARKWOOD, r=1.0, n=0.02)
+    P.box((cx, 4.5, cz), (1.9, 1.5, 3.2), BRASS, 0.02)
+    P.box((cx, 45.5, cz), (1.9, 1.2, 3.2), BRASS, 0.02)
+    P.rbox((cx, 47.5, cz), (6.5, 1.2, 2.2), GOLD, r=1.0, n=0.02)  # guard
+    P.tube([(cx + 5.5, 47.5, cz - 1), (cx + 6, 51, cz - 2.5), (cx + 3, 57, cz - 3)], [0.8, 0.8, 0.8], GOLD)
+    for i in range(8):
+        P.box((cx, 49 + i, cz), (1.3, 0.5, 1.3), LEATHER if i % 2 else shade(LEATHER, 0.8), 0.02)
+    P.ball((cx, 58.5, cz), 1.9, GOLD, 0.02)
+    g.bake_ao(0.3)
+    return g
+
+
+def scabbard():
+    # the empty scabbard (stays at the hip while the cutlass is drawn)
+    g = Grid(10, 50, 12)
+    P = Painter(g)
+    P.rbox((5, 25, 6), (1.6, 21, 3.0), DARKWOOD, r=1.0, n=0.02)
+    P.box((5, 4.5, 6), (1.9, 1.5, 3.2), BRASS, 0.02)
+    P.box((5, 45.5, 6), (1.9, 1.2, 3.2), BRASS, 0.02)
+    g.bake_ao(0.3)
+    return g
+
+
+def sling_bag():
+    # sharpshooter's satchel: a round canvas bag with a flap and buckle (ammo pouch), worn at the hip on a strap
+    g = Grid(30, 20, 26)
+    P = Painter(g)
+    tan = rgb(196, 150, 86)
+    P.ell((15, 10, 11), (12, 6.5, 10), tan, 0.03)
+    P.ell((15, 4.6, 15), (11.5, 2.2, 6.5), shade(tan, 0.82), 0.02)   # flap over the front
+    P.box((15, 2.6, 11), (1.6, 0.8, 1.8), STEEL, 0.0)                # buckle
+    P.box((15, 3.2, 13.5), (0.8, 0.8, 2.6), LEATHER, 0.0)
+    for x in (4.5, 25.5):
+        P.box((x, 10, 21), (1.2, 1.4, 1.6), STEEL, 0.0)              # strap rings
     g.bake_ao(0.3)
     return g
 
@@ -153,6 +210,7 @@ def medkit():
 WEAPONS = {
     "Wep_Sword": sword, "Wep_Hammer": hammer, "Wep_StormBaton": baton, "Wep_Slingshot": slingshot,
     "Wep_Knuckles": knuckles, "Wep_Shoes": shoes, "Wep_MedKit": medkit,
+    "Wep_StormBatonPack": baton_pack, "Wep_SwordSheathed": sword_sheathed, "Wep_Scabbard": scabbard, "Wep_SlingBag": sling_bag,
 }
 
 

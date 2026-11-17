@@ -92,7 +92,7 @@ Q.Main = {
 	},
 	{
 		id = "T09", island = "Daybreak", title = "Find Your Calling",
-		dialog = { "Job Lv.10! Go see the Job Master. Swordsman, Sharpshooter, Sea Cook, Navigator, Ship Doctor or Shipwright... or stay a Brawler. Every crew needs all of them.", "Don't worry about choosing wrong: each class keeps its own progress, and you can switch back later." },
+		dialog = { "Job Lv.10! Go see the Job Master. Swordsman, Sharpshooter, Sea Cook, Navigator, Doctor or Shipwright... or stay a Brawler. Every crew needs all of them.", "Don't worry about choosing wrong: each class keeps its own progress, and you can switch back later." },
 		goal = { kind = "Talk", target = "JobMaster" }, text = "Visit the Job Master",
 		hint = "Pick a new class, or keep punching as a Brawler.",
 		at = { npc = "JobMaster" }, reward = { beli = 500, exp = 200, job = 100 },

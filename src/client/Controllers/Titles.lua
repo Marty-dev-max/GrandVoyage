@@ -7,6 +7,7 @@ local RunService = game:GetService("RunService")
 local TextChatService = game:GetService("TextChatService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Rarity = require(ReplicatedStorage.Shared.Modules.Rarity)
+local TitleStyle = require(script.Parent.Parent.UI.TitleStyle)
 
 local Titles = {}
 local shown = {} -- player -> { gui, key, head, grad }
@@ -30,9 +31,7 @@ local function make(pl, head)
 	bb.AlwaysOnTop = false
 	bb.ResetOnSpawn = false
 	bb.Adornee = head
-	local grad
 	if title then
-		local color, shimmer = Titles.Look(tier)
 		local t = Instance.new("TextLabel")
 		t.Name = "Title"
 		t.BackgroundTransparency = 1
@@ -40,17 +39,12 @@ local function make(pl, head)
 		t.FontFace = FONT
 		t.TextSize = 20
 		t.Text = title
-		t.TextColor3 = shimmer and Color3.new(1, 1, 1) or color
 		t.Parent = bb
 		local st = Instance.new("UIStroke")
 		st.Color = EDGE
 		st.Thickness = 2
 		st.Parent = t
-		if shimmer then
-			grad = Instance.new("UIGradient")
-			grad.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, color), ColorSequenceKeypoint.new(0.5, color:Lerp(Color3.new(1, 1, 1), 0.65)), ColorSequenceKeypoint.new(1, color) })
-			grad.Parent = t
-		end
+		TitleStyle.Apply(t, tier)
 	end
 	local row = Instance.new("Frame")
 	row.BackgroundTransparency = 1
@@ -88,12 +82,15 @@ local function make(pl, head)
 	name.Text = pl.DisplayName
 	name.TextColor3 = Color3.new(1, 1, 1)
 	name.Parent = row
+	if title then
+		TitleStyle.Apply(name, tier) -- the name wears the title's color too
+	end
 	local ns = Instance.new("UIStroke")
 	ns.Color = EDGE
 	ns.Thickness = 2.5
 	ns.Parent = name
 	bb.Parent = head
-	return bb, grad
+	return bb
 end
 
 local function keyOf(pl)
@@ -119,19 +116,8 @@ function Titles.Start()
 		end
 	end)
 
-	local acc, t = 0, 0
+	local acc = 0
 	RunService.Heartbeat:Connect(function(dt)
-		t += dt
-		-- shimmer: slide the highlight across Legendary+ titles; Secret cycles through colors
-		for pl, cur in pairs(shown) do
-			if cur.grad then
-				cur.grad.Offset = Vector2.new(math.sin(t * 1.6) * 0.7, 0)
-				if pl:GetAttribute("TitleRarity") == "Secret" then
-					local c = Color3.fromHSV((t * 0.15) % 1, 0.65, 1)
-					cur.grad.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, c), ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 1)), ColorSequenceKeypoint.new(1, c) })
-				end
-			end
-		end
 		acc += dt
 		if acc < 0.5 then
 			return
@@ -152,8 +138,7 @@ function Titles.Start()
 				cur = nil
 			end
 			if head and not cur then
-				local gui, grad = make(pl, head)
-				shown[pl] = { gui = gui, key = key, head = head, grad = grad }
+				shown[pl] = { gui = make(pl, head), key = key, head = head }
 			end
 		end
 		for pl, cur in pairs(shown) do

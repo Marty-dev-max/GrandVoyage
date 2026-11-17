@@ -26,7 +26,7 @@ local WeaponLines = {
 	Slingshot = { magic = false, label = "Slingshot", names = { "Twig Slingshot", "Brass Slingshot", "Falcon Sling", "Stardrop Sling", "Skybreaker" } },
 	Shoes = { magic = false, label = "Battle Boots", names = { "Deck Boots", "Chef Loafers", "Iron-Toe Boots", "Flamewalk Boots", "Skystep Boots" } },
 	StormBaton = { magic = true, label = "Storm Baton", names = { "Bamboo Staff", "Weather Rod", "Storm Baton", "Tempest Rod", "Skyweaver Baton" } },
-	MedKit = { magic = true, label = "Med Kit", names = { "First Aid Kit", "Field Satchel", "Surgeon Case", "Miracle Bag", "Panacea Chest" } },
+	MedKit = { magic = true, label = "Powder Pouch", names = { "Herb Pouch", "Field Powders", "Surgeon's Dust", "Miracle Powder", "Panacea Pouch" } },
 	Knuckles = { magic = false, label = "Knuckles", names = { "Brass Knuckles", "Iron Knuckles", "Sharktooth Knuckles", "Thunderclap Fists", "Titan Gauntlets" } },
 	Hammer = { magic = false, label = "Hammer", names = { "Wooden Mallet", "Shipwright Hammer", "Keel Breaker", "Galley Maul", "Dockyard Titan" } },
 }

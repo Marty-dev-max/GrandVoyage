@@ -28,20 +28,28 @@
   "sha1": "7388a5e300528cc0bb83381cb354f1d4e603a840"
  },
  "Cook_AxeKick": {
-  "id": "123569376452875",
-  "sha1": "b3943b2cdb607c33033225e52deda87efa4ec185"
+  "id": "139345381456195",
+  "sha1": "cba66ee303bc865b50f466440b8e7b9f3b3a2303"
+ },
+ "Cook_BackKick": {
+  "id": "72981567341432",
+  "sha1": "53cbfe8fa96942997ffe2836bca32b76b89c0450"
+ },
+ "Cook_FlyingKick": {
+  "id": "139782402666259",
+  "sha1": "2d6115fd191dd1eac115bd8866dd5d0a97431146"
  },
  "Cook_FrontKick": {
-  "id": "126489106049477",
-  "sha1": "62d57f4797406cd33aca0d6000e1b56120f9db23"
+  "id": "75153928364897",
+  "sha1": "3ab7a4a0c21bec5e9d74e374373ce9cf8833c2ed"
  },
- "Cook_Roundhouse": {
-  "id": "119152831847975",
-  "sha1": "ecd2ff61af020842a5678ee3b85de4e8e3d52751"
+ "Cook_SideKick": {
+  "id": "104329619375373",
+  "sha1": "753ab53401ab06a6b4d99e4fffc546a7426bf1cf"
  },
  "Cook_Stance": {
-  "id": "118399182297694",
-  "sha1": "432def04ba984456eb1deea73f99978852ba4b85"
+  "id": "116498621034600",
+  "sha1": "ff40366c52ec9ebdde30d6ff97c158450b42e0a2"
  },
  "Hammer_Smash": {
   "id": "132918471770040",

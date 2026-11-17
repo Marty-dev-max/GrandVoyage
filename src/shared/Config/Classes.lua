@@ -103,8 +103,8 @@ local Classes = {
 		},
 	},
 	Doctor = {
-		name = "Ship Doctor",
-		desc = "Healer and party buffer. Essential for dungeons and bosses.",
+		name = "Doctor",
+		desc = "Healer and party buffer who throws medicinal powders: healing dust for friends, stinging dust for foes.",
 		tier = 1,
 		hpMod = 1.0,
 		spMod = 1.3,

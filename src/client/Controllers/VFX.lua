@@ -492,7 +492,7 @@ end
 SkillFX.Kick = function(d)
 	local c = Color3.fromRGB(255, 170, 60)
 	VFX.SpeedLines(d.from, d.to, Color3.fromRGB(255, 220, 160), 10)
-	task.delay(strikeOf("Cook_AxeKick"), function()
+	task.delay(strikeOf("Cook_FlyingKick"), function()
 		VFX.Slash(CFrame.lookAt(d.from, d.to) * CFrame.new(0, -1, -3) * CFrame.Angles(0, 0, math.pi / 2), c, 10)
 		VFX.Impact(d.to, c, 6)
 		VFX.Shockwave(d.to, d.to - d.from, Color3.fromRGB(255, 220, 140), 6)
@@ -621,10 +621,11 @@ local weaponFX = {
 	end,
 	Shoes = function(d, n)
 		local c = Color3.fromRGB(255, 190, 90)
-		VFX.Slash(CFrame.lookAt(d.from, d.to) * CFrame.new(0, -1.5, -3) * CFrame.Angles(0, 0, math.pi / 2), c, n == 3 and 8 or 6)
+		local fin = n == #AnimClips.Weapons.Shoes.combo -- the axe kick
+		VFX.Slash(CFrame.lookAt(d.from, d.to) * CFrame.new(0, -1.5, -3) * CFrame.Angles(0, 0, math.pi / 2), c, fin and 8 or 6)
 		local at, dir = hitPoint(d)
-		VFX.Impact(at, c, n == 3 and 5.5 or 3.6)
-		if n == 3 then
+		VFX.Impact(at, c, fin and 5.5 or 3.6)
+		if fin then
 			VFX.Shockwave(at, dir, Color3.fromRGB(255, 220, 150), 6)
 		end
 	end,
@@ -647,7 +648,14 @@ local weaponFX = {
 		VFX.Projectile(d.from, d.to, Color3.fromRGB(140, 200, 255), 1, 0.22, 2)
 	end,
 	MedKit = function(d)
-		VFX.Projectile(d.from, d.to, Color3.fromRGB(255, 160, 200), 0.6, 0.2, 1)
+		-- a pinch of medicinal powder: a glittering puff arcs over and bursts into a colored dust cloud
+		local dust = ({ Color3.fromRGB(150, 235, 170), Color3.fromRGB(255, 170, 210), Color3.fromRGB(190, 170, 255) })[math.random(1, 3)]
+		VFX.Projectile(d.from + Vector3.new(0, 1, 0), d.to, dust, 0.45, 0.2, 2.5, dust:Lerp(Color3.new(1, 1, 1), 0.4))
+		task.delay(0.2, function()
+			VFX.Smoke(d.to, dust, 9, 3.2)
+			VFX.Sparks(d.to, dust:Lerp(Color3.new(1, 1, 1), 0.3), 10, 6)
+			VFX.Flash(d.to, dust, 3)
+		end)
 	end,
 }
 local MELEE = { Sword = true, Hammer = true, Knuckles = true, Shoes = true }
@@ -734,6 +742,24 @@ handlers.LevelUp = function(d)
 	VFX.Ring(feet + Vector3.new(0, 0.5, 0), 14, gold, 0.8)
 	if d.char == localPlayer.Character or (d.userId and d.userId == localPlayer.UserId) then
 		VFX.ScreenFlash(pale, 0.3, 0.4)
+	end
+end
+handlers.WeaponDraw = function(d)
+	local char = d.char
+	local hand = typeof(char) == "Instance" and (char:FindFirstChild(d.weapon == "Slingshot" and "LeftHand" or "RightHand"))
+	if not hand then
+		return
+	end
+	if d.weapon == "StormBaton" then
+		-- the three segments lock into one staff: a line of clicks/sparks running out from the hand
+		local dir = hand.CFrame.LookVector
+		for i = 0, 3 do
+			task.delay(i * 0.04, function()
+				VFX.Sparks(hand.Position + dir * (i * 1.4), Color3.fromRGB(150, 210, 255), 4, 5)
+			end)
+		end
+	else
+		VFX.Sparks(hand.Position, Color3.fromRGB(255, 240, 210), 4, 4)
 	end
 end
 handlers.Dash = function(d)
@@ -905,6 +931,9 @@ local fxSounds = {
 	end,
 	Dash = function(d)
 		return "Whoosh", d.from, 1.15
+	end,
+	WeaponDraw = function(d)
+		return d.weapon == "StormBaton" and "AnvilClang" or "Equip", d.pos, d.weapon == "StormBaton" and 1.7 or 1
 	end,
 	Splash = function(d)
 		return "Splash", d.pos

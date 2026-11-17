@@ -60,30 +60,55 @@ C.Brawler_Uppercut = { rig = "R15", priority = "Action", strike = 0.18, keys = {
 	{ t = 0.42, pose = GUARD },
 } }
 
--- ===== Sea Cook (Shoes): hands in pockets, front kick -> roundhouse -> axe kick =====
-local POCKETS = { RightUpperArm = { -14, 0, 8 }, RightLowerArm = { 25, 0, 0 }, LeftUpperArm = { -14, 0, -8 }, LeftLowerArm = { 25, 0, 0 }, UpperTorso = { 4, 0, 0 } }
-C.Cook_Stance = { rig = "R15", loop = true, priority = "Idle", length = 1.6, keys = {
-	{ t = 0, pose = POCKETS },
-	{ t = 0.8, pose = with(POCKETS, { UpperTorso = { 6, 0, 0 }, Head = { -4, 0, 0 } }) },
-	{ t = 1.6, pose = POCKETS },
+-- ===== Sea Cook (Shoes): taekwondo. Ready stance (side-on, fists up, bouncing), then
+--       front kick (ap chagi) -> side kick (yeop chagi) -> spinning back kick (dwit chagi) -> axe kick (naeryo chagi);
+--       the flying side kick (twimyo yeop chagi) is the big skill kick. Right leg kicks; the left leg leads.
+local TKD = {
+	LowerTorso = { 0, -35, 0, 0, -0.25, 0 }, UpperTorso = { -4, 12, 0 }, Head = { 0, 22, 0 },
+	LeftUpperArm = { 62, 0, -12 }, LeftLowerArm = { 95, 0, 0 }, RightUpperArm = { 38, 0, 18 }, RightLowerArm = { 125, 0, 0 },
+	LeftUpperLeg = { 22, 0, -4 }, LeftLowerLeg = { -28, 0, 0 }, RightUpperLeg = { -14, 0, 6 }, RightLowerLeg = { -22, 0, 0 },
+}
+C.Cook_Stance = { rig = "R15", loop = true, priority = "Idle", length = 0.8, keys = {
+	{ t = 0, pose = TKD },
+	{ t = 0.4, pose = with(TKD, { LowerTorso = { 0, -35, 0, 0, -0.45, 0 }, LeftLowerLeg = { -38, 0, 0 }, RightLowerLeg = { -32, 0, 0 } }) },
+	{ t = 0.8, pose = TKD },
 } }
-C.Cook_FrontKick = { rig = "R15", priority = "Action", strike = 0.16, keys = {
-	{ t = 0, pose = POCKETS },
-	{ t = 0.08, pose = with(POCKETS, { RightUpperLeg = { 70, 0, 0 }, RightLowerLeg = { -95, 0, 0 }, UpperTorso = { 10, 0, 0 } }) },
-	{ t = 0.16, pose = with(POCKETS, { RightUpperLeg = { 98, 0, 0 }, RightLowerLeg = { -4, 0, 0 }, UpperTorso = { 20, 0, 0 }, LowerTorso = { 0, 0, 0, 0, 0, -0.4 } }) },
-	{ t = 0.36, pose = POCKETS },
+C.Cook_FrontKick = { rig = "R15", priority = "Action", strike = 0.15, keys = {
+	{ t = 0, pose = TKD },
+	{ t = 0.07, pose = with(TKD, { LowerTorso = { 0, -10, 0, 0, -0.1, 0 }, RightUpperLeg = { 95, 0, 0 }, RightLowerLeg = { -115, 0, 0 }, UpperTorso = { 6, 5, 0 } }) },
+	{ t = 0.15, pose = with(TKD, { LowerTorso = { 0, -5, 0, 0, 0, -0.3 }, RightUpperLeg = { 100, 0, 0 }, RightLowerLeg = { -4, 0, 0 }, UpperTorso = { 14, 0, 0 }, LeftLowerLeg = { -10, 0, 0 } }) },
+	{ t = 0.24, pose = with(TKD, { RightUpperLeg = { 90, 0, 0 }, RightLowerLeg = { -110, 0, 0 } }) },
+	{ t = 0.36, pose = TKD },
 } }
-C.Cook_Roundhouse = { rig = "R15", priority = "Action", strike = 0.17, keys = {
-	{ t = 0, pose = POCKETS },
-	{ t = 0.08, pose = with(POCKETS, { LowerTorso = { 0, -70, 0 }, RightUpperLeg = { 30, 0, 30 }, RightLowerLeg = { -70, 0, 0 } }) },
-	{ t = 0.17, pose = with(POCKETS, { LowerTorso = { 0, 35, 0 }, RightUpperLeg = { 25, 0, 80 }, RightLowerLeg = { -6, 0, 0 }, UpperTorso = { 0, 0, -18 } }) },
-	{ t = 0.4, pose = POCKETS },
+C.Cook_SideKick = { rig = "R15", priority = "Action", strike = 0.17, keys = {
+	{ t = 0, pose = TKD },
+	{ t = 0.08, pose = with(TKD, { LowerTorso = { 0, 60, 0, 0, -0.15, 0 }, RightUpperLeg = { 65, 0, 45 }, RightLowerLeg = { -120, 0, 0 }, UpperTorso = { 0, 10, -8 } }) },
+	{ t = 0.17, pose = with(TKD, { LowerTorso = { 0, 85, -10, 0, 0, 0 }, RightUpperLeg = { 8, 0, 88 }, RightLowerLeg = { -2, 0, 0 }, UpperTorso = { 0, 5, -28 }, Head = { 0, -60, 20 }, LeftUpperLeg = { 0, 0, -8 }, LeftLowerLeg = { -8, 0, 0 } }) },
+	{ t = 0.27, pose = with(TKD, { LowerTorso = { 0, 60, 0 }, RightUpperLeg = { 60, 0, 45 }, RightLowerLeg = { -115, 0, 0 } }) },
+	{ t = 0.4, pose = TKD },
 } }
-C.Cook_AxeKick = { rig = "R15", priority = "Action", strike = 0.21, keys = {
-	{ t = 0, pose = POCKETS },
-	{ t = 0.12, pose = with(POCKETS, { RightUpperLeg = { 135, 0, 10 }, RightLowerLeg = { -6, 0, 0 }, UpperTorso = { 22, 0, 0 } }) },
-	{ t = 0.21, pose = with(POCKETS, { RightUpperLeg = { 18, 0, 0 }, UpperTorso = { -16, 0, 0 }, LowerTorso = { 0, 0, 0, 0, -0.3, -0.3 } }) },
-	{ t = 0.44, pose = POCKETS },
+C.Cook_BackKick = { rig = "R15", priority = "Action", strike = 0.21, keys = {
+	{ t = 0, pose = TKD },
+	{ t = 0.09, pose = with(TKD, { LowerTorso = { 0, -120, 0, 0, -0.2, 0 }, Head = { 0, -50, 0 }, RightUpperLeg = { 50, 0, 0 }, RightLowerLeg = { -110, 0, 0 } }) },
+	{ t = 0.21, pose = with(TKD, { LowerTorso = { 0, -180, 0, 0, 0, 0.2 }, UpperTorso = { -28, 0, 0 }, Head = { -10, -70, 0 }, RightUpperLeg = { -85, 0, 0 }, RightLowerLeg = { -4, 0, 0 }, LeftUpperLeg = { 15, 0, 0 } }) },
+	{ t = 0.31, pose = with(TKD, { LowerTorso = { 0, -270, 0 }, RightUpperLeg = { 20, 0, 0 }, RightLowerLeg = { -60, 0, 0 } }) },
+	{ t = 0.44, pose = with(TKD, { LowerTorso = { 0, -359, 0, 0, -0.25, 0 } }) },
+	{ t = 0.5, pose = TKD },
+} }
+C.Cook_AxeKick = { rig = "R15", priority = "Action", strike = 0.22, keys = {
+	{ t = 0, pose = TKD },
+	{ t = 0.13, pose = with(TKD, { LowerTorso = { 0, -15, 0, 0, 0.1, 0 }, RightUpperLeg = { 140, 0, 12 }, RightLowerLeg = { -4, 0, 0 }, UpperTorso = { 18, 0, 0 } }) },
+	{ t = 0.22, pose = with(TKD, { LowerTorso = { 0, -15, 0, 0, -0.45, -0.3 }, RightUpperLeg = { 25, 0, 0 }, RightLowerLeg = { -10, 0, 0 }, UpperTorso = { -18, 0, 0 } }) },
+	{ t = 0.44, pose = TKD },
+} }
+C.Cook_FlyingKick = { rig = "R15", priority = "Action2", strike = 0.32, keys = {
+	{ t = 0, pose = TKD },
+	{ t = 0.1, pose = with(TKD, { LowerTorso = { 0, -20, 0, 0, -0.7, 0 }, LeftUpperLeg = { 50, 0, 0 }, LeftLowerLeg = { -90, 0, 0 }, RightUpperLeg = { 50, 0, 0 }, RightLowerLeg = { -90, 0, 0 } }) },
+	{ t = 0.22, pose = with(TKD, { LowerTorso = { 0, 60, 0, 0, 1.8, -0.6 }, LeftUpperLeg = { 85, 0, 0 }, LeftLowerLeg = { -125, 0, 0 }, RightUpperLeg = { 60, 0, 45 }, RightLowerLeg = { -120, 0, 0 } }) },
+	{ t = 0.32, pose = with(TKD, { LowerTorso = { 0, 88, -12, 0, 2.2, -1.2 }, UpperTorso = { 0, 5, -25 }, Head = { 0, -60, 20 }, LeftUpperLeg = { 80, 0, 0 }, LeftLowerLeg = { -125, 0, 0 }, RightUpperLeg = { 6, 0, 90 }, RightLowerLeg = { -2, 0, 0 } }) },
+	{ t = 0.46, pose = with(TKD, { LowerTorso = { 0, 40, 0, 0, 0.6, -0.6 }, RightUpperLeg = { 40, 0, 30 }, RightLowerLeg = { -90, 0, 0 } }) },
+	{ t = 0.6, pose = with(TKD, { LowerTorso = { 0, -35, 0, 0, -0.6, 0 }, LeftLowerLeg = { -50, 0, 0 }, RightLowerLeg = { -45, 0, 0 } }) },
+	{ t = 0.72, pose = TKD },
 } }
 
 -- ===== Swordsman (Sword): blade forward, overhead slash -> backhand -> thrust =====
@@ -234,7 +259,7 @@ C.Mon_Hit = { rig = "Mon", priority = "Action2", keys = {
 -- weapon -> combo clips (in order), stance, and the clips each skill kind uses
 C.Weapons = {
 	Knuckles = { combo = { "Brawler_Jab", "Brawler_Cross", "Brawler_Hook", "Brawler_Uppercut" }, stance = "Brawler_Stance", Melee = "Brawler_Uppercut", AoE = "Skill_GroundPunch" },
-	Shoes = { combo = { "Cook_FrontKick", "Cook_Roundhouse", "Cook_AxeKick" }, stance = "Cook_Stance", Melee = "Cook_AxeKick", AoE = "Skill_Spin" },
+	Shoes = { combo = { "Cook_FrontKick", "Cook_SideKick", "Cook_BackKick", "Cook_AxeKick" }, stance = "Cook_Stance", Melee = "Cook_FlyingKick", AoE = "Skill_Spin" },
 	Sword = { combo = { "Sword_Slash", "Sword_Backhand", "Sword_Thrust" }, stance = "Sword_Stance", Melee = "Sword_Thrust", AoE = "Skill_Spin" },
 	Hammer = { combo = { "Hammer_Smash", "Hammer_Sweep" }, stance = "Hammer_Stance", Melee = "Hammer_Smash", AoE = "Hammer_Smash" },
 	Slingshot = { combo = { "Sling_Shoot" }, stance = "Sling_Stance", Ranged = "Sling_Shoot", Melee = "Sling_Shoot" },

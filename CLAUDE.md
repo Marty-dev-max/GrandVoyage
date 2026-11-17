@@ -88,8 +88,10 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   Monsters: MonsterService plays Mon_Idle + Mon_Walk (weight follows speed) + Mon_Attack / Mon_Hit on the server.
   AssetService still rigs voxel monster parts to the root with Motor6Ds at their joints (names Body/Head/LegL...).
   `Controllers/CreatureAnim.lua` only does the hit flash and death shatter. VFX timing reads each clip's `strike`.
-  Weapons: `WeaponService` welds `Assets.Weapons/<Type>` (voxel_weapons.py) to the hands (Knuckles both hands, Shoes
-  shin guards) on attack/skill and holsters after 8 s; sets char attributes Weapon / WeaponOut. Unarmed players fight
+  Weapons: `WeaponService` keeps gear visible at all times: HOLSTERED when calm (cutlass in its scabbard at the left
+  hip, hammer across the back, folded 3-piece storm staff + Doctor's powder pouch on the belt), DRAWN in the hands for
+  8 s after an attack/skill (`WeaponDraw` FX: the staff snaps out), WORN always (Sea Cook shin guards, Sharpshooter
+  satchel + strap). Offsets per type live in DRAWN / HOLSTERED / WORN tables; sets char attributes Weapon / WeaponOut. Unarmed players fight
   with their class's weapon type (CombatService.weaponType). Dev tab -> Animation Check; Studio shows an anim status line.
   Pets animate by part name in `Controllers/Pets.lua` (Hinge attribute). Avatars: uniform R15 via
   `PlayerService.normalizeAvatar` (GameConfig.NormalizeAvatars; Game Settings avatar type must be R15).
@@ -127,6 +129,9 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   Dash, skills 1-6, F1-F4, expand, [ammo], AUTO. Stats is a main menu tile with a red points badge (no long button).
 - Window buttons (X + full screen) sit in one holder frame that we move (UI.Tactile remembers button positions), windows
   are capped to the screen (`UI.FitSize`), and tall columns scroll. Loadout supports drag and drop.
+- Sea Cook = taekwondo (ready stance; front -> side -> spinning back -> axe kick combo; flying side kick skill).
+  Doctor (renamed from Ship Doctor) throws medicinal powders (Powder Pouch weapon line, dust-cloud VFX), not a med kit.
+  Stats window has an Auto upgrade toggle (`settings.autoStats`, PlayerService.AutoStats by class build).
 - VFX are ParticleEmitter/Beam based with our own textures (`Config/Textures`); see the toolkit at the top of `Controllers/VFX.lua`.
 - Client controllers start through the protected `start()` in `init.client.lua` (core UI first, visuals in parallel):
   a controller that errors or yields must never block the others (it hid the quest tracker in v0.13.0).

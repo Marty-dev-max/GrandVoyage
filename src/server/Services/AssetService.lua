@@ -50,7 +50,9 @@ end
 -- the length from the handle end (+Z; the striking end points -Z). nil grip = the pivot stays at the center.
 AS.WEAPONS = {
 	Sword = { size = 4.6, grip = 0.13 }, Hammer = { size = 4.8, grip = 0.1 }, StormBaton = { size = 5.4, grip = 0.35 },
-	Slingshot = { size = 1.9, grip = 0.23 }, Knuckles = { size = 1.3 }, Shoes = { size = 1.55 }, MedKit = { size = 1.5 },
+	Slingshot = { size = 1.9, grip = 0.23 }, Knuckles = { size = 1.3 }, Shoes = { size = 1.55 }, MedKit = { size = 1.05 },
+	-- worn / holstered gear (pivot at the center)
+	StormBatonPack = { size = 1.7 }, SwordSheathed = { size = 4.5 }, Scabbard = { size = 3.4 }, SlingBag = { size = 1.6 },
 }
 
 local ENV_HEIGHT = 10 -- Env models are normalized to this height with the pivot at the bottom center

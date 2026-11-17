@@ -90,7 +90,7 @@ Mobile: the thumbstick also steers the ship (VehicleSeat). There is a ⚔️ att
 | System | Where |
 |---|---|
 | Base/Job levels, RO-style stats (STR AGI VIT INT DEX LUK) | `PlayerService`, `Modules/Formulas` |
-| 6 sea-faring classes: Swordsman, Sharpshooter, Brawler Chef, Navigator, Ship Doctor, Shipwright | `Config/Classes` |
+| 6 sea-faring classes: Swordsman, Sharpshooter, Sea Cook, Navigator, Doctor, Shipwright | `Config/Classes` |
 | Weapon grades: Plain → Keen → Masterwork → Grandmaster → Supreme | `Config/Items` |
 | **Rarity tiers** Common → Uncommon → Rare → Epic → Legendary → Mythic → Secret (colors, shine, sounds) | `Modules/Rarity` |
 | Refine +1 to +15 (safe to +4, downgrade on fail, shatter risk from +10, Willpower Charm protects) | `InventoryService` |

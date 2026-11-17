@@ -44,6 +44,51 @@ local function trimBar(bar)
 end
 PS.TrimBar = trimBar
 
+-- ===== auto stat upgrade (Stats window toggle): spend points in the build that suits the class =====
+local STAT_BUILD = {
+	Brawler = { STR = 5, AGI = 3, VIT = 3, DEX = 1 },
+	Swordsman = { STR = 5, VIT = 3, AGI = 2, DEX = 1 },
+	Sniper = { DEX = 5, AGI = 3, LUK = 2 },
+	Cook = { AGI = 4, STR = 4, VIT = 2, LUK = 1 },
+	Navigator = { INT = 5, DEX = 3, VIT = 2 },
+	Doctor = { INT = 5, VIT = 3, DEX = 2 },
+	Shipwright = { STR = 4, VIT = 4, DEX = 2 },
+}
+function PS.AutoStats(player)
+	local p = PS.Profile(player)
+	if not p or not (p.settings and p.settings.autoStats) then
+		return
+	end
+	local build = STAT_BUILD[p.class] or { STR = 1, AGI = 1, VIT = 1, DEX = 1 }
+	local spent = false
+	for _ = 1, 400 do
+		-- the stat furthest behind its share of the build
+		local best, bestRatio
+		for stat, w in pairs(build) do
+			local v = p.stats[stat]
+			if w > 0 and v and v < Formulas.MaxStat then
+				local ratio = v / w
+				if not bestRatio or ratio < bestRatio then
+					best, bestRatio = stat, ratio
+				end
+			end
+		end
+		if not best then
+			break
+		end
+		local cost = Formulas.StatCost(p.stats[best])
+		if cost > p.statPoints then
+			break
+		end
+		p.statPoints -= cost
+		p.stats[best] += 1
+		spent = true
+	end
+	if spent then
+		PS.Recompute(player)
+	end
+end
+
 -- put a skill in the first free slot (no-op if it is already on the bar or the bar is full)
 function PS.BarAdd(p, id)
 	if table.find(p.skillBar, id) then
@@ -270,6 +315,9 @@ function PS.GiveExp(player, base, job, pos)
 		if p.baseLevel >= GameConfig.MaxBaseLevel then
 			p.baseExp = 0
 		end
+	end
+	if leveled then
+		task.defer(PS.AutoStats, player)
 	end
 	local jobLeveled = false
 	local cap = jobCap(p)
@@ -551,6 +599,12 @@ local function setupHandlers()
 		end
 		if tonumber(data.autoPotionPct) then
 			p.settings.autoPotionPct = math.clamp(math.floor(data.autoPotionPct), 0, 90)
+		end
+		if type(data.autoStats) == "boolean" then
+			p.settings.autoStats = data.autoStats
+			if data.autoStats then
+				task.defer(PS.AutoStats, player)
+			end
 		end
 		if tonumber(data.autoRadius) then
 			local ab = GameConfig.AutoBattle

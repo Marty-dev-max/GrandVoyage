@@ -35,6 +35,7 @@ local DailiesCfg = require(ReplicatedStorage.Shared.Config.Dailies)
 local AchievementsCfg = require(ReplicatedStorage.Shared.Config.Achievements)
 local QuestsCfg = require(ReplicatedStorage.Shared.Config.Quests)
 local TitlesCfg = require(ReplicatedStorage.Shared.Config.Titles)
+local TitleStyle = require(script.Parent.TitleStyle)
 
 local function req(action, payload, okSound)
 	local res = Net.Request(action, payload)
@@ -162,14 +163,15 @@ local function itemTile(parent, entry, onClick, selected)
 end
 
 -- ===================== INVENTORY =====================
-function Panels.Inventory()
+function Panels.Inventory(args)
 	local win = UI.Window("Inventory", "Inventory", UDim2.fromOffset(1180, 600), T.Ocean, "🎒", { fullscreen = true })
 	-- left: your character wearing your gear, with the equipment slots around it (tap a slot to inspect it)
 	local charPanel = UI.Card(win.body, UDim2.new(0.36, -10, 1, 0), T.PanelDeep)
 	local left = New("Frame", { BackgroundTransparency = 1, Position = UDim2.new(0.36, 0, 0, 0), Size = UDim2.new(0.38, -10, 1, 0), Parent = win.body })
 	local right = UI.Card(win.body, UDim2.new(0.26, 0, 1, 0))
 	right.Position = UDim2.new(0.74, 0, 0, 0)
-	local stage = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 58), Size = UDim2.new(1, -200, 1, -90), Parent = charPanel })
+	-- the statue fills the panel (behind the gear slots) so there is plenty of room to drag it round, even on phones
+	local stage = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 8), Size = UDim2.new(1, 0, 1, -90), Parent = charPanel })
 	New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.glow, ImageColor3 = T.Ocean:Lerp(Color3.new(1, 1, 1), 0.4), ImageTransparency = 0.6, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.55), Size = UDim2.fromScale(1.1, 0.9), Parent = stage })
 	local _, refreshChar = UI.CharacterView(stage)
 	UI.Text(charPanel, "drag to turn", 12, T.TextSoft, "Semi", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -6), Size = UDim2.fromOffset(200, 16), TextXAlignment = Enum.TextXAlignment.Center })
@@ -181,7 +183,7 @@ function Panels.Inventory()
 	end
 	local lastWeaponType
 	-- title: shown above the statue; tap to choose one (Config/Titles)
-	local titleBtn = New("TextButton", { Text = "", AutoButtonColor = false, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 10), Size = UDim2.fromOffset(250, 44), BackgroundColor3 = Color3.new(1, 1, 1), ZIndex = 5, Parent = charPanel })
+	local titleBtn = New("TextButton", { Text = "", AutoButtonColor = false, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -26), Size = UDim2.new(1, -24, 0, 44), BackgroundColor3 = Color3.new(1, 1, 1), ZIndex = 5, Parent = charPanel })
 	UI.Corner(titleBtn, 12)
 	New("UIGradient", { Color = ColorSequence.new(T.PanelTop, T.PanelDeep), Rotation = 90, Parent = titleBtn })
 	local titleStroke = UI.Stroke(titleBtn, T.Gold, 3)
@@ -201,7 +203,7 @@ function Panels.Inventory()
 		if not p then
 			return
 		end
-		titlePicker = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), Position = UDim2.fromOffset(6, 6), Size = UDim2.new(1, -12, 1, -12), ZIndex = 30, Parent = charPanel })
+		titlePicker = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), Position = UDim2.fromOffset(6, 6), Size = UDim2.new(1, -12, 1, -12), ClipsDescendants = true, ZIndex = 30, Parent = charPanel })
 		UI.Corner(titlePicker, 14)
 		New("UIGradient", { Color = ColorSequence.new(T.PanelTop, T.PanelDeep), Rotation = 90, Parent = titlePicker })
 		UI.Stroke(titlePicker, T.Gold, 3)
@@ -212,7 +214,8 @@ function Panels.Inventory()
 			titlePicker:Destroy()
 			titlePicker = nil
 		end)
-		local tabs = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(10, 44), Size = UDim2.new(1, -20, 0, 34), ZIndex = 31, Parent = titlePicker })
+		-- categories scroll sideways when the panel is narrow (they used to spill into the bag)
+		local tabs = New("ScrollingFrame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(10, 44), Size = UDim2.new(1, -20, 0, 42), CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.X, ScrollingDirection = Enum.ScrollingDirection.X, ScrollBarThickness = 4, BorderSizePixel = 0, ZIndex = 31, Parent = titlePicker })
 		local cats = {}
 		for _, c in ipairs(TitlesCfg.Categories) do
 			table.insert(cats, { c, "", c, T.Gold })
@@ -221,21 +224,30 @@ function Panels.Inventory()
 			titleCat = c
 			openTitles()
 		end, 30)
+		tb.AutomaticSize = Enum.AutomaticSize.X
+		tb.Size = UDim2.fromOffset(0, 36)
 		for _, d in ipairs(tb:GetDescendants()) do
 			if d:IsA("GuiObject") then
 				d.ZIndex = 32
 			end
 		end
-		local list = UI.Scroll(titlePicker, UDim2.new(1, -16, 1, -92))
-		list.Position = UDim2.fromOffset(8, 86)
+		local list = UI.Scroll(titlePicker, UDim2.new(1, -16, 1, -100))
+		list.Position = UDim2.fromOffset(8, 92)
 		list.ZIndex = 31
 		UI.List(list, nil, 6)
 		local current = p.title == nil and TitlesCfg.Default or p.title
-		local function row(name, color, sub, owned, equipped, onPick, order)
+		local function row(name, color, sub, owned, equipped, onPick, order, tierId)
 			local r = New("TextButton", { Text = "", AutoButtonColor = false, Size = UDim2.new(1, -10, 0, 52), BackgroundColor3 = owned and T.Panel or T.PanelDeep, LayoutOrder = order, ZIndex = 32, Parent = list })
 			UI.Corner(r, 10)
 			UI.Stroke(r, equipped and T.Gold or T.Edge, equipped and 3.5 or 2)
-			UI.Text(r, name, 18, owned and color or T.TextSoft, "Display", { Position = UDim2.fromOffset(12, 3), Size = UDim2.new(1, -110, 0, 24), ZIndex = 33, TextWrapped = false })
+			local nl = UI.Text(r, name, 18, owned and color or T.TextSoft, "Display", { Position = UDim2.fromOffset(12, 3), Size = UDim2.new(1, -110, 0, 24), ZIndex = 33, TextWrapped = false })
+			if tierId then
+				-- the preview looks exactly like the nameplate (locked ones are just dimmed)
+				TitleStyle.Apply(nl, tierId)
+				if not owned then
+					nl.TextTransparency = 0.45
+				end
+			end
 			UI.Text(r, sub, 12, T.TextSoft, "Semi", { Position = UDim2.fromOffset(12, 27), Size = UDim2.new(1, -110, 0, 20), ZIndex = 33 })
 			UI.Text(r, equipped and "WEARING" or (owned and "WEAR" or "🔒"), 14, equipped and T.Green or (owned and T.Gold or T.TextSoft), "Display", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 0), Size = UDim2.fromOffset(90, 52), TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 33 })
 			if owned and not equipped then
@@ -258,13 +270,14 @@ function Panels.Inventory()
 						titlePicker:Destroy()
 						titlePicker = nil
 					end
-				end, k)
+				end, k, t.tier)
 			end
 		end
 	end
 	titleBtn.Activated:Connect(openTitles)
 	UI.Pad(right, 12)
-	local filterRow = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 38), Parent = left })
+	-- the filter tabs scroll sideways on small screens instead of piling on top of each other
+	local filterRow = New("ScrollingFrame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 42), CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.X, ScrollingDirection = Enum.ScrollingDirection.X, ScrollBarThickness = 4, BorderSizePixel = 0, Parent = left })
 	local grid = UI.Scroll(left, UDim2.new(1, 0, 1, -44))
 	grid.Position = UDim2.fromOffset(0, 44)
 	New("UIGridLayout", { CellSize = UDim2.fromOffset(84, 84), CellPadding = UDim2.fromOffset(9, 9), SortOrder = Enum.SortOrder.LayoutOrder, Parent = grid })
@@ -286,25 +299,33 @@ function Panels.Inventory()
 
 	local function detail(entry, def)
 		clear(right)
+		local oldList = right:FindFirstChildOfClass("UIListLayout")
+		if oldList then
+			oldList:Destroy() -- (the empty-state placeholder stacks with a list; the detail view places things itself)
+		end
 		selectedUid = entry.uid
-		UI.List(right, nil, 8)
 		local tier = ItemDB.Rarity(def)
-		-- showcase (Anime Vanguards style): the item floats over spinning rarity-colored rays
-		local head = New("Frame", { Size = UDim2.new(1, 0, 0, 190), ClipsDescendants = true, Parent = right })
+		-- top ~55%: the item big on spinning rarity rays (3D model for weapons and fruits), then the details, then the
+		-- actions along the bottom (one = centered, two or more = side by side across the full width)
+		local head = New("Frame", { Size = UDim2.new(1, 0, 0.55, -10), ClipsDescendants = true, Parent = right })
 		UI.Corner(head, 12)
 		UI.RarityStyle(head, def.rarity, true)
-		local rays = New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.focuslines, ImageColor3 = tier.color:Lerp(Color3.new(1, 1, 1), 0.5), ImageTransparency = 0.45, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.fromOffset(300, 300), ZIndex = 3, Parent = head })
-		New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.glow, ImageColor3 = tier.color:Lerp(Color3.new(1, 1, 1), 0.3), ImageTransparency = 0.15, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.fromOffset(170, 170), ZIndex = 3, Parent = head })
+		local rays = New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.focuslines, ImageColor3 = tier.color:Lerp(Color3.new(1, 1, 1), 0.5), ImageTransparency = 0.45, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.45), Size = UDim2.fromScale(1.6, 1.6), ZIndex = 3, Parent = head })
+		New("UIAspectRatioConstraint", { Parent = rays })
+		local glow = New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.glow, ImageColor3 = tier.color:Lerp(Color3.new(1, 1, 1), 0.3), ImageTransparency = 0.15, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.45), Size = UDim2.fromScale(0.85, 0.85), ZIndex = 3, Parent = head })
+		New("UIAspectRatioConstraint", { Parent = glow })
 		local iconId = UI.ItemIconId(def)
-		local big
-		local model = def.kind == "Fruit" and UI.ModelView(head, "Fruits", def.fruit, 150, 0.9, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), ZIndex = 5 })
-		if model then
-			big = model
-		elseif iconId then
-			big = New("ImageLabel", { BackgroundTransparency = 1, Image = iconId, ScaleType = Enum.ScaleType.Fit, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.fromOffset(124, 124), ZIndex = 5, Parent = head })
-		else
-			big = UI.Text(head, def.icon or kindIcon[def.kind] or "", 64, T.Text, "Display", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.fromOffset(124, 124), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 5 })
+		local big = (def.kind == "Fruit" and UI.ModelView(head, "Fruits", def.fruit, 200, 0.9, { ZIndex = 5 }))
+			or (def.weaponType and UI.ModelView(head, "Weapons", def.weaponType, 200, 0.7, { ZIndex = 5 }))
+		if not big and iconId then
+			big = New("ImageLabel", { BackgroundTransparency = 1, Image = iconId, ScaleType = Enum.ScaleType.Fit, ZIndex = 5, Parent = head })
+		elseif not big then
+			big = UI.Text(head, def.icon or kindIcon[def.kind] or "", 64, T.Text, "Display", { TextScaled = true, TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 5 })
 		end
+		big.AnchorPoint = Vector2.new(0.5, 0.5)
+		big.Position = UDim2.fromScale(0.5, 0.43)
+		big.Size = UDim2.fromScale(0.72, 0.72)
+		New("UIAspectRatioConstraint", { Parent = big })
 		UI.Pop(big, 0.5)
 		if tier.rank >= 4 then
 			Audio.Play("Rarity" .. tier.id)
@@ -317,31 +338,38 @@ function Panels.Inventory()
 				return
 			end
 			rays.Rotation = (rays.Rotation + dt * 18) % 360
-			big.Position = UDim2.new(0.5, 0, 0.42, math.sin((os.clock() - t0) * 2.2) * 5)
+			big.Position = UDim2.new(0.5, 0, 0.43, math.sin((os.clock() - t0) * 2.2) * 5)
 		end)
-		UI.Text(head, ItemDB.DisplayName(entry), 21, T.Text, "Display", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -22), Size = UDim2.new(1, -16, 0, 24), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 6, TextWrapped = false })
-		UI.Text(head, string.upper(tier.id), 14, tier.color:Lerp(Color3.new(1, 1, 1), 0.4), "Display", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -5), Size = UDim2.new(1, -16, 0, 16), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 6 })
-		UI.Text(right, describe(entry, def), 15, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 120), TextYAlignment = Enum.TextYAlignment.Top })
-		local row = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 110), Parent = right })
-		New("UIGridLayout", { CellSize = UDim2.fromOffset(150, 46), CellPadding = UDim2.fromOffset(8, 8), Parent = row })
+		local big2 = win.full and 26 or 21
+		UI.Text(head, ItemDB.DisplayName(entry), big2, T.Text, "Display", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -24), Size = UDim2.new(1, -16, 0, big2 + 4), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 6, TextWrapped = false })
+		UI.Text(head, string.upper(tier.id), 15, tier.color:Lerp(Color3.new(1, 1, 1), 0.4), "Display", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -6), Size = UDim2.new(1, -16, 0, 16), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 6 })
+		-- details (scrolls if long)
+		local info = UI.Scroll(right, UDim2.new(1, 0, 0.45, -70))
+		info.Position = UDim2.new(0, 0, 0.55, 2)
+		UI.Text(info, describe(entry, def), win.full and 17 or 15, T.TextSoft, "Semi", { Size = UDim2.new(1, -10, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextYAlignment = Enum.TextYAlignment.Top })
+		-- actions
+		local actions = {}
+		local function act(label, color, fn)
+			table.insert(actions, { label, color, fn })
+		end
 		if def.slot then
 			if equippedUid(entry.uid) then
-				UI.Button(row, "Unequip", T.OceanDark, nil, function()
+				act("Unequip", T.OceanDark, function()
 					req("UnequipItem", { slot = def.slot }, "Equip")
 				end)
 			else
-				UI.Button(row, "Equip", T.Green, nil, function()
+				act("Equip", T.Green, function()
 					req("EquipItem", { uid = entry.uid }, "Equip")
 				end)
 			end
 		end
 		if def.kind == "Consumable" and not def.special then
-			UI.Button(row, "Use", T.Green, nil, function()
+			act("Use", T.Green, function()
 				req("UseItem", { uid = entry.uid })
 			end)
 		end
 		if def.kind == "Egg" then
-			UI.Button(row, "🐣 Hatch", T.Gold, nil, function()
+			act("🐣 Hatch", T.Gold, function()
 				local res = req("HatchEgg", { uid = entry.uid }, "RarityEpic")
 				if res.ok then
 					Panels.Open("Pets")
@@ -349,7 +377,7 @@ function Panels.Inventory()
 			end)
 		end
 		if def.kind == "Fruit" then
-			UI.Button(row, "🍎 Eat", T.Pink, nil, function()
+			act("🍎 Eat", T.Pink, function()
 				local cur = State.profile.fruit
 				local warn = cur and ("\nYou will LOSE your current fruit power (" .. (FruitsCfg.ById[cur.id] and FruitsCfg.ById[cur.id].name or cur.id) .. ").") or ""
 				UI.Confirm("Eat the " .. def.name .. "?" .. warn .. "\nFruit users can never swim again.", function()
@@ -361,13 +389,28 @@ function Panels.Inventory()
 			end)
 		end
 		if def.kind == "Card" then
-			UI.Button(row, "Socket", T.Gold, nil, function()
+			act("Insert", T.Gold, function()
 				Panels.Refine({ tab = "Cards" })
 			end)
+		elseif def.slots and def.slots > 0 then
+			act("Cards", T.Gold, function()
+				Panels.Refine({ tab = "Cards", uid = entry.uid })
+			end)
 		end
-		UI.Button(row, "Sell", T.Red, nil, function()
+		act("Sell", T.Red, function()
 			req("ShopSell", { uid = entry.uid, qty = entry.qty or 1 }, "Coin")
 		end)
+		local bar = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.new(1, 0, 0, 58), Parent = right })
+		UI.List(bar, Enum.FillDirection.Horizontal, 8, Enum.HorizontalAlignment.Center)
+		local n = #actions
+		for _, a in ipairs(actions) do
+			local w = n == 1 and UDim2.new(0.6, 0, 1, -6) or UDim2.new(1 / n, -math.ceil(8 * (n - 1) / n), 1, -6)
+			local btn = UI.Button(bar, a[1], a[2], w, a[3])
+			local cap = btn:FindFirstChildOfClass("UITextSizeConstraint")
+			if cap then
+				cap.MaxTextSize = win.full and 28 or 22
+			end
+		end
 	end
 
 	-- an equipment slot around the character: the item's icon, or a faded hint of what goes there
@@ -417,10 +460,11 @@ function Panels.Inventory()
 		if tdef and p.titles and p.titles[tdef.id] then
 			local tier = Rarity.Get(tdef.tier)
 			titleText.Text = "« " .. tdef.name .. " »"
-			titleText.TextColor3 = tier.color
+			TitleStyle.Apply(titleText, tdef.tier)
 			titleStroke.Color = tier.color
 		else
 			titleText.Text = "No title  •  tap to pick"
+			TitleStyle.Apply(titleText, "Common")
 			titleText.TextColor3 = T.TextSoft
 			titleStroke.Color = T.Edge
 		end
@@ -507,7 +551,8 @@ function Panels.Inventory()
 			filter = f
 			render()
 		end, 32)
-		bar.Size = UDim2.fromScale(1, 1)
+		bar.AutomaticSize = Enum.AutomaticSize.X
+		bar.Size = UDim2.fromOffset(0, 38)
 		local list = {}
 		for i, e in ipairs(p.inventory) do
 			local def = ItemDB.Get(e.id)
@@ -550,6 +595,13 @@ function Panels.Inventory()
 		end
 	end
 	render()
+	-- open straight on an item (used by the UI harness and by "show me" links)
+	if args and args.select and State.profile then
+		local e = Formulas.FindItem(State.profile, args.select)
+		if e then
+			detail(e, ItemDB.Get(e.id))
+		end
+	end
 	onProfile(win, render)
 	local _, h = UI.Button(win.header, "🏪 Open Stall", T.Orange, UDim2.fromOffset(170, 42), function()
 		Panels.StallSetup()
@@ -655,8 +707,11 @@ function Panels.Stats()
 				end
 			end)
 		end
+		-- bottom row: Apply (half) + Auto upgrade toggle (half); both stay inside the frame on any width
 		local any = planCost(p) > 0
-		local _, ah = UI.Button(tbl, any and "Apply" or "Plan points with +", any and T.Green or T.Grey, UDim2.fromOffset(280, 50), function()
+		local foot = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.new(1, 0, 0, 48), Parent = tbl })
+		UI.List(foot, Enum.FillDirection.Horizontal, 10, Enum.HorizontalAlignment.Center)
+		UI.Button(foot, any and "Apply" or "Plan with +", any and T.Green or T.Grey, UDim2.new(0.5, -5, 1, 0), function()
 			if not any then
 				return
 			end
@@ -665,14 +720,25 @@ function Panels.Stats()
 				pend = {}
 			end
 		end)
-		ah.AnchorPoint = Vector2.new(0.5, 1)
-		ah.Position = UDim2.new(0.5, 0, 1, 0)
+		local autoOn = p.settings and p.settings.autoStats == true
+		local autoBtn = UI.Button(foot, (autoOn and "☑" or "☐") .. " Auto upgrade", autoOn and T.Ocean or T.Grey, UDim2.new(0.5, -5, 1, 0), function()
+			local v = not autoOn
+			p.settings = p.settings or {}
+			p.settings.autoStats = v
+			render()
+			task.spawn(req, "SetAutoSettings", { autoStats = v })
+		end)
+		UI.Tooltip(autoBtn, function()
+			return "Auto upgrade: spends new stat points for you, in the build that suits your class (" .. ((Classes[p.class] and Classes[p.class].name) or p.class) .. "). Untick to plan them yourself.", T.Ocean
+		end)
 
 		-- combat numbers
-		local cs = UI.Card(right, UDim2.new(1, -12, 0, 150), T.PanelDeep)
+		-- combat numbers: the card grows with however many rows the grid needs at this width
+		local cs = UI.Card(right, UDim2.new(1, -12, 0, 0), T.PanelDeep)
+		cs.AutomaticSize = Enum.AutomaticSize.Y
 		cs.Position = UDim2.fromOffset(0, 482)
 		UI.Pad(cs, 12)
-		local grid = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Parent = cs })
+		local grid = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, Parent = cs })
 		New("UIGridLayout", { CellSize = UDim2.fromOffset(250, 26), CellPadding = UDim2.fromOffset(18, 4), Parent = grid })
 		for _, l in ipairs({
 			{ "HP", d.maxHp }, { "SP", d.maxSp }, { "ATK", d.atk }, { "MATK", d.matk }, { "DEF", d.def }, { "MDEF", d.mdef },

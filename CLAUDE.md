@@ -142,6 +142,18 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
 - Damage FX `kind` colors numbers (fire, burn, poison, ice, shock, pierce, star, pet, cannon, fruit elements);
   CombatService.applyDot does burn/poison ticks (Ember ammo, Blaze skills, Doctor powders). Ship repair shows +numbers.
 - VFX are ParticleEmitter/Beam based with our own textures (`Config/Textures`); see the toolkit at the top of `Controllers/VFX.lua`.
+- v0.21 combat feel: Brawler = freestyle street fight (7-hit Knuckles combo jab/cross/body blow/hook/knee/elbow/spinning
+  backfist; a skill can name its own clip with `anim` in Config/Classes, e.g. JabRush -> Brawler_Flurry). Hit sounds by
+  attacker weapon (PunchHit/PunchHeavy/SliceHit/ShotHit/ZapHit/PowderPoof) in VFX fxSounds.Damage; impacts
+  `VFX.ImpactSplit` (shockwave + split streaks) for fists/kicks/hammer/pellets, `VFX.SliceLine` for swords, `VFX.Charge`
+  before finishers. Navigator = weather: `VFX.StormCloud` (warm + cold puffs condense), basic attack throws a lightning
+  ball, ThunderCall / CycloneCall skill FX. Own crits: gradient "CRITICAL!" number on an impact star + `VFX.ImpactFrame()`.
+  Overhead mob bars are dressed like HUD bars (stroke, gloss, white flash, shake) in CreatureAnim.juiceBar.
+- Class switch auto-equips the best owned class weapon (PlayerService). Loadout drag uses UIDragDetector.
+- Card drops play `UI/CardReveal.lua` (tension + orbs, whip flip + hitstop, rune rings + golden lightning, foil sheen,
+  monster pops out of the frame, stars, RGB split from Mythic; intensity and pitch scale with rarity, tap skips).
+- Style meter = vertical tube middle-right (left of the menu column; `UI.PlaceStyleMeter` from HUD.Layout), liquid on a
+  spring, letter rides the level. The UI harness pumps `task.wait` loops (`pump`) to play the card reveal through.
 - Client controllers start through the protected `start()` in `init.client.lua` (core UI first, visuals in parallel):
   a controller that errors or yields must never block the others (it hid the quest tracker in v0.13.0).
 - Windows close only with their red X or Esc; the dim backdrop just blocks clicks (owner request).

@@ -7,9 +7,25 @@
   "id": "113150741446246",
   "sha1": "e56fbb9ccee2c1a82913fa415c1fc5b5a4066a69"
  },
+ "Brawler_Backfist": {
+  "id": "125562387918301",
+  "sha1": "d247b618bea4f4c5e7a9bc8fdc6fbd2513760bad"
+ },
+ "Brawler_BodyBlow": {
+  "id": "82258758551088",
+  "sha1": "dd647c046079f52184e09f31fb9011f42908b011"
+ },
  "Brawler_Cross": {
   "id": "100491937968135",
   "sha1": "19d0cf3b345547596b187163e21189236448ec44"
+ },
+ "Brawler_Elbow": {
+  "id": "109247925161698",
+  "sha1": "dee671c6561b253375b0528f1c9126b032afc588"
+ },
+ "Brawler_Flurry": {
+  "id": "102826721738941",
+  "sha1": "0d6c539870c9755fc65a8b92f5de3228d00d1d2a"
  },
  "Brawler_Hook": {
   "id": "139976960636423",
@@ -18,6 +34,10 @@
  "Brawler_Jab": {
   "id": "137070861760117",
   "sha1": "09bb7e74c03beb6a970e8eefc9af899e5ab04e8e"
+ },
+ "Brawler_Knee": {
+  "id": "96356700021564",
+  "sha1": "c780ca5a1a246418f3d379ba016d041416df5220"
  },
  "Brawler_Stance": {
   "id": "81962328856873",

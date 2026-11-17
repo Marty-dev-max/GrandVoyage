@@ -15,6 +15,7 @@ local PetsCfg = require(Shared.Config.Pets)
 local GameConfig = require(Shared.Config.GameConfig)
 local Net = require(Shared.Modules.Net)
 local UI = require(script.Parent.UIKit)
+local CardReveal = require(script.Parent.CardReveal)
 local Panels = require(script.Parent.Panels)
 local State = require(script.Parent.Parent.State)
 local Combat = require(script.Parent.Parent.Controllers.Combat)
@@ -912,8 +913,12 @@ function HUD.Loot(data)
 		local def = ItemDB.Get(it.id)
 		add((it.card and "🃏 " or "") .. (def and def.name or it.id) .. "  x" .. it.qty, def and def.rarity or "Common")
 		if it.card then
-			Audio.Play("CardDrop")
-			UI.Banner("Card Drop!", def and def.name or it.id, Rarity.Get(def and def.rarity).color, def and def.rarity)
+			if def then
+				CardReveal.Play(def)
+			else
+				Audio.Play("CardDrop")
+				UI.Banner("Card Drop!", it.id, Rarity.Get().color)
+			end
 		end
 	end
 	local frames = {}
@@ -1165,6 +1170,12 @@ function HUD.Layout()
 	-- toasts sit just left of the menu column (they used to slide under the currency pills)
 	local menuW = compact and 326 * 0.8 or 158
 	UI.ToastHolder.Position = UDim2.new(1, -(menuW + 32), 0, 222)
+	-- the style meter (vertical tube) stands middle-right: left of the menu column, or under the small phone menu
+	if compact then
+		UI.PlaceStyleMeter(UDim2.new(1, -96, 0.6, 0), 0.6)
+	else
+		UI.PlaceStyleMeter(UDim2.new(1, -(menuW + 30), 0.5, 0), 1)
+	end
 	if attackHolder then
 		attackHolder.Size = UDim2.fromOffset(compact and 120 or 110, compact and 120 or 110)
 	end

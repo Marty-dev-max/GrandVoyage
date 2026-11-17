@@ -1263,26 +1263,55 @@ local RANKS = {
 }
 local PER_RANK = 100
 local combo = { points = 0, hits = 0, total = 0, last = 0, rank = 0 }
-local comboFrame = New("Frame", { Name = "StyleMeter", AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -28, 0.62, 0), Size = UDim2.fromOffset(250, 150), BackgroundTransparency = 1, Visible = false, Parent = gui })
-local flames = New("ImageLabel", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0, 70, 0, 92), Size = UDim2.fromOffset(150, 150), ImageTransparency = 1, ZIndex = 1, Parent = comboFrame })
+-- Layout (owner, v0.21): middle-right of the screen, a VERTICAL tube that the hits push upward. The fill springs
+-- (overshoots and wobbles), a glowing head rides the top of the liquid, bubbles rise inside, and the rank letter rides
+-- next to the fill level. Rank-up = the tube flashes white, bursts and refills from the bottom.
+local TEX = {}
 pcall(function()
-	flames.Image = require(ReplicatedStorage.Shared.Config.Textures).flame
+	TEX = require(ReplicatedStorage.Shared.Config.Textures)
 end)
-local letter = UI.Text(comboFrame, "D", 78, Color3.new(1, 1, 1), "Display", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(70, 48), Size = UDim2.fromOffset(140, 90), TextXAlignment = Enum.TextXAlignment.Center, Rotation = -8, ZIndex = 3, TextWrapped = false })
-local letterScale = New("UIScale", { Parent = letter })
-local rankName = UI.Text(comboFrame, "DULL", 16, Color3.new(1, 1, 1), "Display", { Position = UDim2.fromOffset(0, 90), Size = UDim2.fromOffset(140, 18), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 3 })
-local hitsText = UI.Text(comboFrame, "0", 34, Color3.new(1, 1, 1), "Number", { Position = UDim2.fromOffset(140, 14), Size = UDim2.fromOffset(110, 36), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 3, TextWrapped = false })
-local hitsScale = New("UIScale", { Parent = hitsText })
-UI.Text(comboFrame, "HITS", 14, T.TextSoft, "Display", { Position = UDim2.fromOffset(142, 48), Size = UDim2.fromOffset(100, 16), ZIndex = 3 })
-local totalText = UI.Text(comboFrame, "0", 18, T.Gold, "Number", { Position = UDim2.fromOffset(140, 66), Size = UDim2.fromOffset(110, 20), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 3, TextWrapped = false })
-UI.Text(comboFrame, "TOTAL DMG", 11, T.TextSoft, "Display", { Position = UDim2.fromOffset(142, 86), Size = UDim2.fromOffset(100, 14), ZIndex = 3 })
-local comboBar = New("Frame", { Position = UDim2.fromOffset(6, 116), Size = UDim2.fromOffset(238, 12), BackgroundColor3 = T.PanelDeep, ZIndex = 2, Parent = comboFrame })
-UI.Corner(comboBar, 6)
-UI.Stroke(comboBar, T.Edge, 2)
-local comboFill = New("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = Color3.new(1, 1, 1), ZIndex = 3, Parent = comboBar })
-UI.Corner(comboFill, 6)
-local fillGrad = New("UIGradient", { Parent = comboFill })
+local BAR_H, BAR_W = 250, 26
+local comboFrame = New("Frame", { Name = "StyleMeter", AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -22, 0.47, 0), Size = UDim2.fromOffset(190, 300), BackgroundTransparency = 1, Visible = false, Parent = gui })
+local comboScale = New("UIScale", { Parent = comboFrame })
+local comboBase = 1
+-- HUD.Layout places the meter next to the menu column (and shrinks it on phones)
+function UI.PlaceStyleMeter(pos, scale)
+	comboFrame.Position = pos
+	comboBase = scale or 1
+	comboScale.Scale = comboBase
+end
+local flames = New("ImageLabel", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.85), Position = UDim2.fromOffset(70, 150), Size = UDim2.fromOffset(150, 150), ImageTransparency = 1, Image = TEX.flame or "", ZIndex = 1, Parent = comboFrame })
+-- the tube (right side), fill grows from the bottom
+local comboBar = New("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0, 160, 0, 20 + BAR_H), Size = UDim2.fromOffset(BAR_W, BAR_H), BackgroundColor3 = T.PanelDeep, ClipsDescendants = true, ZIndex = 2, Parent = comboFrame })
+UI.Corner(comboBar, 13)
+local barStroke = UI.Stroke(comboBar, T.Edge, 3)
+local comboFill = New("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.fromScale(1, 0), BackgroundColor3 = Color3.new(1, 1, 1), ZIndex = 3, Parent = comboBar })
+UI.Corner(comboFill, 13)
+local fillGrad = New("UIGradient", { Rotation = 90, Parent = comboFill })
+-- glossy stripe down the tube
+local gloss = New("Frame", { Position = UDim2.new(0, 5, 0, 6), Size = UDim2.new(0, 5, 1, -12), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.6, ZIndex = 5, Parent = comboBar })
+UI.Corner(gloss, 3)
+local barFlash = New("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1, ZIndex = 6, Parent = comboBar })
+UI.Corner(barFlash, 13)
+-- tick marks every quarter
+for i = 1, 3 do
+	New("Frame", { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 0, i / 4, 0), Size = UDim2.new(0.35, 0, 0, 2), BackgroundColor3 = T.Edge, BackgroundTransparency = 0.3, BorderSizePixel = 0, ZIndex = 4, Parent = comboBar })
+end
+-- the glowing head that rides the liquid (outside the clip so it can bloom past the tube)
+local head = New("ImageLabel", { BackgroundTransparency = 1, Image = TEX.glow or "", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(160, 20 + BAR_H), Size = UDim2.fromOffset(70, 40), ImageTransparency = 0.3, ZIndex = 4, Parent = comboFrame })
 local barScale = New("UIScale", { Parent = comboBar })
+-- rank letter + name ride beside the fill level; hits and total sit at the bottom
+local letter = UI.Text(comboFrame, "D", 78, Color3.new(1, 1, 1), "Display", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(70, 150), Size = UDim2.fromOffset(140, 90), TextXAlignment = Enum.TextXAlignment.Center, Rotation = -8, ZIndex = 3, TextWrapped = false })
+local letterScale = New("UIScale", { Parent = letter })
+local rankName = UI.Text(comboFrame, "DULL", 16, Color3.new(1, 1, 1), "Display", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromOffset(70, 192), Size = UDim2.fromOffset(150, 18), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 3 })
+local hitsText = UI.Text(comboFrame, "0", 34, Color3.new(1, 1, 1), "Number", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromOffset(136, 228), Size = UDim2.fromOffset(120, 34), TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 3, TextWrapped = false })
+local hitsScale = New("UIScale", { Parent = hitsText })
+UI.Text(comboFrame, "HITS", 13, T.TextSoft, "Display", { Position = UDim2.fromOffset(16, 236), Size = UDim2.fromOffset(60, 16), ZIndex = 3 })
+local totalText = UI.Text(comboFrame, "0", 18, T.Gold, "Number", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromOffset(136, 262), Size = UDim2.fromOffset(120, 20), TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 3, TextWrapped = false })
+UI.Text(comboFrame, "TOTAL DMG", 11, T.TextSoft, "Display", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromOffset(136, 283), Size = UDim2.fromOffset(120, 14), TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 3 })
+
+local fillShown, fillVel = 0, 0 -- spring state of the liquid (0..1 of the current rank)
+local letterY = 150
 
 local function rankOf(points)
 	return math.clamp(math.floor(points / PER_RANK) + 1, 1, #RANKS)
@@ -1294,8 +1323,37 @@ local function paint(rank)
 	letter.TextColor3 = r[3]
 	rankName.Text = r[2]
 	rankName.TextColor3 = r[3]:Lerp(Color3.new(1, 1, 1), 0.3)
-	fillGrad.Color = ColorSequence.new(r[3]:Lerp(Color3.new(1, 1, 1), 0.45), r[3])
+	fillGrad.Color = ColorSequence.new(r[3]:Lerp(Color3.new(1, 1, 1), 0.5), r[3]:Lerp(Color3.new(0, 0, 0), 0.15))
+	barStroke.Color = rank >= 4 and r[3]:Lerp(T.Edge, 0.35) or T.Edge
+	head.ImageColor3 = r[3]:Lerp(Color3.new(1, 1, 1), 0.4)
 	letter.TextSize = 70 + #r[1] * 4
+end
+
+-- a bubble rising inside the tube
+local function bubble(color)
+	local s = math.random(4, 8)
+	local b = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(math.random(25, 75) / 100, 0, 1, -4), Size = UDim2.fromOffset(s, s), BackgroundColor3 = color:Lerp(Color3.new(1, 1, 1), 0.6), BackgroundTransparency = 0.2, ZIndex = 4, Parent = comboBar })
+	UI.Corner(b, s)
+	local top = 1 - math.max(0.05, fillShown)
+	local d = 0.35 + math.random() * 0.3
+	Tween(b, d, { Position = UDim2.new(b.Position.X.Scale + (math.random() - 0.5) * 0.3, 0, top, 0), BackgroundTransparency = 0.8 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+	task.delay(d, function()
+		b:Destroy()
+	end)
+end
+
+-- rank-up: the tube flashes, a ring bursts off the top, the liquid drops and refills
+local function burst(color)
+	barFlash.BackgroundTransparency = 0
+	Tween(barFlash, 0.3, { BackgroundTransparency = 1 })
+	local ring = New("ImageLabel", { BackgroundTransparency = 1, Image = TEX.ring or "", ImageColor3 = color, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(160, 20), Size = UDim2.fromOffset(30, 30), ZIndex = 6, Parent = comboFrame })
+	Tween(ring, 0.4, { Size = UDim2.fromOffset(170, 170), ImageTransparency = 1 }, Enum.EasingStyle.Quart)
+	task.delay(0.42, function()
+		ring:Destroy()
+	end)
+	comboScale.Scale = comboBase * 1.12
+	Tween(comboScale, 0.35, { Scale = comboBase }, Enum.EasingStyle.Back)
+	fillShown, fillVel = 0, 0
 end
 
 -- amount = damage dealt (for the total), crit adds extra style
@@ -1303,6 +1361,7 @@ function UI.ComboHit(amount, crit)
 	local now = os.clock()
 	if combo.points <= 0 then
 		combo.hits, combo.total = 0, 0
+		fillShown, fillVel = 0, 0
 	end
 	combo.hits += 1
 	combo.total += tonumber(amount) or 0
@@ -1316,26 +1375,35 @@ function UI.ComboHit(amount, crit)
 		combo.rank = newRank
 		paint(newRank)
 		if up then
-			letterScale.Scale = 1.8
-			Tween(letterScale, 0.35, { Scale = 1 }, Enum.EasingStyle.Back)
+			letterScale.Scale = 1.9
+			Tween(letterScale, 0.4, { Scale = 1 }, Enum.EasingStyle.Back)
+			burst(RANKS[newRank][3])
 			Audio.Play("Rarity" .. ({ "Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic", "Secret" })[newRank], { volume = 0.5 })
 		end
 	else
-		letterScale.Scale = 1.15
+		letterScale.Scale = 1.18
 		Tween(letterScale, 0.18, { Scale = 1 }, Enum.EasingStyle.Back)
+	end
+	-- kick the liquid upward (the spring overshoots, then settles)
+	fillVel += crit and 5 or 3
+	for _ = 1, crit and 4 or 2 do
+		bubble(RANKS[newRank][3])
 	end
 	hitsText.Text = tostring(combo.hits)
 	totalText.Text = UI.Format(math.floor(combo.total))
-	hitsScale.Scale = 1.35
-	Tween(hitsScale, 0.2, { Scale = 1 }, Enum.EasingStyle.Back)
-	barScale.Scale = 1.08
-	Tween(barScale, 0.2, { Scale = 1 })
+	hitsScale.Scale = crit and 1.6 or 1.35
+	Tween(hitsScale, 0.22, { Scale = 1 }, Enum.EasingStyle.Back)
+	barScale.Scale = crit and 1.18 or 1.1
+	Tween(barScale, 0.22, { Scale = 1 }, Enum.EasingStyle.Back)
+	barFlash.BackgroundTransparency = crit and 0.2 or 0.6
+	Tween(barFlash, 0.15, { BackgroundTransparency = 1 })
 	-- jolt
-	letter.Position = UDim2.fromOffset(70 + math.random(-5, 5), 48 + math.random(-4, 4))
-	Tween(letter, 0.12, { Position = UDim2.fromOffset(70, 48) })
+	letter.Rotation = -8 + math.random(-6, 6)
+	Tween(letter, 0.15, { Rotation = -8 })
 	if not comboFrame.Visible then
 		comboFrame.Visible = true
-		UI.Pop(comboFrame)
+		comboScale.Scale = comboBase * 0.6
+		Tween(comboScale, 0.35, { Scale = comboBase }, Enum.EasingStyle.Back)
 	end
 end
 RunService.RenderStepped:Connect(function(dt)
@@ -1354,18 +1422,42 @@ RunService.RenderStepped:Connect(function(dt)
 	end
 	local rank = rankOf(combo.points)
 	if rank ~= combo.rank then
+		-- drained down a rank: the tube is full of the lower rank again
 		combo.rank = rank
 		paint(rank)
+		fillShown = 1
 	end
-	comboFill.Size = UDim2.fromScale((combo.points % PER_RANK) / PER_RANK, 1)
-	-- on fire from S up: flickering flames behind the letter (SSS flames shift color)
+	-- spring the liquid toward the target
+	dt = math.min(dt, 1 / 20)
+	local target = (combo.points % PER_RANK) / PER_RANK
+	fillVel += ((target - fillShown) * 160 - fillVel * 14) * dt
+	fillShown = math.clamp(fillShown + fillVel * dt, 0, 1.06)
+	local f = math.min(fillShown, 1)
+	comboFill.Size = UDim2.fromScale(1, f)
+	local topY = 20 + BAR_H * (1 - f)
+	head.Position = UDim2.fromOffset(160, topY)
+	local pulse = 1 + math.sin(now * 10) * 0.08
+	head.Size = UDim2.fromOffset(70 * pulse, 40 * pulse)
+	head.ImageTransparency = f < 0.02 and 1 or 0.25
+	-- the letter rides beside the liquid level (clamped so it never covers the hit counter)
+	letterY += (math.clamp(topY, 60, 170) - letterY) * math.min(1, dt * 12)
+	letter.Position = UDim2.fromOffset(70, letterY)
+	rankName.Position = UDim2.fromOffset(70, letterY + 40)
+	flames.Position = UDim2.fromOffset(70, letterY + 30)
+	-- on fire from S up: flickering flames behind the letter (SSS flames shift color), the tube glows too
 	if rank >= 5 then
 		flames.ImageTransparency = 0.15 + math.random() * 0.15
-		local f = 1 + math.sin(now * 18) * 0.06 + math.random() * 0.04
-		flames.Size = UDim2.fromOffset(150 * f, (130 + (rank - 5) * 25) * f)
+		local fl = 1 + math.sin(now * 18) * 0.06 + math.random() * 0.04
+		flames.Size = UDim2.fromOffset(150 * fl, (130 + (rank - 5) * 25) * fl)
 		flames.ImageColor3 = rank == 7 and Color3.fromHSV((now * 0.4) % 1, 0.7, 1) or RANKS[rank][3]
+		if math.random() < dt * 8 then
+			bubble(RANKS[rank][3])
+		end
 	else
 		flames.ImageTransparency = 1
+	end
+	if rank == 7 then
+		barStroke.Color = Color3.fromHSV((now * 0.5) % 1, 0.6, 1)
 	end
 end)
 

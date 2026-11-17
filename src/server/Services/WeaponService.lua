@@ -30,7 +30,8 @@ local DRAWN = {
 -- at rest (LowerTorso: x = right, -z = front; UpperTorso back = +z)
 local HOLSTERED = {
 	Sword = { { "LowerTorso", "SwordSheathed", CFrame.new(-1.1, -0.3, 0.35) * A(rad(-143), 0, 0) } },
-	Hammer = { { "UpperTorso", "Hammer", CFrame.new(0.25, -1.0, 0.7) * A(0, 0, rad(-20)) * A(rad(90), 0, 0) * A(0, 0, rad(90)) } },
+	-- hammer on the back: head down toward the ground, handle up by the right shoulder (where the right hand grabs it)
+	Hammer = { { "UpperTorso", "Hammer", CFrame.new(0.55, 0.75, 0.7) * A(0, 0, rad(-20)) * A(rad(-90), 0, 0) * A(0, 0, rad(90)) } },
 	StormBaton = { { "LowerTorso", "StormBatonPack", CFrame.new(1.12, -0.35, 0.05) * A(rad(-90), 0, 0) } },
 	MedKit = { { "LowerTorso", "MedKit", CFrame.new(1.1, -0.35, -0.15) } },
 	Slingshot = {},

@@ -29,8 +29,8 @@ local Classes = {
 		color = Color3.fromRGB(235, 85, 70),
 		icon = "👊",
 		skills = {
-			{ id = "JabRush", name = "Jab Rush", kind = "Melee", sp = 8, cd = 3, range = 9, mult = 1.9, maxLevel = 10, fx = "Burst", desc = "A flurry of quick jabs." },
-			{ id = "RisingUppercut", name = "Rising Uppercut", kind = "Melee", sp = 14, cd = 5, range = 9, mult = 2.6, maxLevel = 10, fx = "Smash", desc = "Launch the enemy skyward." },
+			{ id = "JabRush", name = "Jab Rush", anim = "Brawler_Flurry", kind = "Melee", sp = 8, cd = 3, range = 9, mult = 1.9, maxLevel = 10, fx = "Burst", desc = "A flurry of quick jabs." },
+			{ id = "RisingUppercut", name = "Rising Uppercut", anim = "Brawler_Uppercut", kind = "Melee", sp = 14, cd = 5, range = 9, mult = 2.6, maxLevel = 10, fx = "Smash", desc = "Launch the enemy skyward." },
 			{ id = "GroundPound", name = "Ground Pound", kind = "AoE", sp = 18, cd = 8, range = 0, radius = 12, mult = 1.7, maxLevel = 10, fx = "Explosion", desc = "Punch the ground: shockwave around you." },
 			{ id = "IronFist", name = "Iron Fist", kind = "Buff", sp = 22, cd = 30, duration = 15, buff = { atk = 0.2, aspd = 0.15 }, maxLevel = 5, fx = "AuraFire", desc = "ATK and attack speed up." },
 		},
@@ -96,8 +96,8 @@ local Classes = {
 		icon = "🧭",
 		passive = { shipSpeed = 0.1 },
 		skills = {
-			{ id = "ThunderCall", name = "Thunder Call", kind = "GroundAoE", sp = 22, cd = 6, range = 50, radius = 12, mult = 2.3, magic = true, maxLevel = 10, fx = "Lightning", desc = "Call lightning down." },
-			{ id = "CycloneCall", name = "Cyclone Call", kind = "AoE", sp = 20, cd = 8, range = 0, radius = 16, mult = 1.6, magic = true, maxLevel = 10, fx = "Tornado", desc = "A whirlwind around you." },
+			{ id = "ThunderCall", name = "Thunder Call", kind = "GroundAoE", sp = 22, cd = 6, range = 50, radius = 12, mult = 2.3, magic = true, maxLevel = 10, fx = "ThunderCall", desc = "Hot and cold air meet overhead: a storm cloud forms and lightning strikes." },
+			{ id = "CycloneCall", name = "Cyclone Call", kind = "AoE", sp = 20, cd = 8, range = 0, radius = 16, mult = 1.6, magic = true, maxLevel = 10, fx = "CycloneCall", desc = "Spin warm and cold air into a cyclone around you." },
 			{ id = "MirageVeil", name = "Mirage Veil", kind = "Buff", sp = 20, cd = 30, duration = 15, buff = { flee = 40 }, maxLevel = 5, fx = "AuraBlue", desc = "FLEE up." },
 			{ id = "Tailwind", name = "Tailwind", kind = "ShipBuff", sp = 30, cd = 60, duration = 30, buff = { shipSpeed = 0.25 }, maxLevel = 5, fx = "Wind", desc = "Ship speed +25%." },
 		},

@@ -91,7 +91,29 @@ local function juiceBar(model)
 		fill.ZIndex = 1
 		local sc = Instance.new("UIScale")
 		sc.Parent = back
-		st = { ratio = ratio, chunk = chunk, scale = sc, token = 0 }
+		-- dress the plain server bar like our HUD bars: thicker, dark outline, glossy gradient, a white hit flash
+		back.Size = UDim2.new(back.Size.X.Scale, back.Size.X.Offset, 0, 11)
+		back.Position = UDim2.new(back.Position.X.Scale, back.Position.X.Offset, 1, -9)
+		local stroke = Instance.new("UIStroke")
+		stroke.Color = Color3.fromRGB(24, 20, 36)
+		stroke.Thickness = 2
+		stroke.Parent = back
+		local g = Instance.new("UIGradient")
+		g.Color = ColorSequence.new(fill.BackgroundColor3:Lerp(Color3.new(1, 1, 1), 0.35), fill.BackgroundColor3:Lerp(Color3.new(0, 0, 0), 0.2))
+		g.Rotation = 90
+		g.Parent = fill
+		local flashF = Instance.new("Frame")
+		flashF.Name = "HitFlash"
+		flashF.BackgroundColor3 = Color3.new(1, 1, 1)
+		flashF.BackgroundTransparency = 1
+		flashF.BorderSizePixel = 0
+		flashF.Size = UDim2.fromScale(1, 1)
+		flashF.ZIndex = 3
+		local fc = Instance.new("UICorner")
+		fc.CornerRadius = UDim.new(1, 0)
+		fc.Parent = flashF
+		flashF.Parent = back
+		st = { ratio = ratio, chunk = chunk, scale = sc, token = 0, flash = flashF, back = back, home = back.Position }
 		barState[model] = st
 		return
 	end
@@ -106,8 +128,21 @@ local function juiceBar(model)
 				TweenService:Create(st.chunk, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Size = UDim2.new(ratio, 0, 1, 0) }):Play()
 			end
 		end)
-		st.scale.Scale = 1 + math.min(0.25, 0.08 + lost)
-		TweenService:Create(st.scale, TweenInfo.new(0.25, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+		st.scale.Scale = 1 + math.min(0.3, 0.12 + lost * 1.5)
+		TweenService:Create(st.scale, TweenInfo.new(0.28, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+		-- white flash + a short shake
+		st.flash.BackgroundTransparency = 0.15
+		TweenService:Create(st.flash, TweenInfo.new(0.18), { BackgroundTransparency = 1 }):Play()
+		task.spawn(function()
+			for k = 1, 4 do
+				if not st.back.Parent then
+					return
+				end
+				st.back.Position = st.home + UDim2.fromOffset(math.random(-4, 4) * (5 - k) / 4, math.random(-2, 2))
+				task.wait(0.03)
+			end
+			st.back.Position = st.home
+		end)
 	else
 		st.chunk.Size = UDim2.new(ratio, 0, 1, 0)
 	end

@@ -148,7 +148,7 @@ function CharAnim.Start()
 			local k = sk and sk.kind or ""
 			local w = Clips.Weapons[weaponOf(d.char)] or {}
 			CharAnim.Stats.speed = 1
-			action, actionAt = play(w[k] or Clips.SkillKinds[k] or "Skill_Cast"), os.clock()
+			action, actionAt = play((sk and sk.anim) or w[k] or Clips.SkillKinds[k] or "Skill_Cast"), os.clock()
 		elseif kind == "Damage" then
 			if d.toPlayer and mine then
 				play("Hurt", { fade = 0.03 })

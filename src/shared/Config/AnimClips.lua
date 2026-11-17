@@ -60,6 +60,43 @@ C.Brawler_Uppercut = { rig = "R15", priority = "Action", strike = 0.18, keys = {
 	{ t = 0.42, pose = GUARD },
 } }
 
+-- ===== Brawler freestyle (street fighting): body blow, elbow, knee, spinning backfist, punch flurry =====
+local CROUCH = { LowerTorso = { 0, 0, 0, 0, -0.35, 0 }, RightUpperLeg = { 22, 0, 0 }, RightLowerLeg = { -30, 0, 0 }, LeftUpperLeg = { 22, 0, 0 }, LeftLowerLeg = { -30, 0, 0 } }
+C.Brawler_BodyBlow = { rig = "R15", priority = "Action", strike = 0.13, keys = {
+	{ t = 0, pose = GUARD },
+	{ t = 0.06, pose = with(with(GUARD, CROUCH), { UpperTorso = { 8, 28, 0 }, LeftUpperArm = { 35, 0, -30 } }) },
+	{ t = 0.13, pose = with(with(GUARD, CROUCH), { LeftUpperArm = { 55, 0, -55 }, LeftLowerArm = { 80, 0, 0 }, UpperTorso = { -16, -38, 0 }, LowerTorso = { 0, -12, 0, 0, -0.4, 0 } }) },
+	{ t = 0.32, pose = GUARD },
+} }
+C.Brawler_Elbow = { rig = "R15", priority = "Action", strike = 0.12, keys = {
+	{ t = 0, pose = GUARD },
+	{ t = 0.06, pose = with(GUARD, { RightUpperArm = { 40, 0, 72 }, RightLowerArm = { 140, 0, 0 }, UpperTorso = { 0, -28, 0 } }) },
+	{ t = 0.12, pose = with(GUARD, { RightUpperArm = { 82, 0, 18 }, RightLowerArm = { 150, 0, 0 }, UpperTorso = { -10, 48, 0 }, LowerTorso = { 0, 14, 0 } }) },
+	{ t = 0.3, pose = GUARD },
+} }
+C.Brawler_Knee = { rig = "R15", priority = "Action", strike = 0.15, keys = {
+	{ t = 0, pose = GUARD },
+	{ t = 0.07, pose = with(GUARD, { LeftUpperArm = { 95, 0, -8 }, RightUpperArm = { 95, 0, 8 }, LeftLowerArm = { 40, 0, 0 }, RightLowerArm = { 40, 0, 0 } }) },
+	{ t = 0.15, pose = with(GUARD, { RightUpperLeg = { 112, 0, 0 }, RightLowerLeg = { -130, 0, 0 }, LeftUpperArm = { 70, 0, -10 }, RightUpperArm = { 70, 0, 10 }, LeftLowerArm = { 70, 0, 0 }, RightLowerArm = { 70, 0, 0 }, UpperTorso = { -16, 0, 0 }, LowerTorso = { 0, 0, 0, 0, 0.1, -0.3 } }) },
+	{ t = 0.34, pose = GUARD },
+} }
+C.Brawler_Backfist = { rig = "R15", priority = "Action", strike = 0.22, keys = {
+	{ t = 0, pose = GUARD },
+	{ t = 0.08, pose = with(GUARD, { LowerTorso = { 0, -110, 0 }, Head = { 0, -50, 0 }, RightUpperArm = { 30, 0, 30 }, RightLowerArm = { 125, 0, 0 } }) },
+	{ t = 0.18, pose = with(GUARD, { LowerTorso = { 0, -230, 0 }, Head = { 0, -30, 0 }, RightUpperArm = { 20, 0, 60 }, RightLowerArm = { 60, 0, 0 } }) },
+	{ t = 0.22, pose = with(GUARD, { LowerTorso = { 0, -270, 0 }, Head = { 0, 60, 0 }, RightUpperArm = { 8, 0, 92 }, RightLowerArm = { 4, 0, 0 }, UpperTorso = { 0, 0, -10 } }) },
+	{ t = 0.36, pose = with(GUARD, { LowerTorso = { 0, -359, 0 } }) },
+	{ t = 0.44, pose = GUARD },
+} }
+local JAB_L = with(GUARD, { LeftUpperArm = { 88, 0, -4 }, LeftLowerArm = { 4, 0, 0 }, UpperTorso = { -8, -24, 0 } })
+local JAB_R = with(GUARD, { RightUpperArm = { 88, 0, 4 }, RightLowerArm = { 4, 0, 0 }, UpperTorso = { -8, 24, 0 } })
+C.Brawler_Flurry = { rig = "R15", priority = "Action", strike = 0.32, keys = {
+	{ t = 0, pose = GUARD }, { t = 0.05, pose = JAB_L }, { t = 0.1, pose = JAB_R }, { t = 0.15, pose = JAB_L }, { t = 0.2, pose = JAB_R },
+	{ t = 0.25, pose = GUARD },
+	{ t = 0.32, pose = with(GUARD, { RightUpperArm = { 92, 0, 0 }, RightLowerArm = { 2, 0, 0 }, UpperTorso = { -14, 42, 0 }, LowerTorso = { 0, 14, 0, 0, 0, -0.4 } }) },
+	{ t = 0.5, pose = GUARD },
+} }
+
 -- ===== Sea Cook (Shoes): taekwondo. Ready stance (side-on, fists up, bouncing), then
 --       front kick (ap chagi) -> side kick (yeop chagi) -> spinning back kick (dwit chagi) -> axe kick (naeryo chagi);
 --       the flying side kick (twimyo yeop chagi) is the big skill kick. Right leg kicks; the left leg leads.
@@ -261,7 +298,8 @@ C.Mon_Hit = { rig = "Mon", priority = "Action2", keys = {
 
 -- weapon -> combo clips (in order), stance, and the clips each skill kind uses
 C.Weapons = {
-	Knuckles = { combo = { "Brawler_Jab", "Brawler_Cross", "Brawler_Hook", "Brawler_Uppercut" }, stance = "Brawler_Stance", Melee = "Brawler_Uppercut", AoE = "Skill_GroundPunch" },
+	-- freestyle street fighting: jab, cross, body blow, hook, knee, elbow, spinning backfist (the uppercut is a skill now)
+	Knuckles = { combo = { "Brawler_Jab", "Brawler_Cross", "Brawler_BodyBlow", "Brawler_Hook", "Brawler_Knee", "Brawler_Elbow", "Brawler_Backfist" }, stance = "Brawler_Stance", Melee = "Brawler_Uppercut", AoE = "Skill_GroundPunch" },
 	-- bare hands (no weapon equipped): simple jab-cross punches, no stance
 	Fists = { combo = { "Brawler_Jab", "Brawler_Cross" }, Melee = "Brawler_Uppercut", AoE = "Skill_GroundPunch" },
 	Shoes = { combo = { "Cook_FrontKick", "Cook_SideKick", "Cook_BackKick", "Cook_AxeKick" }, stance = "Cook_Stance", Melee = "Cook_FlyingKick", AoE = "Skill_Spin" },

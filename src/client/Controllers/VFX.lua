@@ -249,6 +249,116 @@ function VFX.SpeedLines(from, to, c, count)
 	Debris:AddItem(host, 0.6)
 end
 
+-- punch / blunt impact: star + facing shockwave ring + "split" streaks bursting out radially (anime impact)
+function VFX.ImpactSplit(pos, dir, c, size)
+	size = size or 4
+	VFX.Impact(pos, c, size)
+	VFX.Shockwave(pos, dir, c:Lerp(Color3.new(1, 1, 1), 0.4), size * 1.1)
+	emit(pos, { Texture = Tex.speedline, Color = ColorSequence.new(Color3.new(1, 1, 1), c), Orientation = Enum.ParticleOrientation.VelocityParallel, Speed = NumberRange.new(size * 9, size * 14), SpreadAngle = Vector2.new(180, 180), Drag = 9, Rotation = NumberRange.new(90), Squash = seq(2.4, 2.4), Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, size * 0.25), NumberSequenceKeypoint.new(1, 0) }), Transparency = seq(0, 1), Lifetime = NumberRange.new(0.12, 0.2), ZOffset = 3 }, 6 + math.floor(size), 0.25)
+end
+
+-- blade: a bright cut line across the target on top of the crescent
+function VFX.SliceLine(pos, dir, c)
+	dir = (dir and dir.Magnitude > 0.01) and dir.Unit or Vector3.zAxis
+	local side = dir:Cross(Vector3.yAxis)
+	side = side.Magnitude > 0.01 and side.Unit or Vector3.xAxis
+	local tilt = (side + Vector3.new(0, (math.random() - 0.5) * 1.4, 0)).Unit
+	VFX.Beam(pos - tilt * 3.2, pos + tilt * 3.2, c, 0.35, 0.18, Tex.speedline)
+	VFX.Sparks(pos, c, 6, 9)
+end
+
+-- anticipation: energy streams INTO the hand while a heavy blow winds up (dur = time until the strike)
+function VFX.Charge(part, c, dur)
+	if not part or not part.Parent then
+		return
+	end
+	local att = Instance.new("Attachment")
+	att.Parent = part
+	local e = Instance.new("ParticleEmitter")
+	e.Texture = Tex.glow
+	e.Color = ColorSequence.new(c:Lerp(Color3.new(1, 1, 1), 0.5), c)
+	e.LightEmission, e.LightInfluence = 1, 0
+	e.Size = seq(0.7, 0.1)
+	e.Transparency = seq(0.1, 0.6)
+	e.Lifetime = NumberRange.new(0.15, 0.22)
+	e.Shape = Enum.ParticleEmitterShape.Sphere
+	e.ShapeInOut = Enum.ParticleEmitterShapeInOut.Inward
+	e.ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface
+	e.Speed = NumberRange.new(10, 14)
+	e.Rate = 70 * quality()
+	e.Parent = att
+	local glowE = Instance.new("ParticleEmitter")
+	glowE.Texture = Tex.glow
+	glowE.Color = ColorSequence.new(c)
+	glowE.LightEmission, glowE.LightInfluence = 1, 0
+	glowE.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 2.4) })
+	glowE.Transparency = seq(0.4, 1)
+	glowE.Lifetime = NumberRange.new(0.15)
+	glowE.Speed = NumberRange.new(0)
+	glowE.Rate = 30
+	glowE.Parent = att
+	task.delay(math.max(0.05, dur), function()
+		e.Enabled, glowE.Enabled = false, false
+		Debris:AddItem(att, 0.4)
+	end)
+end
+
+-- weather: a warm (red) and a cold (blue) puff meet and condense into a little storm cloud
+function VFX.StormCloud(pos, size, life)
+	size = size or 3
+	emit(pos + Vector3.new(-size, 0, 0), { Texture = Tex.smoke, Color = ColorSequence.new(Color3.fromRGB(255, 150, 90)), LightEmission = 0.3, Size = seq(size * 0.6, size * 1.1), Transparency = seq(0.3, 1), Lifetime = NumberRange.new(0.35), Speed = NumberRange.new(size * 3), EmissionDirection = Enum.NormalId.Right, SpreadAngle = Vector2.new(15, 15), Drag = 4 }, 5, 0.4)
+	emit(pos + Vector3.new(size, 0, 0), { Texture = Tex.smoke, Color = ColorSequence.new(Color3.fromRGB(120, 190, 255)), LightEmission = 0.3, Size = seq(size * 0.6, size * 1.1), Transparency = seq(0.3, 1), Lifetime = NumberRange.new(0.35), Speed = NumberRange.new(size * 3), EmissionDirection = Enum.NormalId.Left, SpreadAngle = Vector2.new(15, 15), Drag = 4 }, 5, 0.4)
+	task.delay(0.15, function()
+		emit(pos, { Texture = Tex.smoke, Color = ColorSequence.new(Color3.fromRGB(110, 115, 135), Color3.fromRGB(70, 75, 95)), LightEmission = 0, Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, size * 0.5), NumberSequenceKeypoint.new(0.3, size * 1.4), NumberSequenceKeypoint.new(1, size * 1.6) }), Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(0.2, 0.15), NumberSequenceKeypoint.new(1, 1) }), Lifetime = NumberRange.new(life or 0.8), Speed = NumberRange.new(0.5, 1.5), SpreadAngle = Vector2.new(180, 30), Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-20, 20) }, 7, life or 0.8)
+	end)
+end
+
+-- anime impact frame (your own crits): one dark frame, then a white flash with focus lines, all in ~0.15 s
+local impactGui
+function VFX.ImpactFrame()
+	local pg = game:GetService("Players").LocalPlayer:FindFirstChildOfClass("PlayerGui")
+	if not pg then
+		return
+	end
+	if not impactGui then
+		local g = Instance.new("ScreenGui")
+		g.Name = "GVImpactFrame"
+		g.IgnoreGuiInset = true
+		g.ResetOnSpawn = false
+		g.DisplayOrder = 49
+		local dark = Instance.new("Frame")
+		dark.Name = "Dark"
+		dark.Size = UDim2.fromScale(1, 1)
+		dark.BorderSizePixel = 0
+		dark.BackgroundColor3 = Color3.new(0, 0, 0)
+		dark.BackgroundTransparency = 1
+		dark.Parent = g
+		local lines = Instance.new("ImageLabel")
+		lines.Name = "Lines"
+		lines.BackgroundTransparency = 1
+		lines.Image = Tex.focuslines
+		lines.AnchorPoint = Vector2.new(0.5, 0.5)
+		lines.Position = UDim2.fromScale(0.5, 0.5)
+		lines.Size = UDim2.fromScale(1.6, 1.6)
+		lines.ImageTransparency = 1
+		lines.Parent = g
+		g.Parent = pg
+		impactGui = g
+	end
+	local dark, lines = impactGui.Dark, impactGui.Lines
+	dark.BackgroundColor3 = Color3.new(0, 0, 0)
+	dark.BackgroundTransparency = 0.45
+	lines.ImageColor3 = Color3.new(1, 1, 1)
+	lines.ImageTransparency = 0.15
+	lines.Rotation = math.random(0, 360)
+	task.delay(0.04, function()
+		dark.BackgroundColor3 = Color3.new(1, 1, 1)
+		dark.BackgroundTransparency = 0.55
+		tween(dark, 0.12, { BackgroundTransparency = 1 })
+		tween(lines, 0.14, { ImageTransparency = 1 })
+	end)
+end
+
 -- a quick white frame over the whole screen (local player's crits, level up)
 local flashGui
 function VFX.ScreenFlash(c, strength, t)
@@ -286,31 +396,45 @@ function VFX.Number(pos, text, color, big, burst, scale)
 	bb.MaxDistance = 220
 	bb.Parent = holder
 	if burst then
-		local star = Instance.new("Frame")
-		star.AnchorPoint = Vector2.new(0.5, 0.5)
-		star.Position = UDim2.fromScale(0.5, 0.5)
-		star.Size = UDim2.fromScale(0.62, 0.7)
+		-- crit: a spiky impact star (glow behind), the number in a hot gradient, a "CRITICAL" tag, everything slams in
+		local glowI = Instance.new("ImageLabel")
+		glowI.BackgroundTransparency = 1
+		glowI.Image = Tex.glow
+		glowI.ImageColor3 = Color3.fromRGB(255, 120, 60)
+		glowI.ImageTransparency = 0.25
+		glowI.AnchorPoint = Vector2.new(0.5, 0.5)
+		glowI.Position = UDim2.fromScale(0.5, 0.52)
+		glowI.Size = UDim2.fromScale(1.1, 1.6)
+		glowI.Parent = bb
+		local star = Instance.new("ImageLabel")
 		star.BackgroundTransparency = 1
+		star.Image = Tex.impact
+		star.ImageColor3 = burst
+		star.AnchorPoint = Vector2.new(0.5, 0.5)
+		star.Position = UDim2.fromScale(0.5, 0.52)
+		star.Size = UDim2.fromScale(0.95, 1.5)
+		star.ZIndex = 2
 		star.Parent = bb
-		for i = 0, 3 do
-			local spike = Instance.new("Frame")
-			spike.AnchorPoint = Vector2.new(0.5, 0.5)
-			spike.Position = UDim2.fromScale(0.5, 0.5)
-			spike.Size = UDim2.fromScale(1, 0.62)
-			spike.Rotation = i * 22.5
-			spike.BackgroundColor3 = burst
-			spike.BorderSizePixel = 0
-			spike.Parent = star
-			local st = Instance.new("UIStroke")
-			st.Thickness = 2
-			st.Color = Color3.fromRGB(60, 10, 20)
-			st.Parent = spike
-		end
 		local sc = Instance.new("UIScale")
 		sc.Scale = 0.2
 		sc.Parent = star
 		tween(sc, 0.22, { Scale = 1 }, Enum.EasingStyle.Back)
-		tween(star, 0.9, { Rotation = 30 })
+		tween(star, 0.9, { Rotation = 25 })
+		local tag = Instance.new("TextLabel")
+		tag.BackgroundTransparency = 1
+		tag.AnchorPoint = Vector2.new(0.5, 1)
+		tag.Position = UDim2.fromScale(0.5, 0.12)
+		tag.Size = UDim2.fromScale(0.9, 0.3)
+		tag.FontFace = Font.new("rbxasset://fonts/families/FredokaOne.json")
+		tag.TextScaled = true
+		tag.Text = "CRITICAL!"
+		tag.TextColor3 = Color3.fromRGB(255, 240, 160)
+		tag.ZIndex = 4
+		tag.Parent = bb
+		local ts = Instance.new("UIStroke")
+		ts.Thickness = 2
+		ts.Color = Color3.fromRGB(90, 20, 20)
+		ts.Parent = tag
 	end
 	local t = Instance.new("TextLabel")
 	t.Size = UDim2.fromScale(1, 1)
@@ -322,9 +446,17 @@ function VFX.Number(pos, text, color, big, burst, scale)
 	t.ZIndex = 3
 	t.Parent = bb
 	local stroke = Instance.new("UIStroke")
-	stroke.Thickness = 3
-	stroke.Color = Color3.fromRGB(30, 30, 45)
+	stroke.Thickness = burst and 4 or 3
+	stroke.Color = burst and Color3.fromRGB(90, 20, 20) or Color3.fromRGB(30, 30, 45)
 	stroke.Parent = t
+	if burst then
+		t.TextColor3 = Color3.new(1, 1, 1)
+		local tg = Instance.new("UIGradient")
+		tg.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 250, 190)), ColorSequenceKeypoint.new(0.55, Color3.fromRGB(255, 190, 60)), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 90, 40)) })
+		tg.Rotation = 90
+		tg.Parent = t
+		t.Rotation = math.random(-8, 8)
+	end
 	local sc = Instance.new("UIScale")
 	sc.Scale = big and 1.6 or 1.2
 	sc.Parent = t
@@ -518,6 +650,35 @@ SkillFX.Lightning = function(d)
 	VFX.Burst(d.to, d.radius or 10, Color3.fromRGB(170, 210, 255), 0.35)
 	VFX.Ring(d.to, d.radius or 10, Color3.fromRGB(255, 255, 255), 0.4)
 end
+-- Navigator weather skills: warm + cold air meet, condense into a storm cloud, then the storm breaks
+SkillFX.ThunderCall = function(d)
+	local at = d.to or d.from
+	local sky = at + Vector3.new(0, 16, 0)
+	VFX.StormCloud(sky, 5, 1.4)
+	task.delay(0.35, function()
+		local prev = sky
+		for i = 1, 6 do
+			local nextP = sky:Lerp(at, i / 6) + (i < 6 and Vector3.new(math.random(-3, 3), 0, math.random(-3, 3)) or Vector3.zero)
+			VFX.Beam(prev, nextP, Color3.fromRGB(200, 225, 255), 1.6, 0.35)
+			prev = nextP
+		end
+		VFX.ScreenFlash(Color3.fromRGB(210, 230, 255), 0.18, 0.15)
+		VFX.Burst(at, d.radius or 10, Color3.fromRGB(170, 210, 255), 0.35)
+		VFX.Ring(at - Vector3.new(0, 1.8, 0), d.radius or 12, Color3.fromRGB(255, 255, 255), 0.4)
+		VFX.Crack(at - Vector3.new(0, 2.3, 0), (d.radius or 12) * 0.5)
+	end)
+end
+SkillFX.CycloneCall = function(d)
+	local r = d.radius or 16
+	VFX.StormCloud(d.from + Vector3.new(0, 4, 0), 3, 0.8)
+	for i = 0, 7 do
+		task.delay(0.1 + i * 0.06, function()
+			local c = (i % 2 == 0) and Color3.fromRGB(255, 190, 150) or Color3.fromRGB(170, 215, 255)
+			VFX.Ring(d.from + Vector3.new(0, -2 + i * 1.6, 0), r * (0.45 + i * 0.08), c, 0.45)
+		end)
+	end
+	VFX.Smoke(d.from, Color3.fromRGB(215, 225, 235), 14, r * 0.35)
+end
 SkillFX.Heal = function(d)
 	VFX.Ring(d.from - Vector3.new(0, 2.5, 0), d.radius or 25, Color3.fromRGB(120, 255, 150), 0.7)
 	VFX.Aura(d.char, Color3.fromRGB(120, 255, 150), 0.7, true)
@@ -583,69 +744,84 @@ local function hitPoint(d)
 	return d.to - (dir.Magnitude > 0.1 and dir.Unit * 1.2 or Vector3.zero), dir
 end
 
+-- per weapon, at the strike frame. n = which hit of the combo, fin = the last (finisher) hit
+local function isFin(weapon, n)
+	local w = AnimClips.Weapons[weapon]
+	return w ~= nil and n == #w.combo and #w.combo > 1
+end
 local weaponFX = {
 	Sword = function(d, n)
+		-- slashes: a crescent + a bright cut line through the target (the thrust finisher pierces instead)
 		local cf = CFrame.lookAt(d.from, d.to) * CFrame.new(0, 0, -3)
 		local at, dir = hitPoint(d)
-		if n == 3 then
-			-- thrust: a straight speed streak and a pierce flash
-			VFX.SpeedLines(d.from, d.to, Color3.fromRGB(210, 235, 255), 6)
-			VFX.Impact(at, Color3.fromRGB(200, 230, 255), 5)
-			VFX.Shockwave(at, dir, Color3.fromRGB(220, 240, 255), 5)
+		local steel = Color3.fromRGB(200, 232, 255)
+		if isFin("Sword", n) then
+			VFX.SpeedLines(d.from, d.to, Color3.fromRGB(210, 235, 255), 8)
+			VFX.Impact(at, steel, 5.5)
+			VFX.Shockwave(at, dir, Color3.fromRGB(225, 242, 255), 5.5)
+			VFX.SliceLine(at, dir, steel)
 		else
-			VFX.Slash(n == 2 and cf * CFrame.Angles(0, 0, math.pi * 0.85) or cf, Color3.fromRGB(190, 230, 255), 7)
-			VFX.Impact(at, Color3.fromRGB(200, 230, 255), 3)
+			VFX.Slash(n == 2 and cf * CFrame.Angles(0, 0, math.pi * 0.85) or cf, Color3.fromRGB(190, 230, 255), 7.5)
+			VFX.SliceLine(at, dir, steel)
 		end
 	end,
-	Hammer = function(d)
+	Hammer = function(d, n)
 		local at, dir = hitPoint(d)
-		VFX.Impact(at, Color3.fromRGB(255, 210, 130), 6)
-		VFX.Shockwave(at, dir, Color3.fromRGB(255, 230, 170), 6)
-		VFX.Ring(d.to - Vector3.new(0, 2.5, 0), 7, Color3.fromRGB(255, 210, 140), 0.35)
-		VFX.Smoke(d.to - Vector3.new(0, 2, 0), Color3.fromRGB(210, 195, 170), 4, 2.5)
+		local fin = isFin("Hammer", n) or n == 1
+		VFX.ImpactSplit(at, dir, Color3.fromRGB(255, 205, 120), fin and 7 or 5.5)
+		VFX.Ring(d.to - Vector3.new(0, 2.5, 0), 8, Color3.fromRGB(255, 210, 140), 0.35)
+		VFX.Crack(d.to - Vector3.new(0, 2.4, 0), 4)
+		VFX.Smoke(d.to - Vector3.new(0, 2, 0), Color3.fromRGB(210, 195, 170), 5, 2.6)
 	end,
 	Knuckles = function(d, n)
-		-- jab, cross, hook, then a big uppercut finisher with a shockwave and focus lines
+		-- street fighting: every blow lands with a shockwave + split streaks; the finisher is bigger, with focus lines
 		local at, dir = hitPoint(d)
 		local c = Color3.fromRGB(255, 160, 110)
-		if n == #AnimClips.Weapons.Knuckles.combo then
-			VFX.Impact(at + Vector3.new(0, 0.8, 0), c, 7)
-			VFX.Shockwave(at, dir + Vector3.new(0, dir.Magnitude * 0.6, 0), Color3.fromRGB(255, 220, 170), 7)
+		if isFin("Knuckles", n) then
+			VFX.ImpactSplit(at + Vector3.new(0, 0.6, 0), dir + Vector3.new(0, dir.Magnitude * 0.4, 0), c, 7)
 			VFX.Focus(at, Color3.fromRGB(255, 235, 210))
-			VFX.Sparks(at, Color3.fromRGB(255, 230, 200), 10, 10)
 		else
-			VFX.Impact(at, c, 3.6)
-			VFX.Shockwave(at, dir, Color3.fromRGB(255, 220, 180), 3.5)
-			VFX.Sparks(at, Color3.fromRGB(255, 230, 200), 4, 7)
+			VFX.ImpactSplit(at, dir, c, 3.8)
 		end
 	end,
 	Shoes = function(d, n)
 		local c = Color3.fromRGB(255, 190, 90)
-		local fin = n == #AnimClips.Weapons.Shoes.combo -- the axe kick
+		local fin = isFin("Shoes", n)
 		VFX.Slash(CFrame.lookAt(d.from, d.to) * CFrame.new(0, -1.5, -3) * CFrame.Angles(0, 0, math.pi / 2), c, fin and 8 or 6)
 		local at, dir = hitPoint(d)
-		VFX.Impact(at, c, fin and 5.5 or 3.6)
+		VFX.ImpactSplit(at, dir, c, fin and 6 or 4)
 		if fin then
-			VFX.Shockwave(at, dir, Color3.fromRGB(255, 220, 150), 6)
+			VFX.Crack(d.to - Vector3.new(0, 2.4, 0), 3.5)
 		end
 	end,
 	Slingshot = function(d)
-		-- the shot looks like the ammo it is (Config/Ammo colors); blast shots explode, frost shots chill
+		-- the shot looks like the ammo it is (Config/Ammo colors); every pellet lands with a small split impact
 		local AmmoCfg = require(ReplicatedStorage.Shared.Config.Ammo)
 		local am = AmmoCfg.ById[d.ammo or ""]
 		local c = am and am.color or Color3.fromRGB(255, 240, 160)
 		VFX.Projectile(d.from, d.to, c, am and am.id ~= "Pebble" and 0.8 or 0.6, 0.18, 1, c:Lerp(Color3.new(1, 1, 1), 0.3))
 		task.delay(0.18, function()
+			local dir = d.to - d.from
 			if am and am.splash then
 				VFX.Explosion(d.to, am.splash * 0.6)
-			elseif am and am.id ~= "Pebble" then
-				VFX.Impact(d.to, c, 3.5)
-				VFX.Sparks(d.to, c, 6, 7)
 			end
+			VFX.ImpactSplit(d.to, dir, c, am and am.id ~= "Pebble" and 3.6 or 2.8)
 		end)
 	end,
 	StormBaton = function(d)
-		VFX.Projectile(d.from, d.to, Color3.fromRGB(140, 200, 255), 1, 0.22, 2)
+		-- weather: warm + cold air meet over the staff, condense into a little storm cloud, and it spits a ball of
+		-- lightning at the target
+		local origin = d.from + Vector3.new(0, 3.2, 0) + (d.to - d.from).Unit * 1.5
+		VFX.StormCloud(origin, 1.6, 0.6)
+		task.delay(0.12, function()
+			VFX.Projectile(origin, d.to, Color3.fromRGB(170, 215, 255), 1.1, 0.2, 1.5, Color3.fromRGB(255, 255, 160))
+			VFX.Beam(origin, origin:Lerp(d.to, 0.5) + Vector3.new(0, 1, 0), Color3.fromRGB(200, 225, 255), 0.6, 0.15)
+		end)
+		task.delay(0.32, function()
+			VFX.Beam(d.to + Vector3.new(0, 7, 0), d.to, Color3.fromRGB(200, 225, 255), 0.8, 0.2)
+			VFX.Impact(d.to, Color3.fromRGB(170, 215, 255), 4)
+			VFX.Sparks(d.to, Color3.fromRGB(255, 255, 180), 8, 8)
+		end)
 	end,
 	MedKit = function(d)
 		-- a pinch of medicinal powder: a glittering puff arcs over and bursts into a colored dust cloud
@@ -659,10 +835,9 @@ local weaponFX = {
 	end,
 }
 weaponFX.Fists = function(d, n)
-	-- bare-handed punches: smaller impacts than real knuckles
+	-- bare-handed punches: the same split impact, smaller
 	local at, dir = hitPoint(d)
-	VFX.Impact(at, Color3.fromRGB(255, 220, 190), n == 2 and 3.2 or 2.6)
-	VFX.Shockwave(at, dir, Color3.fromRGB(255, 235, 210), 2.6)
+	VFX.ImpactSplit(at, dir, Color3.fromRGB(255, 220, 190), n == 2 and 3.2 or 2.6)
 end
 local MELEE = { Sword = true, Hammer = true, Knuckles = true, Shoes = true, Fists = true }
 
@@ -700,11 +875,12 @@ local function damageFX(d)
 		local UI = require(script.Parent.Parent.UI.UIKit)
 		UI.ComboHit(d.amount, d.crit)
 		if d.crit then
-			VFX.ScreenFlash(Color3.new(1, 1, 1), 0.28, 0.16)
+			VFX.ImpactFrame()
 		end
 	end
 end
 local strikeAt = {} -- attacker UserId -> os.clock() when their current swing connects
+VFX.lastWeapon = {} -- attacker UserId -> the weapon of their last swing (picks the hit sound)
 handlers.Damage = function(d)
 	-- a player's hit arrives with the swing: show it when the fist/blade actually connects
 	if d.src and not d.toPlayer then
@@ -729,6 +905,15 @@ handlers.BasicAttack = function(d)
 	local who = typeof(d.char) == "Instance" and game:GetService("Players"):GetPlayerFromCharacter(d.char)
 	if who then
 		strikeAt[who.UserId] = os.clock() + strike
+	end
+	if who then
+		VFX.lastWeapon[who.UserId] = weapon
+	end
+	-- heavy blows wind up: energy pours into the hand before the finisher lands
+	if isFin(weapon, n) and typeof(d.char) == "Instance" and strike > 0.08 then
+		local hand = d.char:FindFirstChild(weapon == "Shoes" and "RightFoot" or "RightHand")
+		VFX.Charge(hand, ({ Knuckles = Color3.fromRGB(255, 150, 90), Shoes = Color3.fromRGB(255, 190, 90), Sword = Color3.fromRGB(180, 225, 255), Hammer = Color3.fromRGB(255, 210, 120) })[weapon] or Color3.new(1, 1, 1), strike)
+		Audio.Play("ChargeUp", { pos = d.from, volume = 0.8 })
 	end
 	if MELEE[weapon] then
 		if weapon == "Shoes" then
@@ -921,15 +1106,37 @@ end
 -- Sounds tied to effects (3D positioned)
 local fxSounds = {
 	Damage = function(d)
-		return d.crit and "Crit" or "Hit", d.pos
+		-- the hit you hear is the weapon that landed it: punches thud ("pak"), blades slice, pellets thwack...
+		if d.kind == "burn" or d.kind == "poison" then
+			return nil
+		end
+		if d.toPlayer then
+			return "PunchHit", d.pos, 0.8
+		end
+		local w = d.src and VFX.lastWeapon[d.src]
+		local snd = ({ Fists = "PunchHit", Knuckles = "PunchHit", Shoes = "PunchHit", Hammer = "PunchHeavy", Sword = "SliceHit", Slingshot = "ShotHit", StormBaton = "ZapHit", MedKit = "PowderPoof" })[w or ""]
+		if d.kind == "pet" or d.kind == "cannon" then
+			snd = d.kind == "cannon" and "PunchHeavy" or "Hit"
+		end
+		if d.crit and (snd == "PunchHit" or snd == nil) then
+			snd = "PunchHeavy"
+		end
+		return snd or (d.crit and "Crit" or "Hit"), d.pos, d.crit and 1.1 or (0.92 + math.random() * 0.16)
 	end,
 	BasicAttack = function(d)
-		local melee = d.weapon == "Sword" or d.weapon == "Hammer" or d.weapon == "Shoes"
-		return melee and "Slash" or "Whoosh", d.from
+		-- the swing itself: a soft whoosh (the impact sound comes on contact)
+		local blade = d.weapon == "Sword" or d.weapon == "Hammer"
+		return blade and "Slash" or "Whoosh", d.from, blade and 1 or 1.25
 	end,
 	Skill = function(d)
 		if d.fx == "Heal" or d.fx == "Food" then
 			return "Heal", d.from
+		end
+		if d.fx == "ThunderCall" or d.fx == "Lightning" then
+			return "ThunderCrack", d.to or d.from
+		end
+		if d.fx == "CycloneCall" or d.fx == "Tornado" or d.fx == "Wind" then
+			return "WindGust", d.from
 		end
 		return "MagicCast", d.from
 	end,

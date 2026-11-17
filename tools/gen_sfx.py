@@ -117,3 +117,34 @@ for k in range(7):
         _parts.append((t0 + 0.015 + j * 0.022, tone(N(int(_r.integers(81, 92))), 0.12, 'bell', curve=10) * 0.25))
 save('ChestRattle', mix(*_parts), 0.65)
 
+# ===== v0.21 impact pack (appended last so earlier sounds keep their exact noise) =====
+_q = np.random.default_rng(21)
+def qnoise(d, curve=4.0, a=0.002):
+    n = _q.uniform(-1, 1, int(SR * d)); return n * env(len(n), a, curve=curve)
+def bandish(x, lo, hi):  # crude band-pass: low-pass at lo window minus low-pass at hi window
+    return lowpass(x, lo) - lowpass(x, hi)
+# punch: a meaty low thump + a short knuckle snap ("pak")
+save('PunchHit', mix((0, sweep(170, 55, 0.16, 'sine', 9)), (0, lowpass(qnoise(0.05, 40), 3) * 0.9), (0.004, lowpass(qnoise(0.12, 16), 14) * 0.5)), 0.85)
+save('PunchHeavy', mix((0, sweep(130, 38, 0.32, 'sine', 6)), (0, lowpass(qnoise(0.07, 30), 2)), (0.01, lowpass(qnoise(0.3, 7), 20) * 0.6), (0, tone(52, 0.3, 'sine', curve=8) * 0.8)), 0.9)
+# blade: a fast airy swish into a bright cut + a short metallic ring
+save('SliceHit', mix((0, bandish(qnoise(0.14, 9), 2, 9) * np.linspace(0.3, 1, int(SR * 0.14))), (0.11, lowpass(qnoise(0.05, 35), 2) * 0.8), (0.11, tone(3100, 0.25, 'bell', curve=12) * 0.25), (0.11, tone(140, 0.1, 'sine', curve=16) * 0.5)), 0.8)
+# slingshot pellet: a sharp wooden thwack
+save('ShotHit', mix((0, lowpass(qnoise(0.04, 45), 2)), (0, sweep(420, 120, 0.08, 'sine', 12) * 0.7), (0.005, lowpass(qnoise(0.1, 18), 8) * 0.4)), 0.8)
+# electric zap: crackling noise bursts + a high chirp
+_z = np.concatenate([qnoise(0.012, 3) * (0.4 + 0.6 * (k % 2)) for k in range(14)])
+save('ZapHit', mix((0, _z), (0, sweep(2400, 900, 0.18, 'square', 6) * 0.25), (0.02, sweep(1800, 600, 0.15) * 0.3)), 0.75)
+# thunder: a hard crack then a long rolling rumble
+save('ThunderCrack', mix((0, lowpass(qnoise(0.08, 25), 1) * 1.2), (0.02, _z * 0.6), (0.05, lowpass(qnoise(1.6, 2.2), 45) * 1.4), (0.05, sweep(80, 35, 1.4, 'sine', 2) * 0.6)), 0.9)
+# wind gust: filtered noise swelling up and away
+_w = lowpass(_q.uniform(-1, 1, int(SR * 0.9)), 18) * np.sin(np.linspace(0, np.pi, int(SR * 0.9))) ** 1.5
+save('WindGust', _w, 0.6)
+# powder puff: a soft airy poof with a sparkle
+save('PowderPoof', mix((0, lowpass(qnoise(0.25, 7), 10)), (0.03, tone(N(96), 0.25, 'bell', curve=9) * 0.15), (0.06, tone(N(100), 0.2, 'bell', curve=10) * 0.12)), 0.6)
+# charge-up: a quick rising whirr before a big blow
+save('ChargeUp', mix((0, sweep(180, 900, 0.32, 'sine', 0.8) * np.linspace(0.2, 1, int(SR * 0.32))), (0, lowpass(qnoise(0.32, 0.5), 6) * 0.3 * np.linspace(0, 1, int(SR * 0.32)))), 0.5)
+# card reveal: rising arcane charge, bass drop, flip whoosh, celestial chime
+save('CardCharge', mix((0, sweep(220, 1400, 1.1, 'sine', 0.6) * np.linspace(0.1, 1, int(SR * 1.1))), (0, sweep(330, 2100, 1.1, 'sine', 0.6) * 0.4 * np.linspace(0.1, 1, int(SR * 1.1))), *[(k * 0.11, tone(N(72 + k * 2), 0.2, 'bell', curve=8) * 0.2) for k in range(10)]), 0.6)
+save('CardBass', mix((0, sweep(110, 32, 0.9, 'sine', 3) * 1.2), (0, lowpass(qnoise(0.12, 20), 3) * 0.8), (0, lowpass(qnoise(0.9, 3), 40) * 0.6)), 0.95)
+save('CardFlip', mix((0, bandish(qnoise(0.16, 6), 2, 10)), (0.12, lowpass(qnoise(0.03, 40), 2) * 0.6)), 0.6)
+save('CardChime', mix(*[(k * 0.06, tone(N(m), 1.2, 'bell', curve=3) * 0.5) for k, m in enumerate((84, 88, 91, 96, 100))], (0.3, mix(*[(j * 0.03, tone(N(100 + (j % 4) * 3), 0.4, 'sine', curve=6) * 0.2) for j in range(12)]))), 0.7)
+

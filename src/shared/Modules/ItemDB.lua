@@ -21,6 +21,7 @@ for id, c in pairs(Cards) do
 		stack = true,
 		price = 5000,
 		isBossCard = mon ~= nil and mon.isBoss == true,
+		monster = c.monster,
 	}
 end
 

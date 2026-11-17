@@ -685,6 +685,24 @@ local function setupHandlers()
 				p.equipment.weapon = nil
 			end
 		end
+		-- then hand them the best weapon of the new class that they own (highest grade, then refine); the player can
+		-- change it afterwards (owner: switching class auto-equips the class weapon)
+		if not p.equipment.weapon then
+			local best, bestScore
+			for _, e in ipairs(p.inventory) do
+				local def = ItemDB.Get(e.id)
+				if def and def.kind == "Weapon" and table.find(target.weapons, def.weaponType) and (def.reqLevel or 1) <= p.baseLevel then
+					local g = ItemDB.Grade(def)
+					local score = (g and g.rank or 1) * 100 + (e.refine or 0)
+					if not bestScore or score > bestScore then
+						best, bestScore = e, score
+					end
+				end
+			end
+			if best then
+				p.equipment.weapon = best.uid
+			end
+		end
 		-- each class keeps its own bar: save the old one, restore (or build) the new one. Skills of other classes stay
 		-- learned but cannot be used here; Common and fruit skills come along. Every learned skill of the class gets a slot.
 		p.classBars = p.classBars or {}

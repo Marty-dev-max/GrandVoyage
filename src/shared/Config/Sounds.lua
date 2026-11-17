@@ -42,6 +42,20 @@ add("RefineBreak", "SFX", 0.7, "rbxasset://sounds/glassbreak.wav")
 add("AnvilClang", "SFX", 0.6, "rbxasset://sounds/clickfast.wav", { pitch = 0.9 })
 -- Combat
 add("Hit", "SFX", 0.42, HIT, { pitch = 0.82 })
+-- impact pack (v0.21): the hit you hear depends on the weapon that landed it
+add("PunchHit", "SFX", 0.55, HIT, { pitch = 0.9 })
+add("PunchHeavy", "SFX", 0.65, HIT, { pitch = 0.7 })
+add("SliceHit", "SFX", 0.5, SWORD)
+add("ShotHit", "SFX", 0.5, HIT)
+add("ZapHit", "SFX", 0.45, PING)
+add("ThunderCrack", "SFX", 0.7, BOOM, { rolloff = 500 })
+add("WindGust", "SFX", 0.5, "rbxasset://sounds/swordlunge.wav")
+add("PowderPoof", "SFX", 0.5, "rbxasset://sounds/swordlunge.wav")
+add("ChargeUp", "SFX", 0.35, PING)
+add("CardCharge", "SFX", 0.6, PING)
+add("CardBass", "SFX", 0.75, BOOM)
+add("CardFlip", "SFX", 0.55, CLICK)
+add("CardChime", "SFX", 0.65, PING)
 add("Crit", "SFX", 0.55, HIT, { pitch = 1.05 })
 add("Slash", "SFX", 0.45, SWORD)
 add("Whoosh", "SFX", 0.4, "rbxasset://sounds/swordlunge.wav")
@@ -75,6 +89,7 @@ add("MusicBoss", "Music", 0.45, "", { looped = true })
 
 
 
+
 -- ===== uploaded asset ids (written by tools/upload_sfx.py) =====
 S.AmbienceSea.id = "rbxassetid://138177780191891"
 S.AmbienceWind.id = "rbxassetid://121665322013245"
@@ -82,7 +97,12 @@ S.AnvilClang.id = "rbxassetid://119416036242324"
 S.Bell.id = "rbxassetid://117065599726354"
 S.BossRoar.id = "rbxassetid://94312411489126"
 S.Cannon.id = "rbxassetid://134315093700416"
+S.CardBass.id = "rbxassetid://94330191075762"
+S.CardCharge.id = "rbxassetid://79853234139502"
+S.CardChime.id = "rbxassetid://130536990205209"
 S.CardDrop.id = "rbxassetid://86837197767896"
+S.CardFlip.id = "rbxassetid://128561825665290"
+S.ChargeUp.id = "rbxassetid://124969119684938"
 S.ChestRattle.id = "rbxassetid://94867031271514"
 S.Coin.id = "rbxassetid://97184686943653"
 S.Crit.id = "rbxassetid://116048330313567"
@@ -95,6 +115,9 @@ S.LevelUp.id = "rbxassetid://85566351375372"
 S.MagicCast.id = "rbxassetid://111922509561668"
 S.MonsterDie.id = "rbxassetid://100509063761680"
 S.MusicIsland.id = "rbxassetid://90901813437721"
+S.PowderPoof.id = "rbxassetid://84483622469930"
+S.PunchHeavy.id = "rbxassetid://71100249068050"
+S.PunchHit.id = "rbxassetid://134583839099878"
 S.Purchase.id = "rbxassetid://106366826764025"
 S.RarityCommon.id = "rbxassetid://108588977375101"
 S.RarityEpic.id = "rbxassetid://111993988099638"
@@ -108,12 +131,17 @@ S.RefineFail.id = "rbxassetid://127746516165238"
 S.RefineSuccess.id = "rbxassetid://125966446261797"
 S.ShipCreak.id = "rbxassetid://103479643096475"
 S.ShipHit.id = "rbxassetid://119823236880029"
+S.ShotHit.id = "rbxassetid://137492376417086"
 S.Slash.id = "rbxassetid://125418891873956"
+S.SliceHit.id = "rbxassetid://116955118056765"
 S.Splash.id = "rbxassetid://80428746770906"
+S.ThunderCrack.id = "rbxassetid://92004300987583"
 S.UIClick.id = "rbxassetid://85047146917342"
 S.UIClose.id = "rbxassetid://107881653592113"
 S.UIHover.id = "rbxassetid://78923618171273"
 S.UIOpen.id = "rbxassetid://101070708256347"
 S.Whoosh.id = "rbxassetid://87542042603708"
+S.WindGust.id = "rbxassetid://72703815837799"
+S.ZapHit.id = "rbxassetid://73320420962425"
 
 return S

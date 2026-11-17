@@ -207,6 +207,8 @@ end)
 roblox.implementMethod("RemoteEvent", "FireServer", function() end)
 
 -- ===== task (no real scheduling: loops park forever, delays are dropped) =====
+local errors = {}
+local trackWaits, sleepers = false, {}
 local fakeTask = {
 	spawn = function(f, ...)
 		local co = coroutine.create(f)
@@ -220,12 +222,31 @@ local fakeTask = {
 	end,
 	delay = function() end,
 	wait = function()
+		if trackWaits then
+			table.insert(sleepers, coroutine.running())
+		end
 		coroutine.yield()
 	end,
 }
+-- resume the tracked sleepers (each task.wait() = one frame) until cond() or the time runs out
+local function pump(seconds, cond)
+	local t0 = os.clock()
+	while #sleepers > 0 and os.clock() - t0 < seconds and not (cond and cond()) do
+		local list = sleepers
+		sleepers = {}
+		for _, co in list do
+			if coroutine.status(co) == "suspended" then
+				local ok, err = coroutine.resume(co)
+				if not ok then
+					print("[task error]", err)
+					table.insert(errors, "task: " .. tostring(err))
+				end
+			end
+		end
+	end
+end
 
 -- ===== module loader =====
-local errors = {}
 local cache = {}
 local function req(mod)
 	local key = mod:GetFullName()
@@ -460,7 +481,41 @@ step("VFX library", function()
 	e.RotSpeed = roblox.NumberRange.new(-200, 200)
 end)
 step("HUD.Loot", function()
+	trackWaits = true
 	HUD.Loot({ beli = 1250, items = { { id = "TidecoreShard", qty = 1 }, { id = "CaptainConfettiCard", qty = 1, card = true } } })
+end)
+-- play the card reveal through (tension -> flip -> shockwave -> face) and snapshot it once the face is up
+step("CardReveal", function()
+	local function revealGui()
+		return playerGui:FindFirstChild("GVCardReveal")
+	end
+	pump(4, function()
+		local g = revealGui()
+		local face = g and g:FindFirstChild("Face", true)
+		return face ~= nil and face.Visible
+	end)
+	local g = revealGui()
+	assert(g and g:FindFirstChild("Face", true), "card reveal never reached the face")
+	local t0 = os.clock()
+	pump(0.5, function()
+		return os.clock() - t0 > 0.45
+	end)
+	-- finish the tweens the harness does not run: show the stars and art at full size
+	for _, d in g:GetDescendants() do
+		if d:IsA("UIScale") then
+			d.Scale = 1
+		elseif d:IsA("TextLabel") and d.Text == "★" then
+			d.TextTransparency = 0
+		end
+	end
+	fs.writeFile(outDir .. "/card_reveal.json", serde.encode("json", dump(g)))
+	table.insert(shots, "card_reveal")
+	print("[snap] card_reveal")
+	pump(6, function()
+		return revealGui() == nil
+	end)
+	assert(revealGui() == nil, "card reveal did not clean up")
+	trackWaits = false
 end)
 snapshot("hud")
 -- the style meter climbs to S rank (fire) without errors

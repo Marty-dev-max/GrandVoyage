@@ -846,12 +846,75 @@ function Panels.Skills(args)
 		local a, sz = btn.AbsolutePosition, btn.AbsoluteSize
 		return pt.X >= a.X and pt.X <= a.X + sz.X and pt.Y >= a.Y and pt.Y <= a.Y + sz.Y
 	end
-	local function draggable(btn, payload, img, color)
-		btn.InputBegan:Connect(function(input)
-			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-				drag = { payload = payload, start = Vector2.new(input.Position.X, input.Position.Y), img = img, color = color }
+	local function ghostAt(d, pt)
+		local sc = UI.GetScale()
+		if not d.ghost then
+			local g = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(64, 64), BackgroundColor3 = d.color or T.Panel, BackgroundTransparency = 0.15, ZIndex = 90, Parent = UI.Root })
+			UI.Corner(g, 12)
+			UI.Stroke(g, T.Gold, 3)
+			if d.img then
+				New("ImageLabel", { BackgroundTransparency = 1, Image = d.img, Size = UDim2.fromScale(0.8, 0.8), Position = UDim2.fromScale(0.1, 0.1), ScaleType = Enum.ScaleType.Fit, ZIndex = 91, Parent = g })
 			end
+			d.ghost = g
+		end
+		d.ghost.Position = UDim2.fromOffset(pt.X / sc, pt.Y / sc)
+		d.pt = pt
+	end
+	local function finishDrag(d, pt)
+		if d.ghost then
+			d.ghost:Destroy()
+		end
+		lastDrop = os.clock()
+		local inset = 0
+		pcall(function()
+			inset = game:GetService("GuiService"):GetGuiInset().Y
 		end)
+		-- the drop point, tried as-is and shifted by the top-bar inset (input APIs disagree about it)
+		local hit
+		for _, probe in ipairs({ pt, pt + Vector2.new(0, inset) }) do
+			for _, t in ipairs(dropTargets) do
+				if not hit and t.btn.Parent and inside(t.btn, probe) then
+					hit = t
+				end
+			end
+		end
+		if onDrop then
+			onDrop(d.payload, hit)
+		end
+	end
+	-- Roblox's own UIDragDetector does the pointer capture (mouse and touch, also inside scrolling lists); the tile
+	-- itself never moves (CustomOffset), a ghost follows the pointer instead
+	local function draggable(btn, payload, img, color)
+		local ok = pcall(function()
+			local det = Instance.new("UIDragDetector")
+			det.ResponseStyle = Enum.UIDragDetectorResponseStyle.CustomOffset
+			det.Parent = btn
+			local d
+			det.DragStart:Connect(function(pos)
+				d = { payload = payload, img = img, color = color, start = pos, moved = false }
+			end)
+			det.DragContinue:Connect(function(pos)
+				if d and (d.moved or (pos - d.start).Magnitude > 8) then
+					d.moved = true
+					ghostAt(d, pos)
+				end
+			end)
+			det.DragEnd:Connect(function(pos)
+				local dd = d
+				d = nil
+				if dd and dd.moved then
+					finishDrag(dd, pos)
+				end
+			end)
+		end)
+		if not ok then
+			-- (older engines / the UI harness): track the pointer ourselves
+			btn.InputBegan:Connect(function(input)
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+					drag = { payload = payload, start = Vector2.new(input.Position.X, input.Position.Y), img = img, color = color }
+				end
+			end)
+		end
 	end
 	local conns = {}
 	table.insert(conns, UIS.InputChanged:Connect(function(input)

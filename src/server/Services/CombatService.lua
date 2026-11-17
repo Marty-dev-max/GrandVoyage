@@ -253,7 +253,7 @@ end
 -- the clip a skill plays (same choice as the client's CharAnim) and its strike time
 local function skillStrike(player, skill)
 	local w = AnimClips.Weapons[weaponType(player)] or {}
-	local name = w[skill.kind] or AnimClips.SkillKinds[skill.kind] or "Skill_Cast"
+	local name = skill.anim or w[skill.kind] or AnimClips.SkillKinds[skill.kind] or "Skill_Cast"
 	local clip = AnimClips[name]
 	return clip and clip.strike or 0.15
 end

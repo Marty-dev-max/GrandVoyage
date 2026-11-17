@@ -205,6 +205,7 @@ models v2 for pets (18) and fruits (6) (`AssetService`), map art pass up to v0.1
 day/night lighting, wind wisps + leaves, stylized env kit: trees/pines/palms/bushes/boulders, layered rock-cliff hills with
 grass caps, red Red Line cliffs, scattered plants with petal flowers, painted grass texture).
 Bump `GameConfig.Version` on every change: the owner checks it bottom-right in game to confirm Rojo synced.
+Keep `progress.md` (Thai, for the owner) up to date with every version: snapshot, awaiting-test list, version history, next up.
 The owner updates by double-clicking `update.bat` (git pull) on Windows, then Stop/Play in Studio.
 The owner tests in Studio and sends screenshots; previews of new art are rendered in Blender (bpy) from the real GLBs
 (see docs/screenshots/*.png) before shipping. Owner feedback is visual and blunt: iterate until they say it is right.

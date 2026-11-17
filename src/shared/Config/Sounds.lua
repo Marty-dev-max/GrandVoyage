@@ -27,7 +27,7 @@ add("UIClick", "UI", 0.5, CLICK)
 add("UIOpen", "UI", 0.45, PING, { pitch = 0.8 })
 add("UIClose", "UI", 0.4, PING, { pitch = 0.6 })
 add("Error", "UI", 0.5, "rbxasset://sounds/uuhhh.mp3", { pitch = 1.4 })
-add("Coin", "UI", 0.4, PING, { pitch = 0.95 }) -- was 1.5: too shrill when it plays on every kill (owner)
+add("Coin", "UI", 0.4, PING, { pitch = 0.72 }) -- the synth coin is high: play it lower (the owner found it shrill)
 add("Purchase", "UI", 0.55, PING, { pitch = 1.25 })
 add("Equip", "UI", 0.5, "rbxasset://sounds/unsheath.wav")
 -- Progression
@@ -39,6 +39,7 @@ add("CardDrop", "SFX", 0.7, PING, { pitch = 1.8 })
 add("RefineSuccess", "SFX", 0.7, PING, { pitch = 1.3 })
 add("RefineFail", "SFX", 0.6, BOOM, { pitch = 0.7 })
 add("RefineBreak", "SFX", 0.7, "rbxasset://sounds/glassbreak.wav")
+add("AnvilClang", "SFX", 0.6, "rbxasset://sounds/clickfast.wav", { pitch = 0.9 })
 -- Combat
 add("Hit", "SFX", 0.42, HIT, { pitch = 0.82 })
 add("Crit", "SFX", 0.55, HIT, { pitch = 1.05 })
@@ -47,7 +48,7 @@ add("Whoosh", "SFX", 0.4, "rbxasset://sounds/swordlunge.wav")
 add("MagicCast", "SFX", 0.5, PING, { pitch = 0.7 })
 add("Heal", "SFX", 0.5, PING, { pitch = 1.6 })
 add("MonsterDie", "SFX", 0.5, "rbxasset://sounds/splat.wav", { pitch = 0.85 })
-add("ChestOpen", "SFX", 0.6, PING, { pitch = 0.75 })
+add("ChestOpen", "SFX", 0.6, PING, { pitch = 0.75, alias = "Purchase" }) -- a lower take on the purchase jingle
 add("BossRoar", "SFX", 0.8, BOOM, { pitch = 0.4 })
 -- Sea
 add("Cannon", "SFX", 0.75, SHOT, { pitch = 0.6, rolloff = 600 })
@@ -70,9 +71,12 @@ add("MusicBoss", "Music", 0.45, "", { looped = true })
 
 
 
+
+
 -- ===== uploaded asset ids (written by tools/upload_sfx.py) =====
 S.AmbienceSea.id = "rbxassetid://138177780191891"
 S.AmbienceWind.id = "rbxassetid://121665322013245"
+S.AnvilClang.id = "rbxassetid://119416036242324"
 S.Bell.id = "rbxassetid://117065599726354"
 S.BossRoar.id = "rbxassetid://94312411489126"
 S.Cannon.id = "rbxassetid://134315093700416"
@@ -89,7 +93,6 @@ S.MagicCast.id = "rbxassetid://111922509561668"
 S.MonsterDie.id = "rbxassetid://100509063761680"
 S.MusicIsland.id = "rbxassetid://90901813437721"
 S.Purchase.id = "rbxassetid://106366826764025"
-S.ChestOpen.id = S.Purchase.id -- a warmer, lower take on the purchase jingle: chests no longer sound like loot
 S.RarityCommon.id = "rbxassetid://108588977375101"
 S.RarityEpic.id = "rbxassetid://111993988099638"
 S.RarityLegendary.id = "rbxassetid://104842475105865"

@@ -102,3 +102,7 @@ for i in range(32): parts.append((i * beat / 2, lowpass(noise(0.05, 30), 2) * (0
 music = pad(mix(*parts), 0)[: int(SR * beat * 16)]
 save('MusicIsland', music, 0.55)
 print('wrote', len(os.listdir(OUT)), 'files to', os.path.abspath(OUT))
+# (appended last so the noise of the older sounds stays identical)
+# anvil: a few inharmonic metal partials with a hard click on top (the Forge plays three of these)
+clang = mix((0, lowpass(noise(0.03, 40), 2) * 0.8), *[(0, tone(f, 0.9, 'sine', a=0.001, curve=c) * g) for f, c, g in ((523, 5, 0.6), (1393, 6, 0.5), (2411, 8, 0.35), (3557, 10, 0.25), (787, 4, 0.3))])
+save('AnvilClang', clang, 0.7)

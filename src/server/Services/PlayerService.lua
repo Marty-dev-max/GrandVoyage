@@ -176,6 +176,7 @@ local function sync(player)
 			skills = p.skills,
 			skillBar = p.skillBar,
 			itemBar = p.itemBar,
+			ammo = p.ammo,
 			autoSkills = p.autoSkills,
 			inventory = p.inventory,
 			equipment = p.equipment,
@@ -423,6 +424,41 @@ local function setupHandlers()
 		return true
 	end, 0.05)
 
+	-- the Stats window's "Apply": several stats at once, { add = { STR = 3, AGI = 2 } }; all-or-nothing on the cost
+	Net.Handle("AllocateStats", function(player, data)
+		local p = PS.Profile(player)
+		if type(data.add) ~= "table" then
+			return false
+		end
+		local plan, total = {}, 0
+		for _, stat in ipairs(Formulas.StatNames) do
+			local n = math.floor(tonumber(data.add[stat]) or 0)
+			if n < 0 or n > 200 then
+				return false, "Invalid amount"
+			end
+			local cur = p.stats[stat]
+			for k = 0, n - 1 do
+				if cur + k >= Formulas.MaxStat then
+					return false, stat .. " is already at the maximum"
+				end
+				total += Formulas.StatCost(cur + k)
+			end
+			plan[stat] = n
+		end
+		if total == 0 then
+			return false, "Nothing to apply"
+		end
+		if total > p.statPoints then
+			return false, "Not enough stat points"
+		end
+		for stat, n in pairs(plan) do
+			p.stats[stat] += n
+		end
+		p.statPoints -= total
+		PS.Recompute(player)
+		return true, "Stats raised"
+	end, 0.3)
+
 	Net.Handle("LearnSkill", function(player, data)
 		local p = PS.Profile(player)
 		local skill = ClassesCfg.SkillById[data.skillId]
@@ -467,6 +503,22 @@ local function setupHandlers()
 		PS.MarkDirty(player)
 		return true
 	end)
+
+	-- slingshot ammo pick (Config/Ammo); the shot itself checks you still have some
+	Net.Handle("SetAmmo", function(player, data)
+		local p = PS.Profile(player)
+		local AmmoCfg = require(Shared.Config.Ammo)
+		local a = type(data.id) == "string" and AmmoCfg.ById[data.id]
+		if not a then
+			return false
+		end
+		if a.item and R.InventoryService.Count(player, a.item) <= 0 then
+			return false, "You have no " .. a.name .. " (buy some at the General Store)"
+		end
+		p.ammo = a.id
+		PS.MarkDirty(player)
+		return true, a.name .. " loaded"
+	end, 0.2)
 
 	-- quick item slots F1-F8: consumable item ids ("" = empty)
 	Net.Handle("SetItemBar", function(player, data)

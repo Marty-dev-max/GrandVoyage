@@ -540,6 +540,105 @@ function UI.ModelView(parent, folder, key, size, spin, props)
 	return vp
 end
 
+-- Your own character in a ViewportFrame (Bag / Stats): a still copy of the avatar holding the weapon you have equipped
+-- (weaponType -> Assets.Weapons model in the right hand). Drag left/right to turn it. Returns the frame and refresh(weaponType).
+function UI.CharacterView(parent, props)
+	local vp = New("ViewportFrame", {
+		BackgroundTransparency = 1,
+		Size = UDim2.fromScale(1, 1),
+		Ambient = Color3.fromRGB(175, 175, 195),
+		LightColor = Color3.fromRGB(255, 250, 240),
+		LightDirection = Vector3.new(-0.5, -0.8, -1),
+		Parent = parent,
+	})
+	for k, v in pairs(props or {}) do
+		vp[k] = v
+	end
+	local world = New("WorldModel", { Parent = vp })
+	local cam = Instance.new("Camera")
+	cam.FieldOfView = 26
+	cam.Parent = vp
+	vp.CurrentCamera = cam
+	local yaw = math.rad(200)
+	local model
+	local function place()
+		if model then
+			model:PivotTo(CFrame.Angles(0, yaw, 0))
+		end
+	end
+	local function refresh(weaponType)
+		if model then
+			model:Destroy()
+			model = nil
+		end
+		local char = player.Character
+		if not char then
+			return
+		end
+		local was = char.Archivable
+		char.Archivable = true
+		local ok, copy = pcall(function()
+			return char:Clone()
+		end)
+		char.Archivable = was
+		if not ok or not copy then
+			return
+		end
+		-- a still statue: no scripts, no physics, no live weapon models (we add the equipped one below)
+		for _, d in ipairs(copy:GetDescendants()) do
+			if d:IsA("Script") or d:IsA("LocalScript") or d:IsA("Sound") or (d:IsA("Model") and d:GetAttribute("GVWeapon")) then
+				d:Destroy()
+			elseif d:IsA("BasePart") then
+				d.Anchored = true
+			end
+		end
+		local hum = copy:FindFirstChildOfClass("Humanoid")
+		if hum then
+			hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+		end
+		local root = copy:FindFirstChild("HumanoidRootPart")
+		copy:PivotTo(CFrame.new())
+		if root then
+			copy.PrimaryPart = root
+		end
+		local hand = copy:FindFirstChild("RightHand")
+		local tpl = weaponType and UI.ModelAsset("Weapons", weaponType)
+		if hand and tpl then
+			local w = tpl:Clone()
+			w:PivotTo(hand.CFrame * CFrame.new(0, -0.15, 0))
+			w.Parent = copy
+		end
+		copy.Parent = world
+		model = copy
+		local cf, ext = copy:GetBoundingBox()
+		local dist = ext.Y * 0.62 / math.tan(math.rad(13))
+		cam.CFrame = CFrame.lookAt(cf.Position + Vector3.new(0, ext.Y * 0.04, -dist), cf.Position)
+		place()
+	end
+	-- drag to turn (pcall: the headless UI harness has no input events)
+	local dragging, lastX = false, 0
+	pcall(function()
+	vp.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging, lastX = true, input.Position.X
+		end
+	end)
+	vp.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = false
+		end
+	end)
+	vp.InputChanged:Connect(function(input)
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+			yaw += (input.Position.X - lastX) * 0.012
+			lastX = input.Position.X
+			place()
+		end
+	end)
+	end)
+	return vp, refresh
+end
+
 -- Section header: icon chip + display title + accent rule, with optional right-aligned info text.
 -- Returns (frame, rightLabel)
 function UI.Section(parent, icon, title, color, rightText)
@@ -721,17 +820,50 @@ function UI.Window(id, title, size, color, icon, opts)
 		UI.Stroke(big, T.Edge, 3)
 		local back = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 4, 0.5, -4), Size = UDim2.fromOffset(16, 13), BackgroundTransparency = 1, ZIndex = 25, Parent = maxBtn })
 		UI.Stroke(back, T.Edge, 3)
+		-- full screen (like big games' codex/menus): the window covers the whole screen edge to edge, the big title tab
+		-- turns into a slim title bar, X and this button sit in the top-right corner; shrunk, it is a framed window again
+		local frameCorner = frame:FindFirstChildOfClass("UICorner")
+		local frameStroke = frame:FindFirstChildOfClass("UIStroke")
+		local slim = New("Frame", { Name = "SlimBar", BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.55, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 56), Visible = false, ZIndex = 20, Parent = frame })
+		New("UIGradient", { Color = ColorSequence.new(color:Lerp(T.PanelDeep, 0.35), T.PanelDeep), Rotation = 0, Parent = slim })
+		local slimTitle = UI.Text(slim, string.upper(title), 26, Color3.new(1, 1, 1), "Display", { Position = UDim2.fromOffset(200, 0), Size = UDim2.new(1, -330, 1, 0), TextWrapped = false, ZIndex = 22 })
+		if icon then
+			local sc2 = UI.IconChip(slim, icon, color:Lerp(T.Gold, 0.35), 40)
+			sc2.AnchorPoint = Vector2.new(0, 0.5)
+			sc2.Position = UDim2.new(0, 152, 0.5, 0)
+			for _, d in ipairs(sc2:GetDescendants()) do
+				if d:IsA("GuiObject") then
+					d.ZIndex = 23
+				end
+			end
+			sc2.ZIndex = 23
+		end
+		local _ = slimTitle
 		local function apply(animate)
 			local full = UI.FullPref[id]
-			-- full screen stays below Roblox's own top-bar buttons (the header tab pokes 12px above the frame)
 			local inset = 0
 			pcall(function()
 				inset = game:GetService("GuiService").TopbarInset.Max.Y / math.max(0.01, rootScale.Scale)
 			end)
-			local top = math.max(inset, 44) + 18
-			local target = full and UDim2.new(1, -36, 1, -(top + 14)) or windowSize
-			restPos = full and UDim2.new(0.5, 0, 0.5, (top - 14) / 2) or UDim2.fromScale(0.5, 0.53)
+			local top = math.max(inset, 44) + 12
+			local target = full and UDim2.fromScale(1, 1) or windowSize
+			restPos = full and UDim2.fromScale(0.5, 0.5) or UDim2.fromScale(0.5, 0.53)
 			win.full = full
+			-- chrome
+			slim.Size = UDim2.new(1, 0, 0, top)
+			slim.Visible = full
+			tab.Visible = not full
+			rim.Visible = not full
+			if frameCorner then
+				frameCorner.CornerRadius = UDim.new(0, full and 0 or 20)
+			end
+			if frameStroke then
+				frameStroke.Enabled = not full
+			end
+			close.Position = full and UDim2.new(1, -12, 0, (top - 46) / 2) or UDim2.new(1, 12, 0, -12)
+			maxBtn.Position = full and UDim2.new(1, -66, 0, (top - 46) / 2) or UDim2.new(1, -42, 0, -12)
+			body.Position = full and UDim2.fromOffset(20, top + 10) or UDim2.fromOffset(16, 58)
+			body.Size = full and UDim2.new(1, -40, 1, -(top + 22)) or UDim2.new(1, -32, 1, -72)
 			big.Size = full and UDim2.fromOffset(16, 13) or UDim2.fromOffset(22, 18)
 			big.Position = full and UDim2.new(0.5, -3, 0.5, 3) or UDim2.fromScale(0.5, 0.5)
 			back.Visible = full

@@ -16,6 +16,7 @@ local skillCd = {} -- player -> { skillId -> time }
 local lastHurt = {}
 
 local AnimClips = require(Shared.Config.AnimClips)
+local AmmoCfg = require(Shared.Config.Ammo)
 -- ranged basic attacks: the shot flies this long after the release frame (matches VFX.Projectile durations)
 local SHOT_FLIGHT = { Slingshot = 0.18, StormBaton = 0.22, MedKit = 0.2 }
 local combos = {} -- player -> { n, last }
@@ -138,11 +139,14 @@ local function resolveTarget(attacker, inst)
 	return nil
 end
 
-local function hitTarget(attacker, target, mult, magic, fx)
+-- opts (ammo effects): critBonus, ignoreDef, slow, splash
+local function hitTarget(attacker, target, mult, magic, opts)
 	local d = R.PlayerService.Derived(attacker)
 	if not d then
 		return
 	end
+	opts = opts or {}
+	local crit = (d.crit or 0) + (opts.critBonus or 0)
 	local atk = magic and d.matk or d.atk
 	if target.kind == "mob" then
 		local mob = target.mob
@@ -158,9 +162,28 @@ local function hitTarget(attacker, target, mult, magic, fx)
 		if mob.def.style and mob.def.style.shape == "fishman" then
 			bonus += d.dmgVsSeafolk
 		end
-		local dmg, crit = Formulas.Damage(atk, magic and mob.def.def * 0.5 or mob.def.def, mult * bonus, magic and 0 or d.crit)
-		R.MonsterService.Damage(mob, dmg, attacker, crit)
+		local mdef = opts.ignoreDef and 0 or (magic and mob.def.def * 0.5 or mob.def.def)
+		local dmg, isCrit = Formulas.Damage(atk, mdef, mult * bonus, magic and 0 or crit)
+		R.MonsterService.Damage(mob, dmg, attacker, isCrit)
 		R.PetService.OnOwnerHit(attacker, mob)
+		if opts.slow and mob.hum and not mob.dead then
+			-- frost: slowed for 2 s (restored from the monster's own speed, so stacking cannot freeze it)
+			mob.hum.WalkSpeed = mob.def.moveSpeed * opts.slow
+			mob.slowUntil = os.clock() + 2
+			task.delay(2.05, function()
+				if mob.hum and not mob.dead and os.clock() >= (mob.slowUntil or 0) then
+					mob.hum.WalkSpeed = mob.def.moveSpeed
+				end
+			end)
+		end
+		if opts.splash then
+			-- blast: everyone else nearby takes half (no chain explosions)
+			for _, other in ipairs(R.MonsterService.InRadius(mob.root.Position, opts.splash)) do
+				if other ~= mob and not other.dead then
+					hitTarget(attacker, { kind = "mob", mob = other, pos = other.root.Position, model = other.model }, mult * 0.5, magic, { critBonus = opts.critBonus })
+				end
+			end
+		end
 	elseif target.kind == "player" then
 		local td = R.PlayerService.Derived(target.player)
 		if not td then
@@ -172,13 +195,14 @@ local function hitTarget(attacker, target, mult, magic, fx)
 			return
 		end
 		-- PvP damage is reduced by 40% so fights last longer
-		local dmg, crit = Formulas.Damage(atk, magic and td.mdef or td.def, mult * 0.6, magic and 0 or d.crit)
-		Combat.DamagePlayer(target.player, dmg, { crit = crit, killer = attacker })
+		local pdef = opts.ignoreDef and 0 or (magic and td.mdef or td.def)
+		local dmg, isCrit = Formulas.Damage(atk, pdef, mult * 0.6, magic and 0 or crit)
+		Combat.DamagePlayer(target.player, dmg, { crit = isCrit, killer = attacker })
 	end
 end
 
 -- a hit that lands on the attack animation's strike frame (damage used to land before the fist/blade got there)
-local function hitLater(delay, attacker, target, mult, magic)
+local function hitLater(delay, attacker, target, mult, magic, opts)
 	task.delay(delay, function()
 		if not attacker.Parent or not alive(attacker) then
 			return
@@ -189,7 +213,7 @@ local function hitLater(delay, attacker, target, mult, magic)
 		if target.kind == "player" and not alive(target.player) then
 			return
 		end
-		hitTarget(attacker, target, mult, magic)
+		hitTarget(attacker, target, mult, magic, opts)
 	end)
 end
 
@@ -282,8 +306,21 @@ local function setup()
 		local magic = wType == "StormBaton"
 		R.WeaponService.Draw(player, wType)
 		local n, strike = comboStep(player, wType)
-		Net.FX("BasicAttack", { from = root.Position, to = target.pos, weapon = wType, char = player.Character, combo = n }, root.Position, 250)
-		hitLater(strike + (SHOT_FLIGHT[wType] or 0), player, target, 1, magic)
+		-- slingshots fire the picked ammo (1 per shot; out of it -> free Pebble Shot)
+		local ammo, mult = nil, 1
+		if AmmoCfg.Weapons[wType] then
+			local p = R.DataService.Get(player)
+			ammo = AmmoCfg.ById[p and p.ammo or ""] or AmmoCfg.ById[AmmoCfg.Default]
+			if ammo.item and not R.InventoryService.RemoveItem(player, ammo.item, 1) then
+				R.PlayerService.Notify(player, "Out of " .. ammo.name .. ": back to Pebble Shot", "bad")
+				p.ammo = AmmoCfg.Default
+				R.PlayerService.MarkDirty(player)
+				ammo = AmmoCfg.ById[AmmoCfg.Default]
+			end
+			mult = ammo.mult
+		end
+		Net.FX("BasicAttack", { from = root.Position, to = target.pos, weapon = wType, char = player.Character, combo = n, ammo = ammo and ammo.id }, root.Position, 250)
+		hitLater(strike + (SHOT_FLIGHT[wType] or 0), player, target, mult, magic, ammo and { critBonus = ammo.critBonus, ignoreDef = ammo.ignoreDef, slow = ammo.slow, splash = ammo.splash })
 		return true
 	end, 0.2)
 

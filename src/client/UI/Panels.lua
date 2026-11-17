@@ -65,7 +65,7 @@ local function onProfile(win, fn)
 	end)
 end
 
-local kindIcon = { Weapon = "⚔️", Armor = "🧥", Headgear = "🎩", Accessory = "💍", Consumable = "🍖", Material = "🪵", Card = "🃏" }
+local kindIcon = { Ammo = "🔸", Weapon = "⚔️", Armor = "🧥", Headgear = "🎩", Accessory = "💍", Consumable = "🍖", Material = "🪵", Card = "🃏" }
 
 local function equippedUid(uid)
 	if not State.profile then
@@ -162,10 +162,23 @@ end
 
 -- ===================== INVENTORY =====================
 function Panels.Inventory()
-	local win = UI.Window("Inventory", "Inventory", UDim2.fromOffset(940, 580), T.Ocean, "🎒", { fullscreen = true })
-	local left = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(0.6, -8, 1, 0), Parent = win.body })
-	local right = UI.Card(win.body, UDim2.new(0.4, 0, 1, 0))
-	right.Position = UDim2.new(0.6, 0, 0, 0)
+	local win = UI.Window("Inventory", "Inventory", UDim2.fromOffset(1180, 600), T.Ocean, "🎒", { fullscreen = true })
+	-- left: your character wearing your gear, with the equipment slots around it (tap a slot to inspect it)
+	local charPanel = UI.Card(win.body, UDim2.new(0.36, -10, 1, 0), T.PanelDeep)
+	local left = New("Frame", { BackgroundTransparency = 1, Position = UDim2.new(0.36, 0, 0, 0), Size = UDim2.new(0.38, -10, 1, 0), Parent = win.body })
+	local right = UI.Card(win.body, UDim2.new(0.26, 0, 1, 0))
+	right.Position = UDim2.new(0.74, 0, 0, 0)
+	local stage = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), Size = UDim2.new(1, -200, 1, -40), Parent = charPanel })
+	New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.glow, ImageColor3 = T.Ocean:Lerp(Color3.new(1, 1, 1), 0.4), ImageTransparency = 0.6, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.55), Size = UDim2.fromScale(1.1, 0.9), Parent = stage })
+	local _, refreshChar = UI.CharacterView(stage)
+	UI.Text(charPanel, "drag to turn", 12, T.TextSoft, "Semi", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -6), Size = UDim2.fromOffset(200, 16), TextXAlignment = Enum.TextXAlignment.Center })
+	local slotCols = {}
+	for k, side in ipairs({ 0, 1 }) do
+		local col = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(side, 0), Position = UDim2.new(side, side == 0 and 10 or -10, 0, 12), Size = UDim2.new(0, 84, 1, -24), Parent = charPanel })
+		UI.List(col, nil, 14)
+		slotCols[k] = col
+	end
+	local lastWeaponType
 	UI.Pad(right, 12)
 	local filterRow = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 38), Parent = left })
 	local grid = UI.Scroll(left, UDim2.new(1, 0, 1, -44))
@@ -174,6 +187,8 @@ function Panels.Inventory()
 	New("UIPadding", { PaddingTop = UDim.new(0, 6), PaddingLeft = UDim.new(0, 6), Parent = grid })
 	local selectedUid
 	local filter = "All"
+	local render
+	local lastClick = { uid = nil, t = 0 }
 	local function placeholder()
 		clear(right)
 		UI.List(right, nil, 8, Enum.HorizontalAlignment.Center)
@@ -263,7 +278,7 @@ function Panels.Inventory()
 		end
 		if def.kind == "Card" then
 			UI.Button(row, "Socket", T.Gold, nil, function()
-				Panels.Refine({ tab = "Cards", cardUid = entry.uid })
+				Panels.Refine({ tab = "Cards" })
 			end)
 		end
 		UI.Button(row, "Sell", T.Red, nil, function()
@@ -271,13 +286,120 @@ function Panels.Inventory()
 		end)
 	end
 
-	local function render()
+	-- an equipment slot around the character: the item's icon, or a faded hint of what goes there
+	local function gearSlot(col, label, hintIcon, entry, def, onClick)
+		local holder = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(84, 104), Parent = col })
+		local b = New("TextButton", { Text = "", AutoButtonColor = false, Size = UDim2.fromOffset(84, 84), BackgroundColor3 = Color3.new(1, 1, 1), Parent = holder })
+		UI.Corner(b, 14)
+		if def then
+			UI.RarityStyle(b, def.rarity, entry and entry.uid == selectedUid)
+			local img = UI.ItemIconId(def)
+			if img then
+				New("ImageLabel", { BackgroundTransparency = 1, Image = img, ScaleType = Enum.ScaleType.Fit, Size = UDim2.fromScale(0.78, 0.78), Position = UDim2.fromScale(0.11, 0.11), ZIndex = 4, Parent = b })
+			else
+				UI.Text(b, def.icon or "❔", 34, T.Text, "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 4 })
+			end
+			if entry and (entry.refine or 0) > 0 then
+				UI.Text(b, "+" .. entry.refine, 15, T.Gold, "Display", { Position = UDim2.fromOffset(5, 2), Size = UDim2.fromOffset(34, 16), ZIndex = 5 })
+			end
+			if entry and def.slots and def.slots > 0 then
+				-- card sockets: filled = gold dot
+				local dots = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -4, 1, -4), Size = UDim2.fromOffset(def.slots * 13, 11), ZIndex = 5, Parent = b })
+				UI.List(dots, Enum.FillDirection.Horizontal, 3)
+				for k = 1, def.slots do
+					local d = New("Frame", { Size = UDim2.fromOffset(10, 10), BackgroundColor3 = (entry.cards and entry.cards[k]) and T.Gold or T.PanelDeep, ZIndex = 6, Parent = dots })
+					UI.Corner(d, 5)
+					UI.Stroke(d, T.Edge, 1.5)
+				end
+			end
+		else
+			New("UIGradient", { Color = ColorSequence.new(T.PanelTop, T.PanelDeep), Rotation = 90, Parent = b })
+			UI.Stroke(b, T.Edge, 2.5)
+			local hint = UI.Icon(b, hintIcon, 52, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5) })
+			if hint and hint:IsA("ImageLabel") then
+				hint.ImageTransparency = 0.7
+			elseif hint and hint:IsA("TextLabel") then
+				hint.TextTransparency = 0.7
+			end
+		end
+		UI.Text(holder, label, 12, T.TextSoft, "Bold", { Position = UDim2.fromOffset(0, 86), Size = UDim2.new(1, 0, 0, 16), TextXAlignment = Enum.TextXAlignment.Center })
+		UI.Tactile(b)
+		b.Activated:Connect(onClick)
+	end
+
+	local function drawEquip(p)
+		for _, col in ipairs(slotCols) do
+			clear(col)
+			UI.List(col, nil, 14)
+		end
+		local function slotOf(slot, label, hint, col, filterKind)
+			local entry = p.equipment[slot] and Formulas.FindItem(p, p.equipment[slot])
+			local def = entry and ItemDB.Get(entry.id)
+			gearSlot(col, label, hint, entry, def, function()
+				if entry then
+					detail(entry, def)
+				else
+					filter = filterKind
+					render()
+				end
+			end)
+			return def
+		end
+		slotOf("headgear", "Headgear", "🎩", slotCols[1], "Armor")
+		local wdef = slotOf("weapon", "Weapon", "⚔️", slotCols[1], "Weapon")
+		local fdef = p.fruit and ItemDB.Get("Fruit_" .. p.fruit.id)
+		gearSlot(slotCols[1], "Fruit", "🍎", nil, fdef, function()
+			Panels.Open("Skills")
+		end)
+		slotOf("armor", "Armor", "🛡️", slotCols[2], "Armor")
+		slotOf("accessory", "Accessory", "💍", slotCols[2], "Armor")
+		local pet
+		for _, x in ipairs(p.pets and p.pets.list or p.pets or {}) do
+			if type(x) == "table" and x.uid == p.activePet then
+				pet = x
+			end
+		end
+		gearSlot(slotCols[2], "Companion", "🐾", nil, nil, function()
+			Panels.Open("Pets")
+		end)
+		if pet and slotCols[2]:FindFirstChildWhichIsA("Frame", false) then
+			local holders = {}
+			for _, c in ipairs(slotCols[2]:GetChildren()) do
+				if c:IsA("Frame") then
+					table.insert(holders, c)
+				end
+			end
+			local petHolder = holders[#holders]
+			local btn = petHolder and petHolder:FindFirstChildWhichIsA("TextButton")
+			if btn then
+				local view = UI.ModelView(btn, "Pets", (pet.species or "") .. "_" .. (pet.stage or 1), 80, 0.6, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), ZIndex = 5 })
+				if view then
+					for _, c in ipairs(btn:GetChildren()) do
+						if c:IsA("ImageLabel") or c:IsA("TextLabel") then
+							c.Visible = false
+						end
+					end
+				end
+			end
+		end
+		-- the statue holds the equipped weapon (or the class's own weapon style)
+		local cls = Classes[p.class]
+		local wType = (wdef and wdef.weaponType) or (cls and cls.weapons and cls.weapons[1]) or "Knuckles"
+		if wType ~= lastWeaponType or not charPanel:GetAttribute("Drawn") then
+			lastWeaponType = wType
+			charPanel:SetAttribute("Drawn", true)
+			refreshChar(wType)
+		end
+	end
+
+	render = function()
 		clear(grid)
 		clear(filterRow)
 		local p = State.profile
 		if not p then
 			return
 		end
+		drawEquip(p)
 		local bar = UI.TabBar(filterRow, {
 			{ "All", "🎒", "All", T.Ocean },
 			{ "Weapon", "⚔️", "Weapons", T.Red },
@@ -306,7 +428,17 @@ function Panels.Inventory()
 			return a.i < b.i
 		end)
 		for order, it in ipairs(list) do
-			local tile = itemTile(grid, it.e, detail, it.e.uid == selectedUid)
+			local tile = itemTile(grid, it.e, function(entry, def)
+				-- double-click gear with card slots: straight to the Insert Card page
+				local now = os.clock()
+				if lastClick.uid == entry.uid and now - lastClick.t < 0.4 and def.slots and def.slots > 0 then
+					lastClick.uid = nil
+					Panels.Refine({ tab = "Cards", uid = entry.uid })
+					return
+				end
+				lastClick.uid, lastClick.t = entry.uid, now
+				detail(entry, def)
+			end, it.e.uid == selectedUid)
 			if tile then
 				tile.LayoutOrder = order
 			end
@@ -327,68 +459,136 @@ function Panels.Inventory()
 		Panels.StallSetup()
 	end)
 	h.AnchorPoint = Vector2.new(1, 0.5)
-	h.Position = UDim2.new(1, -66, 0.5, -2)
+	h.Position = UDim2.new(1, -128, 0.5, -2)
 	h.ZIndex = 30
 end
 
 -- ===================== STATS =====================
 function Panels.Stats()
-	local win = UI.Window("Stats", "Stats", UDim2.fromOffset(700, 560), T.Purple, "📊")
-	local left = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(0.56, 0, 1, 0), Parent = win.body })
-	local right = UI.Card(win.body, UDim2.new(0.42, 0, 1, 0))
-	right.Position = UDim2.new(0.58, 0, 0, 0)
-	UI.Pad(right, 14)
+	-- like the Bag: your character on the left; on the right the attribute table. Plan points with - / +, then Apply
+	-- (nothing is spent until you press it). Below, the combat numbers those attributes give you.
+	local win = UI.Window("Stats", "Stats", UDim2.fromOffset(1100, 600), T.Purple, "📊", { fullscreen = true })
+	local charPanel = UI.Card(win.body, UDim2.new(0.38, -10, 1, 0), T.PanelDeep)
+	local stage = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 70), Size = UDim2.new(1, 0, 1, -96), Parent = charPanel })
+	New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.glow, ImageColor3 = T.Purple:Lerp(Color3.new(1, 1, 1), 0.4), ImageTransparency = 0.6, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.55), Size = UDim2.fromScale(0.9, 0.9), Parent = stage })
+	local _, refreshChar = UI.CharacterView(stage)
+	local nameLabel = UI.Text(charPanel, "", 24, T.Text, "Display", { Position = UDim2.fromOffset(14, 10), Size = UDim2.new(1, -28, 0, 28) })
+	local subLabel = UI.Text(charPanel, "", 15, T.TextSoft, "Semi", { Position = UDim2.fromOffset(14, 40), Size = UDim2.new(1, -28, 0, 20) })
+	UI.Text(charPanel, "drag to turn", 12, T.TextSoft, "Semi", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -6), Size = UDim2.fromOffset(200, 16), TextXAlignment = Enum.TextXAlignment.Center })
+	local right = New("Frame", { BackgroundTransparency = 1, Position = UDim2.new(0.38, 0, 0, 0), Size = UDim2.new(0.62, 0, 1, 0), Parent = win.body })
 	local desc = { STR = "Physical attack", AGI = "Attack speed / dodge", VIT = "HP / defense", INT = "Magic / SP", DEX = "Accuracy / ranged", LUK = "Crits / drops" }
-	local function render()
-		clear(left)
+	local pend = {}
+	local drawn = false
+
+	local function planCost(p)
+		local total = 0
+		for _, s in ipairs(Formulas.StatNames) do
+			for k = 0, (pend[s] or 0) - 1 do
+				total += Formulas.StatCost(p.stats[s] + k)
+			end
+		end
+		return total
+	end
+
+	local render
+	render = function()
 		clear(right)
 		local p, d = State.profile, State.derived
 		if not p or not d then
 			return
 		end
-		UI.List(left, nil, 8)
-		UI.Section(left, "🎯", "Attributes", T.Purple, p.statPoints .. " points")
-		for _, s in ipairs(Formulas.StatNames) do
-			local row = UI.Card(left, UDim2.new(1, 0, 0, 56))
-			UI.Pad(row, 8)
-			UI.Text(row, s .. "  " .. p.stats[s] .. ' <font color="#7CFF9B">+' .. (d[s] - p.stats[s]) .. "</font>", 22, T.Text, "Display", { Size = UDim2.new(0.6, 0, 0, 24) })
-			UI.Text(row, desc[s] .. "  •  costs " .. Formulas.StatCost(p.stats[s]), 13, T.TextSoft, "Semi", { Position = UDim2.fromOffset(0, 24), Size = UDim2.new(0.62, 0, 0, 16) })
-			local _, h1 = UI.Button(row, "+1", T.Green, UDim2.fromOffset(54, 38), function()
-				req("AllocateStat", { stat = s, amount = 1 })
-			end)
-			h1.Position = UDim2.new(1, -122, 0, 0)
-			local _, h2 = UI.Button(row, "+10", T.Ocean, UDim2.fromOffset(60, 38), function()
-				req("AllocateStat", { stat = s, amount = 10 })
-			end)
-			h2.Position = UDim2.new(1, -62, 0, 0)
-		end
-		UI.List(right, nil, 6)
 		local cls = Classes[p.class]
-		UI.Section(right, cls and cls.icon or "🧭", cls and cls.name or p.class, cls and cls.color or T.Gold)
-		UI.Text(right, "Base Lv." .. p.baseLevel .. "   Job Lv." .. p.jobLevel, 16, T.TextSoft, "Semi")
-		UI.Section(right, "📈", "Combat", T.Red)
-		local lines = {
-			{ "HP", d.maxHp },
-			{ "SP", d.maxSp },
-			{ "ATK", d.atk },
-			{ "MATK", d.matk },
-			{ "DEF", d.def },
-			{ "MDEF", d.mdef },
-			{ "HIT", d.hit },
-			{ "FLEE", d.flee },
-			{ "CRIT", string.format("%.1f%%", d.crit) },
-			{ "Attack every", string.format("%.2fs", d.attackInterval) },
-			{ "Cannon dmg", "+" .. math.floor(d.cannonDamage * 100) .. "%" },
-			{ "Ship speed", "+" .. math.floor(d.shipSpeed * 100) .. "%" },
-		}
-		for _, l in ipairs(lines) do
-			local r = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 22), Parent = right })
-			UI.Text(r, l[1], 17, T.TextSoft, "Semi", { Size = UDim2.new(0.6, 0, 1, 0) })
-			UI.Text(r, tostring(l[2]), 18, T.Text, "Number", { Size = UDim2.new(1, 0, 1, 0), TextXAlignment = Enum.TextXAlignment.Right })
+		nameLabel.Text = player.DisplayName
+		subLabel.Text = (cls and (cls.icon .. " " .. cls.name) or p.class) .. "   •   Base Lv." .. p.baseLevel .. "   Job Lv." .. p.jobLevel
+		if not drawn then
+			drawn = true
+			local wEntry = p.equipment.weapon and Formulas.FindItem(p, p.equipment.weapon)
+			local wDef = wEntry and ItemDB.Get(wEntry.id)
+			refreshChar((wDef and wDef.weaponType) or (cls and cls.weapons and cls.weapons[1]) or "Knuckles")
+		end
+		local left = p.statPoints - planCost(p)
+
+		local tbl = UI.Card(right, UDim2.new(1, 0, 0, 470), T.Panel)
+		UI.Pad(tbl, 14)
+		-- header: points left + reset plan
+		UI.Text(tbl, "POINTS LEFT", 16, T.TextSoft, "Display", { Size = UDim2.fromOffset(140, 30) })
+		UI.Text(tbl, tostring(left), 30, left > 0 and T.Gold or T.Text, "Number", { Position = UDim2.fromOffset(140, -2), Size = UDim2.fromOffset(90, 34) })
+		local _, rh = UI.Button(tbl, "↺ Reset plan", T.Grey, UDim2.fromOffset(150, 36), function()
+			pend = {}
+			render()
+		end)
+		rh.AnchorPoint = Vector2.new(1, 0)
+		rh.Position = UDim2.new(1, 0, 0, -2)
+		-- column titles
+		local cols = { { "ATTRIBUTE", 0, 0.3 }, { "BASE", 0.3, 0.12 }, { "BONUS", 0.42, 0.12 }, { "NEXT COST", 0.54, 0.14 } }
+		for _, c in ipairs(cols) do
+			UI.Text(tbl, c[1], 13, T.TextSoft, "Display", { Position = UDim2.new(c[2], 0, 0, 46), Size = UDim2.new(c[3], 0, 0, 18), TextXAlignment = c[2] == 0 and Enum.TextXAlignment.Left or Enum.TextXAlignment.Center })
+		end
+		for i, s in ipairs(Formulas.StatNames) do
+			local y = 70 + (i - 1) * 56
+			local row = New("Frame", { BackgroundColor3 = i % 2 == 0 and T.PanelDeep or T.PanelTop, BackgroundTransparency = 0.3, Position = UDim2.fromOffset(0, y), Size = UDim2.new(1, 0, 0, 50), Parent = tbl })
+			UI.Corner(row, 10)
+			local base, n = p.stats[s], pend[s] or 0
+			local bonus = (d[s] or base) - base
+			UI.Text(row, s, 22, T.Text, "Display", { Position = UDim2.fromOffset(12, 2), Size = UDim2.new(0.3, -12, 0, 26) })
+			UI.Text(row, desc[s], 11, T.TextSoft, "Semi", { Position = UDim2.fromOffset(12, 28), Size = UDim2.new(0.3, -12, 0, 14) })
+			UI.Text(row, tostring(base) .. (n > 0 and ('<font color="#7CFF9B"> +' .. n .. "</font>") or ""), 20, T.Text, "Number", { Position = UDim2.fromScale(0.3, 0), Size = UDim2.new(0.12, 0, 1, 0), TextXAlignment = Enum.TextXAlignment.Center })
+			UI.Text(row, bonus ~= 0 and ((bonus > 0 and "+" or "") .. bonus) or "0", 20, bonus > 0 and T.Green or T.TextSoft, "Number", { Position = UDim2.fromScale(0.42, 0), Size = UDim2.new(0.12, 0, 1, 0), TextXAlignment = Enum.TextXAlignment.Center })
+			local nextCost = Formulas.StatCost(base + n)
+			local maxed = base + n >= Formulas.MaxStat
+			UI.Text(row, maxed and "MAX" or tostring(nextCost), 20, (not maxed and nextCost <= left) and T.Gold or T.Red, "Number", { Position = UDim2.fromScale(0.54, 0), Size = UDim2.new(0.14, 0, 1, 0), TextXAlignment = Enum.TextXAlignment.Center })
+			local function stepBtn(text, color, xOff, fn)
+				local _, h = UI.Button(row, text, color, UDim2.fromOffset(44, 40), fn)
+				h.AnchorPoint = Vector2.new(1, 0.5)
+				h.Position = UDim2.new(1, xOff, 0.5, -2)
+			end
+			stepBtn("−", n > 0 and T.Pink or T.Grey, -56, function()
+				if n > 0 then
+					pend[s] = n - 1
+					render()
+				end
+			end)
+			stepBtn("+", (not maxed and nextCost <= left) and T.Green or T.Grey, -6, function()
+				if not maxed and nextCost <= left then
+					pend[s] = n + 1
+					render()
+				else
+					UI.Toast(maxed and (s .. " is at the maximum") or "Not enough points", "bad")
+				end
+			end)
+		end
+		local any = planCost(p) > 0
+		local _, ah = UI.Button(tbl, any and "Apply" or "Plan points with +", any and T.Green or T.Grey, UDim2.fromOffset(280, 50), function()
+			if not any then
+				return
+			end
+			local res = req("AllocateStats", { add = pend }, "LevelUp")
+			if res.ok then
+				pend = {}
+			end
+		end)
+		ah.AnchorPoint = Vector2.new(0.5, 1)
+		ah.Position = UDim2.new(0.5, 0, 1, 0)
+
+		-- combat numbers
+		local cs = UI.Card(right, UDim2.new(1, 0, 1, -482), T.PanelDeep)
+		cs.Position = UDim2.fromOffset(0, 482)
+		UI.Pad(cs, 12)
+		local grid = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Parent = cs })
+		New("UIGridLayout", { CellSize = UDim2.fromOffset(250, 26), CellPadding = UDim2.fromOffset(18, 4), Parent = grid })
+		for _, l in ipairs({
+			{ "HP", d.maxHp }, { "SP", d.maxSp }, { "ATK", d.atk }, { "MATK", d.matk }, { "DEF", d.def }, { "MDEF", d.mdef },
+			{ "HIT", d.hit }, { "FLEE", d.flee }, { "CRIT", string.format("%.1f%%", d.crit) },
+			{ "Attack every", string.format("%.2fs", d.attackInterval) }, { "Cannon dmg", "+" .. math.floor(d.cannonDamage * 100) .. "%" }, { "Ship speed", "+" .. math.floor(d.shipSpeed * 100) .. "%" },
+		}) do
+			local r = New("Frame", { BackgroundTransparency = 1, Parent = grid })
+			UI.Text(r, l[1], 15, T.TextSoft, "Semi", { Size = UDim2.new(0.6, 0, 1, 0) })
+			UI.Text(r, tostring(l[2]), 16, T.Text, "Number", { Size = UDim2.new(1, -4, 1, 0), TextXAlignment = Enum.TextXAlignment.Right })
 		end
 	end
 	render()
 	onProfile(win, render)
+	win.resized.Event:Connect(render)
 end
 
 -- ===================== SKILLS =====================
@@ -931,20 +1131,24 @@ end
 
 -- ===================== REFINE / CARDS =====================
 function Panels.Refine(opts)
+	-- Blacksmith, full screen: sidebar Forge / Insert Card, your gear on the left, the picked piece on a glowing stage.
+	-- Forge = refine (+1) with the anvil animation; Insert Card = the item in the middle with a "+" socket per card slot.
+	-- Double-clicking gear with card slots in the Bag opens straight on Insert Card.
 	opts = opts or {}
-	local win = UI.Window("Refine", "Blacksmith", UDim2.fromOffset(820, 580), T.Orange, "🔨")
-	local tab = opts.tab or "Refine"
-	local selected
+	local win = UI.Window("Refine", "Blacksmith", UDim2.fromOffset(1100, 620), T.Orange, "🔨", { fullscreen = true })
+	local tab = (opts.tab == "Cards") and "Cards" or "Forge"
+	local selected = opts.uid
 	local useGuard = false
-	local cardUid = opts.cardUid
-	local tabs = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 44), Parent = win.body })
-	UI.List(tabs, Enum.FillDirection.Horizontal, 8)
-	local list = UI.Scroll(win.body, UDim2.new(0.5, -6, 1, -54))
-	list.Position = UDim2.fromOffset(0, 54)
-	local right = UI.Card(win.body, UDim2.new(0.5, -6, 1, -54))
-	right.Position = UDim2.new(0.5, 6, 0, 54)
-	UI.Pad(right, 14)
+	local equippedOnly = false
+	local busy = false
+	local side = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(0, 160, 1, 0), Parent = win.body })
+	local listPane = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(172, 0), Size = UDim2.new(0.34, -100, 1, 0), Parent = win.body })
+	local stage = UI.Card(win.body, UDim2.new(0.66, -84, 1, 0), T.PanelDeep)
+	stage.AnchorPoint = Vector2.new(1, 0)
+	stage.Position = UDim2.fromScale(1, 0)
+	stage.ClipsDescendants = true
 	local render
+
 	local function count(id)
 		local n = 0
 		for _, x in ipairs(State.profile.inventory) do
@@ -954,42 +1158,145 @@ function Panels.Refine(opts)
 		end
 		return n
 	end
-	local function renderRight()
-		clear(right)
-		UI.List(right, nil, 8)
-		local p = State.profile
-		local e = selected and Formulas.FindItem(p, selected)
-		if not e then
-			UI.Text(right, tab == "Refine" and "Pick a piece of equipment to refine." or "Pick a card, then the equipment to socket it into.", 18, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 60) })
-			return
+
+	-- the item on its pedestal: spinning rays + glow + the 3D weapon (or the item's icon)
+	local function showcase(parent, def, y, size)
+		local holder = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, y), Size = UDim2.fromOffset(size, size), Parent = parent })
+		local tier = ItemDB.Rarity(def)
+		local rays = New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.focuslines, ImageColor3 = tier.color:Lerp(Color3.new(1, 1, 1), 0.5), ImageTransparency = 0.5, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(1.7, 1.7), Parent = holder })
+		local ring = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.86, 0.86), BackgroundColor3 = tier.color:Lerp(T.PanelDeep, 0.55), Parent = holder })
+		UI.Corner(ring, size)
+		UI.Stroke(ring, tier.color:Lerp(Color3.new(1, 1, 1), 0.3), 4)
+		New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.glow, ImageColor3 = tier.color, ImageTransparency = 0.3, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(1, 1), Parent = holder })
+		local view = def.weaponType and UI.ModelView(holder, "Weapons", def.weaponType, math.floor(size * 0.8), 0.7, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5) })
+		if not view then
+			local img = UI.ItemIconId(def)
+			if img then
+				New("ImageLabel", { BackgroundTransparency = 1, Image = img, ScaleType = Enum.ScaleType.Fit, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.6, 0.6), Parent = holder })
+			end
 		end
-		local def = ItemDB.Get(e.id)
-		local head = New("Frame", { Size = UDim2.new(1, 0, 0, 64), Parent = right })
-		UI.Corner(head, 12)
-		UI.RarityStyle(head, def.rarity, true)
-		UI.Text(head, ItemDB.DisplayName(e), 22, T.Text, "Display", { Position = UDim2.fromOffset(10, 0), Size = UDim2.new(1, -20, 1, 0), ZIndex = 4 })
-		if tab == "Refine" then
-			local cur = e.refine or 0
-			if cur >= GameConfig.Refine.Max then
-				UI.Text(right, "Already at +" .. GameConfig.Refine.Max .. "!", 24, T.Gold, "Display")
+		local conn
+		conn = RunService.RenderStepped:Connect(function(dt)
+			if not rays.Parent then
+				conn:Disconnect()
 				return
 			end
-			local cls = Classes[p.class]
-			local chance = math.min(1, GameConfig.Refine.Chance[cur + 1] + (cls.passive and cls.passive.refineBonus or 0))
-			local mat, qty, cost = ItemDB.RefineMaterial(cur)
-			local md = ItemDB.Get(mat)
-			UI.Text(right, "+" .. cur .. "  ➜  +" .. (cur + 1), 40, T.Gold, "Display", { TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 46) })
-			local cBar = UI.Bar(right, chance >= 1 and T.Green or (chance >= 0.4 and T.Gold or T.Red), UDim2.new(1, 0, 0, 26), "Success " .. math.floor(chance * 100) .. "%")
-			cBar:Set(chance)
-			UI.Text(right, "Needs " .. md.name .. " x" .. qty .. "  (have " .. count(mat) .. ")\nCost " .. COIN .. " " .. UI.Format(cost), 16, T.Text, "Semi", { Size = UDim2.new(1, 0, 0, 40) })
-			local risk = cur < GameConfig.Refine.Safe and '<font color="#7CFF9B">Safe: cannot fail</font>' or (cur >= GameConfig.Refine.BreakFrom and '<font color="#FF5C6C">Risk: failure may SHATTER the item</font>' or '<font color="#FFB347">Risk: failure drops 1 level</font>')
-			UI.Text(right, risk, 16, T.Text, "Bold")
-			UI.Button(right, useGuard and "🛡 Willpower Charm: ON" or "🛡 Willpower Charm: OFF", useGuard and T.Purple or T.Grey, UDim2.new(1, 0, 0, 42), function()
-				useGuard = not useGuard
-				renderRight()
+			rays.Rotation = (rays.Rotation + dt * 14) % 360
+		end)
+		return holder
+	end
+
+	-- the anvil: a hammer strikes three times (clang + sparks + shake), then the result shows
+	local function anvilAnimation(onDone)
+		local layer = New("Frame", { BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.35, Size = UDim2.fromScale(1, 1), ZIndex = 40, Parent = stage })
+		local anvil = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.62), Size = UDim2.fromOffset(260, 150), ZIndex = 41, Parent = layer })
+		local function block(pos, size, color, z)
+			local f = New("Frame", { BackgroundColor3 = color, Position = pos, Size = size, ZIndex = z or 42, Parent = anvil })
+			UI.Corner(f, 6)
+			UI.Stroke(f, T.Edge, 3)
+			return f
+		end
+		local iron = Color3.fromRGB(70, 74, 88)
+		block(UDim2.fromOffset(30, 0), UDim2.fromOffset(200, 42), Color3.fromRGB(96, 100, 118)) -- face
+		block(UDim2.fromOffset(0, 6), UDim2.fromOffset(40, 26), Color3.fromRGB(96, 100, 118)) -- horn
+		block(UDim2.fromOffset(85, 40), UDim2.fromOffset(90, 60), iron) -- waist
+		block(UDim2.fromOffset(50, 98), UDim2.fromOffset(160, 40), iron) -- foot
+		local glowBar = block(UDim2.fromOffset(95, -16), UDim2.fromOffset(80, 18), Color3.fromRGB(255, 150, 60), 43) -- hot metal
+		local pivot = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 70, 0.62, -120), Size = UDim2.fromOffset(10, 10), Rotation = -60, ZIndex = 44, Parent = layer })
+		local hammer = UI.Icon(pivot, "hammer", 120, { AnchorPoint = Vector2.new(1, 1), Position = UDim2.fromOffset(0, 0) })
+		if hammer then
+			hammer.ZIndex = 45
+		end
+		local function sparks()
+			for _ = 1, 12 do
+				local s = New("Frame", { BackgroundColor3 = Color3.fromRGB(255, 210, 90), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.62, -86), Size = UDim2.fromOffset(6, 6), ZIndex = 46, Parent = layer })
+				UI.Corner(s, 3)
+				local a = math.random() * math.pi - math.pi
+				local d = 60 + math.random() * 120
+				UI.Tween(s, 0.45, { Position = UDim2.new(0.5, math.cos(a) * d, 0.62, -86 + math.sin(a) * d * 0.8), BackgroundTransparency = 1, Size = UDim2.fromOffset(2, 2) })
+			end
+		end
+		task.spawn(function()
+			for i = 1, 3 do
+				UI.Tween(pivot, 0.16, { Rotation = -70 }, Enum.EasingStyle.Quad)
+				task.wait(0.18)
+				UI.Tween(pivot, 0.08, { Rotation = 25 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+				task.wait(0.08)
+				Audio.Play("AnvilClang", { pitch = 0.95 + i * 0.05 })
+				sparks()
+				glowBar.BackgroundColor3 = Color3.fromRGB(255, 230, 150)
+				UI.Tween(glowBar, 0.25, { BackgroundColor3 = Color3.fromRGB(255, 150, 60) })
+				anvil.Position = UDim2.new(0.5, 0, 0.62, 4)
+				UI.Tween(anvil, 0.12, { Position = UDim2.fromScale(0.5, 0.62) })
+				task.wait(0.2)
+			end
+			task.wait(0.15)
+			layer:Destroy()
+			onDone()
+		end)
+	end
+
+	local function renderForge(p, e, def)
+		local cur = e.refine or 0
+		showcase(stage, def, 170, 250)
+		UI.Text(stage, ItemDB.DisplayName(e), 26, T.Text, "Display", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 300), Size = UDim2.new(1, -20, 0, 30), TextXAlignment = Enum.TextXAlignment.Center })
+		if cur >= GameConfig.Refine.Max then
+			UI.Text(stage, "Already at +" .. GameConfig.Refine.Max .. "!", 26, T.Gold, "Display", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 350), Size = UDim2.fromOffset(400, 34), TextXAlignment = Enum.TextXAlignment.Center })
+			return
+		end
+		local cls = Classes[p.class]
+		local chance = math.min(1, GameConfig.Refine.Chance[cur + 1] + (cls and cls.passive and cls.passive.refineBonus or 0))
+		local mat, qty, cost = ItemDB.RefineMaterial(cur)
+		local md = ItemDB.Get(mat)
+		UI.Text(stage, "+" .. cur .. "  ➜  +" .. (cur + 1), 36, T.Gold, "Display", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 334), Size = UDim2.fromOffset(300, 40), TextXAlignment = Enum.TextXAlignment.Center })
+		-- materials
+		local mats = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 382), Size = UDim2.fromOffset(300, 84), Parent = stage })
+		UI.List(mats, Enum.FillDirection.Horizontal, 12, Enum.HorizontalAlignment.Center)
+		local function matTile(img, text, enough)
+			local t = New("Frame", { Size = UDim2.fromOffset(78, 78), BackgroundColor3 = T.Panel, Parent = mats })
+			UI.Corner(t, 12)
+			UI.Stroke(t, enough and T.Edge or T.Red, 3)
+			if img then
+				New("ImageLabel", { BackgroundTransparency = 1, Image = img, ScaleType = Enum.ScaleType.Fit, Size = UDim2.fromScale(0.72, 0.72), Position = UDim2.fromScale(0.14, 0.04), Parent = t })
+			end
+			UI.Text(t, text, 14, enough and T.Text or T.Red, "Number", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 0, 1, -2), Size = UDim2.new(1, -4, 0, 16), TextXAlignment = Enum.TextXAlignment.Right })
+		end
+		local have = count(mat)
+		matTile(UI.ItemIconId(md), have .. "/" .. qty, have >= qty)
+		matTile(UI.IconId("coin"), UI.Short(cost), (State.profile.beli or 0) >= cost)
+		local cBar = UI.Bar(stage, chance >= 1 and T.Green or (chance >= 0.4 and T.Gold or T.Red), UDim2.fromOffset(360, 24), "Success " .. math.floor(chance * 100) .. "%")
+		cBar:Set(chance)
+		local barFrame = stage:FindFirstChild("Bar") or stage:GetChildren()[#stage:GetChildren()]
+		if barFrame and barFrame:IsA("GuiObject") then
+			barFrame.AnchorPoint = Vector2.new(0.5, 0)
+			barFrame.Position = UDim2.new(0.5, 0, 0, 476)
+		end
+		local risk = cur < GameConfig.Refine.Safe and '<font color="#7CFF9B">Safe: cannot fail</font>' or (cur >= GameConfig.Refine.BreakFrom and '<font color="#FF5C6C">Risk: failure may SHATTER the item</font>' or '<font color="#FFB347">Risk: failure drops 1 level</font>')
+		UI.Text(stage, risk, 16, T.Text, "Bold", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 508), Size = UDim2.fromOffset(420, 20), TextXAlignment = Enum.TextXAlignment.Center })
+		local _, gh = UI.Button(stage, useGuard and "🛡 Charm: ON" or "🛡 Charm: OFF", useGuard and T.Purple or T.Grey, UDim2.fromOffset(170, 50), function()
+			useGuard = not useGuard
+			render()
+		end)
+		gh.AnchorPoint = Vector2.new(1, 1)
+		gh.Position = UDim2.new(0.5, -110, 1, -16)
+		UI.Tooltip(gh:FindFirstChildWhichIsA("TextButton") or gh, function()
+			return "Willpower Charm: a failed forge does not drop or break the item (uses one charm)", T.Purple
+		end)
+		local _, fh = UI.Button(stage, "🔨 FORGE", T.Orange, UDim2.fromOffset(300, 64), function()
+			if busy then
+				return
+			end
+			busy = true
+			-- ask the server right away, reveal the result after the anvil animation
+			local res
+			task.spawn(function()
+				res = Net.Request("Refine", { uid = e.uid, useGuard = useGuard })
 			end)
-			UI.Button(right, "🔥 REFINE!", T.Orange, UDim2.new(1, 0, 0, 58), function()
-				local res = Net.Request("Refine", { uid = e.uid, useGuard = useGuard })
+			anvilAnimation(function()
+				while res == nil do
+					task.wait()
+				end
+				busy = false
 				local r = res.data and res.data.result
 				if r == "success" then
 					Audio.Play("RefineSuccess")
@@ -1003,80 +1310,184 @@ function Panels.Refine(opts)
 					UI.Banner("Shattered!", res.msg, T.Red)
 					selected = nil
 				else
-					UI.Toast(res.msg or "Could not refine", "bad")
+					UI.Toast(res.msg or "Could not forge", "bad")
 				end
+				render()
 			end)
-		else
-			local cd = cardUid and Formulas.FindItem(p, cardUid)
-			local cdef = cd and ItemDB.Get(cd.id)
-			UI.Text(right, describe(e, def), 15, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 150) })
+		end)
+		fh.AnchorPoint = Vector2.new(0, 1)
+		fh.Position = UDim2.new(0.5, -90, 1, -10)
+	end
+
+	-- Insert Card: the item in the middle, a socket per card slot around it; tap "+" to choose a card that fits
+	local pickingSlot
+	local function renderCards(p, e, def)
+		showcase(stage, def, 260, 230)
+		UI.Text(stage, ItemDB.DisplayName(e), 24, T.Text, "Display", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 392), Size = UDim2.new(1, -20, 0, 28), TextXAlignment = Enum.TextXAlignment.Center })
+		local slots = def.slots or 0
+		if slots == 0 then
+			UI.Text(stage, "This item has no card slots.", 18, T.TextSoft, "Semi", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 430), Size = UDim2.fromOffset(400, 24), TextXAlignment = Enum.TextXAlignment.Center })
+			return
+		end
+		for k = 1, slots do
+			-- sockets sit on an arc above / beside the item
+			local a = math.rad(-90 + (k - (slots + 1) / 2) * 70)
+			local pos = UDim2.new(0.5, math.cos(a) * 190, 0, 260 + math.sin(a) * 160)
+			local cardId = e.cards and e.cards[k]
+			local cdef = cardId and ItemDB.Get(cardId)
+			local b = New("TextButton", { Text = "", AutoButtonColor = false, AnchorPoint = Vector2.new(0.5, 0.5), Position = pos, Size = UDim2.fromOffset(92, 92), BackgroundColor3 = cdef and Color3.new(1, 1, 1) or T.Panel, Rotation = 45, Parent = stage })
+			UI.Corner(b, 16)
 			if cdef then
-				local cardHead = New("Frame", { Size = UDim2.new(1, 0, 0, 56), Parent = right })
-				UI.Corner(cardHead, 12)
-				UI.RarityStyle(cardHead, cdef.rarity)
-				UI.Text(cardHead, "🃏 " .. cdef.name .. "\n" .. (cdef.desc or ""), 15, T.Text, "Bold", { Position = UDim2.fromOffset(8, 0), Size = UDim2.new(1, -16, 1, 0), ZIndex = 4 })
-				UI.Button(right, "🃏 SOCKET CARD", T.Gold, UDim2.new(1, 0, 0, 52), function()
-					local res = req("InsertCard", { cardUid = cardUid, targetUid = e.uid })
-					if res.ok then
-						UI.Banner("Card Socketed!", cdef.name, T.Gold, cdef.rarity)
-					end
-					cardUid = nil
+				UI.RarityStyle(b, cdef.rarity, true)
+			end
+			UI.Stroke(b, pickingSlot == k and T.Gold or T.Edge, pickingSlot == k and 5 or 3)
+			local inner = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Rotation = -45, Parent = b })
+			if cdef then
+				local img = UI.ItemIconId(cdef)
+				if img then
+					New("ImageLabel", { BackgroundTransparency = 1, Image = img, ScaleType = Enum.ScaleType.Fit, Size = UDim2.fromScale(0.75, 0.75), Position = UDim2.fromScale(0.125, 0.125), ZIndex = 4, Parent = inner })
+				end
+				UI.Text(stage, cdef.name, 13, T.Gold, "Bold", { AnchorPoint = Vector2.new(0.5, 0), Position = pos + UDim2.fromOffset(0, 62), Size = UDim2.fromOffset(160, 16), TextXAlignment = Enum.TextXAlignment.Center })
+			else
+				UI.Text(inner, "+", 46, T.Text, "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 4 })
+				UI.Tactile(b)
+				b.Activated:Connect(function()
+					pickingSlot = (pickingSlot == k) and nil or k
 					render()
 				end)
-			else
-				UI.Text(right, "Pick a card from the list first.", 16, T.TextSoft, "Semi")
+			end
+		end
+		-- card picker: cards in the bag that fit this item
+		if pickingSlot then
+			local pick = UI.Card(stage, UDim2.new(0.42, 0, 1, -20), T.Panel)
+			pick.AnchorPoint = Vector2.new(1, 0)
+			pick.Position = UDim2.new(1, -10, 0, 10)
+			pick.ZIndex = 30
+			UI.Pad(pick, 10)
+			UI.Text(pick, "PICK A CARD", 18, T.Gold, "Display", { Size = UDim2.new(1, 0, 0, 22) })
+			local sc = UI.Scroll(pick, UDim2.new(1, 0, 1, -28))
+			sc.Position = UDim2.fromOffset(0, 28)
+			UI.List(sc, nil, 6)
+			local n = 0
+			for _, c in ipairs(p.inventory) do
+				local cd = ItemDB.Get(c.id)
+				if cd and cd.kind == "Card" and (cd.cardSlot == def.slot or cd.cardSlot == def.kind or cd.cardSlot == "Any") then
+					n += 1
+					local row = New("TextButton", { Text = "", AutoButtonColor = false, Size = UDim2.new(1, -8, 0, 64), Parent = sc })
+					UI.Corner(row, 10)
+					UI.RarityStyle(row, cd.rarity)
+					UI.Tactile(row)
+					local img = UI.ItemIconId(cd)
+					if img then
+						New("ImageLabel", { BackgroundTransparency = 1, Image = img, ScaleType = Enum.ScaleType.Fit, Position = UDim2.fromOffset(6, 6), Size = UDim2.fromOffset(52, 52), ZIndex = 4, Parent = row })
+					end
+					UI.Text(row, cd.name .. "  x" .. (c.qty or 1), 15, T.Text, "Bold", { Position = UDim2.fromOffset(64, 4), Size = UDim2.new(1, -70, 0, 20), ZIndex = 4 })
+					UI.Text(row, cd.desc or "", 12, T.TextSoft, "Semi", { Position = UDim2.fromOffset(64, 24), Size = UDim2.new(1, -70, 0, 36), ZIndex = 4 })
+					row.Activated:Connect(function()
+						UI.Confirm("Insert " .. cd.name .. " into " .. ItemDB.DisplayName(e) .. "?\nCards cannot be taken out again.", function()
+							local res = req("InsertCard", { cardUid = c.uid, targetUid = e.uid })
+							if res.ok then
+								Audio.Play("AnvilClang", { pitch = 1.3 })
+								UI.Banner("Card inserted!", cd.name, T.Gold, cd.rarity)
+							end
+							pickingSlot = nil
+							render()
+						end, nil, "Insert", "Cancel")
+					end)
+				end
+			end
+			if n == 0 then
+				UI.Text(sc, "No cards for this kind of gear in your bag. Monsters drop them now and then.", 14, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 60) })
 			end
 		end
 	end
+
 	render = function()
-		clear(list)
-		clear(tabs)
-		UI.TabBar(tabs, { { "Refine", "🔨", "Refine", T.Orange }, { "Cards", "🃏", "Socket Cards", T.Gold } }, tab, function(id)
-			tab = id
-			selected = nil
-			render()
-		end, 40)
-		UI.List(list, nil, 6)
+		clear(side)
+		clear(listPane)
+		clear(stage)
 		local p = State.profile
 		if not p then
 			return
 		end
-		local function entryButton(e, label, isSel, onPick)
-			local def = ItemDB.Get(e.id)
-			local b = New("TextButton", { Size = UDim2.new(1, -10, 0, 44), Text = "", AutoButtonColor = false, Parent = list })
-			UI.Corner(b, 10)
-			UI.RarityStyle(b, def.rarity, isSel)
-			UI.Tactile(b)
-			UI.Text(b, (isSel and "▶ " or "") .. label, 17, T.Text, "Bold", { Position = UDim2.fromOffset(10, 0), Size = UDim2.new(1, -20, 1, 0), ZIndex = 4 })
-			b.Activated:Connect(onPick)
+		-- sidebar
+		UI.List(side, nil, 10)
+		for i, it in ipairs({ { "Forge", "🔨", "Forge" }, { "Cards", "🃏", "Insert Card" } }) do
+			local _, h = UI.Button(side, it[2] .. " " .. it[3], tab == it[1] and T.Orange or T.Grey, UDim2.new(1, -6, 0, 50), function()
+				tab = it[1]
+				pickingSlot = nil
+				render()
+			end)
+			h.LayoutOrder = i
 		end
-		if tab == "Cards" then
-			UI.Section(list, "🃏", "Your Cards", T.Purple)
-			for _, e in ipairs(p.inventory) do
-				local def = ItemDB.Get(e.id)
-				if def and def.kind == "Card" then
-					entryButton(e, def.name .. " x" .. (e.qty or 1) .. "  [" .. def.cardSlot .. "]", cardUid == e.uid, function()
-						cardUid = e.uid
-						render()
-					end)
-				end
-			end
-			UI.Section(list, "🛡️", "Gear With Free Slots", T.Gold)
-		end
+		-- gear list
+		local _, eh = UI.Button(listPane, (equippedOnly and "☑" or "☐") .. " Equipped only", equippedOnly and T.Ocean or T.Grey, UDim2.new(1, 0, 0, 38), function()
+			equippedOnly = not equippedOnly
+			render()
+		end)
+		eh.Position = UDim2.fromOffset(0, 0)
+		local list = UI.Scroll(listPane, UDim2.new(1, 0, 1, -48))
+		list.Position = UDim2.fromOffset(0, 48)
+		UI.List(list, nil, 8)
+		local first
 		for _, e in ipairs(p.inventory) do
 			local def = ItemDB.Get(e.id)
-			local ok = def and ((tab == "Refine" and def.refinable) or (tab == "Cards" and def.slots and def.slots > #(e.cards or {})))
-			if ok then
-				entryButton(e, ItemDB.DisplayName(e), selected == e.uid, function()
+			local fits = def and ((tab == "Forge" and def.refinable) or (tab == "Cards" and def.slots and def.slots > 0))
+			if fits and (not equippedOnly or equippedUid(e.uid)) then
+				first = first or e.uid
+				local isSel = selected == e.uid
+				local b = New("TextButton", { Text = "", AutoButtonColor = false, Size = UDim2.new(1, -10, 0, 86), Parent = list })
+				UI.Corner(b, 12)
+				UI.RarityStyle(b, def.rarity, isSel)
+				UI.Tactile(b)
+				local img = UI.ItemIconId(def)
+				if img then
+					New("ImageLabel", { BackgroundTransparency = 1, Image = img, ScaleType = Enum.ScaleType.Fit, Position = UDim2.fromOffset(8, 8), Size = UDim2.fromOffset(70, 70), ZIndex = 4, Parent = b })
+				end
+				UI.Text(b, ItemDB.DisplayName(e), 17, T.Text, "Display", { Position = UDim2.fromOffset(86, 6), Size = UDim2.new(1, -92, 0, 22), ZIndex = 4, TextWrapped = false })
+				UI.Text(b, (def.reqLevel and ("Lv." .. def.reqLevel .. "  •  ") or "") .. (def.typeLabel or def.kind) .. (equippedUid(e.uid) and "  •  equipped" or ""), 13, T.TextSoft, "Semi", { Position = UDim2.fromOffset(86, 30), Size = UDim2.new(1, -92, 0, 16), ZIndex = 4 })
+				if def.slots and def.slots > 0 then
+					local dots = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(86, 54), Size = UDim2.fromOffset(120, 22), ZIndex = 4, Parent = b })
+					UI.List(dots, Enum.FillDirection.Horizontal, 6)
+					for k = 1, def.slots do
+						local filled = e.cards and e.cards[k]
+						local d = New("Frame", { Size = UDim2.fromOffset(20, 20), Rotation = 45, BackgroundColor3 = filled and T.Gold or T.PanelDeep, ZIndex = 5, Parent = dots })
+						UI.Corner(d, 4)
+						UI.Stroke(d, T.Edge, 2)
+					end
+				end
+				b.Activated:Connect(function()
 					selected = e.uid
-					renderRight()
+					pickingSlot = nil
+					render()
 				end)
 			end
 		end
-		renderRight()
+		if not first then
+			UI.Text(list, tab == "Forge" and "Nothing to forge: weapons and armor can be forged." or "No gear with card slots yet.", 15, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 50) })
+		end
+		local e = selected and Formulas.FindItem(p, selected)
+		if not e and first then
+			selected = first
+			e = Formulas.FindItem(p, first)
+		end
+		if not e then
+			return
+		end
+		local def = ItemDB.Get(e.id)
+		if tab == "Forge" then
+			renderForge(p, e, def)
+		else
+			renderCards(p, e, def)
+		end
 	end
 	render()
-	onProfile(win, render)
+	onProfile(win, function()
+		if not busy then
+			render()
+		end
+	end)
+	win.resized.Event:Connect(render)
 end
 
 -- ===================== SHOP =====================
@@ -1093,14 +1504,19 @@ function Panels.Shop()
 		UI.Pad(card, 8)
 		UI.Text(card, (kindIcon[def.kind] or "") .. " " .. def.name, 18, T.Text, "Display", { Size = UDim2.new(1, -230, 0, 22), ZIndex = 4 })
 		UI.Text(card, COIN .. " " .. UI.Format(def.price) .. (def.desc and ("  •  " .. def.desc) or ""), 14, T.Text, "Semi", { Position = UDim2.fromOffset(0, 22), Size = UDim2.new(1, -230, 0, 20), ZIndex = 4 })
-		local _, h = UI.Button(card, "Buy", T.Green, UDim2.fromOffset(100, 40), function()
-			req("ShopBuy", { id = id, qty = 1 }, "Purchase")
+		-- ammo comes in handfuls
+		local q1, q2 = 1, 10
+		if def.kind == "Ammo" then
+			q1, q2 = 20, 99
+		end
+		local _, h = UI.Button(card, q1 == 1 and "Buy" or ("x" .. q1), T.Green, UDim2.fromOffset(100, 40), function()
+			req("ShopBuy", { id = id, qty = q1 }, "Purchase")
 		end)
 		h.Position = UDim2.new(1, -210, 0, 2)
 		h.ZIndex = 5
 		if def.stack then
-			local _, h2 = UI.Button(card, "x10", T.Ocean, UDim2.fromOffset(96, 40), function()
-				req("ShopBuy", { id = id, qty = 10 }, "Purchase")
+			local _, h2 = UI.Button(card, "x" .. q2, T.Ocean, UDim2.fromOffset(96, 40), function()
+				req("ShopBuy", { id = id, qty = q2 }, "Purchase")
 			end)
 			h2.Position = UDim2.new(1, -100, 0, 2)
 			h2.ZIndex = 5

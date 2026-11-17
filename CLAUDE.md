@@ -104,6 +104,16 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   `UI.Window(id, title, size, color, icon, { fullscreen = true })`, layouts must stretch (scale sizes) and can listen to
   `win.resized`. The Pearl shop is labelled "Shop" (owner). Coin/hit sounds were lowered in pitch (owner found them
   shrill); kill streaks raise the coin / death pitch.
+- Full screen mode (owner's reference clip): the window covers the screen edge to edge with a slim title bar, X and
+  the shrink button top-right; shrunk it is a framed window again (`UI.Window` opts.fullscreen, `win.resized`).
+- Bag = character statue (`UI.CharacterView`: a still clone of your avatar holding the equipped weapon, drag to turn)
+  with gear slots around it; double-click gear with card slots -> Blacksmith Insert Card. Stats = same layout, plan
+  points with -/+ then Apply (`AllocateStats`, all-or-nothing). Blacksmith (Panels.Refine) = sidebar Forge / Insert Card,
+  gear list, item on a stage; Forge plays the anvil animation (3 hammer strikes, `AnvilClang` sound) and reveals the
+  server result after it.
+- Ammo (`Config/Ammo`, slingshot weapons): `p.ammo` picked with the bullet button by the hotbar (`SetAmmo`), 1 item
+  used per basic attack in CombatService (falls back to free Pebble Shot), effects via hitTarget opts (critBonus,
+  ignoreDef, slow, splash). Ammo items are sold in handfuls at the General Store.
 - VFX are ParticleEmitter/Beam based with our own textures (`Config/Textures`); see the toolkit at the top of `Controllers/VFX.lua`.
 - Client controllers start through the protected `start()` in `init.client.lua` (core UI first, visuals in parallel):
   a controller that errors or yields must never block the others (it hid the quest tracker in v0.13.0).

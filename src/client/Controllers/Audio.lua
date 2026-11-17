@@ -32,6 +32,11 @@ local function source(def)
 	if def.id and def.id ~= "" then
 		return def.id
 	end
+	-- `alias` = reuse another sound's uploaded file (played with this one's pitch/volume)
+	local other = def.alias and Sounds[def.alias]
+	if other and other.id and other.id ~= "" then
+		return other.id
+	end
 	return def.fallback
 end
 

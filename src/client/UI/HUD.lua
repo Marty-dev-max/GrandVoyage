@@ -270,6 +270,7 @@ local function updateOrbs()
 end
 
 local SkillLook = require(script.Parent.SkillLook)
+local AmmoCfg = require(Shared.Config.Ammo)
 local skillIconId, skillColor = SkillLook.IconId, SkillLook.Color
 
 local function buildStatus()
@@ -474,6 +475,113 @@ local function setExpanded(on)
 	end)
 end
 
+-- a drawn bullet (round pellet with a shine): ammo has no rendered icons
+function HUD.Pellet(parent, color, size)
+	local f = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.45), Size = UDim2.fromOffset(size, size), BackgroundColor3 = Color3.new(1, 1, 1), ZIndex = 4, Parent = parent })
+	UI.Corner(f, size)
+	local g = New("UIGradient", { Name = "Tint", Color = ColorSequence.new(color:Lerp(Color3.new(1, 1, 1), 0.45), color:Lerp(Color3.new(0, 0, 0), 0.35)), Rotation = 60, Parent = f })
+	UI.Stroke(f, T.Edge, 2.5)
+	local shine = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.25, Position = UDim2.fromScale(0.2, 0.16), Size = UDim2.fromScale(0.3, 0.22), ZIndex = 5, Parent = f })
+	UI.Corner(shine, size)
+	local _ = g
+	return f
+end
+local function tintPellet(f, color)
+	local g = f:FindFirstChild("Tint")
+	if g then
+		g.Color = ColorSequence.new(color:Lerp(Color3.new(1, 1, 1), 0.45), color:Lerp(Color3.new(0, 0, 0), 0.35))
+	end
+end
+
+local function ammoCount(p, a)
+	if not a.item then
+		return math.huge
+	end
+	local n = 0
+	for _, e in ipairs(p.inventory or {}) do
+		if e.id == a.item then
+			n += e.qty or 1
+		end
+	end
+	return n
+end
+
+-- the ammo picker pops up above the bullet button: every kind with how many you carry; tap one, then "Load"
+local picker
+function HUD.ToggleAmmoPicker()
+	if picker then
+		picker:Destroy()
+		picker = nil
+		return
+	end
+	local p = State.profile
+	if not p then
+		return
+	end
+	local chosen = p.ammo or AmmoCfg.Default
+	picker = New("Frame", { AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -16, 1, -(SLOT * 2 + 34)), Size = UDim2.fromOffset(380, 330), BackgroundColor3 = Color3.new(1, 1, 1), ZIndex = 30, Parent = UI.Root })
+	UI.Corner(picker, 16)
+	New("UIGradient", { Color = ColorSequence.new(T.PanelTop, T.PanelDeep), Rotation = 90, Parent = picker })
+	UI.Stroke(picker, T.Edge, 3)
+	UI.Pop(picker)
+	local function draw()
+		for _, c in ipairs(picker:GetChildren()) do
+			if c:IsA("GuiObject") then
+				c:Destroy()
+			end
+		end
+		UI.Text(picker, "AMMO", 20, T.Gold, "Display", { Position = UDim2.fromOffset(14, 8), Size = UDim2.fromOffset(200, 24), ZIndex = 31 })
+		local grid = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(14, 38), Size = UDim2.new(1, -28, 0, 160), ZIndex = 31, Parent = picker })
+		New("UIGridLayout", { CellSize = UDim2.fromOffset(78, 76), CellPadding = UDim2.fromOffset(8, 8), Parent = grid })
+		for _, a in ipairs(AmmoCfg.List) do
+			local n = ammoCount(p, a)
+			local isSel = a.id == chosen
+			local cell = New("TextButton", { Text = "", AutoButtonColor = false, BackgroundColor3 = isSel and T.Gold:Lerp(T.Panel, 0.5) or T.Panel, ZIndex = 32, Parent = grid })
+			UI.Corner(cell, 12)
+			UI.Stroke(cell, isSel and T.Gold or T.Edge, isSel and 4 or 2.5)
+			local pel = HUD.Pellet(cell, a.color, 34)
+			pel.ZIndex = 33
+			UI.Text(cell, n == math.huge and "∞" or tostring(n), 13, n == 0 and T.Red or T.Text, "Number", { AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -4, 1, -2), Size = UDim2.fromOffset(40, 14), TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 34 })
+			if a.id == (p.ammo or AmmoCfg.Default) then
+				UI.Text(cell, "IN USE", 10, T.Green, "Display", { Position = UDim2.fromOffset(4, 2), Size = UDim2.fromOffset(50, 12), ZIndex = 34 })
+			end
+			UI.Tactile(cell)
+			cell.Activated:Connect(function()
+				chosen = a.id
+				draw()
+			end)
+		end
+		local a = AmmoCfg.ById[chosen]
+		UI.Text(picker, a.name, 18, a.color:Lerp(Color3.new(1, 1, 1), 0.3), "Display", { Position = UDim2.fromOffset(14, 210), Size = UDim2.new(1, -28, 0, 22), ZIndex = 31 })
+		UI.Text(picker, a.desc .. (a.item and ("\nBuy at the General Store (" .. UI.CurrencyIcon .. " " .. a.price .. " each).") or ""), 13, T.TextSoft, "Semi", { Position = UDim2.fromOffset(14, 234), Size = UDim2.new(1, -28, 0, 36), ZIndex = 31 })
+		local inUse = a.id == (p.ammo or AmmoCfg.Default)
+		local _, h = UI.Button(picker, inUse and "In use" or "Load", inUse and T.Grey or T.Green, UDim2.fromOffset(160, 44), function()
+			if inUse then
+				return
+			end
+			task.spawn(function()
+				local res = Net.Request("SetAmmo", { id = a.id })
+				if res.msg then
+					UI.Toast(res.msg, res.ok and "good" or "bad")
+				end
+				if res.ok then
+					p.ammo = a.id
+					Audio.Play("Equip")
+					if picker then
+						draw()
+					end
+				end
+			end)
+		end)
+		h.AnchorPoint = Vector2.new(0.5, 1)
+		h.Position = UDim2.new(0.5, 0, 1, -10)
+		h.ZIndex = 32
+	end
+	draw()
+end
+HUD.TintPellet = tintPellet
+HUD.AmmoCount = ammoCount
+
 local function buildSkillBar()
 	local bar = New("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -12), Size = UDim2.fromOffset(900, 2 * (SLOT + 4) + 8), BackgroundTransparency = 1, Parent = UI.Root })
 	local vlist = UI.List(bar, Enum.FillDirection.Vertical, 6, Enum.HorizontalAlignment.Center)
@@ -563,6 +671,26 @@ local function buildSkillBar()
 		return HUD.barExpanded and "Hide the second row" or "Show 6 more skill slots and F5-F8", T.Ocean
 	end)
 	New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(34, SLOT), LayoutOrder = 200, Parent = second })
+
+	-- ammo (slingshot classes): the loaded bullet, tap to pick another kind
+	local ammoHolder = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(SLOT, SLOT + 4), LayoutOrder = 210, Visible = false, Parent = main })
+	local ammoSpacer = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(SLOT, SLOT), LayoutOrder = 210, Visible = false, Parent = second })
+	local ammoBtn = New("TextButton", { Text = "", AutoButtonColor = false, Size = UDim2.fromOffset(SLOT, SLOT), BackgroundColor3 = Color3.new(1, 1, 1), Parent = ammoHolder })
+	UI.Corner(ammoBtn, SLOT)
+	New("UIGradient", { Color = ColorSequence.new(T.PanelTop, T.PanelDeep), Rotation = 90, Parent = ammoBtn })
+	UI.Stroke(ammoBtn, T.Gold, 3)
+	UI.Tactile(ammoBtn)
+	local ammoIcon = HUD.Pellet(ammoBtn, Color3.new(1, 1, 1), 34)
+	local ammoCount = UI.Text(ammoBtn, "", 13, T.Text, "Number", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -1), Size = UDim2.fromOffset(50, 14), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 6 })
+	HUD.ammo = { holder = ammoHolder, spacer = ammoSpacer, btn = ammoBtn, icon = ammoIcon, count = ammoCount }
+	ammoBtn.Activated:Connect(function()
+		HUD.ToggleAmmoPicker()
+	end)
+	UI.Tooltip(ammoBtn, function()
+		local p = State.profile
+		local a = AmmoCfg.ById[p and p.ammo or ""] or AmmoCfg.ById[AmmoCfg.Default]
+		return "<b>" .. a.name .. "</b> loaded\n" .. a.desc .. "\nTap to change ammo.", a.color
+	end)
 
 	if UI.IsMobile then
 		local atk = UI.Button(UI.Root, "⚔️", T.Red, UDim2.fromOffset(110, 110), function()
@@ -786,6 +914,31 @@ local function refresh()
 		s.count.TextColor3 = qty > 0 and T.Text or T.Red
 		s.grad.Color = def and ColorSequence.new(T.Ocean:Lerp(Color3.new(1, 1, 1), 0.1), T.Ocean:Lerp(Color3.new(0, 0, 0), 0.5)) or ColorSequence.new(T.PanelTop, T.PanelDeep)
 		s.slot.BackgroundTransparency = def and 0 or 0.35
+	end
+	-- ammo button: only for slingshot users
+	if HUD.ammo and p then
+		local wEntry = p.equipment and p.equipment.weapon
+		local wType
+		for _, e in ipairs(p.inventory or {}) do
+			if e.uid == wEntry then
+				local wd = ItemDB.Get(e.id)
+				wType = wd and wd.weaponType
+			end
+		end
+		local cls = Classes[p.class]
+		wType = wType or (cls and cls.weapons and cls.weapons[1])
+		local shoots = AmmoCfg.Weapons[wType or ""] == true
+		HUD.ammo.holder.Visible = shoots
+		HUD.ammo.spacer.Visible = shoots
+		if shoots then
+			local a = AmmoCfg.ById[p.ammo or ""] or AmmoCfg.ById[AmmoCfg.Default]
+			tintPellet(HUD.ammo.icon, a.color)
+			local n = ammoCount(p, a)
+			HUD.ammo.count.Text = n == math.huge and "∞" or tostring(n)
+		elseif picker then
+			picker:Destroy()
+			picker = nil
+		end
 	end
 	UI.SetButtonColor(autoBtn, State.auto and T.Green or T.Grey)
 	autoBtn.Text = State.auto and "AUTO\nON" or "AUTO"

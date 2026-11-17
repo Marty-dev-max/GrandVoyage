@@ -116,10 +116,19 @@ add("SeaEgg", { name = "Sea Egg", desc = "Hatch it from your Bag. Hermit 40% / B
 add("GoldenEgg", { name = "Golden Egg", desc = "Hatch it from your Bag. Gull 40% / Puffer 35% / Lantern 22% / Leviathan 3%.", kind = "Egg", rarity = "Epic", price = 20000, icon = "🪺" })
 add("SeaBait", { name = "Sea Bait", desc = "Throw it at a weakened Beach Crab, Wild Boar or Leviathan (below 35% HP) to tame it.", kind = "Consumable", special = true, price = 300, stack = true, rarity = "Common", icon = "🪤" })
 
+-- ===== Ammo (slingshot classes, Config/Ammo) =====
+local Ammo = require(script.Parent.Ammo)
+for _, am in ipairs(Ammo.List) do
+	if am.item then
+		add(am.item, { name = am.name, desc = am.desc .. " Pick it with the bullet button by the hotbar.", kind = "Ammo", ammo = am.id, price = am.price, stack = true, rarity = am.rarity or "Common", icon = "🔸" })
+	end
+end
+
 -- General store stock
 local Shop = {
 	"MeatOnBone", "BigFeast", "TangerineJuice", "RepairKit", "SeaBait", "SteelOre", "Wood", "SailCloth",
 	"SailorVest", "Bandana", "CompassCharm",
+	"Ammo_Ember", "Ammo_Frost", "Ammo_Spark", "Ammo_Needle", "Ammo_Blast", "Ammo_Star",
 	"Knuckles_Plain", "Sword_Plain", "Slingshot_Plain", "Shoes_Plain", "StormBaton_Plain", "MedKit_Plain", "Hammer_Plain",
 }
 

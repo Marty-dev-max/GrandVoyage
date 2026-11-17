@@ -629,7 +629,19 @@ local weaponFX = {
 		end
 	end,
 	Slingshot = function(d)
-		VFX.Projectile(d.from, d.to, Color3.fromRGB(255, 240, 160), 0.6, 0.18, 1)
+		-- the shot looks like the ammo it is (Config/Ammo colors); blast shots explode, frost shots chill
+		local AmmoCfg = require(ReplicatedStorage.Shared.Config.Ammo)
+		local am = AmmoCfg.ById[d.ammo or ""]
+		local c = am and am.color or Color3.fromRGB(255, 240, 160)
+		VFX.Projectile(d.from, d.to, c, am and am.id ~= "Pebble" and 0.8 or 0.6, 0.18, 1, c:Lerp(Color3.new(1, 1, 1), 0.3))
+		task.delay(0.18, function()
+			if am and am.splash then
+				VFX.Explosion(d.to, am.splash * 0.6)
+			elseif am and am.id ~= "Pebble" then
+				VFX.Impact(d.to, c, 3.5)
+				VFX.Sparks(d.to, c, 6, 7)
+			end
+		end)
 	end,
 	StormBaton = function(d)
 		VFX.Projectile(d.from, d.to, Color3.fromRGB(140, 200, 255), 1, 0.22, 2)

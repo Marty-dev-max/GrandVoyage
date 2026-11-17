@@ -736,8 +736,39 @@ handlers.LevelUp = function(d)
 		VFX.ScreenFlash(pale, 0.3, 0.4)
 	end
 end
+handlers.Dash = function(d)
+	-- a dash: wind streaks along the path and a puff of dust where it started
+	VFX.SpeedLines(d.from, d.to, Color3.fromRGB(235, 245, 255), 12)
+	VFX.Smoke(d.from - Vector3.new(0, 2.4, 0), Color3.fromRGB(225, 220, 210), 5, 2.2)
+	VFX.Ring(d.from - Vector3.new(0, 2.6, 0), 4, Color3.fromRGB(230, 240, 255), 0.3)
+end
 handlers.PetHit = function(d)
 	VFX.Projectile(d.from, d.to, Color3.fromRGB(150, 255, 190), 0.6, 0.25, 2)
+end
+handlers.ChestShake = function(d)
+	-- before it opens: the chest wobbles harder and harder while coins rattle inside
+	local m = d.model
+	if typeof(m) ~= "Instance" or not m:IsA("Model") then
+		return
+	end
+	local base = m:GetPivot()
+	local t = tonumber(d.time) or 0.85
+	local t0 = os.clock()
+	local conn
+	conn = game:GetService("RunService").RenderStepped:Connect(function()
+		local k = (os.clock() - t0) / t
+		if k >= 1 or not m.Parent then
+			conn:Disconnect()
+			if m.Parent then
+				m:PivotTo(base)
+			end
+			return
+		end
+		local amp = 0.05 + k * 0.16
+		local w = os.clock() * 38
+		m:PivotTo(base * CFrame.new(0, math.abs(math.sin(w * 0.5)) * amp * 0.6, 0) * CFrame.Angles(0, 0, math.sin(w) * amp) * CFrame.Angles(math.sin(w * 1.3) * amp * 0.5, 0, 0))
+	end)
+	VFX.Sparks(d.pos + Vector3.new(0, 1.5, 0), Color3.fromRGB(255, 220, 120), 4, 3)
 end
 handlers.ChestOpen = function(d)
 	-- treasure! a golden light pillar shoots out of the chest, coins and sparkles burst, a ring rolls out
@@ -863,11 +894,17 @@ local fxSounds = {
 	ChestOpen = function(d)
 		return "ChestOpen", d.pos
 	end,
+	ChestShake = function(d)
+		return "ChestRattle", d.pos
+	end,
 	Telegraph = function(d)
 		return "BossRoar", d.pos
 	end,
 	Cannonball = function(d)
 		return "Cannon", d.from
+	end,
+	Dash = function(d)
+		return "Whoosh", d.from, 1.15
 	end,
 	Splash = function(d)
 		return "Splash", d.pos

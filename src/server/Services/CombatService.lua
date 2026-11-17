@@ -3,10 +3,10 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local ClassesCfg = require(Shared.Config.Classes)
-local ItemDB = require(Shared.Modules.ItemDB)
 local Reach = require(ReplicatedStorage.Shared.Modules.Reach)
 local Formulas = require(Shared.Modules.Formulas)
 local Net = require(Shared.Modules.Net)
+local GameConfig = require(Shared.Config.GameConfig)
 
 local Combat = {}
 local R
@@ -20,7 +20,8 @@ local AmmoCfg = require(Shared.Config.Ammo)
 -- ranged basic attacks: the shot flies this long after the release frame (matches VFX.Projectile durations)
 local SHOT_FLIGHT = { Slingshot = 0.18, StormBaton = 0.22, MedKit = 0.2 }
 local combos = {} -- player -> { n, last }
-local WeaponRange = { Knuckles = 9, Sword = 10, Shoes = 9, Hammer = 10, Slingshot = 48, StormBaton = 34, MedKit = 26 }
+local WeaponInfo = require(Shared.Modules.WeaponInfo)
+local WeaponRange = WeaponInfo.Range
 
 function Combat.Init(registry)
 	R = registry
@@ -69,15 +70,8 @@ function Combat.AddBuff(player, id, stats, duration)
 end
 
 local function weaponType(player)
-	local p = R.DataService.Get(player)
-	local entry = p and p.equipment.weapon and Formulas.FindItem(p, p.equipment.weapon)
-	local def = entry and ItemDB.Get(entry.id)
-	if def and def.weaponType then
-		return def.weaponType
-	end
-	-- nothing equipped: fight with the class's own weapon style (a Brawler punches, a Sea Cook kicks)
-	local cls = p and ClassesCfg.Classes[p.class]
-	return cls and cls.weapons and cls.weapons[1] or "Knuckles"
+	-- equipped weapon, else the class's own style (Modules/WeaponInfo, shared with the client)
+	return WeaponInfo.TypeOf(R.DataService.Get(player))
 end
 
 local function alive(player)
@@ -323,6 +317,24 @@ local function setup()
 		hitLater(strike + (SHOT_FLIGHT[wType] or 0), player, target, mult, magic, ammo and { critBonus = ammo.critBonus, ignoreDef = ammo.ignoreDef, slow = ammo.slow, splash = ammo.splash })
 		return true
 	end, 0.2)
+
+	-- Dash: the client moves itself; we keep the cooldown honest and broadcast the streak for everyone else
+	local lastDash = {}
+	Net.Handle("Dash", function(player, data)
+		local now = os.clock()
+		if lastDash[player] and now - lastDash[player] < GameConfig.Dash.Cooldown * 0.9 then
+			return false
+		end
+		local root = R.PlayerService.Root(player)
+		if not root or not alive(player) or typeof(data.dir) ~= "Vector3" then
+			return false
+		end
+		lastDash[player] = now
+		local dir = Vector3.new(data.dir.X, 0, data.dir.Z)
+		dir = dir.Magnitude > 0.01 and dir.Unit or root.CFrame.LookVector
+		Net.FX("Dash", { from = root.Position, to = root.Position + dir * GameConfig.Dash.Speed * GameConfig.Dash.Duration, char = player.Character }, root.Position, 250)
+		return true
+	end, 0.3)
 
 	Net.Handle("CastSkill", function(player, data)
 		if not alive(player) or player:GetAttribute("Vending") then

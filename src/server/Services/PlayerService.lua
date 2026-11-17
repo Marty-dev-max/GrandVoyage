@@ -176,6 +176,7 @@ local function sync(player)
 			skills = p.skills,
 			skillBar = p.skillBar,
 			itemBar = p.itemBar,
+			titles = p.titles,
 			ammo = p.ammo,
 			autoSkills = p.autoSkills,
 			inventory = p.inventory,

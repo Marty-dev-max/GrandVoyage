@@ -25,6 +25,7 @@ local Atmos = require(script.Controllers.Atmos)
 local GrassField = require(script.Controllers.GrassField)
 local CreatureAnim = require(script.Controllers.CreatureAnim)
 local CharAnim = require(script.Controllers.CharAnim)
+local Interact = require(script.Controllers.Interact)
 local Quest = require(script.UI.Quest)
 
 pcall(function()
@@ -97,6 +98,10 @@ local handlers = {
 		UI.Banner("Achievement!", d.icon .. " " .. d.name .. (d.title and ("  •  title: " .. d.title) or ""), UI.Rarity.Get(d.rarity).color, d.rarity)
 		UI.Toast("🏆 " .. d.name .. " unlocked: claim it in Quests (J)", "good")
 	end,
+	TitleUnlocked = function(d)
+		local Rarity = require(ReplicatedStorage.Shared.Modules.Rarity)
+		UI.Banner("New Title!", "« " .. tostring(d.name) .. " »  •  wear it from your Bag", Rarity.Get(d.tier or "Rare").color, d.tier)
+	end,
 	PearlGain = function(d)
 		UI.Toast("+" .. d.amount .. " 🦪 Pearls" .. (d.capped and "  (daily cap reached)" or ""), "good")
 	end,
@@ -168,7 +173,7 @@ start("Quest", Quest)
 for _, c in ipairs({
 	{ "Sailing", Sailing }, { "Builder", Builder }, { "VFX", VFX }, { "Readability", Readability }, { "Swim", Swim },
 	{ "Pets", PetsCtl }, { "Titles", Titles }, { "Ocean", Ocean }, { "Atmos", Atmos }, { "GrassField", GrassField },
-	{ "CreatureAnim", CreatureAnim }, { "CharAnim", CharAnim },
+	{ "CreatureAnim", CreatureAnim }, { "CharAnim", CharAnim }, { "Interact", Interact },
 }) do
 	task.spawn(start, c[1], c[2])
 end

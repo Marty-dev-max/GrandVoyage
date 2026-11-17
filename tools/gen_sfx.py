@@ -106,3 +106,14 @@ print('wrote', len(os.listdir(OUT)), 'files to', os.path.abspath(OUT))
 # anvil: a few inharmonic metal partials with a hard click on top (the Forge plays three of these)
 clang = mix((0, lowpass(noise(0.03, 40), 2) * 0.8), *[(0, tone(f, 0.9, 'sine', a=0.001, curve=c) * g) for f, c, g in ((523, 5, 0.6), (1393, 6, 0.5), (2411, 8, 0.35), (3557, 10, 0.25), (787, 4, 0.3))])
 save('AnvilClang', clang, 0.7)
+# chest rattle: wooden knocks + a jingle of coins inside (plays while the chest shakes, before it opens)
+_r = np.random.default_rng(11)
+_parts = []
+for k in range(7):
+    t0 = k * 0.11
+    _parts.append((t0, lowpass(noise(0.05, 30), 6) * 0.7))           # wood knock
+    _parts.append((t0, tone(160 + 20 * (k % 3), 0.08, 'sine', curve=14) * 0.6))
+    for j in range(3):                                               # coins clinking
+        _parts.append((t0 + 0.015 + j * 0.022, tone(N(int(_r.integers(81, 92))), 0.12, 'bell', curve=10) * 0.25))
+save('ChestRattle', mix(*_parts), 0.65)
+

@@ -9,11 +9,8 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local Islands = require(Shared.Config.Islands)
-local GameConfig = require(Shared.Config.GameConfig)
 local Monsters = require(Shared.Config.Monsters)
 local ClassesCfg = require(Shared.Config.Classes)
-local ItemDB = require(Shared.Modules.ItemDB)
-local Formulas = require(Shared.Modules.Formulas)
 local Rarity = require(Shared.Modules.Rarity)
 local State = require(script.Parent.Parent.State)
 local Settings = require(script.Parent.Settings)
@@ -23,7 +20,6 @@ local R = {}
 local player = Players.LocalPlayer
 local T = UI.Theme
 local New = UI.New
-local WeaponRange = { Knuckles = 8, Sword = 9, Shoes = 8, Hammer = 9, Slingshot = 44, StormBaton = 31, MedKit = 24 }
 R.HoverSkill = nil
 
 local fx = Instance.new("Folder")
@@ -110,13 +106,7 @@ local function groundY(pos, ignore)
 end
 
 local function weaponRange()
-	local p = State.profile
-	if not p or not p.equipment.weapon then
-		return 9
-	end
-	local e = Formulas.FindItem(p, p.equipment.weapon)
-	local def = e and ItemDB.Get(e.id)
-	return WeaponRange[def and def.weaponType or "Sword"] or 9
+	return require(game:GetService("ReplicatedStorage").Shared.Modules.WeaponInfo).ClientRange(State.profile)
 end
 
 -- ===== nameplates / aggro =====

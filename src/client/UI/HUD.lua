@@ -331,7 +331,7 @@ local function buildStatus()
 	UI.Text(UI.Root, "v" .. GameConfig.Version, 12, Color3.fromRGB(220, 220, 235), "Bold", { Name = "Version", AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -8, 1, -2), Size = UDim2.fromOffset(120, 14), TextXAlignment = Enum.TextXAlignment.Right, TextTransparency = 0.35 })
 	-- Studio only: animation status under the version, so any screenshot the owner sends shows whether clips load and play
 	if game:GetService("RunService"):IsStudio() then
-		local animLine = UI.Text(UI.Root, "", 11, Color3.fromRGB(255, 230, 150), "Bold", { Name = "AnimStatus", AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -8, 1, -16), Size = UDim2.fromOffset(520, 14), TextXAlignment = Enum.TextXAlignment.Right, TextTransparency = 0.2 })
+		local animLine = UI.Text(UI.Root, "", 11, Color3.fromRGB(255, 230, 150), "Bold", { Name = "AnimStatus", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 50), Size = UDim2.fromOffset(620, 14), TextXAlignment = Enum.TextXAlignment.Center, TextTransparency = 0.2 })
 		task.spawn(function()
 			local Anim = require(game:GetService("ReplicatedStorage").Shared.Modules.Anim)
 			local CharAnim = require(script.Parent.Parent.Controllers.CharAnim)
@@ -356,7 +356,7 @@ local MENU = {
 	{ "🗺️", "Map", T.Ocean, "M", "Map", main = true },
 	{ "🐾", "Pets", T.Green:Lerp(T.Ocean, 0.3), "N", "Pets", main = true },
 	{ "🛍️", "PearlShop", Color3.fromRGB(80, 170, 220), "H", "Shop", main = true },
-	{ "📊", "Stats", T.Purple, "C", "Stats" },
+	{ "📊", "Stats", T.Purple, "C", "Stats", main = true },
 	{ "ship", "Shipwright", T.OceanDark, nil, "Ships" },
 	{ "🏴", "Guild", T.Pirate, "G", "Guild" },
 	{ "👥", "Party", T.Green, "P", "Party" },
@@ -390,6 +390,13 @@ local function menuTile(parent, it)
 	tile.Activated:Connect(function()
 		Panels.Toggle(it[2])
 	end)
+	-- red count badge (unspent stat / skill points)
+	local badge = New("Frame", { Name = "Badge", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(1, -4, 0, 4), Size = UDim2.fromOffset(28, 22), BackgroundColor3 = T.Red, Visible = false, ZIndex = 6, Parent = tile })
+	UI.Corner(badge, 11)
+	UI.Stroke(badge, T.Edge, 2)
+	UI.Text(badge, "", 13, Color3.new(1, 1, 1), "Number", { Name = "Label", Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 7 })
+	HUD.badges = HUD.badges or {}
+	HUD.badges[it[2]] = badge
 	return tile
 end
 
@@ -519,7 +526,20 @@ function HUD.ToggleAmmoPicker()
 		return
 	end
 	local chosen = p.ammo or AmmoCfg.Default
-	picker = New("Frame", { AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -16, 1, -(SLOT * 2 + 34)), Size = UDim2.fromOffset(380, 330), BackgroundColor3 = Color3.new(1, 1, 1), ZIndex = 30, Parent = UI.Root })
+	-- pops up right above the bullet button (it used to open at the right edge, on top of the menu)
+	local pos = UDim2.new(1, -16, 1, -(SLOT * 2 + 34))
+	local anchor = Vector2.new(1, 1)
+	pcall(function()
+		local b = HUD.ammo.btn
+		local sc = UI.GetScale()
+		local cx = (b.AbsolutePosition.X + b.AbsoluteSize.X / 2) / sc
+		local top = b.AbsolutePosition.Y / sc
+		local canvasW = UI.Root.AbsoluteSize.X / sc
+		cx = math.clamp(cx, 200, canvasW - 200)
+		pos = UDim2.fromOffset(cx, top - 10)
+		anchor = Vector2.new(0.5, 1)
+	end)
+	picker = New("Frame", { AnchorPoint = anchor, Position = pos, Size = UDim2.fromOffset(380, 330), BackgroundColor3 = Color3.new(1, 1, 1), ZIndex = 30, Parent = UI.Root })
 	UI.Corner(picker, 16)
 	New("UIGradient", { Color = ColorSequence.new(T.PanelTop, T.PanelDeep), Rotation = 90, Parent = picker })
 	UI.Stroke(picker, T.Edge, 3)
@@ -595,15 +615,23 @@ local function buildSkillBar()
 		r:FindFirstChildOfClass("UIListLayout").SortOrder = Enum.SortOrder.LayoutOrder
 	end
 
-	autoBtn = UI.Button(main, "AUTO", T.Grey, UDim2.fromOffset(92, SLOT), function()
-		Combat.ToggleAuto()
+	-- Dash (Q) opens the bar; AUTO sits at the far end (after the ammo button for slingshot users)
+	local dash = makeSlot(main, "Q", 0)
+	dash.name.Text = "DASH"
+	dash.name.TextSize = 13
+	UI.Text(dash.slot, "💨", 26, T.Text, "Display", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.4), Size = UDim2.fromOffset(40, 30), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 3 })
+	dash.name.Position = UDim2.new(0, 3, 1, -20)
+	dash.name.Size = UDim2.new(1, -6, 0, 16)
+	dash.grad.Color = ColorSequence.new(T.Ocean:Lerp(Color3.new(1, 1, 1), 0.2), T.Ocean:Lerp(Color3.new(0, 0, 0), 0.45))
+	dash.slot.Activated:Connect(function()
+		Combat.Dash()
 	end)
-	autoBtn.Parent.LayoutOrder = 0
-	UI.Tooltip(autoBtn, function()
-		return "<b>Auto Battle</b>  [T]\nFights monsters within your search range (Skills -> Loadout), uses ticked skills and drinks potions.", T.Green
+	UI.Tooltip(dash.slot, function()
+		return "<b>Dash</b>  [Q]\nA quick burst the way you move (or face). " .. GameConfig.Dash.Cooldown .. "s cooldown.", T.Ocean
 	end)
-	-- the second row starts where the skills start (under it sits the AUTO button)
-	New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(92, SLOT), LayoutOrder = 0, Parent = second })
+	HUD.dashSlot = dash
+	-- the second row starts where the skills start (under it sits the Dash button)
+	New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(SLOT, SLOT), LayoutOrder = 0, Parent = second })
 
 	skillSlots = {}
 	for i = 1, GameConfig.SkillBarSize do
@@ -671,6 +699,15 @@ local function buildSkillBar()
 		return HUD.barExpanded and "Hide the second row" or "Show 6 more skill slots and F5-F8", T.Ocean
 	end)
 	New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(34, SLOT), LayoutOrder = 200, Parent = second })
+
+	autoBtn = UI.Button(main, "AUTO", T.Grey, UDim2.fromOffset(92, SLOT), function()
+		Combat.ToggleAuto()
+	end)
+	autoBtn.Parent.LayoutOrder = 220
+	UI.Tooltip(autoBtn, function()
+		return "<b>Auto Battle</b>  [T]\nFights monsters within your search range (Skills -> Loadout), uses ticked skills and drinks potions.", T.Green
+	end)
+	New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(92, SLOT), LayoutOrder = 220, Parent = second })
 
 	-- ammo (slingshot classes): the loaded bullet, tap to pick another kind
 	local ammoHolder = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(SLOT, SLOT + 4), LayoutOrder = 210, Visible = false, Parent = main })
@@ -846,8 +883,19 @@ local function refresh()
 		bounty.label.TextColor3 = T.TextSoft
 	end
 	local pts = (player:GetAttribute("StatPoints") or 0) + (player:GetAttribute("SkillPoints") or 0)
-	pointsBtn.Parent.Visible = pts > 0
-	pointsBtn.Text = "+" .. pts .. " POINTS"
+	-- unspent points show as red badges on the Stats / Skills tiles (the long "+ POINTS" button is gone)
+	pointsBtn.Parent.Visible = false
+	local _ = pts
+	for panel, n in pairs({ Stats = player:GetAttribute("StatPoints") or 0, Skills = player:GetAttribute("SkillPoints") or 0 }) do
+		local badge = HUD.badges and HUD.badges[panel]
+		if badge then
+			badge.Visible = n > 0
+			local lbl = badge:FindFirstChild("Label")
+			if lbl then
+				lbl.Text = n > 99 and "99+" or tostring(n)
+			end
+		end
+	end
 	-- buffs
 	local buffs = player:GetAttribute("Buffs") or ""
 	if buffs ~= lastBuffs then
@@ -892,6 +940,12 @@ local function refresh()
 		s.cdText.Text = (skill and left > 0) and string.format(left < 1 and "%.1f" or "%d", left) or ""
 		s.auto.Visible = skill ~= nil and p.autoSkills[id] == true
 		s.stroke.Color = (skill and (player:GetAttribute("SP") or 0) < skill.sp) and T.Red or T.Edge
+	end
+	-- dash cooldown sweep
+	if HUD.dashSlot then
+		local left = Combat.dashReadyAt - now
+		HUD.dashSlot.cd.Size = UDim2.new(1, 0, left > 0 and math.clamp(left / GameConfig.Dash.Cooldown, 0, 1) or 0, 0)
+		HUD.dashSlot.cdText.Text = left > 0 and string.format("%.1f", left) or ""
 	end
 	-- quick items: icon + how many are left in the bag
 	for i, s in ipairs(itemSlots or {}) do

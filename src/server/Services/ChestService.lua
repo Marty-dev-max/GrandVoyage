@@ -106,11 +106,25 @@ function CS.Start()
 		table.insert(byIsland[islandId], m:GetAttribute("ChestId"))
 		local prompt = m:FindFirstChildWhichIsA("ProximityPrompt", true)
 		if prompt then
+			-- the chest shakes and rattles for a moment (client FX), then opens; one open in flight per player+chest
+			local opening = {}
 			prompt.Triggered:Connect(function(player)
-				local ok, err = pcall(open, player, m)
-				if not ok then
-					warn("[ChestService]", err)
+				local p = R.PlayerService.Profile(player)
+				if opening[player] or not m.PrimaryPart or (p and p.chests and p.chests[m:GetAttribute("ChestId")]) then
+					if p and p.chests and p.chests[m:GetAttribute("ChestId")] then
+						R.PlayerService.Notify(player, "You already looted this chest.", "info")
+					end
+					return
 				end
+				opening[player] = true
+				Net.FX("ChestShake", { model = m, pos = m.PrimaryPart.Position, time = 0.85 }, m.PrimaryPart.Position, 120)
+				task.delay(0.85, function()
+					opening[player] = nil
+					local ok, err = pcall(open, player, m)
+					if not ok then
+						warn("[ChestService]", err)
+					end
+				end)
 			end)
 		end
 	end

@@ -2,7 +2,7 @@
 return {
 	GameName = "Grand Voyage",
 	-- bump on every change: shown bottom-right in game and printed in Output, so you can tell which code is running
-	Version = "0.17.0",
+	Version = "0.18.0",
 	SagaName = "Azure East Saga",
 	DataStoreName = "GV_Player_v1",
 	GuildStoreName = "GV_Guild_v1",
@@ -102,6 +102,8 @@ return {
 		MinRadius = 15,
 		LeashRadius = 160,
 	},
+	-- Dash (Q): a quick burst in the direction you move (or face); the server enforces the cooldown
+	Dash = { Cooldown = 2.5, Speed = 85, Duration = 0.18 },
 	-- hotbar: 12 skill slots (keys 1-6, then 7 8 9 0 - =) and 8 quick item slots (F1-F8); empty slot = ""
 	SkillBarSize = 12,
 	ItemBarSize = 8,

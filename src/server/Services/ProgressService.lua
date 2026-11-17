@@ -175,10 +175,11 @@ function PG.Check(player)
 	end
 end
 
+-- titles moved to TitleService (Config/Titles): keep the old entry point working
 local function setTitleAttr(player, p)
-	local a = p.title and Achievements.ById[p.title]
-	player:SetAttribute("Title", a and a.title or nil)
-	player:SetAttribute("TitleRarity", a and (a.rarity or "Rare") or nil)
+	if R and R.TitleService then
+		R.TitleService.SetAttributes(player, p)
+	end
 end
 PG.SetAttributes = setTitleAttr
 
@@ -263,22 +264,6 @@ function PG.Start()
 		return true, "+" .. a.pearls .. " Pearls"
 	end, 0.5)
 
-	Net.Handle("SetTitle", function(player, data)
-		local p = R.PlayerService.Profile(player)
-		local st = ach(p)
-		if data.id == nil then
-			p.title = nil
-		else
-			local a = Achievements.ById[tostring(data.id)]
-			if not a or not a.title or not st.done[a.id] then
-				return false, "Title not unlocked"
-			end
-			p.title = a.id
-		end
-		setTitleAttr(player, p)
-		R.PlayerService.MarkDirty(player)
-		return true
-	end, 0.5)
 end
 
 return PG

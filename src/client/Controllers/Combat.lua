@@ -1,13 +1,10 @@
 -- Combat (client): click-to-target, Ragnarok-style chase & attack, skills, Auto Battle + auto potions
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local GameConfig = require(Shared.Config.GameConfig)
 local ClassesCfg = require(Shared.Config.Classes)
-local ItemDB = require(Shared.Modules.ItemDB)
-local Formulas = require(Shared.Modules.Formulas)
 local Reach = require(Shared.Modules.Reach)
 local Net = require(Shared.Modules.Net)
 local State = require(script.Parent.Parent.State)
@@ -15,7 +12,11 @@ local UI = require(script.Parent.Parent.UI.UIKit)
 
 local Combat = {}
 local player = Players.LocalPlayer
-local WeaponRange = { Knuckles = 8, Sword = 9, Shoes = 8, Hammer = 9, Slingshot = 44, StormBaton = 31, MedKit = 24 }
+-- client walking range = a bit inside the server limit (Modules/WeaponInfo)
+local WeaponRange = {}
+for k, v in pairs(require(game:GetService("ReplicatedStorage").Shared.Modules.WeaponInfo).Range) do
+	WeaponRange[k] = v - 1
+end
 local lastAttack = 0
 local anchor -- where Auto Battle was started
 local busy = false
@@ -33,14 +34,9 @@ local function hum()
 	return c and c:FindFirstChildOfClass("Humanoid")
 end
 
+local WeaponInfo = require(game:GetService("ReplicatedStorage").Shared.Modules.WeaponInfo)
 local function weaponType()
-	local p = State.profile
-	if not p or not p.equipment.weapon then
-		return "Sword"
-	end
-	local e = Formulas.FindItem(p, p.equipment.weapon)
-	local def = e and ItemDB.Get(e.id)
-	return def and def.weaponType or "Sword"
+	return WeaponInfo.TypeOf(State.profile)
 end
 
 local function mobModel(inst)
@@ -301,6 +297,45 @@ function Combat.SetAuto(on)
 	end
 end
 
+-- ===== Dash (Q) =====
+-- The character's physics belong to this client, so the burst happens here (instant, no lag); the server only checks
+-- the cooldown and tells everyone else to draw the streak.
+Combat.dashReadyAt = 0
+function Combat.Dash()
+	local r, h = root(), hum()
+	local cfg = GameConfig.Dash
+	if not r or not h or h.Health <= 0 or os.clock() < Combat.dashReadyAt then
+		return
+	end
+	if h.Sit or h:GetState() == Enum.HumanoidStateType.Swimming then
+		return
+	end
+	Combat.dashReadyAt = os.clock() + cfg.Cooldown
+	local dir = h.MoveDirection
+	if dir.Magnitude < 0.1 then
+		dir = r.CFrame.LookVector
+	end
+	dir = Vector3.new(dir.X, 0, dir.Z).Unit
+	State.chasing = false
+	local att = Instance.new("Attachment")
+	att.Parent = r
+	local lv = Instance.new("LinearVelocity")
+	lv.Attachment0 = att
+	lv.MaxForce = math.huge
+	lv.VelocityConstraintMode = Enum.VelocityConstraintMode.Plane
+	lv.PrimaryTangentAxis = Vector3.xAxis
+	lv.SecondaryTangentAxis = Vector3.zAxis
+	lv.PlaneVelocity = Vector2.new(dir.X, dir.Z) * cfg.Speed
+	lv.RelativeTo = Enum.ActuatorRelativeTo.World
+	lv.Parent = r
+	r.CFrame = CFrame.lookAt(r.Position, r.Position + dir)
+	task.delay(cfg.Duration, function()
+		lv:Destroy()
+		att:Destroy()
+	end)
+	task.spawn(Net.Request, "Dash", { dir = dir })
+end
+
 function Combat.ToggleAuto()
 	Combat.SetAuto(not State.auto)
 end
@@ -413,6 +448,8 @@ function Combat.Start()
 			Combat.ClickAt(input.Position)
 		elseif input.KeyCode == Enum.KeyCode.T then
 			Combat.ToggleAuto()
+		elseif input.KeyCode == Enum.KeyCode.Q then
+			Combat.Dash()
 		elseif input.KeyCode == Enum.KeyCode.Tab then
 			local r = root()
 			if r then

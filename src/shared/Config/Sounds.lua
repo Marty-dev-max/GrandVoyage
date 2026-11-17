@@ -49,6 +49,7 @@ add("MagicCast", "SFX", 0.5, PING, { pitch = 0.7 })
 add("Heal", "SFX", 0.5, PING, { pitch = 1.6 })
 add("MonsterDie", "SFX", 0.5, "rbxasset://sounds/splat.wav", { pitch = 0.85 })
 add("ChestOpen", "SFX", 0.6, PING, { pitch = 0.75, alias = "Purchase" }) -- a lower take on the purchase jingle
+add("ChestRattle", "SFX", 0.55, "rbxasset://sounds/clickfast.wav", { pitch = 0.9 })
 add("BossRoar", "SFX", 0.8, BOOM, { pitch = 0.4 })
 -- Sea
 add("Cannon", "SFX", 0.75, SHOT, { pitch = 0.6, rolloff = 600 })
@@ -73,6 +74,7 @@ add("MusicBoss", "Music", 0.45, "", { looped = true })
 
 
 
+
 -- ===== uploaded asset ids (written by tools/upload_sfx.py) =====
 S.AmbienceSea.id = "rbxassetid://138177780191891"
 S.AmbienceWind.id = "rbxassetid://121665322013245"
@@ -81,6 +83,7 @@ S.Bell.id = "rbxassetid://117065599726354"
 S.BossRoar.id = "rbxassetid://94312411489126"
 S.Cannon.id = "rbxassetid://134315093700416"
 S.CardDrop.id = "rbxassetid://86837197767896"
+S.ChestRattle.id = "rbxassetid://94867031271514"
 S.Coin.id = "rbxassetid://97184686943653"
 S.Crit.id = "rbxassetid://116048330313567"
 S.Equip.id = "rbxassetid://74370616073413"

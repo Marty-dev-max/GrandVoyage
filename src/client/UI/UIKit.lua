@@ -559,7 +559,7 @@ function UI.CharacterView(parent, props)
 	cam.FieldOfView = 26
 	cam.Parent = vp
 	vp.CurrentCamera = cam
-	local yaw = math.rad(200)
+	local yaw = math.rad(-18) -- face the camera (it sits on the -Z side), turned a little for a 3/4 look
 	local model
 	local function place()
 		if model then
@@ -708,6 +708,22 @@ end
 -- windows that can fill the screen (opts.fullscreen): they open full screen and a button next to the X shrinks them
 -- back to a normal window (and back); the choice is remembered per window for this session
 UI.FullPref = {}
+-- a window never sticks out of the screen: offsets are capped to the visible canvas (small screens / Studio panes)
+function UI.FitSize(size)
+	local okSize, vp = pcall(function()
+		return gui.AbsoluteSize
+	end)
+	if not okSize or not vp or vp.X < 10 then
+		return size -- (headless UI harness: no layout sizes)
+	end
+	local sc = math.max(0.01, rootScale.Scale)
+	local inset = 0
+	pcall(function()
+		inset = game:GetService("GuiService").TopbarInset.Max.Y
+	end)
+	local maxW, maxH = vp.X / sc - 40, (vp.Y - inset) / sc - 40
+	return UDim2.new(size.X.Scale, math.min(size.X.Offset, maxW), size.Y.Scale, math.min(size.Y.Offset, maxH))
+end
 function UI.Window(id, title, size, color, icon, opts)
 	opts = opts or {}
 	if openWindows[id] then
@@ -718,7 +734,7 @@ function UI.Window(id, title, size, color, icon, opts)
 		Name = "Win_" .. id,
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.53),
-		Size = size or UDim2.fromOffset(560, 520),
+		Size = UI.FitSize(size or UDim2.fromOffset(560, 520)),
 		BackgroundColor3 = Color3.new(1, 1, 1),
 		ZIndex = 20,
 		Parent = gui,
@@ -776,9 +792,12 @@ function UI.Window(id, title, size, color, icon, opts)
 		local _ = st
 	end
 	tab.ClipsDescendants = false
+	-- X (and the full-screen button) live in one holder: we move the holder, never the buttons, because the hover
+	-- "jump" (UI.Tactile) remembers a button's position and used to snap it back to its old place
+	local ctrl = New("Frame", { Name = "WindowButtons", BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 12, 0, -12), Size = UDim2.fromOffset(opts.fullscreen and 100 or 46, 46), ZIndex = 24, Parent = header })
 	local close = New("TextButton", {
 		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, 12, 0, -12),
+		Position = UDim2.new(1, 0, 0, 0),
 		Size = UDim2.fromOffset(46, 46),
 		BackgroundColor3 = T.Red,
 		Text = "X",
@@ -789,7 +808,7 @@ function UI.Window(id, title, size, color, icon, opts)
 		TextStrokeColor3 = T.Edge,
 		AutoButtonColor = false,
 		ZIndex = 24,
-		Parent = header,
+		Parent = ctrl,
 	})
 	UI.Corner(close, 8)
 	UI.Stroke(close, T.Edge, 3)
@@ -803,14 +822,14 @@ function UI.Window(id, title, size, color, icon, opts)
 			UI.FullPref[id] = true
 		end
 		local maxBtn = New("TextButton", {
-			AnchorPoint = Vector2.new(1, 0),
-			Position = UDim2.new(1, -42, 0, -12),
+			AnchorPoint = Vector2.new(0, 0),
+			Position = UDim2.fromOffset(0, 0),
 			Size = UDim2.fromOffset(46, 46),
 			BackgroundColor3 = T.Gold,
 			Text = "",
 			AutoButtonColor = false,
 			ZIndex = 24,
-			Parent = header,
+			Parent = ctrl,
 		})
 		UI.Corner(maxBtn, 8)
 		UI.Stroke(maxBtn, T.Edge, 3)
@@ -831,6 +850,7 @@ function UI.Window(id, title, size, color, icon, opts)
 			local sc2 = UI.IconChip(slim, icon, color:Lerp(T.Gold, 0.35), 40)
 			sc2.AnchorPoint = Vector2.new(0, 0.5)
 			sc2.Position = UDim2.new(0, 152, 0.5, 0)
+			win.slimChip = sc2
 			for _, d in ipairs(sc2:GetDescendants()) do
 				if d:IsA("GuiObject") then
 					d.ZIndex = 23
@@ -838,7 +858,6 @@ function UI.Window(id, title, size, color, icon, opts)
 			end
 			sc2.ZIndex = 23
 		end
-		local _ = slimTitle
 		local function apply(animate)
 			local full = UI.FullPref[id]
 			local inset = 0
@@ -860,8 +879,19 @@ function UI.Window(id, title, size, color, icon, opts)
 			if frameStroke then
 				frameStroke.Enabled = not full
 			end
-			close.Position = full and UDim2.new(1, -12, 0, (top - 46) / 2) or UDim2.new(1, 12, 0, -12)
-			maxBtn.Position = full and UDim2.new(1, -66, 0, (top - 46) / 2) or UDim2.new(1, -42, 0, -12)
+			ctrl.Position = full and UDim2.new(1, -12, 0, (top - 46) / 2) or UDim2.new(1, 12, 0, -12)
+			-- the slim title starts right after Roblox's own top-left buttons (they are bigger on small screens)
+			local left = 150
+			pcall(function()
+				left = game:GetService("GuiService").TopbarInset.Min.X / math.max(0.01, rootScale.Scale) + 14
+			end)
+			left = math.max(left, 60)
+			if win.slimChip then
+				win.slimChip.Position = UDim2.new(0, left, 0.5, 0)
+			end
+			slimTitle.Position = UDim2.fromOffset(left + (win.slimChip and 50 or 0), 0)
+			slimTitle.Size = UDim2.new(1, -(left + 180), 1, 0)
+			target = full and target or UI.FitSize(windowSize)
 			body.Position = full and UDim2.fromOffset(20, top + 10) or UDim2.fromOffset(16, 58)
 			body.Size = full and UDim2.new(1, -40, 1, -(top + 22)) or UDim2.new(1, -32, 1, -72)
 			big.Size = full and UDim2.fromOffset(16, 13) or UDim2.fromOffset(22, 18)

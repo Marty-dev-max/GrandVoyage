@@ -114,6 +114,19 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
 - Ammo (`Config/Ammo`, slingshot weapons): `p.ammo` picked with the bullet button by the hotbar (`SetAmmo`), 1 item
   used per basic attack in CombatService (falls back to free Pebble Shot), effects via hitTarget opts (critBonus,
   ignoreDef, slow, splash). Ammo items are sold in handfuls at the General Store.
+- Titles (`Config/Titles`, `TitleService`): ladders Voyage (level, per sea) / Pirate (bounty) / Marine (merit ranks) /
+  Class (Job 40) / Fruit (mastery) / Feats (achievement titles, ids = achievement ids) / Special (granted). Tier = rarity
+  color; `soon = true` = next-sea titles shown locked. Once met a title stays in `p.titles`; default Greenhorn; `p.title = ""`
+  = none. Picked in the Bag (title button above the statue). `Controllers/Titles.lua` draws every player's nameplate
+  (title + Lv + name in FredokaOne, Roblox's tag hidden) and prefixes chat with the title in its color (TextChatService).
+- `Controllers/Interact.lua`: every ProximityPrompt uses our styled card (Style = Custom, tap/click works too) and NPC
+  nameplates are restyled on the client (baked map untouched). Chests shake + rattle (`ChestShake` FX) 0.85 s before
+  the server opens them.
+- Weapon type/range: `Shared/Modules/WeaponInfo` (TypeOf = equipped or class weapon; Range) for server and client alike.
+- Q = Dash (client-side LinearVelocity burst, server checks `GameConfig.Dash.Cooldown`, `Dash` FX). Hotbar order:
+  Dash, skills 1-6, F1-F4, expand, [ammo], AUTO. Stats is a main menu tile with a red points badge (no long button).
+- Window buttons (X + full screen) sit in one holder frame that we move (UI.Tactile remembers button positions), windows
+  are capped to the screen (`UI.FitSize`), and tall columns scroll. Loadout supports drag and drop.
 - VFX are ParticleEmitter/Beam based with our own textures (`Config/Textures`); see the toolkit at the top of `Controllers/VFX.lua`.
 - Client controllers start through the protected `start()` in `init.client.lua` (core UI first, visuals in parallel):
   a controller that errors or yields must never block the others (it hid the quest tracker in v0.13.0).

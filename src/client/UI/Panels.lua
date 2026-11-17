@@ -34,6 +34,7 @@ local PetsCfg = require(ReplicatedStorage.Shared.Config.Pets)
 local DailiesCfg = require(ReplicatedStorage.Shared.Config.Dailies)
 local AchievementsCfg = require(ReplicatedStorage.Shared.Config.Achievements)
 local QuestsCfg = require(ReplicatedStorage.Shared.Config.Quests)
+local TitlesCfg = require(ReplicatedStorage.Shared.Config.Titles)
 
 local function req(action, payload, okSound)
 	local res = Net.Request(action, payload)
@@ -168,7 +169,7 @@ function Panels.Inventory()
 	local left = New("Frame", { BackgroundTransparency = 1, Position = UDim2.new(0.36, 0, 0, 0), Size = UDim2.new(0.38, -10, 1, 0), Parent = win.body })
 	local right = UI.Card(win.body, UDim2.new(0.26, 0, 1, 0))
 	right.Position = UDim2.new(0.74, 0, 0, 0)
-	local stage = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), Size = UDim2.new(1, -200, 1, -40), Parent = charPanel })
+	local stage = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 58), Size = UDim2.new(1, -200, 1, -90), Parent = charPanel })
 	New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.glow, ImageColor3 = T.Ocean:Lerp(Color3.new(1, 1, 1), 0.4), ImageTransparency = 0.6, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.55), Size = UDim2.fromScale(1.1, 0.9), Parent = stage })
 	local _, refreshChar = UI.CharacterView(stage)
 	UI.Text(charPanel, "drag to turn", 12, T.TextSoft, "Semi", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -6), Size = UDim2.fromOffset(200, 16), TextXAlignment = Enum.TextXAlignment.Center })
@@ -179,6 +180,89 @@ function Panels.Inventory()
 		slotCols[k] = col
 	end
 	local lastWeaponType
+	-- title: shown above the statue; tap to choose one (Config/Titles)
+	local titleBtn = New("TextButton", { Text = "", AutoButtonColor = false, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 10), Size = UDim2.fromOffset(250, 44), BackgroundColor3 = Color3.new(1, 1, 1), ZIndex = 5, Parent = charPanel })
+	UI.Corner(titleBtn, 12)
+	New("UIGradient", { Color = ColorSequence.new(T.PanelTop, T.PanelDeep), Rotation = 90, Parent = titleBtn })
+	local titleStroke = UI.Stroke(titleBtn, T.Gold, 3)
+	local titleText = UI.Text(titleBtn, "", 18, T.Text, "Display", { Size = UDim2.new(1, -40, 1, 0), Position = UDim2.fromOffset(10, 0), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 6, TextWrapped = false })
+	UI.Text(titleBtn, "✎", 18, T.TextSoft, "Display", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 0), Size = UDim2.fromOffset(20, 44), ZIndex = 6 })
+	UI.Tactile(titleBtn)
+	UI.Tooltip(titleBtn, function()
+		return "Your title: shown above your head and in chat. Tap to change it.", T.Gold
+	end)
+	local titlePicker
+	local titleCat = "Voyage"
+	local function openTitles()
+		if titlePicker then
+			titlePicker:Destroy()
+		end
+		local p = State.profile
+		if not p then
+			return
+		end
+		titlePicker = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), Position = UDim2.fromOffset(6, 6), Size = UDim2.new(1, -12, 1, -12), ZIndex = 30, Parent = charPanel })
+		UI.Corner(titlePicker, 14)
+		New("UIGradient", { Color = ColorSequence.new(T.PanelTop, T.PanelDeep), Rotation = 90, Parent = titlePicker })
+		UI.Stroke(titlePicker, T.Gold, 3)
+		UI.Text(titlePicker, "TITLES", 22, T.Gold, "Display", { Position = UDim2.fromOffset(14, 8), Size = UDim2.fromOffset(200, 28), ZIndex = 31 })
+		local closeB = New("TextButton", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -8, 0, 8), Size = UDim2.fromOffset(34, 34), BackgroundColor3 = T.Red, Text = "X", TextColor3 = Color3.new(1, 1, 1), FontFace = Font.new("rbxasset://fonts/families/FredokaOne.json"), TextSize = 20, ZIndex = 32, Parent = titlePicker })
+		UI.Corner(closeB, 8)
+		closeB.Activated:Connect(function()
+			titlePicker:Destroy()
+			titlePicker = nil
+		end)
+		local tabs = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(10, 44), Size = UDim2.new(1, -20, 0, 34), ZIndex = 31, Parent = titlePicker })
+		local cats = {}
+		for _, c in ipairs(TitlesCfg.Categories) do
+			table.insert(cats, { c, "", c, T.Gold })
+		end
+		local tb = UI.TabBar(tabs, cats, titleCat, function(c)
+			titleCat = c
+			openTitles()
+		end, 30)
+		for _, d in ipairs(tb:GetDescendants()) do
+			if d:IsA("GuiObject") then
+				d.ZIndex = 32
+			end
+		end
+		local list = UI.Scroll(titlePicker, UDim2.new(1, -16, 1, -92))
+		list.Position = UDim2.fromOffset(8, 86)
+		list.ZIndex = 31
+		UI.List(list, nil, 6)
+		local current = p.title == nil and TitlesCfg.Default or p.title
+		local function row(name, color, sub, owned, equipped, onPick, order)
+			local r = New("TextButton", { Text = "", AutoButtonColor = false, Size = UDim2.new(1, -10, 0, 52), BackgroundColor3 = owned and T.Panel or T.PanelDeep, LayoutOrder = order, ZIndex = 32, Parent = list })
+			UI.Corner(r, 10)
+			UI.Stroke(r, equipped and T.Gold or T.Edge, equipped and 3.5 or 2)
+			UI.Text(r, name, 18, owned and color or T.TextSoft, "Display", { Position = UDim2.fromOffset(12, 3), Size = UDim2.new(1, -110, 0, 24), ZIndex = 33, TextWrapped = false })
+			UI.Text(r, sub, 12, T.TextSoft, "Semi", { Position = UDim2.fromOffset(12, 27), Size = UDim2.new(1, -110, 0, 20), ZIndex = 33 })
+			UI.Text(r, equipped and "WEARING" or (owned and "WEAR" or "🔒"), 14, equipped and T.Green or (owned and T.Gold or T.TextSoft), "Display", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 0), Size = UDim2.fromOffset(90, 52), TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 33 })
+			if owned and not equipped then
+				UI.Tactile(r)
+				r.Activated:Connect(onPick)
+			end
+		end
+		row("No title", T.Text, "Show only your name", true, current == "", function()
+			req("SetTitle", {})
+			titlePicker:Destroy()
+			titlePicker = nil
+		end, 0)
+		for k, t in ipairs(TitlesCfg.List) do
+			if t.category == titleCat then
+				local owned = p.titles and p.titles[t.id] == true
+				local tier = Rarity.Get(t.tier)
+				row(t.name, tier.color, string.upper(t.tier) .. "  •  " .. (t.soon and not owned and "coming with the next sea" or t.desc), owned, current == t.id, function()
+					req("SetTitle", { id = t.id }, "Equip")
+					if titlePicker then
+						titlePicker:Destroy()
+						titlePicker = nil
+					end
+				end, k)
+			end
+		end
+	end
+	titleBtn.Activated:Connect(openTitles)
 	UI.Pad(right, 12)
 	local filterRow = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 38), Parent = left })
 	local grid = UI.Scroll(left, UDim2.new(1, 0, 1, -44))
@@ -328,6 +412,18 @@ function Panels.Inventory()
 	end
 
 	local function drawEquip(p)
+		local tid = p.title == nil and TitlesCfg.Default or p.title
+		local tdef = TitlesCfg.ById[tid or ""]
+		if tdef and p.titles and p.titles[tdef.id] then
+			local tier = Rarity.Get(tdef.tier)
+			titleText.Text = "« " .. tdef.name .. " »"
+			titleText.TextColor3 = tier.color
+			titleStroke.Color = tier.color
+		else
+			titleText.Text = "No title  •  tap to pick"
+			titleText.TextColor3 = T.TextSoft
+			titleStroke.Color = T.Edge
+		end
 		for _, col in ipairs(slotCols) do
 			clear(col)
 			UI.List(col, nil, 14)
@@ -475,7 +571,9 @@ function Panels.Stats()
 	local nameLabel = UI.Text(charPanel, "", 24, T.Text, "Display", { Position = UDim2.fromOffset(14, 10), Size = UDim2.new(1, -28, 0, 28) })
 	local subLabel = UI.Text(charPanel, "", 15, T.TextSoft, "Semi", { Position = UDim2.fromOffset(14, 40), Size = UDim2.new(1, -28, 0, 20) })
 	UI.Text(charPanel, "drag to turn", 12, T.TextSoft, "Semi", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -6), Size = UDim2.fromOffset(200, 16), TextXAlignment = Enum.TextXAlignment.Center })
-	local right = New("Frame", { BackgroundTransparency = 1, Position = UDim2.new(0.38, 0, 0, 0), Size = UDim2.new(0.62, 0, 1, 0), Parent = win.body })
+	-- scrolls when the window is short (small screens) instead of spilling out of the frame
+	local right = UI.Scroll(win.body, UDim2.new(0.62, 0, 1, 0))
+	right.Position = UDim2.new(0.38, 0, 0, 0)
 	local desc = { STR = "Physical attack", AGI = "Attack speed / dodge", VIT = "HP / defense", INT = "Magic / SP", DEX = "Accuracy / ranged", LUK = "Crits / drops" }
 	local pend = {}
 	local drawn = false
@@ -508,7 +606,7 @@ function Panels.Stats()
 		end
 		local left = p.statPoints - planCost(p)
 
-		local tbl = UI.Card(right, UDim2.new(1, 0, 0, 470), T.Panel)
+		local tbl = UI.Card(right, UDim2.new(1, -12, 0, 470), T.Panel)
 		UI.Pad(tbl, 14)
 		-- header: points left + reset plan
 		UI.Text(tbl, "POINTS LEFT", 16, T.TextSoft, "Display", { Size = UDim2.fromOffset(140, 30) })
@@ -571,7 +669,7 @@ function Panels.Stats()
 		ah.Position = UDim2.new(0.5, 0, 1, 0)
 
 		-- combat numbers
-		local cs = UI.Card(right, UDim2.new(1, 0, 1, -482), T.PanelDeep)
+		local cs = UI.Card(right, UDim2.new(1, -12, 0, 150), T.PanelDeep)
 		cs.Position = UDim2.fromOffset(0, 482)
 		UI.Pad(cs, 12)
 		local grid = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Parent = cs })
@@ -673,6 +771,74 @@ function Panels.Skills(args)
 		skillsView.side = args.tab
 	end
 	local win = UI.Window("Skills", "Skills", UDim2.fromOffset(1000, 620), T.Gold, "✨", { fullscreen = true })
+	-- drag and drop (Loadout): press a skill / item / slot, move, release over a slot. Dragging a slot off the bar
+	-- empties it. A press that does not move stays a tap (tap-then-tap still works, e.g. on phones).
+	local UIS = game:GetService("UserInputService")
+	local drag, lastDrop = nil, 0
+	local dropTargets = {}
+	local onDrop -- set by the loadout: function(payload, target or nil)
+	local function inside(btn, pt)
+		local a, sz = btn.AbsolutePosition, btn.AbsoluteSize
+		return pt.X >= a.X and pt.X <= a.X + sz.X and pt.Y >= a.Y and pt.Y <= a.Y + sz.Y
+	end
+	local function draggable(btn, payload, img, color)
+		btn.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				drag = { payload = payload, start = Vector2.new(input.Position.X, input.Position.Y), img = img, color = color }
+			end
+		end)
+	end
+	local conns = {}
+	table.insert(conns, UIS.InputChanged:Connect(function(input)
+		if not drag or (input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch) then
+			return
+		end
+		local pt = Vector2.new(input.Position.X, input.Position.Y)
+		local sc = UI.GetScale()
+		if not drag.ghost and (pt - drag.start).Magnitude > 10 then
+			local g = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(64, 64), BackgroundColor3 = drag.color or T.Panel, BackgroundTransparency = 0.15, ZIndex = 90, Parent = UI.Root })
+			UI.Corner(g, 12)
+			UI.Stroke(g, T.Gold, 3)
+			if drag.img then
+				New("ImageLabel", { BackgroundTransparency = 1, Image = drag.img, Size = UDim2.fromScale(0.8, 0.8), Position = UDim2.fromScale(0.1, 0.1), ScaleType = Enum.ScaleType.Fit, ZIndex = 91, Parent = g })
+			end
+			drag.ghost = g
+		end
+		if drag.ghost then
+			-- InputObject positions leave out the top-bar inset (mouse and touch alike); our UI root does not
+			local inset = 0
+			pcall(function()
+				inset = game:GetService("GuiService"):GetGuiInset().Y
+			end)
+			drag.ghost.Position = UDim2.fromOffset(pt.X / sc, (pt.Y + inset) / sc)
+			drag.pt = Vector2.new(pt.X, pt.Y + inset)
+		end
+	end))
+	table.insert(conns, UIS.InputEnded:Connect(function(input)
+		if not drag or (input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch) then
+			return
+		end
+		local d = drag
+		drag = nil
+		if d.ghost then
+			d.ghost:Destroy()
+			lastDrop = os.clock()
+			local hit
+			for _, t in ipairs(dropTargets) do
+				if t.btn.Parent and inside(t.btn, d.pt or d.start) then
+					hit = t
+				end
+			end
+			if onDrop then
+				onDrop(d.payload, hit)
+			end
+		end
+	end))
+	win.frame.Destroying:Connect(function()
+		for _, c in ipairs(conns) do
+			c:Disconnect()
+		end
+	end)
 	local side = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(0, 150, 1, 0), Parent = win.body })
 	UI.List(side, nil, 10)
 	local content = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(162, 0), Size = UDim2.new(1, -162, 1, 0), Parent = win.body })
@@ -822,11 +988,25 @@ function Panels.Skills(args)
 	-- ---------- loadout ----------
 	local sel -- { kind = "skill"|"item", id } or { kind = "slot", bar = "skill"|"item", i }
 	local function renderLoadout(p)
+		dropTargets = {}
 		local left = UI.Scroll(content, UDim2.new(0.55, -10, 1, 0))
 		UI.List(left, nil, 8)
-		local right = New("Frame", { BackgroundTransparency = 1, Position = UDim2.new(0.55, 0, 0, 0), Size = UDim2.new(0.45, 0, 1, 0), Parent = content })
+		local right = UI.Scroll(content, UDim2.new(0.45, 0, 1, 0))
+		right.Position = UDim2.new(0.55, 0, 0, 0)
 		UI.List(right, nil, 10)
+		-- slot size follows the column width so 6 slots always fit inside the card
+		local okW, absW = pcall(function()
+			return content.AbsoluteSize.X
+		end)
+		local colW = (okW and absW or 0) * 0.45
+		local SL = (colW > 100) and math.clamp(math.floor((colW - 44 - 5 * 6) / 6), 38, 56) or 56
 
+		local tilePayload
+		local function tileDrag(b, img, color)
+			if tilePayload then
+				draggable(b, tilePayload, img, color)
+			end
+		end
 		local function tile(parent, img, title, color, picked, onClick, extra)
 			local holder = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(96, 128), Parent = parent })
 			local b = New("TextButton", { Text = "", AutoButtonColor = false, Size = UDim2.fromOffset(96, 96), BackgroundColor3 = Color3.new(1, 1, 1), Parent = holder })
@@ -838,7 +1018,12 @@ function Panels.Skills(args)
 			end
 			UI.Text(holder, title, 13, T.Text, "Bold", { Position = UDim2.fromOffset(0, 98), Size = UDim2.new(1, 0, 0, 30), TextXAlignment = Enum.TextXAlignment.Center })
 			UI.Tactile(b)
-			b.Activated:Connect(onClick)
+			b.Activated:Connect(function()
+				if os.clock() - lastDrop > 0.2 then
+					onClick()
+				end
+			end)
+			tileDrag(b, img, color)
 			if extra then
 				extra(b)
 			end
@@ -870,10 +1055,11 @@ function Panels.Skills(args)
 			consider(s)
 		end
 		for _, group in ipairs({ { "⚔️", "Attack skills", attack, T.Red }, { "✨", "Support skills", support, T.Green } }) do
-			UI.Section(left, group[1], group[2], group[4], "tap, then tap a slot")
+			UI.Section(left, group[1], group[2], group[4], "drag onto a slot")
 			local g = gridIn(left, #group[3])
 			for _, s in ipairs(group[3]) do
 				local picked = sel and sel.kind == "skill" and sel.id == s.id
+				tilePayload = { kind = "skill", id = s.id }
 				tile(g, SkillLook.IconId(s), s.name, SkillLook.Color(s), picked, function()
 					sel = picked and nil or { kind = "skill", id = s.id }
 					render()
@@ -905,7 +1091,7 @@ function Panels.Skills(args)
 				table.insert(items, def)
 			end
 		end
-		UI.Section(left, "🍖", "Quick items", T.Ocean, #items == 0 and "no food or potions in your bag" or "tap, then tap an F slot")
+		UI.Section(left, "🍖", "Quick items", T.Ocean, #items == 0 and "no food or potions in your bag" or "drag onto an F slot")
 		local ig = gridIn(left, #items)
 		for _, def in ipairs(items) do
 			local picked = sel and sel.kind == "item" and sel.id == def.id
@@ -915,6 +1101,7 @@ function Panels.Skills(args)
 					qty += e.qty or 1
 				end
 			end
+			tilePayload = { kind = "item", id = def.id }
 			tile(ig, UI.ItemIconId(def), def.name .. " x" .. qty, T.Ocean, picked, function()
 				sel = picked and nil or { kind = "item", id = def.id }
 				render()
@@ -922,18 +1109,18 @@ function Panels.Skills(args)
 		end
 
 		-- the hotbar layout
-		local card = UI.Card(right, UDim2.new(1, 0, 0, 360), T.PanelDeep)
+		local card = UI.Card(right, UDim2.new(1, -12, 0, 84 + 4 * (SL + 6) + 26), T.PanelDeep)
 		card.LayoutOrder = 1
 		UI.Pad(card, 12)
 		UI.Text(card, "HOTBAR", 20, T.Gold, "Display", { Size = UDim2.new(1, 0, 0, 24) })
-		UI.Text(card, "Tap a skill or item on the left, then a slot. Tap two slots to swap them.", 13, T.TextSoft, "Semi", { Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 0, 18) })
+		UI.Text(card, "Drag a skill or item onto a slot (or tap it, then a slot). Drag a slot off to empty it.", 13, T.TextSoft, "Semi", { Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 0, 18) })
 		local Combat = require(script.Parent.Parent.Controllers.Combat)
 		local function slotRow(y, bar, from, to, keyFn, look)
-			local r = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, y), Size = UDim2.new(1, 0, 0, 60), Parent = card })
+			local r = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, y), Size = UDim2.new(1, 0, 0, SL + 4), Parent = card })
 			UI.List(r, Enum.FillDirection.Horizontal, 6)
 			for i = from, to do
 				local picked = sel and sel.kind == "slot" and sel.bar == bar and sel.i == i
-				local b = New("TextButton", { Text = "", AutoButtonColor = false, Size = UDim2.fromOffset(56, 56), BackgroundColor3 = Color3.new(1, 1, 1), Parent = r })
+				local b = New("TextButton", { Text = "", AutoButtonColor = false, Size = UDim2.fromOffset(SL, SL), BackgroundColor3 = Color3.new(1, 1, 1), Parent = r })
 				UI.Corner(b, 10)
 				local img, col = look(i)
 				New("UIGradient", { Color = ColorSequence.new(col:Lerp(Color3.new(1, 1, 1), 0.15), col:Lerp(Color3.new(0, 0, 0), 0.45)), Rotation = 90, Parent = b })
@@ -943,7 +1130,14 @@ function Panels.Skills(args)
 				end
 				UI.Text(b, keyFn(i), 12, T.Gold, "Display", { Position = UDim2.fromOffset(4, 1), Size = UDim2.fromOffset(24, 14) })
 				UI.Tactile(b)
+				table.insert(dropTargets, { btn = b, bar = bar, i = i })
+				if img then
+					draggable(b, { kind = "slot", bar = bar, i = i }, img, col)
+				end
 				b.Activated:Connect(function()
+					if os.clock() - lastDrop < 0.2 then
+						return
+					end
 					local list = bar == "skill" and padded(p.skillBar, GameConfig.SkillBarSize) or padded(p.itemBar, GameConfig.ItemBarSize)
 					local function commit()
 						sel = nil
@@ -981,20 +1175,59 @@ function Panels.Skills(args)
 			local def = p.itemBar and ItemDB.Get(p.itemBar[i] or "")
 			return def and UI.ItemIconId(def), def and T.Ocean or T.Panel
 		end
+		local rowH = SL + 6
 		UI.Text(card, "SKILLS", 14, T.Text, "Display", { Position = UDim2.fromOffset(0, 48), Size = UDim2.new(1, 0, 0, 16) })
 		slotRow(66, "skill", 1, 6, function(i)
 			return Combat.SKILL_KEY_LABELS[i]
 		end, skillLook)
-		slotRow(128, "skill", 7, 12, function(i)
+		slotRow(66 + rowH, "skill", 7, 12, function(i)
 			return Combat.SKILL_KEY_LABELS[i]
 		end, skillLook)
-		UI.Text(card, "QUICK ITEMS", 14, T.Text, "Display", { Position = UDim2.fromOffset(0, 192), Size = UDim2.new(1, 0, 0, 16) })
-		slotRow(210, "item", 1, 4, function(i)
+		local iy = 66 + 2 * rowH + 6
+		UI.Text(card, "QUICK ITEMS", 14, T.Text, "Display", { Position = UDim2.fromOffset(0, iy), Size = UDim2.new(1, 0, 0, 16) })
+		slotRow(iy + 18, "item", 1, 4, function(i)
 			return "F" .. i
 		end, itemLook)
-		slotRow(272, "item", 5, 8, function(i)
+		slotRow(iy + 18 + rowH, "item", 5, 8, function(i)
 			return "F" .. i
 		end, itemLook)
+		-- drag and drop: same rules as tapping (place / move / swap), plus "drag a slot off the bar to empty it"
+		onDrop = function(payload, target)
+			local function listOf(bar)
+				return bar == "skill" and padded(p.skillBar, GameConfig.SkillBarSize) or padded(p.itemBar, GameConfig.ItemBarSize)
+			end
+			local function save(bar, list)
+				if bar == "skill" then
+					setBar(p, list)
+				else
+					setItemBar(p, list)
+				end
+			end
+			sel = nil
+			if payload.kind == "slot" then
+				local list = listOf(payload.bar)
+				if not target then
+					list[payload.i] = ""
+				elseif target.bar == payload.bar then
+					list[payload.i], list[target.i] = list[target.i], list[payload.i]
+				else
+					render()
+					return
+				end
+				save(payload.bar, list)
+			elseif target and target.bar == payload.kind then
+				local list = listOf(target.bar)
+				for k = 1, #list do
+					if list[k] == payload.id then
+						list[k] = ""
+					end
+				end
+				list[target.i] = payload.id
+				save(target.bar, list)
+			end
+			render()
+		end
+
 		-- clear the picked slot
 		if sel and sel.kind == "slot" then
 			local _, h = UI.Button(card, "Clear slot", T.Red, UDim2.fromOffset(130, 40), function()
@@ -1015,7 +1248,7 @@ function Panels.Skills(args)
 
 		-- Auto Battle range + potion threshold
 		local ab = GameConfig.AutoBattle
-		local auto = UI.Card(right, UDim2.new(1, 0, 0, 150), T.PanelDeep)
+		local auto = UI.Card(right, UDim2.new(1, -12, 0, 150), T.PanelDeep)
 		auto.LayoutOrder = 2
 		UI.Pad(auto, 12)
 		UI.Text(auto, "AUTO BATTLE", 20, T.Green, "Display", { Size = UDim2.new(1, 0, 0, 24) })
@@ -1591,7 +1824,8 @@ end
 -- ===================== MAP / FAST TRAVEL =====================
 function Panels.FastTravel()
 	local win = UI.Window("Map", Islands.SeaName, UDim2.fromOffset(1000, 480), T.Ocean, "🗺️", { fullscreen = true })
-	local strip = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), Size = UDim2.new(1, 0, 0, 280), Parent = win.body })
+	-- the sea strip sits in the middle of the window (full screen used to leave it stuck to the top)
+	local strip = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 0, 0.5, -36), Size = UDim2.new(1, 0, 0, 280), Parent = win.body })
 	UI.Corner(strip, 16)
 	UI.Gradient(strip, Color3.fromRGB(110, 210, 245), Color3.fromRGB(50, 150, 210), 90)
 	UI.Stroke(strip, T.Edge, 3)
@@ -1642,7 +1876,7 @@ function Panels.FastTravel()
 	UI.Corner(rl, 16)
 	UI.Stroke(rl, T.Edge, 3)
 	UI.Text(rl, string.upper(Islands.RedLine.name) .. "\n⛰\nLv." .. GameConfig.GrandLineLevel, 18, T.Text, "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center })
-	UI.Text(win.body, "Islands lie in a straight line: sail east to reach the next one. Stay in the windy lane: the Doldrums at the edges have no wind and Leviathans. Past " .. Islands.List[n].name .. ", " .. Islands.RedLine.peakName .. " leads to the " .. Islands.RedLine.nextSea .. " (next update).", 16, T.TextSoft, "Semi", { Position = UDim2.fromOffset(0, 292), Size = UDim2.new(1, 0, 0, 60) })
+	UI.Text(win.body, "Islands lie in a straight line: sail east to reach the next one. Stay in the windy lane: the Doldrums at the edges have no wind and Leviathans. Past " .. Islands.List[n].name .. ", " .. Islands.RedLine.peakName .. " leads to the " .. Islands.RedLine.nextSea .. " (next update).", 16, T.TextSoft, "Semi", { Position = UDim2.new(0, 0, 0.5, 112), Size = UDim2.new(1, 0, 0, 60), TextXAlignment = Enum.TextXAlignment.Center })
 end
 Panels.Map = Panels.FastTravel
 
@@ -2314,8 +2548,8 @@ function Panels.Quests(args)
 			UI.Section(body, "🏆", "Achievements", T.Purple, n .. " / " .. #AchievementsCfg.List)
 			-- title picker
 			local titleRow = UI.Card(body, UDim2.new(1, -12, 0, 54), T.Purple:Lerp(T.Panel, 0.75))
-			local cur = p.title and AchievementsCfg.ById[p.title]
-			UI.Text(titleRow, "Title shown above your head:  " .. (cur and ("« " .. cur.title .. " »") or "none"), 16, T.Text, "Display", { Position = UDim2.fromOffset(14, 0), Size = UDim2.new(1, -200, 1, 0) })
+			local cur = TitlesCfg.ById[(p.title == nil and TitlesCfg.Default) or p.title or ""]
+			UI.Text(titleRow, "Title:  " .. (cur and ("« " .. cur.name .. " »") or "none") .. "   (all titles: Bag -> title button)", 16, T.Text, "Display", { Position = UDim2.fromOffset(14, 0), Size = UDim2.new(1, -200, 1, 0) })
 			if cur then
 				local _, h = UI.Button(titleRow, "Hide title", T.Grey, UDim2.fromOffset(150, 40), function()
 					req("SetTitle", {})
@@ -2416,43 +2650,79 @@ end
 
 -- ===================== PETS =====================
 function Panels.Pets()
-	local win = UI.Window("Pets", "Sea Companions", UDim2.fromOffset(880, 580), T.Green, "🐾", { fullscreen = true })
+	-- like the Bag: a grid of square tiles (the pet itself), name on hover, sorted the way you like
+	local win = UI.Window("Pets", "Sea Companions", UDim2.fromOffset(980, 600), T.Green, "🐾", { fullscreen = true })
 	local selected
-	local left = UI.Scroll(win.body, UDim2.new(0.5, -6, 1, 0))
-	local right = UI.Card(win.body, UDim2.new(0.5, -6, 1, 0))
-	right.Position = UDim2.new(0.5, 6, 0, 0)
+	local sortBy = "Recent"
+	local top = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(0.6, -10, 0, 40), Parent = win.body })
+	local left = UI.Scroll(win.body, UDim2.new(0.6, -10, 1, -48))
+	left.Position = UDim2.fromOffset(0, 48)
+	New("UIGridLayout", { CellSize = UDim2.fromOffset(96, 96), CellPadding = UDim2.fromOffset(10, 10), SortOrder = Enum.SortOrder.LayoutOrder, Parent = left })
+	New("UIPadding", { PaddingTop = UDim.new(0, 6), PaddingLeft = UDim.new(0, 6), Parent = left })
+	local right = UI.Card(win.body, UDim2.new(0.4, 0, 1, 0))
+	right.Position = UDim2.new(0.6, 0, 0, 0)
 	UI.Pad(right, 12)
-	local function render()
+	local render
+	render = function()
 		clear(left)
 		clear(right)
+		clear(top)
 		local p = State.profile
 		if not p then
 			return
 		end
 		local pets = p.pets or {}
-		UI.List(left, nil, 6)
-		UI.Section(left, "🐾", "Your Companions", T.Green, #pets .. "/" .. PetsCfg.MaxPets)
+		local bar = UI.TabBar(top, { { "Recent", "🕒", "Recent", T.Ocean }, { "Rarity", "⭐", "Rarity", T.Gold }, { "Level", "📈", "Level", T.Green } }, sortBy, function(id)
+			sortBy = id
+			render()
+		end, 32)
+		bar.Size = UDim2.new(1, -90, 1, 0)
+		UI.Text(top, #pets .. "/" .. PetsCfg.MaxPets, 18, T.Text, "Number", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 6), Size = UDim2.fromOffset(80, 24), TextXAlignment = Enum.TextXAlignment.Right })
 		if #pets == 0 then
-			UI.Text(left, "No companions yet.\n• Hatch eggs from chests (or the Pearl Shop)\n• Buy Sea Bait at the General Store, weaken a Beach Crab or Wild Boar below 35% HP, then press 🪤 Capture", 14, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 90) })
+			local tip = UI.Text(left, "No companions yet.\n• Hatch eggs from chests (or the Shop)\n• Buy Sea Bait at the General Store, weaken a Beach Crab or Wild Boar below 35% HP, then press 🪤 Capture", 14, T.TextSoft, "Semi", { Size = UDim2.fromOffset(420, 90) })
+			local _ = tip
 		end
-		for _, pet in ipairs(pets) do
-			local sp = PetsCfg.ById[pet.species]
-			if sp then
-				local isActive = p.activePet == pet.uid
-				local card = New("TextButton", { Text = "", AutoButtonColor = false, Size = UDim2.new(1, -12, 0, 62), BackgroundColor3 = Color3.new(1, 1, 1), Parent = left })
-				UI.Corner(card, 12)
-				UI.RarityStyle(card, sp.rarity)
-				UI.Tactile(card)
-				local chip = UI.IconChip(card, sp.icon, sp.color, 44)
-				chip.Position = UDim2.fromOffset(8, 9)
-				chip.ZIndex = 4
-				UI.Text(card, sp.stages[pet.stage] .. (isActive and "  ⭐" or ""), 18, T.Text, "Display", { Position = UDim2.fromOffset(60, 8), Size = UDim2.new(1, -70, 0, 22), ZIndex = 4, TextWrapped = false })
-				UI.Text(card, "Lv." .. pet.level .. "  •  Stage " .. pet.stage .. "/3  •  " .. sp.rarity, 13, T.Text, "Semi", { Position = UDim2.fromOffset(60, 32), Size = UDim2.new(1, -70, 0, 18), ZIndex = 4 })
-				card.Activated:Connect(function()
-					selected = pet.uid
-					render()
-				end)
+		local order = {}
+		for i, pet in ipairs(pets) do
+			if PetsCfg.ById[pet.species] then
+				table.insert(order, { pet = pet, i = i, rank = Rarity.Get(PetsCfg.ById[pet.species].rarity).rank or 0 })
 			end
+		end
+		table.sort(order, function(a, b)
+			if sortBy == "Rarity" and a.rank ~= b.rank then
+				return a.rank > b.rank
+			elseif sortBy == "Level" and a.pet.level ~= b.pet.level then
+				return a.pet.level > b.pet.level
+			end
+			return a.i > b.i -- newest first
+		end)
+		for k, o in ipairs(order) do
+			local pet = o.pet
+			local sp = PetsCfg.ById[pet.species]
+			local isActive = p.activePet == pet.uid
+			local tile = New("TextButton", { Text = "", AutoButtonColor = false, BackgroundColor3 = Color3.new(1, 1, 1), LayoutOrder = k, Parent = left })
+			UI.Corner(tile, 14)
+			UI.RarityStyle(tile, sp.rarity, pet.uid == selected)
+			UI.Tactile(tile)
+			local key = sp.id .. "_" .. pet.stage
+			local view = UI.ModelAsset("Pets", key) and UI.ModelView(tile, "Pets", key, 84, false, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), ZIndex = 4 })
+			if not view then
+				local chip = UI.IconChip(tile, sp.icon, sp.color, 56)
+				chip.AnchorPoint = Vector2.new(0.5, 0.5)
+				chip.Position = UDim2.fromScale(0.5, 0.5)
+				chip.ZIndex = 4
+			end
+			UI.Text(tile, "Lv." .. pet.level, 13, T.Text, "Number", { AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -5, 1, -3), Size = UDim2.fromOffset(50, 15), TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 5 })
+			if isActive then
+				UI.Text(tile, "⭐", 18, T.Gold, "Display", { Position = UDim2.fromOffset(4, 2), Size = UDim2.fromOffset(22, 22), ZIndex = 5 })
+			end
+			UI.Tooltip(tile, function()
+				return "<b>" .. sp.stages[pet.stage] .. "</b>" .. (isActive and "  (summoned)" or "") .. "\nLv." .. pet.level .. "  •  Stage " .. pet.stage .. "/3  •  " .. sp.rarity, Rarity.Get(sp.rarity).color
+			end)
+			tile.Activated:Connect(function()
+				selected = pet.uid
+				render()
+			end)
 		end
 		-- detail
 		local pet = selected and (function()

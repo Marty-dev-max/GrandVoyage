@@ -352,6 +352,28 @@ local function setup()
 		return true
 	end, 0.2)
 
+	-- Manual mode swing at the air (owner, v0.22.8: a click always punches, even with nothing in reach): the same
+	-- attack clip for everyone to see, no target, no damage, no ammo; shares the attack-speed limit with Attack
+	Net.Handle("Swing", function(player, data)
+		if not alive(player) or player:GetAttribute("Vending") then
+			return false
+		end
+		local d = R.PlayerService.Derived(player)
+		local now = os.clock()
+		if lastAttack[player] and now - lastAttack[player] < d.attackInterval * 0.92 then
+			return false
+		end
+		local root = R.PlayerService.Root(player)
+		local dir = typeof(data.dir) == "Vector3" and Vector3.new(data.dir.X, 0, data.dir.Z) or Vector3.zero
+		dir = dir.Magnitude > 0.01 and dir.Unit or root.CFrame.LookVector
+		lastAttack[player] = now
+		local wType = weaponType(player)
+		R.WeaponService.Draw(player, wType)
+		local n, _, speed = comboStep(player, wType)
+		Net.FX("BasicAttack", { from = root.Position, to = root.Position + dir * (WeaponRange[wType] or 8), weapon = wType, char = player.Character, combo = n, speed = speed, miss = true }, root.Position, 250)
+		return true
+	end, 0.15)
+
 	-- Dash: the client moves itself; we keep the cooldown honest and broadcast the streak for everyone else
 	local lastDash = {}
 	Net.Handle("Dash", function(player, data)

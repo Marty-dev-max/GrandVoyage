@@ -919,7 +919,10 @@ handlers.BasicAttack = function(d)
 		if weapon == "Shoes" then
 			VFX.SpeedLines(d.from, d.to, Color3.fromRGB(255, 230, 190), 5)
 		end
-		task.delay(strike, weaponFX[weapon], d, n)
+		-- a swing at the air (manual mode, nothing in reach): the clip + whoosh, no impact burst
+		if not d.miss then
+			task.delay(strike, weaponFX[weapon], d, n)
+		end
 	else
 		-- shots leave on the release frame of the draw / throw
 		task.delay(math.max(0, strike - 0.02), weaponFX[weapon], d, n)

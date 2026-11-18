@@ -80,7 +80,7 @@ def tail():
     # tail fin: a tall vertical blade at the end
     for k in range(9):
         y = 33 + k
-        h = 4 + k * 1.3
+        h = 2 + k * 0.65  # moderate fluke (v0.22.8: the tall blade stuck out above and below)
         g.add(g.d_box((cx, y, cz - 2), (0.8, 0.6, h)), lambda m: CREST if k < 7 else CREST_TIP)
     g.bake_ao(0.35)
     return g

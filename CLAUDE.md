@@ -173,6 +173,10 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   Audio.SetUnderwater EQ muffling, AmbienceUnderwater loop, WaterPlunge/WaterSurface). Sea floor + reefs: WorldBuilder
   buildSeaFloor (own Random). Ambience loops come from `tools/gen_ambience.py` (numpy + scipy, 44.1 kHz, seamless).
   Kit.Flowers / Kit.Plant are EnvProps dressed with the Env meshes (no more ball flowers); no monster-area signposts.
+  v0.22.8: the synthesized ambience crackled (owner): AmbienceSea / AmbienceIsland / AmbienceUnderwater / WaterPlunge /
+  WaterSurface now use real ProSoundEffects recordings from the Creator Store (licensed for every Roblox game; ids set
+  in Sounds.lua add(..., { id = })). Find more with apis.roblox.com/toolbox-service/v1/marketplace/3?keyword=... +
+  /v1/items/details (creator ProSoundEffects). Do not go back to synthesized noise loops.
 - v0.22.5 Bay Serpent = full body: head is the monster (`Mon_BaySerpent`, parts Head + Jaw hinged at its back),
   body/tail pieces `Serp_Seg` / `Serp_Tail` (Assets.Serpent, tools/blender/serpent.py) chained along the head's trail by
   `Shared/Modules/SerpentChain` (server: BodyPts attribute -> Reach.Gap counts the whole body; client:
@@ -180,7 +184,9 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   enables it; MonsterService serpentAttack = telegraphed lunge bite / water spit / tail slam (Telegraph FX kind
   line|circle, SerpentBite/SerpentSpit/SerpentTail FX, Mon_SerpentBite/Mon_SerpentSpit clips). Daybreak paths: no
   coplanar overlaps (exact segment lengths, lower joints, per-path height step, clipped at the plaza ring), quay blocks
-  alternate height; no direction signposts on Daybreak (owner). Island music = MusicJazz (owner's track, assets/music).
+  alternate height (paths also alternate 0.05 per segment: bends overlap); no direction signposts on Daybreak (owner).
+  Serpent v0.22.8: 13 overlapping segments (spacing 6.4 < 10.8 length), each faces along its neighbours, gentle wiggle;
+  Manual mode swings at the air when nothing is in reach (`Swing` request -> BasicAttack FX with miss = true). Island music = MusicJazz (owner's track, assets/music).
 - Lune's CFrame.lookAt is WRONG (flips Z). tools/bake.luau passes a fixed `CFrame.lookAt` (fromMatrix) to the world code;
   before v0.22.6 every lookAt-placed part of the baked map faced the wrong way (overlapping paths / quay). Any new
   Lune tool that runs game code must use the same shim. In-game Roblox lookAt is fine.

@@ -26,7 +26,9 @@ function C.Offsets(spec)
 		d += spec.spacing * k
 	end
 	local kt = scaleOf(spec, spec.segments)
-	table.insert(out, { d = d - spec.spacing * kt * 0.5 + spec.tailLength * kt * 0.5, scale = kt, tail = true })
+	local last = out[#out]
+	-- the tail's front tucks under the last segment (no gap)
+	table.insert(out, { d = last.d + spec.spacing * last.scale * 0.5 + spec.tailLength * kt * 0.5 - 3 * kt, scale = kt, tail = true })
 	return out
 end
 

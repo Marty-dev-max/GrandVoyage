@@ -235,11 +235,34 @@ function Combat.ManualAttack(screenPos)
 	end
 	local target = manualTarget(screenPos)
 	if not target then
-		-- nothing in reach: still select what you clicked (HP bar, skills), but never walk there
+		-- nothing in reach: still select what you clicked (HP bar, skills), never walk there, and swing anyway:
+		-- toward the pointer, else the way you face (v0.22.8)
 		local picked = screenPos and Combat.PickMob(screenPos)
 		if picked and picked ~= State.target then
 			Combat.SetTarget(picked)
 		end
+		local d = State.derived
+		if os.clock() - lastAttack < (d and d.attackInterval or 1.2) then
+			return
+		end
+		lastAttack = os.clock()
+		local dir = r.CFrame.LookVector
+		local cam = workspace.CurrentCamera
+		if screenPos and cam then
+			local ray = cam:ScreenPointToRay(screenPos.X, screenPos.Y)
+			if math.abs(ray.Direction.Y) > 1e-3 then
+				local t = (r.Position.Y - 2.5 - ray.Origin.Y) / ray.Direction.Y
+				if t > 0 then
+					local hitPos = ray.Origin + ray.Direction * t
+					local flat = Vector3.new(hitPos.X - r.Position.X, 0, hitPos.Z - r.Position.Z)
+					if flat.Magnitude > 1 then
+						dir = flat.Unit
+					end
+				end
+			end
+		end
+		r.CFrame = CFrame.lookAt(r.Position, r.Position + Vector3.new(dir.X, 0, dir.Z))
+		task.spawn(Net.Request, "Swing", { dir = dir })
 		return
 	end
 	if target ~= State.target then

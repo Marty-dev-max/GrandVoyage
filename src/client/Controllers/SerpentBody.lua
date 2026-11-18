@@ -108,28 +108,36 @@ local function update(st, dt)
 	local speed = Vector3.new(v.X, 0, v.Z).Magnitude
 	st.moving = (st.moving or 0) + ((speed > 2 and 1 or 0) - (st.moving or 0)) * math.min(1, dt * 3)
 	st.phase += dt * (1.4 + math.min(speed, 30) * 0.22)
-	local amp = 0.5 + 1.8 * st.moving
+	-- a gentle slither: a sideways wave travelling down the body (none at the neck), small enough that the
+	-- overlapping segments stay joined; each segment then faces along the curve through its neighbours
+	local amp = 0.25 + 1.0 * st.moving
 	local now = os.clock()
 	local slamLeft = st.slamUntil - now
-	local n = #st.pieces
-	for i, pc in ipairs(Chain.Pieces(st.chain, anchor)) do
+	local pieces = Chain.Pieces(st.chain, anchor)
+	local n = #pieces
+	local pos = table.create(n)
+	for i, pc in ipairs(pieces) do
+		local flat = Vector3.new(pc.dir.X, 0, pc.dir.Z)
+		flat = flat.Magnitude > 1e-3 and flat.Unit or Vector3.new(0, 0, -1)
+		local right = flat:Cross(UP)
+		local wave = math.sin(st.phase - pc.d * 0.11) * amp * math.clamp(pc.d / 16, 0, 1)
+		local p = pc.pos + right * wave
+		-- tail slam: the last pieces rise while it winds up, then drop
+		if slamLeft > -0.25 and i >= n - 2 then
+			local k = (i - (n - 3)) / 3
+			p += UP * (slamLeft > 0 and (1 - slamLeft / st.slamTime) * 9 * k or 0)
+		end
+		pos[i] = p
+	end
+	for i = 1, n do
 		local piece = st.pieces[i]
 		if piece then
-			local dir = pc.dir
-			local flat = Vector3.new(dir.X, 0, dir.Z)
-			flat = flat.Magnitude > 1e-3 and flat.Unit or Vector3.new(0, 0, -1)
-			local right = flat:Cross(UP)
-			-- the slither: a sideways wave travelling down the body, none at the neck
-			local wave = math.sin(st.phase - pc.d * 0.17) * amp * math.clamp(pc.d / 14, 0, 1)
-			local pos = pc.pos + right * wave + UP * piece.lift
-			-- tail slam: the last pieces rise while it winds up, then drop
-			if slamLeft > -0.25 and i >= n - 2 then
-				local k = (i - (n - 3)) / 3
-				local up = slamLeft > 0 and (1 - slamLeft / st.slamTime) * 9 * k or 0
-				pos += UP * up
-			end
-			local look = (flat + right * (math.cos(st.phase - pc.d * 0.17) * amp * 0.09)).Unit
-			piece.model:PivotTo(CFrame.lookAt(pos, pos + look))
+			local ahead = i == 1 and anchor or pos[i - 1]
+			local behind = pos[i + 1] or (pos[i] - (ahead - pos[i]))
+			local look = ahead - behind
+			look = look.Magnitude > 1e-3 and look.Unit or Vector3.new(0, 0, -1)
+			local at = pos[i] + UP * piece.lift
+			piece.model:PivotTo(CFrame.lookAt(at, at + look))
 		end
 	end
 end

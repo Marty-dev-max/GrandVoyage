@@ -241,6 +241,7 @@ function VA.Apply(char)
 	model.Name = "VoxelGear"
 	model.Parent = char
 	local rng = Random.new(#char.Name * 131 + 7)
+	local made, blocks = 0, 0
 	for _, acc in ipairs(char:GetChildren()) do
 		if acc:IsA("Accessory") then
 			local handle = acc:FindFirstChild("Handle")
@@ -248,7 +249,8 @@ function VA.Apply(char)
 			if handle and handle:IsA("BasePart") and limb then
 				local hair = isHair(acc)
 				local maxDim = math.max(handle.Size.X, handle.Size.Y, handle.Size.Z)
-				local voxel = math.clamp(maxDim / 9, 0.16, 0.45)
+				-- chunky blocks like the owner's reference (about 5-6 across a hairdo)
+				local voxel = math.clamp(maxDim / (hair and 5.5 or 4.5), 0.3, 0.65)
 				local okSample, grid = pcall(sample, handle, voxel)
 				if not okSample then
 					grid = nil
@@ -262,13 +264,18 @@ function VA.Apply(char)
 				if color == Color3.new(1, 1, 1) and not hair then
 					color = Color3.fromRGB(200, 200, 205)
 				end
-				local ok = pcall(build, grid, handle, color, limb, model, rng, hair)
+				local ok, n = pcall(build, grid, handle, color, limb, model, rng, hair)
 				if ok then
 					acc:Destroy()
+					blocks += n
+					made += 1
+				else
+					warn("[VoxelAvatar] " .. acc.Name .. ": " .. tostring(n))
 				end
 			end
 		end
 	end
+	print(string.format("[VoxelAvatar] %s: cube head + %d accessories rebuilt from %d blocks", char.Name, made, blocks))
 end
 
 VA._cap, VA._build, VA._colorFromName = cap, build, colorFromName -- for the offline preview (tools)

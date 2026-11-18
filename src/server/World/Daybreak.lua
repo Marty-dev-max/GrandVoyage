@@ -130,7 +130,8 @@ local function path(ctx, pts, width, opts)
 		local cf
 		if a then
 			local pa, pb = ctx.at(a.X, a.Y), ctx.at(b.X, b.Y)
-			local mid = (pa + pb) / 2 + Vector3.new(0, lift, 0)
+			-- every other segment sits 0.05 higher: at bends the boxes overlap on the inner side and would z-fight
+			local mid = (pa + pb) / 2 + Vector3.new(0, lift + (i % 2) * 0.05, 0)
 			local len = (pb - pa).Magnitude
 			cf = CFrame.lookAt(mid, Vector3.new(pb.X, mid.Y, pb.Z))
 			P(Vector3.new(width, 0.3, len), opts.color or PATH, cf, { material = opts.material or M.Ground, shadow = false, name = "Path" })

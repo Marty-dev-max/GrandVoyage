@@ -1233,6 +1233,7 @@ function UI.Toggle(parent, label, value, onChange, desc)
 	UI.Tactile(row)
 	row.Activated:Connect(function()
 		value = not value
+		Audio.Play("BlkToggle", { pitch = value and 1.1 or 0.9 })
 		Tween(knob, 0.15, { Position = value and UDim2.fromOffset(31, 3) or UDim2.fromOffset(3, 3) }, Enum.EasingStyle.Back)
 		Tween(track, 0.15, { BackgroundColor3 = value and T.Green or T.Pink })
 		onChange(value)

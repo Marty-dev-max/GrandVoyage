@@ -600,6 +600,7 @@ local function buildEdit()
 			return
 		end
 		editing.look[target] = Looks.Hex(Color3.fromHSV(hsv[1], hsv[2], hsv[3]))
+		Audio.Play("BlkTick", { volume = 0.5, pitch = 0.7 + hsv[3] * 0.6 })
 		refreshEdit()
 	end
 	local function setPresetList(list)
@@ -615,6 +616,7 @@ local function buildEdit()
 			UI.Tactile(sw, true)
 			sw.Activated:Connect(function()
 				if editing and not locked() then
+					Audio.Play("BlkDrop", { volume = 0.6 })
 					editing.look[target] = hex
 					hsv = { col:ToHSV() }
 					refreshEdit()
@@ -798,7 +800,7 @@ function Menu.Spin()
 			editing.heritage = Looks.Heritages[(k % (#Looks.Heritages - 1)) + 1].id
 			editing.variant = 1
 			refreshEdit()
-			Audio.Play("UIHover")
+			Audio.Play("BlkTick", { pitch = 0.8 + k * 0.04 })
 			task.wait(0.04 + k * 0.012)
 		end
 		editing.heritage = final
@@ -808,7 +810,7 @@ function Menu.Spin()
 		slots[editing.slot] = res.data.summary
 		refreshEdit()
 		local h = Looks.HeritageById[final]
-		Audio.Play((h and h.chance <= 10) and "LevelUp" or "UIClick")
+		Audio.Play((h and h.chance <= 2) and "LevelUp" or "BlkReward")
 		UI.Toast("You're " .. heritageLabel(final, finalVariant) .. "!", "good")
 		if h and h.chance <= 2 then
 			UI.Banner(string.upper(h.name) .. "!", h.chance .. "% heritage  •  " .. h.perk, h.color, h.mythic and "Mythic" or "Legendary")

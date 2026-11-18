@@ -29,6 +29,11 @@ local master = 1
 local lastPlayed = {}
 
 local function source(def)
+	-- `prefer` = another sound's file wins when it is uploaded (it is then played at its own pitch, see Audio.Play)
+	local pref = def.prefer and Sounds[def.prefer]
+	if pref and pref.id and pref.id ~= "" then
+		return pref.id, pref
+	end
 	if def.id and def.id ~= "" then
 		return def.id
 	end
@@ -61,9 +66,12 @@ function Audio.Play(name, opts)
 	if not def then
 		return
 	end
-	local id = source(def)
+	local id, preferred = source(def)
 	if not id or id == "" then
 		return
+	end
+	if preferred then
+		def = preferred
 	end
 	local now = os.clock()
 	if lastPlayed[name] and now - lastPlayed[name] < 0.03 then

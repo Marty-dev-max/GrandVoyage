@@ -325,6 +325,10 @@ C.Weapons = {
 	StormBaton = { combo = { "Baton_Strike" }, stance = "Baton_Stance", Ranged = "Baton_Strike", Melee = "Baton_Strike" },
 	MedKit = { combo = { "Med_Toss" }, Ranged = "Med_Toss", Melee = "Med_Toss" },
 }
+-- Heavy Attack (the starter skill): a big kick for kick fighters, a big punch for everyone else
+function C.HeavyFor(weaponType)
+	return weaponType == "Shoes" and "Cook_AxeKick" or "Brawler_Hook"
+end
 C.SkillKinds = { Melee = "Brawler_Uppercut", Dash = "Brawler_Cross", Ranged = "Skill_Cast", AoE = "Skill_GroundPunch", GroundAoE = "Skill_Cast",
 	Heal = "Skill_Bless", PartyHeal = "Skill_Bless", Buff = "Skill_PowerUp", PartyBuff = "Skill_PowerUp" }
 

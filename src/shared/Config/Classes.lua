@@ -14,7 +14,9 @@ local Classes = {
 		icon = "⚓",
 		skills = {
 			{ id = "FirstAid", name = "First Aid", kind = "Heal", sp = 5, cd = 6, range = 0, power = 30, maxLevel = 3, desc = "Patch yourself up." },
-			{ id = "Bash", name = "Deck Swab Strike", kind = "Melee", sp = 6, cd = 3, range = 9, mult = 1.6, maxLevel = 5, fx = "Slash", desc = "A hearty mop swing." },
+			-- v0.24.0 (owner): the starter attack skill. A heavy punch for every class, a heavy kick for kick fighters
+			-- (Sea Cook / Shoes); `heavy` picks the clip by weapon (AnimClips.HeavyFor). id stays "Bash" for old saves.
+			{ id = "Bash", name = "Heavy Attack", heavy = true, kind = "Melee", sp = 6, cd = 3, range = 9, mult = 1.6, maxLevel = 5, fx = "Smash", desc = "A heavy blow: a big punch, or a big kick for kick fighters." },
 		},
 	},
 	-- Everyone starts as a Brawler. At Job Lv.10 you may switch class at a Job Master, or stay a Brawler for good.

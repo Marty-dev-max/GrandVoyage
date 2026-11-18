@@ -840,82 +840,27 @@ function Panels.Skills(args)
 	-- drag and drop (Loadout): press a skill / item / slot, move, release over a slot. Dragging a slot off the bar
 	-- empties it. A press that does not move stays a tap (tap-then-tap still works, e.g. on phones).
 	local UIS = game:GetService("UserInputService")
-	local drag, lastDrop = nil, 0
+	local drag = nil
 	local dropTargets = {}
 	local onDrop -- set by the loadout: function(payload, target or nil)
 	local function inside(btn, pt)
 		local a, sz = btn.AbsolutePosition, btn.AbsoluteSize
 		return pt.X >= a.X and pt.X <= a.X + sz.X and pt.Y >= a.Y and pt.Y <= a.Y + sz.Y
 	end
-	local function ghostAt(d, pt)
-		local sc = UI.GetScale()
-		if not d.ghost then
-			local g = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(64, 64), BackgroundColor3 = d.color or T.Panel, BackgroundTransparency = 0.15, ZIndex = 90, Parent = UI.Root })
-			UI.Corner(g, 12)
-			UI.Stroke(g, T.Gold, 3)
-			if d.img then
-				New("ImageLabel", { BackgroundTransparency = 1, Image = d.img, Size = UDim2.fromScale(0.8, 0.8), Position = UDim2.fromScale(0.1, 0.1), ScaleType = Enum.ScaleType.Fit, ZIndex = 91, Parent = g })
-			end
-			d.ghost = g
-		end
-		d.ghost.Position = UDim2.fromOffset(pt.X / sc, pt.Y / sc)
-		d.pt = pt
-	end
-	local function finishDrag(d, pt)
-		if d.ghost then
-			d.ghost:Destroy()
-		end
-		lastDrop = os.clock()
-		local inset = 0
-		pcall(function()
-			inset = game:GetService("GuiService"):GetGuiInset().Y
-		end)
-		-- the drop point, tried as-is and shifted by the top-bar inset (input APIs disagree about it)
-		local hit
-		for _, probe in ipairs({ pt, pt + Vector2.new(0, inset) }) do
-			for _, t in ipairs(dropTargets) do
-				if not hit and t.btn.Parent and inside(t.btn, probe) then
-					hit = t
-				end
-			end
-		end
-		if onDrop then
-			onDrop(d.payload, hit)
-		end
-	end
-	-- Roblox's own UIDragDetector does the pointer capture (mouse and touch, also inside scrolling lists); the tile
-	-- itself never moves (CustomOffset), a ghost follows the pointer instead
+	-- v0.24.0: our own pointer tracking for every tile and slot (UIDragDetector swallowed taps and lost drops for the
+	-- owner). Press = candidate; moving > 10 px = drag (a ghost follows, the scrolling list freezes); release over a
+	-- slot = drop. A release without moving is a TAP and runs the tile's click (tap-then-tap placing still works).
+	local tapHandlers = setmetatable({}, { __mode = "k" })
 	local function draggable(btn, payload, img, color)
-		local ok = pcall(function()
-			local det = Instance.new("UIDragDetector")
-			det.ResponseStyle = Enum.UIDragDetectorResponseStyle.CustomOffset
-			det.Parent = btn
-			local d
-			det.DragStart:Connect(function(pos)
-				d = { payload = payload, img = img, color = color, start = pos, moved = false }
-			end)
-			det.DragContinue:Connect(function(pos)
-				if d and (d.moved or (pos - d.start).Magnitude > 8) then
-					d.moved = true
-					ghostAt(d, pos)
-				end
-			end)
-			det.DragEnd:Connect(function(pos)
-				local dd = d
-				d = nil
-				if dd and dd.moved then
-					finishDrag(dd, pos)
-				end
-			end)
+		btn.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				local scroller = btn:FindFirstAncestorWhichIsA("ScrollingFrame")
+				drag = { payload = payload, start = Vector2.new(input.Position.X, input.Position.Y), img = img, color = color, btn = btn, scroller = scroller }
+			end
 		end)
-		if not ok then
-			-- (older engines / the UI harness): track the pointer ourselves
-			btn.InputBegan:Connect(function(input)
-				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-					drag = { payload = payload, start = Vector2.new(input.Position.X, input.Position.Y), img = img, color = color }
-				end
-			end)
-		end
+	end
+	local function onTap(btn, fn)
+		tapHandlers[btn] = fn
 	end
 	local conns = {}
 	table.insert(conns, UIS.InputChanged:Connect(function(input)
@@ -924,7 +869,10 @@ function Panels.Skills(args)
 		end
 		local pt = Vector2.new(input.Position.X, input.Position.Y)
 		local sc = UI.GetScale()
-		if not drag.ghost and (pt - drag.start).Magnitude > 10 then
+		if not drag.ghost and drag.payload.kind ~= "none" and (pt - drag.start).Magnitude > 10 then
+			if drag.scroller then
+				drag.scroller.ScrollingEnabled = false
+			end
 			local g = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(64, 64), BackgroundColor3 = drag.color or T.Panel, BackgroundTransparency = 0.15, ZIndex = 90, Parent = UI.Root })
 			UI.Corner(g, 12)
 			UI.Stroke(g, T.Gold, 3)
@@ -949,9 +897,11 @@ function Panels.Skills(args)
 		end
 		local d = drag
 		drag = nil
+		if d.scroller then
+			d.scroller.ScrollingEnabled = true
+		end
 		if d.ghost then
 			d.ghost:Destroy()
-			lastDrop = os.clock()
 			local hit
 			for _, t in ipairs(dropTargets) do
 				if t.btn.Parent and inside(t.btn, d.pt or d.start) then
@@ -961,6 +911,9 @@ function Panels.Skills(args)
 			if onDrop then
 				onDrop(d.payload, hit)
 			end
+		elseif d.btn and tapHandlers[d.btn] then
+			-- a press that did not move: the tap
+			tapHandlers[d.btn]()
 		end
 	end))
 	win.frame.Destroying:Connect(function()
@@ -1118,17 +1071,33 @@ function Panels.Skills(args)
 	local sel -- { kind = "skill"|"item", id } or { kind = "slot", bar = "skill"|"item", i }
 	local function renderLoadout(p)
 		dropTargets = {}
-		local left = UI.Scroll(content, UDim2.new(0.55, -10, 1, 0))
-		UI.List(left, nil, 8)
-		local right = UI.Scroll(content, UDim2.new(0.45, 0, 1, 0))
-		right.Position = UDim2.new(0.55, 0, 0, 0)
-		UI.List(right, nil, 10)
-		-- slot size follows the column width so 6 slots always fit inside the card
+		-- v0.24.0: on narrow windows (phones, shrunk window) everything stacks in one column: hotbar first, then the
+		-- skills; tiles and slots size themselves to the width so nothing slides under another panel
 		local okW, absW = pcall(function()
 			return content.AbsoluteSize.X
 		end)
-		local colW = (okW and absW or 0) * 0.45
-		local SL = (colW > 100) and math.clamp(math.floor((colW - 44 - 5 * 6) / 6), 38, 56) or 56
+		local W = (okW and absW and absW > 0) and absW / math.max(0.01, UI.GetScale()) or 1000
+		local stacked = W < 760
+		local left, right
+		if stacked then
+			local col = UI.Scroll(content, UDim2.new(1, 0, 1, 0))
+			UI.List(col, nil, 10)
+			right = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, LayoutOrder = 1, Parent = col })
+			UI.List(right, nil, 10)
+			left = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, LayoutOrder = 2, Parent = col })
+			UI.List(left, nil, 8)
+		else
+			left = UI.Scroll(content, UDim2.new(0.55, -10, 1, 0))
+			UI.List(left, nil, 8)
+			right = UI.Scroll(content, UDim2.new(0.45, 0, 1, 0))
+			right.Position = UDim2.new(0.55, 0, 0, 0)
+			UI.List(right, nil, 10)
+		end
+		local leftW = stacked and W - 12 or W * 0.55 - 10
+		local colW = stacked and W - 12 or W * 0.45
+		-- slot size follows the column width so 6 slots always fit inside the card
+		local SL = math.clamp(math.floor((colW - 44 - 5 * 6) / 6), 34, 56)
+		local TILE = leftW < 440 and 76 or 96
 
 		local tilePayload
 		local function tileDrag(b, img, color)
@@ -1137,21 +1106,17 @@ function Panels.Skills(args)
 			end
 		end
 		local function tile(parent, img, title, color, picked, onClick, extra)
-			local holder = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(96, 128), Parent = parent })
-			local b = New("TextButton", { Text = "", AutoButtonColor = false, Size = UDim2.fromOffset(96, 96), BackgroundColor3 = Color3.new(1, 1, 1), Parent = holder })
+			local holder = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(TILE, TILE + 32), Parent = parent })
+			local b = New("TextButton", { Text = "", AutoButtonColor = false, Size = UDim2.fromOffset(TILE, TILE), BackgroundColor3 = Color3.new(1, 1, 1), Parent = holder })
 			UI.Corner(b, 14)
 			New("UIGradient", { Color = ColorSequence.new(color:Lerp(Color3.new(1, 1, 1), 0.2), color:Lerp(Color3.new(0, 0, 0), 0.4)), Rotation = 90, Parent = b })
 			UI.Stroke(b, picked and T.Gold or T.Edge, picked and 5 or 3)
 			if img then
 				New("ImageLabel", { BackgroundTransparency = 1, Image = img, Size = UDim2.fromScale(0.8, 0.8), Position = UDim2.fromScale(0.1, 0.06), ScaleType = Enum.ScaleType.Fit, Parent = b })
 			end
-			UI.Text(holder, title, 13, T.Text, "Bold", { Position = UDim2.fromOffset(0, 98), Size = UDim2.new(1, 0, 0, 30), TextXAlignment = Enum.TextXAlignment.Center })
+			UI.Text(holder, title, 13, T.Text, "Bold", { Position = UDim2.fromOffset(0, TILE + 2), Size = UDim2.new(1, 0, 0, 30), TextXAlignment = Enum.TextXAlignment.Center })
 			UI.Tactile(b)
-			b.Activated:Connect(function()
-				if os.clock() - lastDrop > 0.2 then
-					onClick()
-				end
-			end)
+			onTap(b, onClick)
 			tileDrag(b, img, color)
 			if extra then
 				extra(b)
@@ -1159,9 +1124,10 @@ function Panels.Skills(args)
 			return holder
 		end
 		local function gridIn(parent, n)
-			local rows = math.max(1, math.ceil(n / 5))
-			local g = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, -8, 0, rows * 136), Parent = parent })
-			New("UIGridLayout", { CellSize = UDim2.fromOffset(96, 128), CellPadding = UDim2.fromOffset(10, 8), Parent = g })
+			local perRow = math.max(1, math.floor((leftW - 8 + 10) / (TILE + 10)))
+			local rows = math.max(1, math.ceil(n / perRow))
+			local g = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, -8, 0, rows * (TILE + 40)), Parent = parent })
+			New("UIGridLayout", { CellSize = UDim2.fromOffset(TILE, TILE + 32), CellPadding = UDim2.fromOffset(10, 8), Parent = g })
 			return g
 		end
 
@@ -1260,13 +1226,8 @@ function Panels.Skills(args)
 				UI.Text(b, keyFn(i), 12, T.Gold, "Display", { Position = UDim2.fromOffset(4, 1), Size = UDim2.fromOffset(24, 14) })
 				UI.Tactile(b)
 				table.insert(dropTargets, { btn = b, bar = bar, i = i })
-				if img then
-					draggable(b, { kind = "slot", bar = bar, i = i }, img, col)
-				end
-				b.Activated:Connect(function()
-					if os.clock() - lastDrop < 0.2 then
-						return
-					end
+				draggable(b, img and { kind = "slot", bar = bar, i = i } or { kind = "none" }, img, col)
+				onTap(b, function()
 					local list = bar == "skill" and padded(p.skillBar, GameConfig.SkillBarSize) or padded(p.itemBar, GameConfig.ItemBarSize)
 					local function commit()
 						sel = nil
@@ -1276,6 +1237,9 @@ function Panels.Skills(args)
 							setItemBar(p, list)
 						end
 						render()
+					end
+					if sel then
+						Audio.Play(sel.kind == "slot" and "BlkSwap" or "BlkDrop")
 					end
 					if sel and sel.kind == (bar == "skill" and "skill" or "item") then
 						-- place it (a skill lives in one slot only: move it)
@@ -1333,6 +1297,9 @@ function Panels.Skills(args)
 				end
 			end
 			sel = nil
+			if target then
+				Audio.Play(payload.kind == "slot" and "BlkSwap" or "BlkDrop")
+			end
 			if payload.kind == "slot" then
 				local list = listOf(payload.bar)
 				if not target then

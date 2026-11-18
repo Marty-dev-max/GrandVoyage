@@ -22,10 +22,21 @@ local SPLASH = "rbxasset://sounds/impact_water.mp3"
 local SHOT = "rbxasset://sounds/Rocket shot.wav"
 
 -- UI
-add("UIHover", "UI", 0.25, CLICK, { pitch = 1.6 })
-add("UIClick", "UI", 0.5, CLICK)
-add("UIOpen", "UI", 0.45, PING, { pitch = 0.8 })
-add("UIClose", "UI", 0.4, PING, { pitch = 0.6 })
+-- v0.24.0 (owner): blocky, satisfying UI sounds (tools/gen_ui_sfx.py): wooden block knocks + 8-bit blips.
+-- `prefer` = play that sound's file (at its own pitch) when it is uploaded, else this entry's own id/fallback.
+add("BlkHover", "UI", 0.32, CLICK)
+add("BlkClick", "UI", 0.55, CLICK)
+add("BlkDrop", "UI", 0.6, CLICK)
+add("BlkSwap", "UI", 0.5, CLICK)
+add("BlkOpen", "UI", 0.45, PING)
+add("BlkClose", "UI", 0.42, PING)
+add("BlkToggle", "UI", 0.5, CLICK)
+add("BlkTick", "UI", 0.35, CLICK)
+add("BlkReward", "UI", 0.55, PING)
+add("UIHover", "UI", 0.25, CLICK, { pitch = 1.6, prefer = "BlkHover" })
+add("UIClick", "UI", 0.5, CLICK, { prefer = "BlkClick" })
+add("UIOpen", "UI", 0.45, PING, { pitch = 0.8, prefer = "BlkOpen" })
+add("UIClose", "UI", 0.4, PING, { pitch = 0.6, prefer = "BlkClose" })
 add("Error", "UI", 0.5, "rbxasset://sounds/uuhhh.mp3", { pitch = 1.4 })
 add("Coin", "UI", 0.4, PING, { pitch = 0.72 }) -- the synth coin is high: play it lower (the owner found it shrill)
 add("Purchase", "UI", 0.55, PING, { pitch = 1.25 })
@@ -101,10 +112,20 @@ add("MusicBoss", "Music", 0.45, "", { looped = true })
 
 
 
+
 -- ===== uploaded asset ids (written by tools/upload_sfx.py) =====
 S.AmbienceWind.id = "rbxassetid://121665322013245"
 S.AnvilClang.id = "rbxassetid://119416036242324"
 S.Bell.id = "rbxassetid://117065599726354"
+S.BlkClick.id = "rbxassetid://94805456841567"
+S.BlkClose.id = "rbxassetid://92109534077260"
+S.BlkDrop.id = "rbxassetid://76975682776406"
+S.BlkHover.id = "rbxassetid://75768589544700"
+S.BlkOpen.id = "rbxassetid://126008511330983"
+S.BlkReward.id = "rbxassetid://85351416155642"
+S.BlkSwap.id = "rbxassetid://90095917810902"
+S.BlkTick.id = "rbxassetid://125395146895714"
+S.BlkToggle.id = "rbxassetid://132452117615324"
 S.BossRoar.id = "rbxassetid://94312411489126"
 S.Cannon.id = "rbxassetid://134315093700416"
 S.CardBass.id = "rbxassetid://94330191075762"

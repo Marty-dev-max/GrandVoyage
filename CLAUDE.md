@@ -181,6 +181,13 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   line|circle, SerpentBite/SerpentSpit/SerpentTail FX, Mon_SerpentBite/Mon_SerpentSpit clips). Daybreak paths: no
   coplanar overlaps (exact segment lengths, lower joints, per-path height step, clipped at the plaza ring), quay blocks
   alternate height; no direction signposts on Daybreak (owner). Island music = MusicJazz (owner's track, assets/music).
+- Lune's CFrame.lookAt is WRONG (flips Z). tools/bake.luau passes a fixed `CFrame.lookAt` (fromMatrix) to the world code;
+  before v0.22.6 every lookAt-placed part of the baked map faced the wrong way (overlapping paths / quay). Any new
+  Lune tool that runs game code must use the same shim. In-game Roblox lookAt is fine.
+- Ships (v0.22.6): `ShipModel.DressHull` wraps every launched ship (player + NPC) in a real hull around the block deck:
+  stepped V-hull, bulwarks + rail + stripe (gun ports at edge cannons), pointed prow + stem, transom; size class by
+  length (Dinghy <= 12 rows, Sloop <= 16, Galleon) adds bowsprit / quarterdeck / stern castle + lanterns + figurehead.
+  Paint by faction (ShipService HULL_STYLES). The shipyard builder preview stays plain blocks.
 - Dev tab "New Player" (`Admin` cmd `resetall`, `DataService.ResetProfile`): fresh save in place (keeps receipts, perks, guild).
 - Card drops play `UI/CardReveal.lua` (tension + orbs, whip flip + hitstop, rune rings + golden lightning, foil sheen,
   monster pops out of the frame, stars, RGB split from Mythic; intensity and pitch scale with rarity, tap skips).

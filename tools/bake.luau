@@ -39,12 +39,32 @@ local wsProxy = setmetatable({ Raycast = function() return nil end }, { __index 
 	return v
 end, __newindex = function(_, k, v) ws[k] = v end })
 
+-- Lune's CFrame.lookAt points the wrong way along Z (lookAt(0, (0,0,-1)).LookVector = (0,0,1)), which turned every
+-- lookAt-placed part of the baked map (path segments, quay blocks, houses, signs, docks) the wrong way round (fixed
+-- v0.22.5). Build the frame ourselves, exactly like Roblox does.
+local CFrameFixed = setmetatable({
+	lookAt = function(at, target, up)
+		up = up or roblox.Vector3.new(0, 1, 0)
+		local look = target - at
+		if look.Magnitude < 1e-6 then
+			return roblox.CFrame.new(at.X, at.Y, at.Z)
+		end
+		look = look.Unit
+		local right = look:Cross(up)
+		if right.Magnitude < 1e-6 then
+			right = look:Cross(roblox.Vector3.new(0, 0, 1))
+		end
+		right = right.Unit
+		return roblox.CFrame.fromMatrix(at, right, right:Cross(look))
+	end,
+}, { __index = roblox.CFrame })
+
 local cache = {}
 local function req(mod)
 	local key = mod:GetFullName()
 	if cache[key] then return cache[key] end
 	local env = setmetatable({ script = mod, require = req, game = gameProxy, workspace = ws,
-		Vector3 = roblox.Vector3, Vector2 = roblox.Vector2, Color3 = roblox.Color3, CFrame = roblox.CFrame,
+		Vector3 = roblox.Vector3, Vector2 = roblox.Vector2, Color3 = roblox.Color3, CFrame = CFrameFixed,
 		UDim2 = roblox.UDim2, UDim = roblox.UDim, Enum = roblox.Enum, Instance = roblox.Instance, Random = { new = function(seed) local s = (math.floor(math.abs(seed or 1)) % 2147483646) + 1; local function nxt() s = (s * 48271) % 2147483647; return s / 2147483647 end; return { NextNumber = function(_, a, b) a = a or 0; b = b or 1; return a + nxt() * (b - a) end, NextInteger = function(_, a, b) return a + math.min(b - a, math.floor(nxt() * (b - a + 1))) end } end },
 		Font = roblox.Font,
 		ColorSequence = roblox.ColorSequence, NumberSequence = roblox.NumberSequence, NumberSequenceKeypoint = roblox.NumberSequenceKeypoint,

@@ -48,6 +48,13 @@ local function toast(player, text, kind, key)
 end
 
 -- ===== Ship construction =====
+-- hull paint per faction (ShipModel.DressHull)
+local HULL_STYLES = {
+	None = { hull = Color3.fromRGB(140, 92, 56), trim = Color3.fromRGB(88, 58, 36), stripe = Color3.fromRGB(232, 192, 80) },
+	Pirate = { hull = Color3.fromRGB(70, 50, 40), trim = Color3.fromRGB(38, 28, 24), stripe = Color3.fromRGB(196, 44, 44) },
+	Marine = { hull = Color3.fromRGB(240, 240, 246), trim = Color3.fromRGB(60, 100, 190), stripe = Color3.fromRGB(232, 192, 80) },
+}
+
 local function buildShip(design, cf, opts)
 	nextId += 1
 	local minV, maxV = ShipModel.Bounds(design)
@@ -56,6 +63,13 @@ local function buildShip(design, cf, opts)
 	local originCf = cf * CFrame.new(-cx * G, -minV.Y * G, cz * G)
 	local model = ShipModel.BuildDesign(design, originCf, opts.colorFn)
 	model.Name = opts.name
+	-- a real hull around the block deck (dinghy / sloop / galleon by length)
+	local okHull, class = pcall(ShipModel.DressHull, model, design, originCf, opts.hullStyle)
+	if okHull and class then
+		model:SetAttribute("SizeClass", class)
+	elseif not okHull then
+		warn("[ShipService] hull dressing failed:", class)
+	end
 
 	local root = Instance.new("Part")
 	root.Name = "ShipRoot"
@@ -425,7 +439,7 @@ function Ship.Launch(player, slot)
 		p.shipSunk = false
 		R.PlayerService.Notify(player, "Ship repaired (🪙" .. cost .. ")", "info")
 	end
-	local ship = buildShip(design, dock.launchCf, { name = "Ship_" .. player.UserId })
+	local ship = buildShip(design, dock.launchCf, { name = "Ship_" .. player.UserId, hullStyle = HULL_STYLES[p and p.faction or "None"] or HULL_STYLES.None })
 	ship.owner = player
 	ship.stats = stats
 	ship.maxHp = stats.hp
@@ -561,7 +575,7 @@ local function spawnNPC(defId, pos, segment)
 	local def = NPCShips.Ships[defId]
 	local design = npcDesign(def)
 	local yaw = math.random() * math.pi * 2
-	local ship = buildShip(design, CFrame.new(pos.X, GameConfig.SeaLevel - G * 0.5, pos.Z) * CFrame.Angles(0, yaw, 0), { name = "NPC_" .. defId, colorFn = npcColor(def) })
+	local ship = buildShip(design, CFrame.new(pos.X, GameConfig.SeaLevel - G * 0.5, pos.Z) * CFrame.Angles(0, yaw, 0), { name = "NPC_" .. defId, colorFn = npcColor(def), hullStyle = HULL_STYLES[def.faction] })
 	ship.npc = def
 	ship.segment = segment
 	ship.maxHp = def.hp

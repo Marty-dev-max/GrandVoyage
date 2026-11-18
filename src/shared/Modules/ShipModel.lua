@@ -192,6 +192,197 @@ function SM.BuildDesign(design, originCf, colorFn)
 	return model
 end
 
+-- ===== Hull dressing (owner, v0.22.5: launched ships looked like flat planks floating on the sea) =====
+-- The block design still decides stats; around it we build a real hull: a stepped V-hull under the waterline that
+-- narrows toward bow and stern, bulwarks with a rail and a painted stripe along the deck (gun ports left open where a
+-- cannon sits at the edge), a pointed prow and a transom stern. By length: dinghy (plain), sloop (bowsprit + raised
+-- stern deck), galleon (stern castle with lit windows + lanterns, forecastle rail, figurehead).
+-- style = { hull = Color3, trim = Color3, stripe = Color3 }. Returns the size class.
+local WOOD_DARK = Color3.fromRGB(92, 60, 38)
+function SM.SizeClass(lengthCells)
+	if lengthCells <= 12 then
+		return "Dinghy"
+	elseif lengthCells <= 16 then
+		return "Sloop"
+	end
+	return "Galleon"
+end
+
+function SM.DressHull(model, design, originCf, style)
+	style = style or {}
+	local hullC = style.hull or Color3.fromRGB(132, 86, 52)
+	local trimC = style.trim or WOOD_DARK
+	local stripeC = style.stripe or Color3.fromRGB(230, 190, 80)
+	local folder = Instance.new("Model")
+	folder.Name = "Hull"
+	folder.Parent = model
+	-- deck footprint: per row (z) the outermost hull cells at y = 0, and which edge cells carry a cannon
+	local rows, gun = {}, {}
+	for _, p in ipairs(design.parts) do
+		local def = ShipParts[p.id]
+		if def and def.category == "Hull" and p.y == 0 then
+			local r = rows[p.z]
+			if not r then
+				r = { minX = p.x, maxX = p.x + 1 }
+				rows[p.z] = r
+			end
+			r.minX = math.min(r.minX, p.x)
+			r.maxX = math.max(r.maxX, p.x + 1)
+		elseif def and def.cannon then
+			gun[p.z .. ":" .. p.x] = true
+		end
+	end
+	local zs = {}
+	for z in pairs(rows) do
+		table.insert(zs, z)
+	end
+	if #zs == 0 then
+		return nil
+	end
+	table.sort(zs)
+	local zMin, zMax = zs[1], zs[#zs]
+	local L = zMax - zMin + 1
+	local class = SM.SizeClass(L)
+	local function at(x, y, z) -- plot cells -> world (z grows toward the bow = -Z)
+		return originCf * CFrame.new(x * G, y, -z * G)
+	end
+	local function part(size, color, cf, opts)
+		opts = opts or {}
+		local pt = mk(folder, opts.class or "Part", size, color, cf, opts.material or Enum.Material.WoodPlanks)
+		pt.CanCollide = opts.collide == true
+		pt.CanTouch = false
+		pt.CastShadow = opts.shadow ~= false
+		return pt
+	end
+	local depth = ({ Dinghy = 2, Sloop = 3, Galleon = 4 })[class] -- layers under the deck
+	local layerH = 1.3
+	local rail = ({ Dinghy = 1.1, Sloop = 1.4, Galleon = 1.7 })[class]
+	-- 1) under the waterline: each row gets stepped layers that narrow toward the keel, and toward the ends
+	for _, z in ipairs(zs) do
+		local r = rows[z]
+		local endK = math.min(z - zMin, zMax - z) -- rows from the nearer end
+		local w = (r.maxX - r.minX) * G
+		local cx = (r.minX + r.maxX) / 2
+		for k = 1, depth do
+			local shrink = k * (w / (depth + 1.5)) / 2 + math.max(0, 2 - endK) * k * 0.9
+			local lw = w - shrink * 2
+			if lw > 0.8 then
+				part(Vector3.new(lw, layerH, G), k == depth and trimC or hullC, at(cx, -layerH * (k - 0.5), z + 0.5))
+			end
+		end
+	end
+	-- 2) bulwarks + rail + stripe along both sides (skip where a cannon sits on that edge cell)
+	local prowFrom = zMax + 1
+	do
+		local pr = rows[zMax - 1]
+		if pr and (pr.maxX - pr.minX) > (rows[zMax].maxX - rows[zMax].minX) then
+			prowFrom = zMax
+		end
+	end
+	for _, z in ipairs(zs) do
+		local r = rows[z]
+		for _, side in ipairs(z < prowFrom and { -1, 1 } or {}) do
+			local edgeX = side < 0 and r.minX or r.maxX
+			local cellX = side < 0 and r.minX or r.maxX - 1
+			local x = edgeX * G + side * 0.25
+			-- sheer: the rail rises toward the bow and the stern
+			local h = G + rail + math.max(0, 3 - (zMax - z)) * 0.45 + math.max(0, 2 - (z - zMin)) * 0.35
+			local cf = originCf * CFrame.new(x, h / 2, -(z + 0.5) * G)
+			part(Vector3.new(0.5, h, G), hullC, cf, { collide = not gun[z .. ":" .. cellX] })
+			if gun[z .. ":" .. cellX] then
+				-- gun port: the wall stays low here so the barrel shows
+				part(Vector3.new(0.6, 0.5, G), trimC, originCf * CFrame.new(x, G + rail - 0.25, -(z + 0.5) * G))
+			else
+				part(Vector3.new(0.7, 0.3, G + 0.02), trimC, originCf * CFrame.new(x, h + 0.15, -(z + 0.5) * G)) -- rail cap
+			end
+			part(Vector3.new(0.56, 0.45, G + 0.02), stripeC, originCf * CFrame.new(x, G * 0.55, -(z + 0.5) * G), { material = Enum.Material.SmoothPlastic })
+		end
+	end
+	-- 3) prow: two angled planks meet at a raised stem in front of the first row, decked over, with the hull
+	--    narrowing to the keel underneath; the forward deck row (bow wedges) gets a flat plank cover
+	local front, zFront = rows[zMax], (zMax + 1) * G
+	local prev = rows[zMax - 1]
+	if prev and (prev.maxX - prev.minX) > (front.maxX - front.minX) then
+		-- the first row is narrower (bow wedges): the prow starts from the last full-width row and covers it
+		front, zFront = prev, zMax * G
+	end
+	local fw = (front.maxX - front.minX) * G
+	local fcx = (front.minX + front.maxX) / 2 * G
+	local bowLen = math.clamp(fw * 0.85, 4, 16)
+	local tipZ = zFront + bowLen
+	local sheer = 1.8
+	local H = G + rail + sheer + 1.5 -- from 1.5 below the deck bottom to the raised bow rail
+	local yc = H / 2 - 1.5
+	if zFront == zMax * G then
+		-- deck over the sloped wedge row
+		part(Vector3.new(fw, 0.3, G), Color3.fromRGB(176, 128, 82), at((front.minX + front.maxX) / 2, G + 0.15, zMax + 0.5), { collide = true })
+	end
+	for _, side in ipairs({ -1, 1 }) do
+		local cx = side < 0 and front.minX * G or front.maxX * G
+		local a = Vector3.new(cx + side * 0.25, yc, -zFront)
+		local b = Vector3.new(fcx, yc, -tipZ)
+		local mid, len = (a + b) / 2, (b - a).Magnitude
+		local cf = originCf * CFrame.lookAt(mid, b)
+		part(Vector3.new(0.5, H, len + 0.4), hullC, cf, { collide = true })
+		part(Vector3.new(0.7, 0.3, len + 0.4), trimC, cf * CFrame.new(0, H / 2 + 0.15, 0))
+		part(Vector3.new(0.56, 0.45, len + 0.4), stripeC, cf * CFrame.new(0, G * 0.55 - yc, 0), { material = Enum.Material.SmoothPlastic })
+	end
+	local steps = 5
+	for i = 1, steps do
+		local t = (i - 0.5) / steps
+		local ww = fw * (1 - t) - 1.6
+		local zz = zFront + bowLen * t
+		if ww > 0.4 then
+			part(Vector3.new(ww, 0.3, bowLen / steps + 0.05), Color3.fromRGB(176, 128, 82), originCf * CFrame.new(fcx, G - 0.15 + sheer * t * 0.6, -zz), { collide = true })
+		end
+		for k = 1, depth do
+			local lw = (fw * (1 - t)) * (1 - k / (depth + 1))
+			if lw > 0.6 then
+				part(Vector3.new(lw, layerH, bowLen / steps + 0.05), hullC, originCf * CFrame.new(fcx, -layerH * (k - 0.5), -zz))
+			end
+		end
+	end
+	-- stem post at the tip
+	local tip = tipZ
+	part(Vector3.new(0.9, H + 1.2, 0.9), trimC, originCf * CFrame.new(fcx, yc + 0.6, -tip), { material = Enum.Material.Wood })
+	-- 4) stern: transom board across the back
+	local back = rows[zMin]
+	local bw = (back.maxX - back.minX) * G
+	local bcx = (back.minX + back.maxX) / 2 * G
+	part(Vector3.new(bw + 1, G + rail + depth * layerH * 0.6, 0.6), hullC, originCf * CFrame.new(bcx, (G + rail - depth * layerH * 0.6) / 2, -(zMin * G - 0.3)), { collide = true })
+	part(Vector3.new(bw + 1.1, 0.35, 0.8), trimC, originCf * CFrame.new(bcx, G + rail + 0.17, -(zMin * G - 0.3)))
+	-- 5) by size class
+	if class ~= "Dinghy" then
+		-- bowsprit
+		local len = class == "Galleon" and 14 or 9
+		local base = originCf * CFrame.new(fcx, G + rail + 0.6, -(tip - 1))
+		cyl(folder, len, 0.6, trimC, base * CFrame.Angles(0, math.pi / 2, 0) * CFrame.Angles(0, 0, math.rad(-18)) * CFrame.new(len / 2, 0, 0), Enum.Material.Wood)
+		-- raised stern deck: a short quarterdeck over the last rows
+		local qLen = math.min(3, L - 2) * G
+		local qh = class == "Galleon" and G * 1.2 or G * 0.6
+		part(Vector3.new(bw, qh, qLen), hullC, originCf * CFrame.new(bcx, G + qh / 2, -(zMin * G + qLen / 2)), { collide = true })
+		part(Vector3.new(bw + 0.4, 0.4, qLen + 0.4), trimC, originCf * CFrame.new(bcx, G + qh + 0.2, -(zMin * G + qLen / 2)), { collide = true })
+		if class == "Galleon" then
+			-- stern castle: windows on the back face, lanterns at the corners
+			local wy = G + qh * 0.5
+			for i = -1, 1 do
+				local win = part(Vector3.new(bw / 5, qh * 0.4, 0.2), Color3.fromRGB(255, 214, 120), originCf * CFrame.new(bcx + i * bw / 3.6, wy, -(zMin * G - 0.65)), { material = Enum.Material.Neon, shadow = false })
+				win.Transparency = 0.15
+			end
+			for _, sx in ipairs({ -1, 1 }) do
+				local lp = originCf * CFrame.new(bcx + sx * (bw / 2 + 0.2), G + qh + 1.6, -(zMin * G - 0.2))
+				part(Vector3.new(0.9, 1.2, 0.9), Color3.fromRGB(255, 200, 90), lp, { material = Enum.Material.Neon, shadow = false })
+				part(Vector3.new(1.1, 0.25, 1.1), trimC, lp * CFrame.new(0, 0.72, 0))
+			end
+			-- forecastle rail at the bow
+			part(Vector3.new(fw, 0.9, 0.5), hullC, originCf * CFrame.new(fcx, G + rail + 0.45, -((zMax + 1) * G - 1)), { collide = true })
+			-- figurehead: a gilded block at the stem
+			part(Vector3.new(1.2, 1.6, 1.4), Color3.fromRGB(235, 190, 70), originCf * CFrame.new(fcx, G * 0.5, -(tip + 0.6)), { material = Enum.Material.SmoothPlastic })
+		end
+	end
+	return class
+end
+
 -- Design bounds in grid cells (used to center the root)
 function SM.Bounds(design)
 	local minV = Vector3.new(math.huge, math.huge, math.huge)

@@ -221,6 +221,8 @@ grass caps, red Red Line cliffs, scattered plants with petal flowers, painted gr
 Bump `GameConfig.Version` on every change: the owner checks it bottom-right in game to confirm Rojo synced.
 Keep `progress.md` (Thai, for the owner) up to date with every version: snapshot, awaiting-test list, version history, next up.
 The owner updates by double-clicking `update.bat` (git pull) on Windows, then Stop/Play in Studio.
+Owner's standing instruction (18 Nov 2026): push every finished change to `main` as well as the session branch
+(`update.bat` only pulls `main`), without asking each time.
 The owner tests in Studio and sends screenshots; previews of new art are rendered in Blender (bpy) from the real GLBs
 (see docs/screenshots/*.png) before shipping. Owner feedback is visual and blunt: iterate until they say it is right.
 

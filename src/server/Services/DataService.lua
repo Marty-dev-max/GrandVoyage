@@ -9,11 +9,25 @@ local Shared = ReplicatedStorage.Shared
 local GameConfig = require(Shared.Config.GameConfig)
 local ShipStats = require(Shared.Modules.ShipStats)
 local Islands = require(Shared.Config.Islands)
+local Looks = require(Shared.Config.Looks)
 
 local DataService = {}
 local profiles = {}
+local slotOf = {} -- player -> the character slot being played (v0.24.0)
 local store
 local useMemory = false
+local memSlots = {} -- Studio without API access: userId -> { [slot] = data } (this session only)
+local loadedEvent = Instance.new("BindableEvent")
+-- fires (player, profile) once a character slot is loaded and the player enters the game
+DataService.Loaded = loadedEvent.Event
+
+-- slot 1 keeps the old single-save key so existing progress becomes "slot 1"
+local function keyFor(userId, slot)
+	if slot == 1 then
+		return "p_" .. userId
+	end
+	return "p_" .. userId .. "_s" .. slot
+end
 
 local function template()
 	return {
@@ -56,6 +70,11 @@ local function template()
 		quest = { step = 1, progress = 0 }, -- main story (Config/Quests)
 		chests = {}, -- exploration chests opened (chest id -> true)
 		settings = { autoPotionPct = 35, autoPotionItem = "MeatOnBone" },
+		look = Looks.Default(), -- character creator (Config/Looks)
+		heritage = "Islander",
+		heritageVariant = 1,
+		heritageMode = "flame", -- Cinderwing only: "flame" (hits harder) | "calm" (moves faster)
+		spins = Looks.Spins,
 		created = os.time(),
 	}
 end
@@ -85,8 +104,10 @@ function DataService.Init()
 	end
 end
 
-function DataService.Load(player)
-	local key = "p_" .. player.UserId
+function DataService.Load(player, slot)
+	slot = slot or 1
+	slotOf[player] = slot
+	local key = keyFor(player.UserId, slot)
 	local data
 	local loadedOk = useMemory
 	if not useMemory then
@@ -117,7 +138,14 @@ function DataService.Load(player)
 			end
 		end
 	end
+	if useMemory then
+		memSlots[player.UserId] = memSlots[player.UserId] or {}
+		data = memSlots[player.UserId][slot]
+	end
 	data = reconcile(data or template(), template())
+	if useMemory then
+		memSlots[player.UserId][slot] = data
+	end
 	-- v2: the old "Novice" (Cabin Boy) starter class became the Brawler; give old saves a pair of knuckles
 	if data.class == "Novice" then
 		data.class = "Brawler"
@@ -150,7 +178,7 @@ function DataService.ResetProfile(player)
 	if not data then
 		return nil
 	end
-	local keep = { receipts = data.receipts, perks = data.perks, guildId = data.guildId, __noSave = data.__noSave }
+	local keep = { receipts = data.receipts, perks = data.perks, guildId = data.guildId, __noSave = data.__noSave, look = data.look, heritage = data.heritage, spins = data.spins }
 	if data.guildId then
 		keep.faction = data.faction
 	end
@@ -178,7 +206,7 @@ function DataService.Save(player, release)
 	if useMemory then
 		return true -- Studio without API access: nothing to save
 	end
-	local key = "p_" .. player.UserId
+	local key = keyFor(player.UserId, slotOf[player] or 1)
 	local ok, err = pcall(function()
 		store:UpdateAsync(key, function(old)
 			old = old or {}
@@ -200,6 +228,178 @@ end
 function DataService.Release(player)
 	DataService.Save(player, true)
 	profiles[player] = nil
+	slotOf[player] = nil
+end
+
+function DataService.Slot(player)
+	return slotOf[player]
+end
+
+function DataService.FireLoaded(player)
+	loadedEvent:Fire(player, profiles[player])
+end
+
+-- ===== account spin bank (bought Heritage spins, shared by every slot) =====
+local memBank = {}
+local function bankKey(userId)
+	return "acct_" .. userId
+end
+function DataService.BankSpins(userId)
+	if useMemory then
+		return (memBank[userId] or {}).spins or 0
+	end
+	local ok, res = pcall(function()
+		return store:GetAsync(bankKey(userId))
+	end)
+	return ok and res and res.spins or 0
+end
+-- add spins for a Robux receipt; idempotent on purchaseId. Returns true once the grant is stored.
+function DataService.GrantBankSpins(userId, purchaseId, amount)
+	if useMemory then
+		local b = memBank[userId] or { spins = 0, receipts = {} }
+		memBank[userId] = b
+		if not b.receipts[purchaseId] then
+			b.receipts[purchaseId] = true
+			b.spins += amount
+		end
+		return true
+	end
+	local ok = pcall(function()
+		store:UpdateAsync(bankKey(userId), function(old)
+			old = old or { spins = 0, receipts = {} }
+			old.receipts = old.receipts or {}
+			if old.receipts[purchaseId] then
+				return old
+			end
+			old.receipts[purchaseId] = os.time()
+			old.spins = (old.spins or 0) + amount
+			return old
+		end)
+	end)
+	return ok
+end
+-- take one spin from the bank; returns true when one was taken
+function DataService.TakeBankSpin(userId)
+	if useMemory then
+		local b = memBank[userId]
+		if b and b.spins > 0 then
+			b.spins -= 1
+			return true
+		end
+		return false
+	end
+	local took = false
+	pcall(function()
+		store:UpdateAsync(bankKey(userId), function(old)
+			if not old or (old.spins or 0) <= 0 then
+				return nil
+			end
+			old.spins -= 1
+			took = true
+			return old
+		end)
+	end)
+	return took
+end
+function DataService.RefundBankSpin(userId)
+	if useMemory then
+		local b = memBank[userId] or { spins = 0, receipts = {} }
+		memBank[userId] = b
+		b.spins += 1
+		return
+	end
+	pcall(function()
+		store:UpdateAsync(bankKey(userId), function(old)
+			old = old or { spins = 0, receipts = {} }
+			old.spins = (old.spins or 0) + 1
+			return old
+		end)
+	end)
+end
+
+-- ===== character slots (menu, before a slot is loaded) =====
+-- A slot's summary for the menu cards
+local function summary(data)
+	if not data then
+		return nil
+	end
+	return {
+		look = Looks.Sanitize(data.look),
+		heritage = data.heritage or "Islander",
+		variant = data.heritageVariant or 1,
+		spins = data.spins or 0,
+		level = data.baseLevel or 1,
+		class = data.class or "Brawler",
+		jobLevel = data.jobLevel or 1,
+		played = data.lastPlayed or 0,
+	}
+end
+
+-- every slot of a player: { [1] = summary | false, ... } (reads each slot key; no session lock)
+function DataService.ListSlots(player)
+	local out = {}
+	for slot = 1, Looks.Slots do
+		local data
+		if useMemory then
+			data = memSlots[player.UserId] and memSlots[player.UserId][slot]
+		else
+			local ok, res = pcall(function()
+				return store:GetAsync(keyFor(player.UserId, slot))
+			end)
+			if not ok then
+				return nil, "Could not read your characters, try again"
+			end
+			data = res and res.data
+		end
+		out[slot] = summary(data) or false
+	end
+	return out
+end
+
+-- change a slot that is NOT being played (look, Heritage spin, or create it). fn(data) edits the table in place.
+-- Returns the slot's new summary.
+function DataService.EditSlot(player, slot, fn)
+	if profiles[player] then
+		return nil, "Already in game"
+	end
+	if useMemory then
+		memSlots[player.UserId] = memSlots[player.UserId] or {}
+		local data = memSlots[player.UserId][slot] or template()
+		reconcile(data, template())
+		local ok, err = pcall(fn, data)
+		if not ok then
+			return nil, err
+		end
+		memSlots[player.UserId][slot] = data
+		return summary(data)
+	end
+	local result, failure
+	local ok, err = pcall(function()
+		store:UpdateAsync(keyFor(player.UserId, slot), function(old)
+			old = old or {}
+			if old.lock and old.lock ~= game.JobId and os.time() - (old.lockTime or 0) < 600 then
+				failure = "This character is still in use on another server"
+				return nil
+			end
+			local data = reconcile(old.data or template(), template())
+			local okFn, e = pcall(fn, data)
+			if not okFn then
+				failure = tostring(e)
+				return nil
+			end
+			old.data = data
+			result = summary(data)
+			return old
+		end)
+	end)
+	if not ok then
+		warn("[DataService] slot edit failed", player.Name, err)
+		return nil, "Save failed, try again"
+	end
+	if failure then
+		return nil, failure
+	end
+	return result
 end
 
 function DataService.Start()

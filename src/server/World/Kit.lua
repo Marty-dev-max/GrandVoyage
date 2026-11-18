@@ -172,7 +172,7 @@ function Kit.Sign(text, cf, size, textColor, bg, opts)
 		local t = Instance.new("TextLabel")
 		t.Size = UDim2.fromScale(1, 1)
 		t.BackgroundTransparency = 1
-		t.FontFace = Font.new("rbxasset://fonts/families/FredokaOne.json")
+		t.FontFace = Font.fromEnum(Enum.Font.Arcade)
 		t.TextScaled = true
 		t.Text = text
 		t.TextColor3 = textColor or Color3.fromRGB(255, 240, 200)

@@ -411,7 +411,7 @@ function AS.Gallery(player)
 		label.Text = m.Name
 		label.TextColor3 = Color3.new(1, 1, 1)
 		label.TextStrokeTransparency = 0.3
-		label.Font = Enum.Font.GothamBold
+		label.Font = Enum.Font.Arcade
 		label.TextSize = 14
 		label.Parent = tag
 		tag.Adornee = c.PrimaryPart or c:FindFirstChildWhichIsA("BasePart")

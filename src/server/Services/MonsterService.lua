@@ -241,7 +241,15 @@ local function die(mob, killer)
 			p.CanCollide = false
 		end
 	end
-	task.delay(0.6, function()
+	-- v0.24.0 (owner): the body stays a moment: clients topple it to the ground, it lies there, then breaks into
+	-- voxel blocks + pixel dust (CreatureAnim.deathFall). Nothing can target it meanwhile (removed from mobs above).
+	model:SetAttribute("Dead", true)
+	for _, g in ipairs(model:GetDescendants()) do
+		if g:IsA("BillboardGui") then
+			g.Enabled = false -- name + HP bar go away at once
+		end
+	end
+	task.delay(def.isBoss and 3.6 or 2.6, function()
 		model:Destroy()
 	end)
 	if mob.zone and not mob.opts.noRespawn then

@@ -2,7 +2,7 @@
 return {
 	GameName = "Grand Voyage",
 	-- bump on every change: shown bottom-right in game and printed in Output, so you can tell which code is running
-	Version = "0.23.0",
+	Version = "0.24.0",
 	SagaName = "Azure East Saga",
 	DataStoreName = "GV_Player_v1",
 	GuildStoreName = "GV_Guild_v1",
@@ -13,6 +13,9 @@ return {
 	NormalizeAvatars = true,
 	-- every player's avatar in the voxel style: cube head with their face, blocky body, hair/hats rebuilt from blocks
 	VoxelAvatars = true,
+	-- v0.24.0 (owner): title menu with PLAY / CHARACTER, character slots and a voxel character creator
+	-- (Config/Looks). Players spawn only after Play, built from their slot's look (VoxelAvatars then no longer applies).
+	TitleMenu = true,
 
 	-- ===== Day / night (client Controllers/Atmos.lua; same clock on every client via server time) =====
 	DayNight = {

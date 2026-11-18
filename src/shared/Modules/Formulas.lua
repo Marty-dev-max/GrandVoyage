@@ -107,6 +107,33 @@ function F.Compute(profile, buffs)
 		b.atkPct = (b.atkPct or 0) + (fp.atkPct or 0)
 		b.hpPct = (b.hpPct or 0) + (fp.maxHpPct or 0)
 	end
+	-- Heritage perks (Config/Looks, v0.24.0)
+	local her = profile.heritage
+	local herSpeed, herMatk = 1, 0
+	if her == "Islander" then
+		b.hpPct = (b.hpPct or 0) + 0.05
+		b.expPct = (b.expPct or 0) + 0.05
+	elseif her == "Skyborn" then
+		herSpeed = 1.05
+	elseif her == "Tidekin" then
+		b.defPct = (b.defPct or 0) + 0.05
+	elseif her == "Beastkin" then
+		b.atkPct = (b.atkPct or 0) + 0.05
+		herSpeed = 1.05
+	elseif her == "Oni" then
+		b.atkPct = (b.atkPct or 0) + 0.08
+		b.defPct = (b.defPct or 0) + 0.06
+	elseif her == "Cinderwing" then
+		-- the 0.1% heritage: always +10% HP, then FLAME (+25% ATK / MATK) or CALM (+20% speed, +10% FLEE, +8% ASPD)
+		b.hpPct = (b.hpPct or 0) + 0.1
+		if profile.heritageMode == "calm" then
+			herSpeed = 1.2
+			b.aspd = (b.aspd or 0) + 0.08
+		else
+			b.atkPct = (b.atkPct or 0) + 0.25
+			herMatk = 0.25
+		end
+	end
 	local STR = s.STR + (b.str or 0)
 	local AGI = s.AGI + (b.agi or 0)
 	local VIT = s.VIT + (b.vit or 0)
@@ -117,17 +144,17 @@ function F.Compute(profile, buffs)
 	local d = {}
 	d.STR, d.AGI, d.VIT, d.INT, d.DEX, d.LUK = STR, AGI, VIT, INT, DEX, LUK
 	d.maxHp = math.floor(((100 + lvl * 20 + VIT * 14 + lvl * VIT * 0.6) * cls.hpMod + (b.maxHp or 0)) * (1 + (b.hpPct or 0)))
-	d.maxSp = math.floor((30 + lvl * 4 + INT * 6) * cls.spMod + (b.maxSp or 0))
+	d.maxSp = math.floor(((30 + lvl * 4 + INT * 6) * cls.spMod + (b.maxSp or 0)) * (her == "Tidekin" and 1.08 or 1))
 	d.atk = math.floor((STR * 2.2 + DEX * 0.4 + LUK * 0.3 + lvl + b.weaponAtk + (b.atk or 0)) * (1 + (b.atkPct or 0) + (buffs.atk or 0)))
-	d.matk = math.floor((INT * 3 + lvl + b.weaponMatk + (b.matk or 0)) * (1 + (buffs.atk or 0)))
+	d.matk = math.floor((INT * 3 + lvl + b.weaponMatk + (b.matk or 0)) * (1 + (buffs.atk or 0) + herMatk))
 	d.def = math.floor((VIT * 0.8 + b.equipDef + (b.def or 0)) * (1 + (b.defPct or 0) + (buffs.def or 0)))
 	d.mdef = math.floor(INT * 0.5 + b.equipMdef + (b.mdef or 0))
 	d.hit = math.floor(lvl + DEX * 1.6 + (b.hit or 0))
-	d.flee = math.floor(lvl + AGI * 1.6 + (b.flee or 0) + (buffs.flee or 0))
+	d.flee = math.floor((lvl + AGI * 1.6 + (b.flee or 0) + (buffs.flee or 0)) * ((her == "Skyborn" and 1.05) or (her == "Cinderwing" and profile.heritageMode == "calm" and 1.1) or 1))
 	d.crit = 1 + LUK * 0.35 + (b.crit or 0) + (buffs.crit or 0)
 	local aspd = (b.aspd or 0) + (buffs.aspd or 0)
 	d.attackInterval = math.max(0.35, 1.5 * (1 - AGI * 0.006 - DEX * 0.0015) / (1 + aspd))
-	d.moveSpeed = math.min(24, 17 + AGI * 0.05)
+	d.moveSpeed = math.min(24, 17 + AGI * 0.05) * herSpeed
 	d.cannonDamage = (b.cannonDamage or 0) + (cls.passive and cls.passive.cannonDamage or 0)
 	d.shipSpeed = (b.shipSpeed or 0) + (cls.passive and cls.passive.shipSpeed or 0)
 	d.shipHp = b.shipHp or 0

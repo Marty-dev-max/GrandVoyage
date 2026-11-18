@@ -39,11 +39,14 @@ UI.Theme = {
 }
 local T = UI.Theme
 
+-- v0.24.0 (owner): the whole game uses the pixel font Press Start 2P (Enum.Font.Arcade); UI/PixelUI scales fixed
+-- text sizes for it and squares every corner
+local PIXEL_FONT = Font.fromEnum(Enum.Font.Arcade)
 UI.Fonts = {
-	Display = Font.new("rbxasset://fonts/families/FredokaOne.json"),
-	Bold = Font.new("rbxasset://fonts/families/BuilderSans.json", Enum.FontWeight.Heavy),
-	Semi = Font.new("rbxasset://fonts/families/BuilderSans.json", Enum.FontWeight.Bold),
-	Number = Font.new("rbxasset://fonts/families/FredokaOne.json"),
+	Display = PIXEL_FONT,
+	Bold = PIXEL_FONT,
+	Semi = PIXEL_FONT,
+	Number = PIXEL_FONT,
 }
 local F = UI.Fonts
 
@@ -99,12 +102,13 @@ function UI.Tween(inst, t, props, style, dir)
 end
 local Tween = UI.Tween
 
-function UI.Corner(parent, r)
-	return New("UICorner", { CornerRadius = UDim.new(0, r or 12), Parent = parent })
+function UI.Corner(parent, _r)
+	-- voxel UI (v0.24.0): square corners everywhere
+	return New("UICorner", { CornerRadius = UDim.new(0, 0), Parent = parent })
 end
 
 function UI.Stroke(parent, color, thick, mode)
-	return New("UIStroke", { Color = color or T.Edge, Thickness = thick or 2.5, ApplyStrokeMode = mode or Enum.ApplyStrokeMode.Border, LineJoinMode = Enum.LineJoinMode.Round, Parent = parent })
+	return New("UIStroke", { Color = color or T.Edge, Thickness = thick or 2.5, ApplyStrokeMode = mode or Enum.ApplyStrokeMode.Border, LineJoinMode = Enum.LineJoinMode.Miter, Parent = parent })
 end
 
 function UI.Pad(parent, px)

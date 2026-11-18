@@ -43,8 +43,16 @@ end
 local handlers = {}
 local lastCall = {}
 
-function Net.Handle(action, fn, minInterval)
-	handlers[action] = { fn = fn, interval = minInterval or 0.08 }
+-- open = true: allowed before the player has entered the game (title menu / character slots)
+function Net.Handle(action, fn, minInterval, open)
+	handlers[action] = { fn = fn, interval = minInterval or 0.08, open = open }
+end
+
+-- gate(player) -> true when the player is in the game (a character slot is loaded). Requests that are not `open`
+-- are refused until then, so no handler ever sees a player without a profile.
+local gate
+function Net.SetGate(fn)
+	gate = fn
 end
 
 -- Hooks run after every handled request with (player, action, payload, result). Used by QuestService so services
@@ -78,6 +86,9 @@ function Net.StartServer()
 			return { ok = false, msg = "Too fast", throttled = true }
 		end
 		lastCall[key] = now
+		if gate and not h.open and not gate(player) then
+			return { ok = false, msg = "Choose a character first", notInGame = true }
+		end
 		payload = type(payload) == "table" and payload or {}
 		local ok, a, b, c = pcall(h.fn, player, payload)
 		if not ok then

@@ -295,13 +295,15 @@ local function spinWindmills(dt)
 	end
 end
 
+-- v0.24.0 (owner): the jazz track belongs to the title menu / character creator only. In the world you hear the
+-- place you are in: birds on an island by day, crickets at night, the sea's water lap (and the harbor at night) at sea.
 local function updateAudio(zone, onIsland)
+	Audio.Loop("music", nil, 2.5)
+	local night = Atmos.IsNight()
 	if onIsland and zone ~= "CalmBelt" then
-		Audio.Loop("music", "MusicJazz")
-		Audio.Loop("ambience", "AmbienceIsland")
+		Audio.Loop("ambience", night and "AmbienceNight" or "AmbienceIsland", 3)
 	else
-		Audio.Loop("music", "MusicSea")
-		Audio.Loop("ambience", "AmbienceSea")
+		Audio.Loop("ambience", "AmbienceSea", 3)
 	end
 end
 

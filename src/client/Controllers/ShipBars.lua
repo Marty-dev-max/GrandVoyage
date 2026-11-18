@@ -67,7 +67,7 @@ local function build(ship)
 	corner(flash)
 	local label = new("TextLabel", {
 		Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 5, Text = "",
-		FontFace = Font.new("rbxasset://fonts/families/FredokaOne.json"), TextSize = 12, TextColor3 = Color3.new(1, 1, 1),
+		FontFace = Font.fromEnum(Enum.Font.Arcade), TextSize = 12, TextColor3 = Color3.new(1, 1, 1),
 		Parent = back,
 	})
 	new("UIStroke", { Color = Color3.fromRGB(18, 14, 28), Thickness = 1.5, Parent = label })

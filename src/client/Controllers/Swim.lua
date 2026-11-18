@@ -19,6 +19,10 @@ local New = UI.New
 
 local swimming = false
 local sinkWarned = false
+local function maxBreath()
+	-- Tidekin heritage breathes 60% longer (server mirrors it in PlayerService)
+	return CFG.BreathSeconds * (player:GetAttribute("Heritage") == "Tidekin" and 1.6 or 1)
+end
 local breath = CFG.BreathSeconds
 local seaTime = 0
 local depth = 0 -- studs below the normal floating height
@@ -187,15 +191,15 @@ function Swim.Start()
 					UI.Notice("🫧 OUT OF BREATH! SWIM UP!", T.Red)
 				end
 			else
-				breath = math.min(CFG.BreathSeconds, breath + dt * 6)
-				if breath >= CFG.BreathSeconds * 0.5 then
+				breath = math.min(maxBreath(), breath + dt * 6)
+				if breath >= maxBreath() * 0.5 then
 					outOfBreath = false
 				end
 			end
 			-- one bar: breath while under (or refilling), otherwise how long you can keep swimming
 			local k, label
-			if submerged or breath < CFG.BreathSeconds - 0.05 then
-				k, label = breath / CFG.BreathSeconds, "🫧 BREATH"
+			if submerged or breath < maxBreath() - 0.05 then
+				k, label = breath / maxBreath(), "🫧 BREATH"
 			else
 				k, label = math.max(0, 1 - seaTime / CFG.SeaSeconds), "🏊 SWIM"
 			end
@@ -203,7 +207,7 @@ function Swim.Start()
 			barText.Text = k < 0.25 and (submerged and "🫧 OUT OF BREATH!" or "🏊 TIRED: GET OUT!") or label
 			barText.TextColor3 = k < 0.25 and Color3.fromRGB(255, 120, 120) or Color3.new(1, 1, 1)
 		else
-			breath = math.min(CFG.BreathSeconds, breath + dt * 6)
+			breath = math.min(maxBreath(), breath + dt * 6)
 			outOfBreath = false
 		end
 	end)
@@ -248,7 +252,7 @@ function Swim.Start()
 	player.CharacterAdded:Connect(function()
 		swimming = false
 		float = nil
-		breath = CFG.BreathSeconds
+		breath = maxBreath()
 		depth, seaTime, outOfBreath, diveHeld = 0, 0, false, false
 		if bar then
 			bar.Visible = false

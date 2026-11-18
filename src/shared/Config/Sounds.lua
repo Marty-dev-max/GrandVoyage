@@ -81,8 +81,9 @@ add("AmbienceIsland", "Ambience", 0.45, "", { looped = true, id = "rbxassetid://
 add("AmbienceUnderwater", "Ambience", 0.6, "", { looped = true, id = "rbxassetid://9112889917" }) -- Underwater Ambience 1
 add("WaterPlunge", "SFX", 0.6, SPLASH, { id = "rbxassetid://9120585252" }) -- Water Splash Big Water Splash Dive In 1
 add("WaterSurface", "SFX", 0.4, SPLASH, { id = "rbxassetid://9120618797" }) -- Wave Spraying 3
+add("AmbienceNight", "Ambience", 0.4, "", { looped = true, id = "rbxassetid://9112764573" }) -- Crickets Night 3 (ProSoundEffects)
 add("MusicIsland", "Music", 0.35, "", { looped = true })
--- owner's pick (v0.22.5): jazz piano track played on the islands / when you join (assets/music/MusicJazz.mp3)
+-- owner's pick (v0.22.5): jazz piano track (assets/music/MusicJazz.mp3). v0.24.0: title menu + character creator only
 add("MusicJazz", "Music", 0.4, "", { looped = true, id = "rbxassetid://78909647577056" })
 add("MusicSea", "Music", 0.35, "", { looped = true })
 add("MusicBoss", "Music", 0.45, "", { looped = true })

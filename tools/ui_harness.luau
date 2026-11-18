@@ -156,6 +156,7 @@ local services = {
 	CollectionService = { GetTagged = function() return {} end, GetInstanceAddedSignal = function() return dummy end, AddTag = function() end, HasTag = function() return false end },
 	StarterGui = { SetCoreGuiEnabled = function() end, SetCore = function() end },
 	Debris = { AddItem = function() end },
+	MarketplaceService = { PromptProductPurchase = function() end, PromptGamePassPurchase = function() end },
 	Lighting = place:GetService("Lighting"),
 	SoundService = place:GetService("SoundService"),
 	ReplicatedStorage = place:GetService("ReplicatedStorage"),
@@ -199,6 +200,9 @@ end
 local fakeResponses = {
 	StallView = { ok = true, data = { title = "Cheap Cards!", seller = "Pirate King", items = { { index = 1, id = "WildBoarCard", qty = 2, price = 5000 }, { index = 2, id = "Sword_Keen", refine = 5, cards = {}, qty = 1, price = 90000 } } } },
 	PearlInfo = { ok = true, data = { pearls = 840, bound = 120, earnedToday = 75, cap = 300, canTrade = true, perks = {}, products = { { productId = 0, pearls = 100, name = "Pouch of Pearls" }, { productId = 0, pearls = 550, name = "Chest of Pearls" } } } },
+	MenuSlots = { ok = true, data = { bank = 2, slots = { { look = { hair = 18, eyes = 6, mouth = 2, shirt = 6, pants = 1, shoes = 2, hair1 = "F4F4F4" }, heritage = "Skyborn", variant = 3, spins = 1, level = 12, class = "Brawler", jobLevel = 9, played = 5 }, false, false } } },
+	MenuSpin = { ok = true, data = { heritage = "Cinderwing", variant = 1, bank = 1, summary = { look = {}, heritage = "Cinderwing", variant = 1, spins = 0, level = 1, class = "Brawler", jobLevel = 1, played = 0 } } },
+	MenuSaveLook = { ok = true, data = { look = {}, heritage = "Islander", variant = 1, spins = 3, level = 1, class = "Brawler", jobLevel = 1, played = 0 } },
 	GuildList = { ok = true, data = { { id = "a", name = "Sea Wolves", faction = "Pirate", count = 12 }, { id = "b", name = "Blue Anchor", faction = "Marine", count = 8 } } },
 }
 roblox.implementMethod("RemoteFunction", "InvokeServer", function(_, action)
@@ -420,11 +424,11 @@ end
 
 local UI = mod("UI.UIKit")
 local shots = {}
-local function snapshot(name)
+local function snapshot(name, root)
 	for _ = 1, 4 do
 		renderStepped:Fire(0.1)
 	end
-	fs.writeFile(outDir .. "/" .. name .. ".json", serde.encode("json", dump(UI.Root)))
+	fs.writeFile(outDir .. "/" .. name .. ".json", serde.encode("json", dump(root or UI.Root)))
 	table.insert(shots, name)
 	print("[snap]", name)
 end
@@ -563,6 +567,31 @@ for _, p in panels do
 	end) then
 		snapshot("panel_" .. p[1] .. ((p[2] and p[2].tab) and ("_" .. p[2].tab) or ""))
 	end
+end
+-- v0.24.0 title menu: title, character slots, creator (+ color target / spin / buy spins)
+do
+	local Menu = mod("UI.Menu")
+	step("Menu.Start", Menu.Start)
+	snapshot("menu_title", playerGui:FindFirstChild("TitleMenu"))
+	step("Menu.Slots", function()
+		for _, f in playerGui:GetDescendants() do
+			if f.Name == "Slots" and f:IsA("Frame") then
+				f.Visible = true
+			elseif (f.Name == "Title" or f.Name == "Edit") and f:IsA("Frame") then
+				f.Visible = false
+			end
+		end
+	end)
+	snapshot("menu_slots", playerGui:FindFirstChild("TitleMenu"))
+	step("Menu.Edit", function()
+		Menu.Edit(1)
+	end)
+	snapshot("menu_edit", playerGui:FindFirstChild("TitleMenu"))
+	step("Menu.Spin", Menu.Spin)
+	step("Menu.BuySpins", Menu.BuySpins)
+	snapshot("menu_buyspins", playerGui:FindFirstChild("TitleMenu"))
+	step("Menu.Done", Menu.Done)
+	step("Menu.Close", Menu.Close)
 end
 fs.writeFile(outDir .. "/index.json", serde.encode("json", { shots = shots, errors = errors, view = { VIEW.X, VIEW.Y }, topbar = TOPBAR }))
 print(#errors == 0 and "UI HARNESS: NO RUNTIME ERRORS" or ("UI HARNESS ERRORS: " .. #errors))

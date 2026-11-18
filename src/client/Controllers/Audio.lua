@@ -118,7 +118,9 @@ end
 
 -- Looping music/ambience with crossfade
 local loops = {}
-function Audio.Loop(channel, name, fade)
+-- the title menu owns the music channel while it is open (gameplay controllers' music requests wait behind it)
+local musicOverride
+local function loop(channel, name, fade)
 	local cur = loops[channel]
 	if cur and cur.name == name then
 		return
@@ -144,6 +146,19 @@ function Audio.Loop(channel, name, fade)
 	s:Play()
 	TweenService:Create(s, TweenInfo.new(fade), { Volume = def.volume }):Play()
 	loops[channel] = { name = name, sound = s }
+end
+
+function Audio.Loop(channel, name, fade)
+	if channel == "music" and musicOverride then
+		return
+	end
+	loop(channel, name, fade)
+end
+
+-- name = a music track to force (menu), nil = give the channel back (silence until the world asks for something)
+function Audio.SetMenuMusic(name, fade)
+	musicOverride = name
+	loop("music", name, fade or 1.5)
 end
 
 return Audio

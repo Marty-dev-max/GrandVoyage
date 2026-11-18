@@ -39,6 +39,66 @@
   "id": "106525955388452",
   "sha1": "bea93b6dbb43bd143727ac9616b0d5838f630412"
  },
+ "px_bubble": {
+  "id": "136571378280124",
+  "sha1": "52f7be971b0bcc64698c5b672fc4f06fb4bdd485"
+ },
+ "px_burst": {
+  "id": "114681990519587",
+  "sha1": "7f2858f030c7ce64ea99b2da2acbcb92d7ee242e"
+ },
+ "px_crack": {
+  "id": "77825526528136",
+  "sha1": "237cb257117ee4e919fd5f087129a233500cee65"
+ },
+ "px_cube": {
+  "id": "86279140208763",
+  "sha1": "e7982ea470668038eaa8cbccd896e51e76c2cd07"
+ },
+ "px_flame": {
+  "id": "100547883521158",
+  "sha1": "7b47d2b167233153c5fbb3ef4b6edbb2ddecc383"
+ },
+ "px_glow": {
+  "id": "110093638919302",
+  "sha1": "dafecb6427cac437dbb2e3f7b51815a5d21d19dd"
+ },
+ "px_impact": {
+  "id": "106393351594287",
+  "sha1": "7bc3c7477d47aaf6bb1c79fc60a5a8f45f4fc2bc"
+ },
+ "px_leaf": {
+  "id": "102977878155436",
+  "sha1": "6b29e273e012441edc6acc69697817f4f53e589e"
+ },
+ "px_lightning": {
+  "id": "131106438207890",
+  "sha1": "6d7bfbb15b9319aae32aeaa033f8df66efd42bb2"
+ },
+ "px_plus": {
+  "id": "139643683055315",
+  "sha1": "d9bbb033887e04209079ba996441c170097356a7"
+ },
+ "px_ring": {
+  "id": "93566870460675",
+  "sha1": "e989b2b936c0a300595d7f6d76ad9c89af3b71da"
+ },
+ "px_slash": {
+  "id": "125758735256769",
+  "sha1": "bec23b0cc3e29796ed8a38424d06fe06649747a1"
+ },
+ "px_smoke": {
+  "id": "77079299493412",
+  "sha1": "9cab3357fbbd2bb30ff8d96129dd5812e970439c"
+ },
+ "px_sparkle": {
+  "id": "86839459717563",
+  "sha1": "a7e67103e8a727ecf048f579b9aa35ba7d5d3472"
+ },
+ "px_square": {
+  "id": "86688027663942",
+  "sha1": "342152f5f00d204e33399c36252921895c59de20"
+ },
  "ring": {
   "id": "82570570668357",
   "sha1": "51624af8ecc7f93fda49126fcb5f206c207f7b8f"

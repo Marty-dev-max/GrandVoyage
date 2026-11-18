@@ -4,7 +4,9 @@
 local Debris = game:GetService("Debris")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local Net = require(ReplicatedStorage.Shared.Modules.Net)
+local Voxels = require(script.Parent.Voxels)
 
 local CreatureAnim = {}
 CreatureAnim.Stats = { rigged = 0, plain = 0, animated = 0, attacks = 0, hits = 0 }
@@ -64,6 +66,114 @@ local function shatter(model, color, boss)
 			Debris:AddItem(c, 1.4)
 		end
 	end
+end
+
+-- death (v0.24.0, owner): the monster does not vanish at once. It topples over to the ground (gravity ease + a small
+-- bounce), lies there for a beat and blinks, then breaks apart into voxel blocks and pixel dust in its own colors.
+-- The server keeps the (anchored) body ~2.6 s for this; every move here is local to this client.
+local function deathFall(model, color, boss)
+	if not model.Parent then
+		return
+	end
+	color = color or Color3.fromRGB(220, 220, 220)
+	local parts, orig = {}, {}
+	for _, p in ipairs(model:GetDescendants()) do
+		if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" and p.Transparency < 1 then
+			table.insert(parts, p)
+			orig[p] = p.CFrame
+		end
+	end
+	if #parts == 0 then
+		return
+	end
+	local okBox, bcf, bsize = pcall(model.GetBoundingBox, model)
+	if not okBox then
+		return shatter(model, color, boss)
+	end
+	local base = bcf.Position - Vector3.new(0, bsize.Y / 2, 0)
+	local serpent = model:GetAttribute("BodyPts") ~= nil or bsize.Y > 40
+	-- fall sideways, to the camera's left or right so the player sees the body go down
+	local cam = workspace.CurrentCamera
+	local right = cam and cam.CFrame.RightVector or Vector3.xAxis
+	local dir = Vector3.new(right.X, 0, right.Z)
+	dir = (dir.Magnitude > 0.01 and dir.Unit or Vector3.xAxis) * (math.random() < 0.5 and -1 or 1)
+	local axis = Vector3.yAxis:Cross(dir).Unit
+	local reach = math.max(bsize.X, bsize.Z) * 0.35
+	local pivot = base + dir * reach
+	local fallT = boss and 0.85 or 0.45
+	local t0 = os.clock()
+	local done = false
+	local conn
+	local function pose(angle, drop)
+		local r = CFrame.new(pivot - Vector3.new(0, drop, 0)) * CFrame.fromAxisAngle(axis, angle) * CFrame.new(-pivot)
+		for _, p in ipairs(parts) do
+			if p.Parent then
+				p.CFrame = r * orig[p]
+			end
+		end
+	end
+	if not serpent then
+		conn = RunService.RenderStepped:Connect(function()
+			local t = os.clock() - t0
+			local a
+			if t < fallT then
+				local k = t / fallT
+				a = (k * k) * math.rad(88)
+			elseif t < fallT + 0.22 then
+				-- bounce back up a little, then settle flat
+				local k = (t - fallT) / 0.22
+				a = math.rad(88) - math.sin(k * math.pi) * math.rad(10)
+			else
+				a = math.rad(88)
+				if done then
+					conn:Disconnect()
+				end
+			end
+			pose(a, math.min(1, t / fallT) * bsize.Y * 0.04)
+		end)
+		task.delay(fallT, function()
+			-- thud: a ring of dust where it lands
+			Voxels.Pixels(pivot + dir * bsize.Y * 0.4, { count = boss and 40 or 16, colors = { Color3.fromRGB(196, 176, 140), Color3.fromRGB(150, 130, 100) }, size = boss and 0.9 or 0.35, speed = boss and 18 or 9, gravity = 14, life = 0.6 })
+		end)
+	end
+	-- lie still, blink twice, then dissolve
+	task.delay((serpent and 0.1 or fallT + 0.5), function()
+		for _ = 1, 2 do
+			local hl = Instance.new("Highlight")
+			hl.FillColor = Color3.new(1, 1, 1)
+			hl.FillTransparency = 0.35
+			hl.OutlineTransparency = 1
+			hl.DepthMode = Enum.HighlightDepthMode.Occluded
+			hl.Adornee = model
+			hl.Parent = model
+			task.wait(0.08)
+			hl:Destroy()
+			task.wait(0.1)
+		end
+		done = true
+		if not model.Parent then
+			return
+		end
+		local cf2, size2 = model:GetBoundingBox()
+		local vol = size2.X * size2.Y * size2.Z
+		local blockSize = math.clamp(math.min(size2.X, size2.Y, size2.Z) / 4, 0.3, boss and 2.2 or 0.9)
+		local cols = { color, color:Lerp(Color3.new(0, 0, 0), 0.3), color:Lerp(Color3.new(1, 1, 1), 0.25) }
+		for _, p in ipairs(parts) do
+			if p.Color ~= Color3.new(1, 1, 1) and p.Color ~= Color3.fromRGB(163, 162, 165) then
+				table.insert(cols, p.Color)
+			end
+		end
+		Voxels.Blocks(cf2.Position, { count = math.clamp(math.floor(vol / (blockSize ^ 3) / 6), 10, boss and 60 or 26), colors = cols, size = { blockSize * 0.7, blockSize * 1.2 }, speed = boss and 16 or 8, up = boss and 14 or 9, spread = math.max(size2.X, size2.Z) * 0.3, life = 0.9 })
+		Voxels.Pixels(cf2.Position, { count = boss and 90 or 40, colors = cols, size = boss and 0.8 or 0.3, speed = boss and 22 or 12, gravity = -4, up = 6, life = 0.9, spread = math.max(size2.X, size2.Z) * 0.6 })
+		for _, p in ipairs(parts) do
+			p.LocalTransparencyModifier = 1
+			for _, d in ipairs(p:GetDescendants()) do
+				if d:IsA("Decal") or d:IsA("Texture") then
+					d.Transparency = 1
+				end
+			end
+		end
+	end)
 end
 
 -- overhead HP bars (made on the server): drain smoothly with a red chunk of what was lost, and punch on big hits
@@ -170,7 +280,7 @@ function CreatureAnim.Start()
 			CreatureAnim.Stats.hits += 1
 			flash(d.model) -- the server sends damage on the attacker's strike frame
 		elseif kind == "MobDeath" then
-			shatter(d.model, d.color, d.boss)
+			deathFall(d.model, d.color, d.boss)
 		end
 	end)
 	task.spawn(function()

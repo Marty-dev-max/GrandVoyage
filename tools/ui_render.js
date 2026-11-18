@@ -99,7 +99,7 @@ function render(n, parentLayout) {
   const isText = n.Text !== undefined && n.cls !== 'ScreenGui';
   if (isText) {
     const ctx = mods.strokes.find(s => s.mode === 'Contextual' && s.enabled !== false);
-    const font = n.FontFace && n.FontFace.includes('Fredoka') ? 'Fredoka One' : 'Inter';
+    const font = n.FontFace && (n.FontFace.includes('Arcade') || n.FontFace.includes('PressStart')) ? 'Press Start 2P' : (n.FontFace && n.FontFace.includes('Fredoka') ? 'Fredoka One' : 'Inter');
     const weight = font === 'Inter' ? 800 : 400;
     const ta = { Left: 'left', Center: 'center', Right: 'right' }[n.TextXAlignment] || 'center';
     const va = { Top: 'flex-start', Center: 'center', Bottom: 'flex-end' }[n.TextYAlignment] || 'center';
@@ -132,6 +132,7 @@ for (const folder of ['assets/icons', 'assets/vfx']) {
   if (index.view) { W = index.view[0]; H = index.view[1]; }
   TOPBAR = index.topbar || 0;
   const font = fs.readFileSync(path.join(__dirname, 'fredoka-one.woff2')).toString('base64');
+  const pixelFont = fs.existsSync(path.join(__dirname, 'press-start-2p.woff2')) ? fs.readFileSync(path.join(__dirname, 'press-start-2p.woff2')).toString('base64') : '';
   const bgData = fs.existsSync(bg) ? `url(data:image/png;base64,${fs.readFileSync(bg).toString('base64')})` : '#7cc4ee';
   const browser = await chromium.launch();
   
@@ -141,6 +142,7 @@ for (const folder of ['assets/icons', 'assets/vfx']) {
     const scale = Math.min(Math.max(H / 860, 0.55), 1.25);
     const html = `<!doctype html><html><head><style>
       @font-face{font-family:'Fredoka One';src:url(data:font/woff2;base64,${font}) format('woff2')}
+      @font-face{font-family:'Press Start 2P';src:url(data:font/woff2;base64,${pixelFont}) format('woff2')}
       body{margin:0;width:${W}px;height:${H}px;overflow:hidden;background:${bgData} center/cover}
       #root{position:absolute;left:0;top:0;width:${W / scale}px;height:${H / scale}px;transform:scale(${scale});transform-origin:0 0}
       #root > div{width:100% !important;height:100% !important}

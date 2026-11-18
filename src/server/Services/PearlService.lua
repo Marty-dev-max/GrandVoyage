@@ -181,7 +181,27 @@ for _, prod in ipairs(Pearls.Products) do
 	end
 end
 
+-- Heritage spin packs (Config/Spins): granted to the account spin bank, works on the title menu too
+local SpinsCfg = require(Shared.Config.Spins)
+local spinPackById = {}
+for _, sp in ipairs(SpinsCfg.Products) do
+	if sp.productId and sp.productId ~= 0 then
+		spinPackById[sp.productId] = sp
+	end
+end
+
 local function processReceipt(info)
+	local pack = spinPackById[info.ProductId]
+	if pack then
+		if not R.DataService.GrantBankSpins(info.PlayerId, info.PurchaseId, pack.spins) then
+			return Enum.ProductPurchaseDecision.NotProcessedYet
+		end
+		local buyer = Players:GetPlayerByUserId(info.PlayerId)
+		if buyer then
+			Net.Push(buyer, "SpinsBought", { spins = pack.spins, bank = R.DataService.BankSpins(info.PlayerId) })
+		end
+		return Enum.ProductPurchaseDecision.PurchaseGranted
+	end
 	local player = Players:GetPlayerByUserId(info.PlayerId)
 	local prod = productById[info.ProductId]
 	if not player or not prod then
@@ -219,10 +239,10 @@ function PS.Start()
 	pcall(function()
 		ledgerStore = DataStoreService:GetDataStore(Pearls.LedgerStore)
 	end)
-	if next(productById) then
+	if next(productById) or next(spinPackById) then
 		MarketplaceService.ProcessReceipt = processReceipt
 	end
-	Players.PlayerAdded:Connect(function(player)
+	R.DataService.Loaded:Connect(function(player) -- v0.24.0: once a character slot is loaded (title menu)
 		task.delay(3, function()
 			local p = prof(player)
 			if p then

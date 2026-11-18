@@ -6,7 +6,28 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Net = require(ReplicatedStorage.Shared.Modules.Net)
 local Audio = require(script.Parent.Audio)
 local Settings = require(script.Parent.Settings)
-local Tex = require(ReplicatedStorage.Shared.Config.Textures)
+local Voxels = require(script.Parent.Voxels)
+-- v0.24.0 (owner): voxel / pixel FX. Every texture with a pixel-art twin (px_<name>, tools/gen_vfx.py) is swapped for
+-- it, particles do not spin (square pixels stay square), spheres and cylinders become cubes, and the main effects add
+-- real voxel blocks (Controllers/Voxels) in the colors of what they are.
+local Tex = {}
+do
+	local raw = require(ReplicatedStorage.Shared.Config.Textures)
+	for k, v in pairs(raw) do
+		Tex[k] = raw["px_" .. k] or v
+	end
+end
+local PIXEL = {}
+for k, v in pairs(Tex) do
+	if string.sub(k, 1, 3) == "px_" then
+		PIXEL[v] = true
+	end
+end
+for k, v in pairs(require(ReplicatedStorage.Shared.Config.Textures)) do
+	if string.sub(k, 1, 3) == "px_" then
+		PIXEL[v] = true
+	end
+end
 
 local VFX = {}
 local fxFolder = Instance.new("Folder")
@@ -25,8 +46,12 @@ local function part(size, color, cf, shape, material, transparency)
 	p.CFrame = cf
 	p.Material = material or Enum.Material.Neon
 	p.Transparency = transparency or 0
-	if shape then
-		p.Shape = shape
+	if shape == Enum.PartType.Ball then
+		-- voxel style: a sphere becomes a cube (a little smaller, so it reads the same size)
+		p.Size = size * 0.85
+	elseif shape == Enum.PartType.Cylinder then
+		-- rings / discs / pillars become flat square slabs (cylinder axis X -> slab is thin along X)
+		p.Size = Vector3.new(size.X, size.Y * 0.88, size.Z * 0.88)
 	end
 	p.Parent = fxFolder
 	return p
@@ -93,6 +118,13 @@ local function emit(pos, props, count, life, host)
 			e[k] = v
 		end
 	end
+	if PIXEL[e.Texture] and e.Orientation == Enum.ParticleOrientation.FacingCamera and e.Texture ~= Tex.slash then
+		-- square pixels stay square: no random spin (slashes keep their aimed rotation)
+		e.RotSpeed = NumberRange.new(0)
+		if e.Rotation.Max - e.Rotation.Min >= 90 then
+			e.Rotation = NumberRange.new(0)
+		end
+	end
 	e.Parent = h
 	e:Emit(math.max(1, math.floor(count * (props.Fixed and 1 or quality()) + 0.5)))
 	if not host then
@@ -120,6 +152,7 @@ function VFX.Flash(pos, c, size)
 	size = size or 4
 	emit(pos, { Texture = Tex.burst, Color = color(c), Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, size * 0.3), NumberSequenceKeypoint.new(0.3, size), NumberSequenceKeypoint.new(1, size * 1.1) }), Transparency = seq(0, 1), Lifetime = NumberRange.new(0.16, 0.2), Rotation = NumberRange.new(0, 360), Speed = NumberRange.new(0), ZOffset = 3, Fixed = true }, 1, 0.2)
 	emit(pos, { Texture = Tex.glow, Color = ColorSequence.new(c), Size = seq(size * 1.4, size * 2), Transparency = seq(0.3, 1), Lifetime = NumberRange.new(0.2), Speed = NumberRange.new(0), Fixed = true }, 1, 0.2)
+	Voxels.Pixels(pos, { count = 8 + math.floor(size), colors = { c, c:Lerp(Color3.new(1, 1, 1), 0.6) }, size = math.clamp(size * 0.07, 0.18, 0.6), speed = 10 + size, gravity = 18, life = 0.35, glow = 1 })
 end
 
 function VFX.Sparks(pos, c, count, speed)
@@ -129,6 +162,7 @@ end
 
 function VFX.Burst(pos, radius, c, t)
 	t = t or 0.35
+	Voxels.Blocks(pos, { count = 4 + math.floor(radius * 0.8), colors = { c, c:Lerp(Color3.new(1, 1, 1), 0.4) }, size = math.clamp(radius * 0.09, 0.25, 1.2), speed = radius * 1.4, up = 8 + radius * 0.6, neon = true, collide = false, life = 0.5 })
 	emit(pos, { Texture = Tex.glow, Color = ColorSequence.new(c), Size = seq(radius * 0.6, radius * 2.4), Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(1, 1) }), Lifetime = NumberRange.new(t), Speed = NumberRange.new(0), Fixed = true }, 1, t)
 	VFX.Flash(pos, c, radius * 0.9)
 	VFX.Sparks(pos, c, 6 + math.floor(radius), radius * 0.8)
@@ -146,6 +180,7 @@ end
 
 function VFX.Smoke(pos, c, count, radius)
 	radius = radius or 6
+	Voxels.Pixels(pos, { count = (count or 8) * 2, colors = { c or Color3.fromRGB(210, 210, 215), (c or Color3.fromRGB(210, 210, 215)):Lerp(Color3.new(0, 0, 0), 0.2) }, size = radius * 0.12, speed = radius, gravity = -3, life = 1.2, drag = 3 })
 	emit(pos, { Texture = Tex.smoke, Color = ColorSequence.new(c or Color3.fromRGB(210, 210, 215)), LightEmission = 0, Size = seq(radius * 0.8, radius * 2), Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.35), NumberSequenceKeypoint.new(1, 1) }), Lifetime = NumberRange.new(1, 1.8), Speed = NumberRange.new(2, 6), SpreadAngle = Vector2.new(180, 40), Drag = 2, Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-30, 30), Acceleration = Vector3.new(0, 3, 0) }, count or 8, 1.8)
 end
 
@@ -227,6 +262,7 @@ function VFX.Impact(pos, c, size)
 	size = size or 4
 	emit(pos, { Texture = Tex.impact, Color = ColorSequence.new(Color3.new(1, 1, 1), c), Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, size * 0.4), NumberSequenceKeypoint.new(0.25, size * 1.3), NumberSequenceKeypoint.new(1, size * 1.5) }), Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.5, 0.2), NumberSequenceKeypoint.new(1, 1) }), Lifetime = NumberRange.new(0.14, 0.18), Rotation = NumberRange.new(-25, 25), Speed = NumberRange.new(0), ZOffset = 4, Fixed = true }, 1, 0.2)
 	emit(pos, { Texture = Tex.glow, Color = ColorSequence.new(c), Size = seq(size * 1.2, size * 2.2), Transparency = seq(0.25, 1), Lifetime = NumberRange.new(0.22), Speed = NumberRange.new(0), Fixed = true }, 1, 0.25)
+	Voxels.Blocks(pos, { count = 3 + math.floor(size * 0.6), colors = { c, Color3.new(1, 1, 1) }, size = math.clamp(size * 0.06, 0.15, 0.5), speed = 8 + size, up = 6, neon = true, collide = false, life = 0.3 })
 end
 
 -- shockwave ring that faces the direction of the blow (a vertical ring flying outward from the hit)
@@ -425,7 +461,7 @@ function VFX.Number(pos, text, color, big, burst, scale)
 		tag.AnchorPoint = Vector2.new(0.5, 1)
 		tag.Position = UDim2.fromScale(0.5, 0.12)
 		tag.Size = UDim2.fromScale(0.9, 0.3)
-		tag.FontFace = Font.new("rbxasset://fonts/families/FredokaOne.json")
+		tag.FontFace = Font.fromEnum(Enum.Font.Arcade)
 		tag.TextScaled = true
 		tag.Text = "CRITICAL!"
 		tag.TextColor3 = Color3.fromRGB(255, 240, 160)
@@ -439,7 +475,7 @@ function VFX.Number(pos, text, color, big, burst, scale)
 	local t = Instance.new("TextLabel")
 	t.Size = UDim2.fromScale(1, 1)
 	t.BackgroundTransparency = 1
-	t.FontFace = Font.new("rbxasset://fonts/families/FredokaOne.json")
+	t.FontFace = Font.fromEnum(Enum.Font.Arcade)
 	t.TextScaled = true
 	t.Text = text
 	t.TextColor3 = color
@@ -550,6 +586,7 @@ function VFX.Aura(char, c, t, heal)
 end
 
 function VFX.Splash(pos, size)
+	Voxels.Blocks(pos, { count = 6 + math.floor((size or 4) * 1.5), colors = { Color3.fromRGB(120, 200, 255), Color3.fromRGB(230, 248, 255), Color3.fromRGB(60, 150, 230) }, size = math.clamp((size or 4) * 0.08, 0.25, 0.9), speed = (size or 4) * 1.6, up = 14 + (size or 4), collide = false, life = 0.6, material = Enum.Material.Glass })
 	size = size or 10
 	local base = Vector3.new(pos.X, 0.2, pos.Z)
 	local col = part(Vector3.new(size * 0.5, 1, size * 0.5), Color3.fromRGB(230, 250, 255), CFrame.new(base), Enum.PartType.Cylinder, Enum.Material.SmoothPlastic, 0.1)
@@ -564,6 +601,7 @@ function VFX.Splash(pos, size)
 end
 
 function VFX.Explosion(pos, radius)
+	Voxels.Blocks(pos, { count = 10 + math.floor((radius or 8) * 1.2), colors = { Color3.fromRGB(255, 200, 80), Color3.fromRGB(255, 120, 40), Color3.fromRGB(60, 50, 46), Color3.fromRGB(120, 100, 90) }, size = math.clamp((radius or 8) * 0.08, 0.35, 1.4), speed = (radius or 8) * 2, up = 16, life = 0.9 })
 	if custom("Explosion", CFrame.new(pos)) then
 		return
 	end
@@ -936,6 +974,10 @@ handlers.Skill = function(d)
 end
 handlers.LevelUp = function(d)
 	local gold, pale = Color3.fromRGB(255, 215, 80), Color3.fromRGB(255, 245, 200)
+	-- glowing cubes bursting out and floating up around the character (voxel level up)
+	local cyan, ice = Color3.fromRGB(90, 230, 255), Color3.fromRGB(210, 250, 255)
+	Voxels.Blocks(d.pos, { count = 26, colors = { cyan, ice, gold }, size = { 0.35, 0.9 }, speed = 10, up = 18, spread = 1.5, neon = true, collide = false, life = 1.1, spin = 8 })
+	Voxels.Pixels(d.pos, { count = 50, colors = { cyan, ice, pale }, size = 0.3, speed = 16, gravity = -10, up = 0, life = 1.2, glow = 1, spread = 3 })
 	local feet = d.pos - Vector3.new(0, 3, 0)
 	local p = part(Vector3.new(6, 1, 6), gold, CFrame.new(feet), Enum.PartType.Cylinder, Enum.Material.Neon, 0.2)
 	p.CFrame = CFrame.new(feet) * CFrame.Angles(0, 0, math.pi / 2)
@@ -1076,7 +1118,7 @@ handlers.MobAlert = function(d)
 	t.Size = UDim2.fromScale(1, 1)
 	t.Text = "!"
 	t.TextScaled = true
-	t.FontFace = Font.new("rbxasset://fonts/families/FredokaOne.json")
+	t.FontFace = Font.fromEnum(Enum.Font.Arcade)
 	t.TextColor3 = Color3.fromRGB(255, 226, 60)
 	t.Parent = bb
 	local st = Instance.new("UIStroke")

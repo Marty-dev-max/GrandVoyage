@@ -11,6 +11,8 @@ local FruitsCfg = require(Shared.Config.Fruits)
 local Formulas = require(Shared.Modules.Formulas)
 local Net = require(Shared.Modules.Net)
 local VoxelAvatar = require(script.Parent.VoxelAvatar)
+local VoxelChar = require(Shared.Modules.VoxelChar)
+local Looks = require(Shared.Config.Looks)
 
 local Classes = ClassesCfg.Classes
 local PS = {}
@@ -125,6 +127,39 @@ local dirty = {}
 function PS.Init(registry)
 	R = registry
 	Players.RespawnTime = GameConfig.RespawnTime
+	if GameConfig.TitleMenu then
+		-- v0.24.0: nobody spawns until they pick a character slot and press Play on the title menu
+		Players.CharacterAutoLoads = false
+		Net.SetGate(function(player)
+			return R.DataService.Get(player) ~= nil
+		end)
+	end
+end
+
+-- the blank R15 body every custom character is built on (the look itself is VoxelChar blocks)
+local function blankDescription()
+	local desc = Instance.new("HumanoidDescription")
+	desc.HeightScale, desc.WidthScale, desc.DepthScale, desc.HeadScale = 1, 1, 1, 1
+	desc.BodyTypeScale, desc.ProportionScale = 0, 0
+	return desc
+end
+
+-- (re)spawn the player's character: their custom look when the title menu is on, else their Roblox avatar
+function PS.Respawn(player)
+	if not player.Parent or not R.DataService.Get(player) then
+		return
+	end
+	if GameConfig.TitleMenu then
+		local ok, err = pcall(function()
+			player:LoadCharacterWithHumanoidDescription(blankDescription())
+		end)
+		if not ok then
+			warn("[PlayerService] spawn with description failed, plain spawn:", err)
+			pcall(player.LoadCharacter, player)
+		end
+	else
+		player:LoadCharacter()
+	end
 end
 
 function PS.Profile(player)
@@ -409,6 +444,22 @@ local function onCharacter(player, char)
 	-- every spawn (also after dying): wait until Roblox has put the avatar's look on, then reset the body;
 	-- applying too early was silently undone by the appearance loader
 	task.spawn(function()
+		if GameConfig.TitleMenu then
+			-- custom character (title menu creator): blocks built from the slot's look
+			task.wait(0.15)
+			local prof = PS.Profile(player)
+			if char.Parent and prof then
+				local ok, err = pcall(VoxelChar.Apply, char, prof.look, prof.heritage, prof.heritageVariant, prof.heritageMode)
+				if not ok then
+					warn("[PlayerService] voxel character failed:", err)
+				end
+				if prof.heritage == "Skyborn" or prof.heritage == "Cinderwing" then
+					hum.UseJumpPower = true
+					hum.JumpPower = 50 * 1.15
+				end
+			end
+			return
+		end
 		if not player:HasAppearanceLoaded() then
 			player.CharacterAppearanceLoaded:Wait()
 		end
@@ -453,14 +504,25 @@ local function onCharacter(player, char)
 		R.CombatService.ClearBuffs(player)
 		R.MarketService.CloseStall(player)
 		PS.Notify(player, "You were knocked out... respawning at " .. Islands.ById[p.lastIsland].name, "bad")
+		if not Players.CharacterAutoLoads then
+			task.delay(Players.RespawnTime, function()
+				if player.Character == char then
+					PS.Respawn(player)
+				end
+			end)
+		end
 	end)
 end
 
-local function onPlayerAdded(player)
-	local p = R.DataService.Load(player)
+local function enterGame(player, slot)
+	local p = R.DataService.Load(player, slot)
 	if not p then
-		return
+		return nil
 	end
+	p.lastPlayed = os.time()
+	player:SetAttribute("Slot", slot)
+	player:SetAttribute("Heritage", p.heritage)
+	player:SetAttribute("HeritageMode", p.heritageMode)
 	PS.SetAttributes(player)
 	R.GuildService.OnPlayerJoin(player)
 	player.CharacterAdded:Connect(function(char)
@@ -470,6 +532,135 @@ local function onPlayerAdded(player)
 		task.spawn(onCharacter, player, player.Character)
 	end
 	PS.MarkDirty(player)
+	R.DataService.FireLoaded(player)
+	return p
+end
+
+local function onPlayerAdded(player)
+	if GameConfig.TitleMenu then
+		return -- waits on the title menu (MenuPlay)
+	end
+	enterGame(player, 1)
+end
+
+-- ===== title menu: character slots (open requests, allowed before the player is in the game) =====
+local entering = {}
+local function setupMenuHandlers()
+	local function validSlot(n)
+		n = tonumber(n)
+		if not n or n ~= math.floor(n) or n < 1 or n > Looks.Slots then
+			return nil
+		end
+		return n
+	end
+	Net.Handle("MenuSlots", function(player)
+		local list, err = R.DataService.ListSlots(player)
+		if not list then
+			return false, err
+		end
+		return true, nil, { slots = list, bank = R.DataService.BankSpins(player.UserId), inGame = R.DataService.Get(player) ~= nil }
+	end, 1, true)
+	-- save a slot's look (creates the slot if it is empty)
+	Net.Handle("MenuSaveLook", function(player, data)
+		local slot = validSlot(data.slot)
+		if not slot then
+			return false, "Invalid slot"
+		end
+		local look = Looks.Sanitize(data.look)
+		local sum, err = R.DataService.EditSlot(player, slot, function(d)
+			d.look = look
+		end)
+		if not sum then
+			return false, err
+		end
+		return true, "Character saved", sum
+	end, 0.5, true)
+	-- Heritage spin: rolled here, never on the client. The slot's own spins go first, then the account's bought ones.
+	Net.Handle("MenuSpin", function(player, data)
+		local slot = validSlot(data.slot)
+		if not slot then
+			return false, "Invalid slot"
+		end
+		local look = data.look and Looks.Sanitize(data.look)
+		local function roll(useBank)
+			local rolled, noSpins
+			local sum, err = R.DataService.EditSlot(player, slot, function(d)
+				if look then
+					d.look = look
+				end
+				if not useBank then
+					if (d.spins or 0) <= 0 then
+						noSpins = true
+						return
+					end
+					d.spins -= 1
+				end
+				rolled = Looks.RollHeritage()
+				d.heritage = rolled
+				d.heritageVariant = Looks.RollVariant(rolled)
+				d.heritageMode = "flame"
+			end)
+			return sum, err, rolled, noSpins
+		end
+		local sum, err, rolled, noSpins = roll(false)
+		if sum and noSpins then
+			if not R.DataService.TakeBankSpin(player.UserId) then
+				return false, "No spins left", sum
+			end
+			sum, err, rolled = roll(true)
+			if not sum then
+				R.DataService.RefundBankSpin(player.UserId)
+			end
+		end
+		if not sum then
+			return false, err
+		end
+		local h = Looks.HeritageById[rolled]
+		if h and h.chance <= 2 then
+			Net.PushAll("Announce", { text = "✨ " .. player.DisplayName .. " rolled the " .. h.chance .. "% " .. h.name .. " heritage!", rarity = h.chance <= 0.5 and "Mythic" or "Legendary" })
+		end
+		return true, nil, { summary = sum, heritage = rolled, variant = sum.variant, bank = R.DataService.BankSpins(player.UserId) }
+	end, 1.2, true)
+	-- Cinderwing: switch FLAME (hits harder) <-> CALM (moves faster)
+	Net.Handle("HeritageMode", function(player)
+		local p = PS.Profile(player)
+		local h = p and Looks.HeritageById[p.heritage or ""]
+		if not h or not h.modes then
+			return false, "Your heritage has no modes"
+		end
+		p.heritageMode = p.heritageMode == "calm" and "flame" or "calm"
+		player:SetAttribute("HeritageMode", p.heritageMode)
+		if player.Character then
+			VoxelChar.SetFlame(player.Character, p.heritageMode ~= "calm")
+			local root = PS.Root(player)
+			if root then
+				Net.FX("HeritageMode", { char = player.Character, mode = p.heritageMode, pos = root.Position }, root.Position, 250)
+			end
+		end
+		PS.Recompute(player)
+		return true, p.heritageMode == "calm" and "CALM mode: faster" or "FLAME mode: stronger"
+	end, 1.5)
+	Net.Handle("MenuPlay", function(player, data)
+		local slot = validSlot(data.slot) or 1
+		if R.DataService.Get(player) then
+			return false, "Already in game"
+		end
+		if entering[player] then
+			return false, "Loading..."
+		end
+		entering[player] = true
+		local ok, p = pcall(enterGame, player, slot)
+		entering[player] = nil
+		if not ok or not p then
+			warn("[PlayerService] MenuPlay failed:", p)
+			return false, "Could not load this character, try again"
+		end
+		task.spawn(PS.Respawn, player)
+		return true
+	end, 2, true)
+	Players.PlayerRemoving:Connect(function(player)
+		entering[player] = nil
+	end)
 end
 
 -- ===== Request handlers =====
@@ -794,6 +985,7 @@ end
 
 function PS.Start()
 	setupHandlers()
+	setupMenuHandlers()
 	Players.PlayerAdded:Connect(onPlayerAdded)
 	for _, pl in ipairs(Players:GetPlayers()) do
 		task.spawn(onPlayerAdded, pl)
@@ -865,7 +1057,7 @@ function PS.Start()
 			else
 				player:SetAttribute("Drowning", nil)
 			end
-			if not drowning and (sank or swimTime[player] > SWIM.SeaSeconds + 3 or (underTime[player] or 0) > SWIM.BreathSeconds + 3) then
+			if not drowning and (sank or swimTime[player] > SWIM.SeaSeconds + 3 or (underTime[player] or 0) > SWIM.BreathSeconds * (player:GetAttribute("Heritage") == "Tidekin" and 1.6 or 1) + 3) then
 				local p = PS.Profile(player)
 				if p then
 					swimTime[player] = 0

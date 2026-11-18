@@ -123,7 +123,7 @@ function TS.Start()
 		return true
 	end, 0.5)
 	-- the first check is quiet (no flood of "unlocked" toasts on join), then every 5 s
-	Players.PlayerAdded:Connect(function(player)
+	R.DataService.Loaded:Connect(function(player) -- v0.24.0: once a character slot is loaded (title menu)
 		task.delay(3, function()
 			TS.Refresh(player, true)
 		end)

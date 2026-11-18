@@ -182,7 +182,7 @@ function GW.Start()
 			R.QuestService.Push(player, true)
 			task.defer(function()
 				if player.Parent then
-					player:LoadCharacter()
+					R.PlayerService.Respawn(player)
 				end
 			end)
 			return true, "Reset to a brand-new player"

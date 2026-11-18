@@ -112,7 +112,7 @@ function SM.BuildPart(p, cf, colorOverride)
 			t.BackgroundTransparency = 1
 			t.Size = UDim2.fromScale(1, 1)
 			t.TextScaled = true
-			t.Font = Enum.Font.FredokaOne
+			t.Font = Enum.Font.Arcade
 			t.Text = def.faction == "Pirate" and "☠" or "MARINE"
 			t.TextColor3 = def.faction == "Pirate" and Color3.new(1, 1, 1) or Color3.fromRGB(40, 90, 200)
 			t.Parent = gui

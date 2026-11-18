@@ -2,7 +2,6 @@
 -- Every gameplay event already flows through QuestService.Event, which forwards here (one funnel for all progress).
 -- Profile: daily = { day, list = { { id, kind, target, count, progress, claimed } }, bonusClaimed }
 --          ach = { counters = { [key] = n }, done = { [id] = true }, claimed = { [id] = true } }, title = achievement id
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local Dailies = require(Shared.Config.Dailies)
@@ -188,7 +187,7 @@ function PG.Init(registry)
 end
 
 function PG.Start()
-	Players.PlayerAdded:Connect(function(player)
+	R.DataService.Loaded:Connect(function(player) -- v0.24.0: once a character slot is loaded (title menu)
 		task.delay(3, function()
 			local p = R.PlayerService.Profile(player)
 			if p then

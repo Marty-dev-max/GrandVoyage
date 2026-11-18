@@ -15,7 +15,7 @@ local Interact = {}
 local T = UI.Theme
 local New = UI.New
 local player = Players.LocalPlayer
-local FONT = Font.new("rbxasset://fonts/families/FredokaOne.json", Enum.FontWeight.Bold)
+local FONT = Font.fromEnum(Enum.Font.Arcade)
 
 local function tween(o, t, props, style)
 	TweenService:Create(o, TweenInfo.new(t, style or Enum.EasingStyle.Back, Enum.EasingDirection.Out), props):Play()
@@ -133,13 +133,13 @@ local function styleNameplate(model)
 	New("UIGradient", { Color = ColorSequence.new(color:Lerp(Color3.new(1, 1, 1), 0.3), color:Lerp(Color3.new(0, 0, 0), 0.3)), Rotation = 90, Parent = chip })
 	UI.Stroke(chip, T.Edge, 3)
 	New("TextLabel", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Text = icon, TextScaled = true, FontFace = FONT, Parent = chip })
-	local t = New("TextLabel", { BackgroundTransparency = 1, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 44), Text = title, FontFace = FONT, TextSize = 34, TextColor3 = color, Parent = row })
+	local t = New("TextLabel", { BackgroundTransparency = 1, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 44), Text = title, FontFace = FONT, TextSize = 22, TextColor3 = color, Parent = row })
 	New("UIStroke", { Color = T.Edge, Thickness = 3, Parent = t })
 	if sub and sub ~= "" then
 		local ribbon = New("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 52), Size = UDim2.fromOffset(0, 28), AutomaticSize = Enum.AutomaticSize.X, BackgroundColor3 = T.PanelDeep, BackgroundTransparency = 0.15, Parent = holder })
 		UI.Corner(ribbon, 8)
 		New("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12), Parent = ribbon })
-		local s = New("TextLabel", { BackgroundTransparency = 1, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 28), Text = "◆ " .. sub, FontFace = FONT, TextSize = 18, TextColor3 = Color3.fromRGB(255, 240, 200), Parent = ribbon })
+		local s = New("TextLabel", { BackgroundTransparency = 1, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 28), Text = "◆ " .. sub, FontFace = FONT, TextSize = 12, TextColor3 = Color3.fromRGB(255, 240, 200), Parent = ribbon })
 		local _ = s
 	end
 end

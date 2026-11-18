@@ -396,7 +396,7 @@ function addBannerAndArena(island, c)
 	local t = Instance.new("TextLabel")
 	t.Size = UDim2.fromScale(1, 0.55)
 	t.BackgroundTransparency = 1
-	t.FontFace = Font.new("rbxasset://fonts/families/FredokaOne.json")
+	t.FontFace = Font.fromEnum(Enum.Font.Arcade)
 	t.TextScaled = true
 	t.TextColor3 = Color3.fromRGB(255, 245, 210)
 	t.Text = island.name
@@ -408,7 +408,7 @@ function addBannerAndArena(island, c)
 	local t2 = t:Clone()
 	t2.Position = UDim2.fromScale(0, 0.55)
 	t2.Size = UDim2.fromScale(1, 0.25)
-	t2.FontFace = Font.new("rbxasset://fonts/families/BuilderSans.json", Enum.FontWeight.Heavy)
+	t2.FontFace = Font.fromEnum(Enum.Font.Arcade)
 	t2.Text = island.subtitle or ""
 	t2.Parent = bb
 	local t3 = t2:Clone()

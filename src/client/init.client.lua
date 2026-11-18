@@ -31,6 +31,9 @@ local ShipBars = require(script.Controllers.ShipBars)
 local Underwater = require(script.Controllers.Underwater)
 local SerpentBody = require(script.Controllers.SerpentBody)
 local Quest = require(script.UI.Quest)
+local Menu = require(script.UI.Menu)
+local PixelUI = require(script.UI.PixelUI)
+local Heritage = require(script.Controllers.Heritage)
 
 pcall(function()
 	StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Health, false)
@@ -168,23 +171,35 @@ local function start(name, mod)
 		warn("[GrandVoyage] " .. name .. " failed to start: " .. tostring(err))
 	end
 end
--- core gameplay UI first, in order
-start("Settings", Settings)
-start("HUD", HUD)
-start("Combat", Combat)
-start("Quest", Quest)
+-- v0.24.0: the voxel/pixel UI pass and the title menu come first (the menu hides every other GUI until Play)
+start("PixelUI", PixelUI)
+start("Menu", Menu)
+-- core gameplay UI next, in order, on its own thread: with the title menu there is no character until Play, and a
+-- controller waiting for one must never hold up the others
+task.spawn(function()
+	start("Settings", Settings)
+	start("HUD", HUD)
+	start("Combat", Combat)
+	start("Quest", Quest)
+end)
 -- the rest (visuals, world feel) in parallel
 for _, c in ipairs({
 	{ "Sailing", Sailing }, { "Builder", Builder }, { "VFX", VFX }, { "Readability", Readability }, { "Swim", Swim },
 	{ "Pets", PetsCtl }, { "Titles", Titles }, { "Ocean", Ocean }, { "Atmos", Atmos }, { "GrassField", GrassField },
-	{ "CreatureAnim", CreatureAnim }, { "CharAnim", CharAnim }, { "Interact", Interact }, { "ChartsView", ChartsView }, { "ShipBars", ShipBars }, { "Underwater", Underwater }, { "SerpentBody", SerpentBody },
+	{ "CreatureAnim", CreatureAnim }, { "CharAnim", CharAnim }, { "Interact", Interact }, { "ChartsView", ChartsView }, { "ShipBars", ShipBars }, { "Underwater", Underwater }, { "SerpentBody", SerpentBody }, { "Heritage", Heritage },
 }) do
 	task.spawn(start, c[1], c[2])
 end
-Net.Request("GetState")
-task.spawn(Net.Request, "GetBossBoard")
-
-task.delay(1.5, function()
-	UI.Banner(GameConfig.GameName, GameConfig.SagaName .. "  •  Set sail across the " .. Islands.SeaName .. "!", UI.Theme.Gold, "Legendary")
-end)
+local function entered()
+	Net.Request("GetState")
+	task.spawn(Net.Request, "GetBossBoard")
+	task.delay(1.5, function()
+		UI.Banner(GameConfig.GameName, GameConfig.SagaName .. "  •  Set sail across the " .. Islands.SeaName .. "!", UI.Theme.Gold, "Legendary")
+	end)
+end
+if Menu.IsOpen then
+	Menu.OnPlay = entered -- after PLAY on the title menu
+else
+	entered()
+end
 print("[GrandVoyage] client ready  v" .. GameConfig.Version, Players.LocalPlayer.Name)

@@ -139,7 +139,38 @@ def main():
     body = 0.12 * (r < 0.84)
     glint = np.exp(-(((xx - cx + 40) ** 2 + (yy - cy + 44) ** 2) / (S * 0.09) ** 2) * 1.0) * 0.9
     save('bubble', np.maximum(rim, body) + glint * (r < 0.8), blur=1)
+    pixel_pack()
     print('wrote', sorted(os.listdir(OUT)))
+
+# v0.24.0 (owner): voxel / pixel-art FX. Every soft texture gets a "px_" twin: box-downsampled to a small grid,
+# alpha quantized to a few hard steps, scaled back up with nearest-neighbour (crisp square pixels). VFX.lua swaps
+# Tex.<name> for Tex.px_<name> whenever the twin exists. Plus px_square (one solid pixel) and px_cube (a voxel face
+# with a light top-left bevel and a dark bottom-right edge).
+PIXEL_GRID = {'glow': 12, 'sparkle': 11, 'burst': 14, 'ring': 16, 'slash': 16, 'smoke': 10, 'flame': 10, 'lightning': 16,
+              'impact': 13, 'plus': 9, 'bubble': 12, 'leaf': 9, 'crack': 16}
+
+def pixel_pack():
+    for name, g in PIXEL_GRID.items():
+        src = os.path.join(OUT, name + '.png')
+        if not os.path.exists(src):
+            continue
+        a = Image.open(src).getchannel('A')
+        small = np.asarray(a.resize((g, int(round(g * a.height / a.width))), Image.BOX), np.float32) / 255
+        q = np.where(small < 0.12, 0, np.where(small < 0.4, 0.45, np.where(small < 0.7, 0.75, 1.0)))
+        img = Image.fromarray((q * 255).astype(np.uint8), 'L').resize((g * 8, small.shape[0] * 8), Image.NEAREST)
+        rgba = Image.new('RGBA', img.size, (255, 255, 255, 0))
+        rgba.putalpha(img)
+        rgba.save(os.path.join(OUT, 'px_' + name + '.png'))
+    sq = Image.new('RGBA', (32, 32), (255, 255, 255, 255))
+    sq.save(os.path.join(OUT, 'px_square.png'))
+    cube = np.full((8, 8, 4), 255, np.uint8)
+    shade = np.ones((8, 8), np.float32) * 0.86
+    shade[0, :] = 1.0
+    shade[:, 0] = 1.0
+    shade[7, :] = 0.62
+    shade[:, 7] = 0.62
+    cube[..., :3] = (shade[..., None] * 255).astype(np.uint8)
+    Image.fromarray(cube, 'RGBA').resize((64, 64), Image.NEAREST).save(os.path.join(OUT, 'px_cube.png'))
 
 if __name__ == '__main__':
     main()

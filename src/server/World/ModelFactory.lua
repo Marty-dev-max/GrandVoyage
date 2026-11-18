@@ -249,7 +249,7 @@ function MF.Billboard(adornee, title, subtitle, color, height)
 	t.Name = "Title"
 	t.BackgroundTransparency = 1
 	t.Size = UDim2.new(1, 0, 0.55, 0)
-	t.Font = Enum.Font.FredokaOne
+	t.Font = Enum.Font.Arcade
 	t.TextScaled = true
 	t.Text = title
 	t.TextColor3 = color or Color3.new(1, 1, 1)
@@ -262,7 +262,7 @@ function MF.Billboard(adornee, title, subtitle, color, height)
 		s.Size = UDim2.new(1, 0, 0.4, 0)
 		s.Text = subtitle
 		s.TextColor3 = Color3.fromRGB(255, 240, 200)
-		s.Font = Enum.Font.GothamBold
+		s.Font = Enum.Font.Arcade
 		s.Parent = bb
 	end
 	bb.Parent = adornee

@@ -11,7 +11,7 @@ local TitleStyle = require(script.Parent.Parent.UI.TitleStyle)
 
 local Titles = {}
 local shown = {} -- player -> { gui, key, head, grad }
-local FONT = Font.new("rbxasset://fonts/families/FredokaOne.json", Enum.FontWeight.Bold)
+local FONT = Font.fromEnum(Enum.Font.Arcade)
 local EDGE = Color3.fromRGB(24, 20, 36)
 
 -- a title's color (and whether it shimmers / cycles)
@@ -37,7 +37,7 @@ local function make(pl, head)
 		t.BackgroundTransparency = 1
 		t.Size = UDim2.new(1, 0, 0, 26)
 		t.FontFace = FONT
-		t.TextSize = 20
+		t.TextSize = 13
 		t.Text = title
 		t.Parent = bb
 		local st = Instance.new("UIStroke")
@@ -65,7 +65,7 @@ local function make(pl, head)
 		badge.BackgroundColor3 = EDGE
 		badge.BackgroundTransparency = 0.25
 		badge.FontFace = FONT
-		badge.TextSize = 14
+		badge.TextSize = 10
 		badge.TextColor3 = Color3.fromRGB(255, 214, 90)
 		badge.Text = " Lv." .. lv .. " "
 		badge.Parent = row
@@ -78,7 +78,7 @@ local function make(pl, head)
 	name.Size = UDim2.fromOffset(0, 32)
 	name.AutomaticSize = Enum.AutomaticSize.X
 	name.FontFace = FONT
-	name.TextSize = 26
+	name.TextSize = 17
 	name.Text = pl.DisplayName
 	name.TextColor3 = Color3.new(1, 1, 1)
 	name.Parent = row

@@ -538,7 +538,7 @@ function Ship.Launch(player, slot)
 	local t = Instance.new("TextLabel")
 	t.Size = UDim2.fromScale(1, 1)
 	t.BackgroundTransparency = 1
-	t.Font = Enum.Font.FredokaOne
+	t.Font = Enum.Font.Arcade
 	t.TextScaled = true
 	t.TextStrokeTransparency = 0.4
 	t.TextColor3 = p.faction == "Marine" and Color3.fromRGB(140, 200, 255) or (p.faction == "Pirate" and Color3.fromRGB(255, 120, 120) or Color3.new(1, 1, 1))
@@ -675,7 +675,7 @@ local function spawnNPC(defId, pos, segment)
 	local t = Instance.new("TextLabel")
 	t.Size = UDim2.fromScale(1, 1)
 	t.BackgroundTransparency = 1
-	t.Font = Enum.Font.FredokaOne
+	t.Font = Enum.Font.Arcade
 	t.TextScaled = true
 	t.TextStrokeTransparency = 0.3
 	t.TextColor3 = def.faction == "Marine" and Color3.fromRGB(150, 200, 255) or Color3.fromRGB(255, 110, 110)

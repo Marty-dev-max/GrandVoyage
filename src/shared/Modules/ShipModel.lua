@@ -23,10 +23,9 @@ local function mk(parent, class, size, color, cf, material)
 	return p
 end
 
+-- voxel style (v0.24.0): what used to be cylinders (masts, barrels, wheels, booms) are square beams
 local function cyl(parent, length, diameter, color, cf, material)
-	local p = mk(parent, "Part", Vector3.new(length, diameter, diameter), color, cf, material)
-	p.Shape = Enum.PartType.Cylinder
-	return p
+	return mk(parent, "Part", Vector3.new(length, diameter, diameter), color, cf, material)
 end
 
 -- Part center CFrame in plot space (origin = bottom corner of cell 0,0,0)
@@ -62,7 +61,13 @@ function SM.BuildPart(p, cf, colorOverride)
 
 	local main
 	if def.wedge then
+		-- voxel bow block: the (invisible) wedge keeps the old collision, two stepped blocks show it
 		main = mk(model, "WedgePart", sz, color, cf * CFrame.Angles(0, 0, math.pi), material)
+		main.Transparency = 1
+		local top = mk(model, "Part", Vector3.new(sz.X, sz.Y / 2, sz.Z), color, cf * CFrame.new(0, sz.Y / 4, 0), material)
+		top.CanCollide = false
+		local low = mk(model, "Part", Vector3.new(sz.X * 0.7, sz.Y / 2, sz.Z / 2), color:Lerp(Color3.new(0, 0, 0), 0.15), cf * CFrame.new(0, -sz.Y / 4, sz.Z / 4), material)
+		low.CanCollide = false
 	elseif def.slab then
 		main = mk(model, "Part", Vector3.new(sz.X, G * 0.35, sz.Z), color, cf * CFrame.new(0, -G / 2 + G * 0.175, 0), material)
 	elseif def.category == "Hull" then
@@ -199,10 +204,12 @@ end
 -- stern deck), galleon (stern castle with lit windows + lanterns, forecastle rail, figurehead).
 -- style = { hull = Color3, trim = Color3, stripe = Color3 }. Returns the size class.
 local WOOD_DARK = Color3.fromRGB(92, 60, 38)
+-- v0.24.0 (owner): sizes that fit their crew. A grid cell is 4 studs and a character ~5 studs tall:
+-- Dinghy (<= 7 rows, ~28 studs) seats 1 comfortably, 2-3 at most; Sloop (<= 12 rows); Galleon above that.
 function SM.SizeClass(lengthCells)
-	if lengthCells <= 12 then
+	if lengthCells <= 7 then
 		return "Dinghy"
-	elseif lengthCells <= 16 then
+	elseif lengthCells <= 12 then
 		return "Sloop"
 	end
 	return "Galleon"
@@ -308,43 +315,46 @@ function SM.DressHull(model, design, originCf, style)
 	end
 	local fw = (front.maxX - front.minX) * G
 	local fcx = (front.minX + front.maxX) / 2 * G
-	local bowLen = math.clamp(fw * 0.85, 4, 16)
+	-- voxel prow (v0.24.0, owner: no triangles): the bow narrows in square steps, each step a deck plank row with
+	-- bulwark blocks at both edges rising toward the stem, and stepped hull layers under it
+	local steps = ({ Dinghy = 2, Sloop = 3, Galleon = 4 })[class]
+	local stepLen = G
+	local bowLen = steps * stepLen
 	local tipZ = zFront + bowLen
-	local sheer = 1.8
-	local H = G + rail + sheer + 1.5 -- from 1.5 below the deck bottom to the raised bow rail
-	local yc = H / 2 - 1.5
 	if zFront == zMax * G then
 		-- deck over the sloped wedge row
 		part(Vector3.new(fw, 0.3, G), Color3.fromRGB(176, 128, 82), at((front.minX + front.maxX) / 2, G + 0.15, zMax + 0.5), { collide = true })
 	end
-	for _, side in ipairs({ -1, 1 }) do
-		local cx = side < 0 and front.minX * G or front.maxX * G
-		local a = Vector3.new(cx + side * 0.25, yc, -zFront)
-		local b = Vector3.new(fcx, yc, -tipZ)
-		local mid, len = (a + b) / 2, (b - a).Magnitude
-		local cf = originCf * CFrame.lookAt(mid, b)
-		part(Vector3.new(0.5, H, len + 0.4), hullC, cf, { collide = true })
-		part(Vector3.new(0.7, 0.3, len + 0.4), trimC, cf * CFrame.new(0, H / 2 + 0.15, 0))
-		part(Vector3.new(0.56, 0.45, len + 0.4), stripeC, cf * CFrame.new(0, G * 0.55 - yc, 0), { material = Enum.Material.SmoothPlastic })
-	end
-	local steps = 5
 	for i = 1, steps do
-		local t = (i - 0.5) / steps
-		local ww = fw * (1 - t) - 1.6
-		local zz = zFront + bowLen * t
-		if ww > 0.4 then
-			part(Vector3.new(ww, 0.3, bowLen / steps + 0.05), Color3.fromRGB(176, 128, 82), originCf * CFrame.new(fcx, G - 0.15 + sheer * t * 0.6, -zz), { collide = true })
+		local ww = fw * (1 - i / (steps + 1))
+		local zz = zFront + stepLen * (i - 0.5)
+		local rise = i * 0.45
+		part(Vector3.new(ww, G + rise, stepLen), Color3.fromRGB(176, 128, 82), originCf * CFrame.new(fcx, (G + rise) / 2, -zz), { collide = true })
+		for _, side in ipairs({ -1, 1 }) do
+			local x = fcx + side * (ww / 2 + 0.25)
+			local h = rail + 0.5 + rise
+			part(Vector3.new(0.5, h, stepLen + 0.02), hullC, originCf * CFrame.new(x, G + rise + h / 2, -zz), { collide = true })
+			part(Vector3.new(0.7, 0.3, stepLen + 0.04), trimC, originCf * CFrame.new(x, G + rise + h + 0.15, -zz))
+			part(Vector3.new(0.56, 0.45, stepLen + 0.04), stripeC, originCf * CFrame.new(x, G * 0.55, -zz), { material = Enum.Material.SmoothPlastic })
+			-- close the step: a short wall across the front of the wider row behind
+			local prevW = fw * (1 - (i - 1) / (steps + 1))
+			local gap = (prevW - ww) / 2
+			if gap > 0.3 then
+				part(Vector3.new(gap + 0.5, G + rail + rise, 0.5), hullC, originCf * CFrame.new(fcx + side * (ww / 2 + gap / 2), (G + rail + rise) / 2, -(zz - stepLen / 2)), { collide = true })
+			end
 		end
 		for k = 1, depth do
-			local lw = (fw * (1 - t)) * (1 - k / (depth + 1))
+			local lw = ww * (1 - k / (depth + 1))
 			if lw > 0.6 then
-				part(Vector3.new(lw, layerH, bowLen / steps + 0.05), hullC, originCf * CFrame.new(fcx, -layerH * (k - 0.5), -zz))
+				part(Vector3.new(lw, layerH, stepLen + 0.05), hullC, originCf * CFrame.new(fcx, -layerH * (k - 0.5), -zz))
 			end
 		end
 	end
+	local H = G + rail + steps * 0.45 + 1.5
+	local yc = H / 2 - 1.5
 	-- stem post at the tip
 	local tip = tipZ
-	part(Vector3.new(0.9, H + 1.2, 0.9), trimC, originCf * CFrame.new(fcx, yc + 0.6, -tip), { material = Enum.Material.Wood })
+	part(Vector3.new(1.2, H + 1.2, 1.2), trimC, originCf * CFrame.new(fcx, yc + 0.6, -(tip + 0.3)), { material = Enum.Material.Wood })
 	-- 4) stern: transom board across the back
 	local back = rows[zMin]
 	local bw = (back.maxX - back.minX) * G
@@ -356,7 +366,7 @@ function SM.DressHull(model, design, originCf, style)
 		-- bowsprit
 		local len = class == "Galleon" and 14 or 9
 		local base = originCf * CFrame.new(fcx, G + rail + 0.6, -(tip - 1))
-		cyl(folder, len, 0.6, trimC, base * CFrame.Angles(0, math.pi / 2, 0) * CFrame.Angles(0, 0, math.rad(-18)) * CFrame.new(len / 2, 0, 0), Enum.Material.Wood)
+		cyl(folder, len, 0.6, trimC, base * CFrame.Angles(0, math.pi / 2, 0) * CFrame.Angles(0, 0, math.rad(18)) * CFrame.new(len / 2, 0, 0), Enum.Material.Wood)
 		-- raised stern deck: a short quarterdeck over the last rows
 		local qLen = math.min(3, L - 2) * G
 		local qh = class == "Galleon" and G * 1.2 or G * 0.6

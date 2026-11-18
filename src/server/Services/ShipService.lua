@@ -249,7 +249,7 @@ end
 local function breakRandomParts(ship, count)
 	local candidates = {}
 	for _, child in ipairs(ship.model:GetChildren()) do
-		if child:IsA("Model") and child.Name ~= "Helm" then
+		if child:IsA("Model") and child.Name ~= "Helm" and child.Name ~= "Crew" then
 			table.insert(candidates, child)
 		end
 	end
@@ -436,12 +436,23 @@ sink = function(ship)
 end
 
 -- ===== Cannons =====
-local function impact(pos, damage, srcShip, player)
+-- is a point over a ship's deck footprint (its rotated rectangle), give or take `extra` studs?
+local function overShip(sh, pos, extra)
+	local l = sh.root.CFrame:PointToObjectSpace(Vector3.new(pos.X, sh.root.Position.Y, pos.Z))
+	return math.abs(l.X) <= sh.width / 2 + extra and math.abs(l.Z) <= sh.length / 2 + extra
+end
+
+local function impact(pos, damage, srcShip, player, lock)
 	local hitSomething = false
 	for _, s in pairs(ships) do
-		if s ~= srcShip and not s.sinking and hostile(srcShip, s) and flat(pos, s.root.Position) <= s.radius * 0.75 + cfg.SplashRadius then
-			Ship.DamageShip(s, damage, srcShip, player)
-			hitSomething = true
+		if s ~= srcShip and not s.sinking and hostile(srcShip, s) then
+			-- v0.24.0: hits are measured to the ship's whole hull (not a circle around its middle), and the ship the
+			-- shot was aimed at counts a wider margin (it was moving while the ball flew)
+			local extra = cfg.SplashRadius * (s == lock and 0.9 or 0.5)
+			if overShip(s, pos, extra) then
+				Ship.DamageShip(s, damage, srcShip, player)
+				hitSomething = true
+			end
 		end
 	end
 	if player then
@@ -453,7 +464,33 @@ local function impact(pos, damage, srcShip, player)
 	Net.FX(hitSomething and "Explosion" or "Splash", { pos = Vector3.new(pos.X, math.max(pos.Y, 0), pos.Z), radius = cfg.SplashRadius }, pos, 600)
 end
 
+-- the hostile ship a shot is aimed at (the click landed on or near it), if any
+local function aimedShip(srcShip, target)
+	local best, bestD
+	for _, s in pairs(ships) do
+		if s ~= srcShip and not s.sinking and hostile(srcShip, s) and overShip(s, target, 18) then
+			local d = flat(target, s.root.Position)
+			if not best or d < bestD then
+				best, bestD = s, d
+			end
+		end
+	end
+	return best
+end
+
 local function fireBall(from, target, damage, range, srcShip, player)
+	-- lead a moving target ship: aim where it will be when the ball lands (v0.24.0: shots used to land behind
+	-- sailing NPC ships, so they never got hit)
+	local lock = player and aimedShip(srcShip, target) or nil
+	if lock then
+		local off = target - lock.root.Position
+		for _ = 1, 2 do
+			local tt = flat(from, target) / cfg.CannonballSpeed + 0.25
+			local v = lock.root.AssemblyLinearVelocity
+			target = lock.root.Position + Vector3.new(v.X, 0, v.Z) * tt + Vector3.new(off.X, 0, off.Z) * 0.5
+		end
+		target = Vector3.new(target.X, 0, target.Z)
+	end
 	local dir = Vector3.new(target.X - from.X, 0, target.Z - from.Z)
 	local dist = dir.Magnitude
 	if dist < 1 then
@@ -466,7 +503,7 @@ local function fireBall(from, target, damage, range, srcShip, player)
 	end
 	local t = dist / cfg.CannonballSpeed + 0.25
 	Net.FX("Cannonball", { from = from, to = target, t = t }, from, 700)
-	task.delay(t, impact, target, damage, srcShip, player)
+	task.delay(t, impact, target, damage, srcShip, player, lock)
 end
 
 local function volley(ship, target, count, damageMult, player, spread, fixedDamage)
@@ -654,6 +691,74 @@ local function npcColor(def)
 	end
 end
 
+-- NPC crew (v0.24.0, owner): voxel sailors on every NPC ship, a helmsman at the wheel and a gunner behind the cannons
+-- (every other cannon on big ships), dressed by faction. Blocks welded to the ship root, no collisions.
+local VoxelChar = require(Shared.Modules.VoxelChar)
+local Looks = require(Shared.Config.Looks)
+local CREW_RNG = Random.new(4242)
+local function crewLook(faction)
+	local look = Looks.Random(CREW_RNG)
+	if faction == "Marine" then
+		look.shirt = CREW_RNG:NextNumber() < 0.5 and 4 or 11 -- sailor stripes / polo
+		look.shirt1, look.shirt2 = "F4F4F4", "2846A0"
+		look.pants, look.pants1, look.pants2 = 1, "F4F4F4", "2846A0"
+		look.shoes, look.shoes1 = 2, "1C1A22"
+	else
+		local tops = { 5, 8, 10, 15, 2 }
+		look.shirt = tops[CREW_RNG:NextInteger(1, #tops)]
+		look.pants = CREW_RNG:NextNumber() < 0.5 and 5 or 3
+		look.pants1 = ({ "3A2A22", "2A2A32", "5A3A2A" })[CREW_RNG:NextInteger(1, 3)]
+		look.pants2 = "C42A2E"
+	end
+	return look
+end
+local function addCrew(ship, def)
+	local root = ship.root
+	local spots = {}
+	local cannons = 0
+	for _, child in ipairs(ship.model:GetChildren()) do
+		local main = child:IsA("Model") and child.PrimaryPart
+		if main then
+			if child.Name == "Helm" then
+				-- behind the wheel, facing the bow
+				local at = main.Position - root.CFrame.LookVector * 3
+				table.insert(spots, { pos = at, face = root.CFrame.LookVector, y = main.Position.Y - G / 2 })
+			elseif child.Name == "LightCannon" or child.Name == "HeavyCannon" then
+				cannons += 1
+				if def.cannons <= 6 or cannons % 2 == 1 then
+					local look = main.CFrame.LookVector
+					local at = main.Position - Vector3.new(look.X, 0, look.Z).Unit * 3.2
+					table.insert(spots, { pos = at, face = look, y = main.Position.Y - G / 2 })
+				end
+			end
+		end
+	end
+	local crewFolder = Instance.new("Model")
+	crewFolder.Name = "Crew"
+	for _, spot in ipairs(spots) do
+		local fig = VoxelChar.Preview(crewLook(def.faction), nil, nil, nil, { lite = true })
+		local face = Vector3.new(spot.face.X, 0, spot.face.Z)
+		face = face.Magnitude > 0.01 and face.Unit or Vector3.zAxis
+		local base = Vector3.new(spot.pos.X, spot.y, spot.pos.Z)
+		fig:PivotTo(CFrame.lookAt(base, base + face))
+		for _, d in ipairs(fig:GetDescendants()) do
+			if d:IsA("BasePart") then
+				d.Anchored = false
+				d.CanCollide = false
+				d.CanQuery = false
+				d.CanTouch = false
+				d.Massless = true
+				local w = Instance.new("WeldConstraint")
+				w.Part0 = root
+				w.Part1 = d
+				w.Parent = d
+			end
+		end
+		fig.Parent = crewFolder
+	end
+	crewFolder.Parent = ship.model
+end
+
 local function spawnNPC(defId, pos, segment)
 	local def = NPCShips.Ships[defId]
 	local design = npcDesign(def)
@@ -665,6 +770,10 @@ local function spawnNPC(defId, pos, segment)
 	ship.hp = def.hp
 	ship.stats = { cannonsManned = def.cannons, crew = def.cannons }
 	ship.model:SetAttribute("NPC", true)
+	local okCrew, crewErr = pcall(addCrew, ship, def)
+	if not okCrew then
+		warn("[ShipService] NPC crew failed:", crewErr)
+	end
 	ship.model:SetAttribute("Faction", def.faction)
 	ship.model:SetAttribute("Tier", def.tier)
 	local bb = Instance.new("BillboardGui")

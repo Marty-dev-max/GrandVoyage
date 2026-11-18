@@ -409,6 +409,7 @@ local function faceImage(parent, key, pos, size, tint, z)
 end
 
 -- build every block of a look. place(partName) -> CFrame, Size of that body part; emit(block, partName, cframe)
+local LITE = false -- set by VC.Preview(..., { lite = true }): fewer hair blocks (NPC crews)
 local function buildAll(look, heritage, variant, mode, place, emit)
 	look = Looks.Sanitize(look)
 	local her = Looks.HeritageById[heritage or ""]
@@ -723,7 +724,7 @@ local function buildAll(look, heritage, variant, mode, place, emit)
 	faceImage(sg, "mouth" .. look.mouth, UDim2.fromScale(0.27, 0.64), UDim2.fromScale(0.46, 0.23), nil, 5)
 
 	local style = HAIR[look.hair] or HAIR[1]
-	local lumpy = not NO_LUMP[look.hair]
+	local lumpy = not NO_LUMP[look.hair] and not LITE
 	local function cellCF(ix, iy, iz, len)
 		-- ix 0..7 is left->right as seen from the front: the front is -Z, so screen-left is +X
 		local cx = (ix + len / 2) * u - H / 2
@@ -759,7 +760,7 @@ local function buildAll(look, heritage, variant, mode, place, emit)
 		if lumpy and not v and y == 9 and inHead(x, z) and style(x, 8, z) and hash(x, 9, z) < 0.62 then
 			v = 1
 		end
-		if v == 1 and hash(x, y, z) > 0.9 then
+		if v == 1 and not LITE and hash(x, y, z) > 0.9 then
 			v = 3 -- a few lighter highlight blocks
 		end
 		return v
@@ -949,7 +950,8 @@ function VC.Apply(char, look, heritage, variant, mode)
 end
 
 -- ===== standalone preview (client menu) =====
-function VC.Preview(look, heritage, variant, mode)
+function VC.Preview(look, heritage, variant, mode, opts)
+	LITE = opts ~= nil and opts.lite == true
 	local model = Instance.new("Model")
 	model.Name = "VoxelPreview"
 	local root = Instance.new("Part")
@@ -974,6 +976,7 @@ function VC.Preview(look, heritage, variant, mode)
 		b.Parent = model
 	end)
 	model.WorldPivot = CFrame.new()
+	LITE = false
 	return model
 end
 

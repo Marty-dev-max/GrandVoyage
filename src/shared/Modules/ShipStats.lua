@@ -100,19 +100,18 @@ function S.StarterDesign()
 	local function add(id, x, y, z, rr)
 		table.insert(parts, { id = id, x = x, y = y, z = z, r = rr or 0 })
 	end
-	for x = 2, 6 do
-		for z = 4, 14 do
+	-- v0.24.0 (owner): a real dinghy, 3 cells wide x 6 long (12 x 24 studs + the bow): one sailor fits nicely
+	for x = 3, 5 do
+		for z = 4, 9 do
 			add("PlankBlock", x, 0, z)
 		end
 	end
-	for x = 3, 5 do
-		add("PlankWedge", x, 0, 15)
-	end
-	add("Helm", 4, 1, 5)
-	add("SmallMast", 4, 1, 10)
-	add("LightCannon", 2, 1, 9, 1) -- r=1 faces port (-X)
-	add("LightCannon", 6, 1, 9, 3) -- r=3 faces starboard (+X)
-	add("OarBench", 3, 1, 12)
+	add("PlankWedge", 4, 0, 10)
+	add("Helm", 4, 1, 4)
+	add("SmallMast", 4, 1, 7)
+	add("LightCannon", 3, 1, 6, 1) -- r=1 faces port (-X)
+	add("LightCannon", 5, 1, 6, 3) -- r=3 faces starboard (+X)
+	add("OarBench", 4, 1, 9)
 	return { name = "Little Dinghy", parts = parts }
 end
 

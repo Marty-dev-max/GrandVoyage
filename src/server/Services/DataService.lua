@@ -161,6 +161,12 @@ function DataService.Load(player, slot)
 		end
 		data.equipment.weapon = uid
 	end
+	-- v0.24.0: the old 5 x 11 starter "dinghy" was the size of a sloop; swap it for the new small one
+	for i, sh in ipairs(data.ships or {}) do
+		if sh.name == "Little Dinghy" and #(sh.parts or {}) == 63 then
+			data.ships[i] = ShipStats.StarterDesign()
+		end
+	end
 	if not loadedOk then
 		-- Load failed: allow play but never overwrite the existing save
 		data.__noSave = true

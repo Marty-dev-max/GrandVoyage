@@ -2,7 +2,7 @@
 return {
 	GameName = "Grand Voyage",
 	-- bump on every change: shown bottom-right in game and printed in Output, so you can tell which code is running
-	Version = "0.22.6",
+	Version = "0.22.7",
 	SagaName = "Azure East Saga",
 	DataStoreName = "GV_Player_v1",
 	GuildStoreName = "GV_Guild_v1",
@@ -11,6 +11,8 @@ return {
 	-- every avatar is reset to the same R15 proportions + default body parts (face/hair/clothes kept); needs the
 	-- experience's Avatar type set to R15 in Game Settings
 	NormalizeAvatars = true,
+	-- every player's avatar in the voxel style: cube head with their face, blocky body, hair/hats rebuilt from blocks
+	VoxelAvatars = true,
 
 	-- ===== Day / night (client Controllers/Atmos.lua; same clock on every client via server time) =====
 	DayNight = {

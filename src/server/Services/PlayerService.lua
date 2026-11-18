@@ -10,6 +10,7 @@ local Islands = require(Shared.Config.Islands)
 local FruitsCfg = require(Shared.Config.Fruits)
 local Formulas = require(Shared.Modules.Formulas)
 local Net = require(Shared.Modules.Net)
+local VoxelAvatar = require(script.Parent.VoxelAvatar)
 
 local Classes = ClassesCfg.Classes
 local PS = {}
@@ -383,6 +384,19 @@ local function normalizeAvatar(hum)
 	desc.HeightScale, desc.WidthScale, desc.DepthScale, desc.HeadScale = 1, 1, 1, 1
 	desc.BodyTypeScale, desc.ProportionScale = 0, 0
 	desc.Torso, desc.LeftArm, desc.RightArm, desc.LeftLeg, desc.RightLeg = 0, 0, 0, 0, 0
+	if GameConfig.VoxelAvatars then
+		-- voxel style (v0.22.6): the plain head (we put a cube with the face on it) and no layered 3D clothing
+		desc.Head = 0
+		pcall(function()
+			local keep = {}
+			for _, a in ipairs(desc:GetAccessories(true)) do
+				if not a.IsLayered then
+					table.insert(keep, a)
+				end
+			end
+			desc:SetAccessories(keep, true)
+		end)
+	end
 	local applied = pcall(function()
 		hum:ApplyDescription(desc)
 	end)
@@ -404,6 +418,15 @@ local function onCharacter(player, char)
 				return
 			end
 			if normalizeAvatar(hum) then
+				if GameConfig.VoxelAvatars then
+					task.wait(0.3) -- let the re-applied accessories attach
+					if char.Parent then
+						local ok, err = pcall(VoxelAvatar.Apply, char)
+						if not ok then
+							warn("[PlayerService] voxel avatar failed:", err)
+						end
+					end
+				end
 				return
 			end
 		end

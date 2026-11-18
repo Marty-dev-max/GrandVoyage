@@ -188,6 +188,10 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   stepped V-hull, bulwarks + rail + stripe (gun ports at edge cannons), pointed prow + stem, transom; size class by
   length (Dinghy <= 12 rows, Sloop <= 16, Galleon) adds bowsprit / quarterdeck / stern castle + lanterns + figurehead.
   Paint by faction (ShipService HULL_STYLES). The shipyard builder preview stays plain blocks.
+- Voxel avatars (v0.22.7, GameConfig.VoxelAvatars): `Services/VoxelAvatar.Apply(char)` after normalizeAvatar (which now
+  also sets Head = 0 and drops layered clothing): cube "VoxelHead" with the face decal (Head hidden), every accessory
+  rebuilt as welded blocks: shape by raycast sampling (rows merged), cap fallback when rays see a box/nothing, color
+  from the item name (no texture access in Roblox), highlight/dark blocks + spikes on hair.
 - Dev tab "New Player" (`Admin` cmd `resetall`, `DataService.ResetProfile`): fresh save in place (keeps receipts, perks, guild).
 - Card drops play `UI/CardReveal.lua` (tension + orbs, whip flip + hitstop, rune rings + golden lightning, foil sheen,
   monster pops out of the frame, stars, RGB split from Mythic; intensity and pitch scale with rarity, tap skips).

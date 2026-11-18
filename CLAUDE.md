@@ -162,6 +162,17 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   `MobAlert` sound, charge at 2x speed for 1.6 s). Manual mode = Auto Battle off (`Combat.ManualAttack`): no click-to-chase,
   click/tap/hold swings at the pointed or closest monster in reach, skills out of reach say "Too far". Spawn pads are invisible.
   Stat quest goal counts points raised (AllocateStats + AutoStats report `Stat` with the amount).
+- v0.22.4: Pearls are called **Gems** for players (💎, icon "gem"); code/save keep the pearl names (p.pearls, PearlService,
+  Config/Pearls, attribute "Pearls", ledger store) so nothing migrates. Island names are hidden ("???") until visited or
+  until the quest reaches that island's "Sail to" step (`Shared/Modules/Charts`, client `Controllers/ChartsView`; the
+  Sea Compass item + banner come from QuestService.chartNext). Quest saves carry `quest.v` (Quests.SaveVersion): v2
+  inserted T12 Bay Serpent, QuestService.questOf shifts old steps >= 12 up one. Bay Serpent arena = at sea east of the
+  Daybreak harbor (boss.arenaRadius 70, respawn 3 min). Ships get overhead HP bars (`Controllers/ShipBars`).
+  Diving: `Controllers/Swim` (Ctrl / 🤿 to dive, Space to rise, breath only under water, Swim.SeaSeconds caps surface
+  swimming; server mirrors both in PlayerService), `Controllers/Underwater` (tint, blur, bubbles, Atmos.SetUnderwater,
+  Audio.SetUnderwater EQ muffling, AmbienceUnderwater loop, WaterPlunge/WaterSurface). Sea floor + reefs: WorldBuilder
+  buildSeaFloor (own Random). Ambience loops come from `tools/gen_ambience.py` (numpy + scipy, 44.1 kHz, seamless).
+  Kit.Flowers / Kit.Plant are EnvProps dressed with the Env meshes (no more ball flowers); no monster-area signposts.
 - Dev tab "New Player" (`Admin` cmd `resetall`, `DataService.ResetProfile`): fresh save in place (keeps receipts, perks, guild).
 - Card drops play `UI/CardReveal.lua` (tension + orbs, whip flip + hitstop, rune rings + golden lightning, foil sheen,
   monster pops out of the frame, stars, RGB split from Mythic; intensity and pitch scale with rarity, tap skips).

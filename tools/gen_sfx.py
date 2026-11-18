@@ -87,7 +87,8 @@ waves = lowpass(rng.uniform(-1, 1, n), 60) * (0.55 + 0.45 * np.sin(2 * np.pi * t
 gulls = mix(*[(o, sweep(1500, 1100, 0.25, 'sine', 4) * 0.15) for o in (1.3, 1.6, 5.2)])
 amb = waves + np.pad(gulls, (0, n - len(gulls)))[:n]
 fade = int(SR * 0.3); amb[:fade] *= np.linspace(0, 1, fade); amb[-fade:] *= np.linspace(1, 0, fade)
-save('AmbienceSea', amb, 0.5)
+# AmbienceSea comes from tools/gen_ambience.py since v0.22.4 (realistic layered loop)
+# save('AmbienceSea', amb, 0.5)
 wind = lowpass(rng.uniform(-1, 1, n), 25) * (0.4 + 0.6 * np.sin(2 * np.pi * tt / 4) ** 2)
 wind[:fade] *= np.linspace(0, 1, fade); wind[-fade:] *= np.linspace(1, 0, fade)
 save('AmbienceWind', wind, 0.45)

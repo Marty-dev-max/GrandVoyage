@@ -320,7 +320,7 @@ local function buildStatus()
 	end)
 	bounty = { label = bl, icon = bic }
 	local _, pl = segment(3, PearlsCfg.Icon, Color3.fromRGB(150, 225, 255), 120, function()
-		return "<b>Pearls</b>\nEarned from chests, exploring, story quests and MVP bosses. Spend them in the Pearl Shop or trade them in stalls (Lv." .. PearlsCfg.Trade.MinLevel .. "+).", Color3.fromRGB(150, 225, 255)
+		return "<b>Gems</b>\nEarned from chests, exploring, story quests and MVP bosses. Spend them in the Gem Shop or trade them in stalls (Lv." .. PearlsCfg.Trade.MinLevel .. "+).", Color3.fromRGB(150, 225, 255)
 	end)
 	HUD.pearls = pl
 	pointsBtn = UI.Button(UI.Root, "+ POINTS", T.Gold, UDim2.fromOffset(150, 40), function()

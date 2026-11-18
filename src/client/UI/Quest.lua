@@ -48,6 +48,11 @@ local function targetOf(step)
 				return Vector3.new(isl.x + sp.offset.X, 8, (isl.z or 0) + sp.offset.Y)
 			end
 		end
+	elseif at.boss then
+		local bi = Islands.ById[at.boss]
+		if bi and bi.boss then
+			return Vector3.new(bi.x + bi.boss.offset.X, 8, bi.boss.offset.Y)
+		end
 	elseif at.island then
 		local dest = Islands.ById[at.island]
 		if dest then
@@ -301,6 +306,7 @@ end
 function Quest.OnQuest(d)
 	data = d
 	State.quest = d
+	State.Fire("quest")
 	refreshTracker()
 	if d.dialog then
 		local step = Quests.ById[d.id or ""]

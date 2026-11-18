@@ -809,8 +809,10 @@ function PS.Start()
 		end
 		return false
 	end
+	local underTime = {}
 	Players.PlayerRemoving:Connect(function(pl)
 		swimTime[pl] = nil
+		underTime[pl] = nil
 	end)
 	local acc = 0
 	RunService.Heartbeat:Connect(function(dt)
@@ -825,7 +827,10 @@ function PS.Start()
 			local onShip = root and R.ShipService.IsOnShip(player)
 			local inSea = root and hum and hum.Health > 0 and not onShip and root.Position.Y < GameConfig.SeaLevel + 0.5 and not nearIsland(root.Position)
 			swimTime[player] = inSea and (swimTime[player] or 0) + 0.5 or 0
-			local sank = root and hum and hum.Health > 0 and root.Position.Y < -8 and not onShip
+			-- diving (v0.22.4): breath only drains with the head under water, and refills fast at the surface
+			local under = inSea and root.Position.Y < GameConfig.SeaLevel - SWIM.SurfaceOffset - 2
+			underTime[player] = under and (underTime[player] or 0) + 0.5 or math.max(0, (underTime[player] or 0) - 3)
+			local sank = root and hum and hum.Health > 0 and root.Position.Y < GameConfig.SeaLevel - SWIM.MaxDepth - 12 and not onShip
 			-- Cursed Fruit users cannot swim: the sea drags them under and they DROWN (HP drains) until they get out or die
 			local drowning = player:GetAttribute("Fruit") ~= nil and inSea and root.Position.Y < GameConfig.SeaLevel - 1 and swimTime[player] >= FruitsCfg.SinkSeconds
 			if drowning then
@@ -837,10 +842,11 @@ function PS.Start()
 			else
 				player:SetAttribute("Drowning", nil)
 			end
-			if not drowning and (sank or swimTime[player] > SWIM.BreathSeconds + 2) then
+			if not drowning and (sank or swimTime[player] > SWIM.SeaSeconds + 3 or (underTime[player] or 0) > SWIM.BreathSeconds + 3) then
 				local p = PS.Profile(player)
 				if p then
 					swimTime[player] = 0
+					underTime[player] = 0
 					hum.Health = math.max(1, hum.Health - hum.MaxHealth * 0.1)
 					PS.TeleportTo(player, PS.SpawnCFrame(p.lastIsland))
 					PS.Notify(player, "Out of breath! The waves washed you ashore... (sail a ship to cross the sea)", "bad")

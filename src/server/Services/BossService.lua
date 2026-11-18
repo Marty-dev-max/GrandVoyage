@@ -21,7 +21,7 @@ local function spawnBoss(island)
 	local st = state[island.id]
 	st.alive = true
 	R.MonsterService.Spawn(b.id, pos, {
-		zone = { center = pos, radius = 35 },
+		zone = { center = pos, radius = (b.arenaRadius or 42) - 8 },
 		noRespawn = true,
 		onDeath = function()
 			st.alive = false

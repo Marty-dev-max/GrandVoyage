@@ -422,16 +422,26 @@ function addBannerAndArena(island, c)
 	-- boss arena at sea
 	if island.boss and island.boss.atSea then
 		local bp = Vector3.new(island.x + island.boss.offset.X, 0, island.boss.offset.Y)
-		Cyl(30, 90, Color3.fromRGB(120, 125, 130), bp + Vector3.new(0, -10, 0), { material = M.Slate })
-		Cyl(2, 84, Color3.fromRGB(150, 110, 75), bp + Vector3.new(0, 5.5, 0), { material = M.WoodPlanks })
-		foam(bp + Vector3.new(0, 0.1, 0), 96)
+		local ar = island.boss.arenaRadius or 42 -- deck radius
+		Cyl(30, ar * 2 + 6, Color3.fromRGB(120, 125, 130), bp + Vector3.new(0, -10, 0), { material = M.Slate })
+		Cyl(2, ar * 2, Color3.fromRGB(150, 110, 75), bp + Vector3.new(0, 5.5, 0), { material = M.WoodPlanks })
+		foam(bp + Vector3.new(0, 0.1, 0), ar * 2 + 12)
 		for i = 1, 8 do
 			local a = i / 8 * math.pi * 2
-			rock(bp + Vector3.new(math.cos(a) * 44, 3, math.sin(a) * 44), rng:NextNumber(8, 14), Color3.fromRGB(100, 105, 115))
+			rock(bp + Vector3.new(math.cos(a) * (ar + 2), 3, math.sin(a) * (ar + 2)), rng:NextNumber(8, 14), Color3.fromRGB(100, 105, 115))
 		end
 		for i = 0, 3 do
 			local a = i / 4 * math.pi * 2 + 0.4
-			Kit.Flag(bp + Vector3.new(math.cos(a) * 38, 6.5, math.sin(a) * 38), Color3.fromRGB(220, 50, 60), 12)
+			Kit.Flag(bp + Vector3.new(math.cos(a) * (ar - 4), 6.5, math.sin(a) * (ar - 4)), Color3.fromRGB(220, 50, 60), 12)
+		end
+		-- boarding steps on the harbor side so you can climb up from the water or a rowboat
+		if island.boss.arenaRadius then
+			local a = math.pi - math.pi / 8 -- between two rim rocks, facing the harbor
+			local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+			for k = 0, 3 do
+				local at = bp + dir * (ar + 3 + k * 4) + Vector3.new(0, 5.5 - k * 1.8, 0)
+				P(Vector3.new(10, 1, 5), Color3.fromRGB(150, 110, 75), CFrame.lookAt(at, at + dir), { material = M.WoodPlanks })
+			end
 		end
 		local marker = P(Vector3.new(1, 1, 1), Color3.new(1, 1, 1), CFrame.new(bp + Vector3.new(0, 28, 0)), { transparency = 1, collide = false })
 		local bbb = Instance.new("BillboardGui")
@@ -531,6 +541,55 @@ local function buildOcean(world)
 			Ball(2.5, Color3.fromRGB(255, 70, 50), pos + Vector3.new(0, 5, 0), { parent = f, material = Enum.Material.Neon })
 		end
 		bx += 260
+	end
+end
+
+-- Sea floor for diving (v0.22.4): a deep teal sand bed under the whole sea, with rocks, coral and seaweed on the
+-- slopes around every island. Uses its own Random (never Kit's shared stream) so island layouts stay identical.
+-- Kept out of the "Ocean" folder: the swim code raycasts it as the bottom.
+local function buildSeaFloor(world)
+	local f = folderOf("SeaFloor", world)
+	local W = GameConfig.World
+	local y = GameConfig.Swim.SeaFloorY
+	local tile = 2000
+	local x = W.MinX
+	while x < W.MaxX + 600 do
+		local z = -W.HalfZ
+		while z < W.HalfZ do
+			P(Vector3.new(tile, 4, tile), Color3.fromRGB(46, 92, 104), CFrame.new(x + tile / 2, y - 2, z + tile / 2), { parent = f, material = M.Sand, shadow = false, name = "Floor" })
+			z += tile
+		end
+		x += tile
+	end
+	local rand = Random.new(46046)
+	local coral = { Color3.fromRGB(255, 120, 140), Color3.fromRGB(255, 170, 90), Color3.fromRGB(190, 120, 255), Color3.fromRGB(255, 230, 120) }
+	for _, isl in ipairs(IslandsCfg.List) do
+		if not isl.floating then
+			local c = Vector3.new(isl.x, y, isl.z or 0)
+			local function spot(minR, maxR)
+				local a, r = rand:NextNumber(0, math.pi * 2), rand:NextNumber(isl.radius + minR, isl.radius + maxR)
+				return c + Vector3.new(math.cos(a) * r, 0, math.sin(a) * r)
+			end
+			for _ = 1, 50 do
+				local p, sz = spot(25, 220), rand:NextNumber(3, 9)
+				P(Vector3.new(sz, sz * 0.7, sz * 0.9), Color3.fromRGB(70, 90, 96):Lerp(Color3.fromRGB(110, 120, 110), rand:NextNumber()),
+					CFrame.new(p + Vector3.new(0, sz * 0.25, 0)) * CFrame.Angles(rand:NextNumber(0, 0.4), rand:NextNumber(0, 6.28), rand:NextNumber(0, 0.4)), { parent = f, material = M.Slate, decor = true })
+			end
+			for _ = 1, 40 do
+				local p, h = spot(20, 200), rand:NextNumber(6, 16)
+				P(Vector3.new(0.6, h, 0.25), Color3.fromRGB(60, 150, 80):Lerp(Color3.fromRGB(120, 170, 60), rand:NextNumber()),
+					CFrame.new(p + Vector3.new(0, h / 2, 0)) * CFrame.Angles(rand:NextNumber(-0.2, 0.2), rand:NextNumber(0, 6.28), rand:NextNumber(-0.2, 0.2)), { parent = f, material = M.Grass, collide = false, decor = true, shadow = false })
+			end
+			for _ = 1, 24 do
+				local p = spot(25, 160)
+				local col = coral[rand:NextInteger(1, #coral)]
+				for k = 1, 3 do
+					local h = rand:NextNumber(2, 5)
+					P(Vector3.new(0.8, h, 0.8), col, CFrame.new(p + Vector3.new(rand:NextNumber(-1.2, 1.2), h / 2, rand:NextNumber(-1.2, 1.2))) * CFrame.Angles(rand:NextNumber(-0.4, 0.4), 0, rand:NextNumber(-0.4, 0.4)), { parent = f, material = M.Slate, collide = false, decor = true })
+					Ball(1.4 + k * 0.2, col:Lerp(Color3.new(1, 1, 1), 0.15), p + Vector3.new(rand:NextNumber(-1.5, 1.5), h, rand:NextNumber(-1.5, 1.5)), { parent = f, material = M.Slate, collide = false, decor = true })
+				end
+			end
+		end
 	end
 end
 
@@ -653,7 +712,7 @@ end
 -- away and rebuilt from code at server start (so the owner's published place updates through Rojo too).
 -- Hand-built content made in Studio goes in workspace.Handmade (never touched by rebuilds). Kit props placed there
 -- (tagged EnvProp/EnvPart) are dressed with the stylized meshes like the generated ones.
-WB.WORLD_VERSION = 6
+WB.WORLD_VERSION = 7
 
 -- Old copies of the map can hide anywhere in Workspace: a renamed or regrouped World, an island dragged into
 -- Handmade, single NPCs / chests / docks pasted from an old bake. They draw on top of the new islands and register
@@ -763,6 +822,7 @@ function WB.Build()
 	world.Parent = workspace
 	Kit.parent = world
 	buildOcean(world)
+	buildSeaFloor(world)
 	for _, island in ipairs(IslandsCfg.List) do
 		buildIsland(island)
 	end

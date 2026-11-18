@@ -55,6 +55,13 @@ function Atmos.SetClock(c)
 	overrideClock = c
 end
 
+-- underwater blend (Controllers/Underwater): 0 = above the sea .. 1 = submerged (short, blue-green visibility)
+local uwK = 0
+function Atmos.SetUnderwater(k)
+	uwK = k
+end
+local UW = { atm = Color3.fromRGB(26, 104, 150), decay = Color3.fromRGB(8, 50, 90), amb = Color3.fromRGB(60, 120, 160) }
+
 function Atmos.SetCalm(on)
 	calm = on
 end
@@ -271,6 +278,15 @@ function Atmos.Start()
 			atm.Density = lerp(L.dens, CALM.dens, calmK)
 			atm.Haze = lerp(L.haze, CALM.haze, calmK)
 			atm.Glare = L.glare
+		end
+		if atm and uwK > 0.01 then
+			atm.Color = atm.Color:Lerp(UW.atm, uwK)
+			atm.Decay = atm.Decay:Lerp(UW.decay, uwK)
+			atm.Density = lerp(atm.Density, 0.8, uwK)
+			atm.Haze = lerp(atm.Haze, 2.6, uwK)
+			atm.Glare = lerp(atm.Glare, 0, uwK)
+			Lighting.Ambient = Lighting.Ambient:Lerp(UW.amb, uwK * 0.6)
+			Lighting.OutdoorAmbient = Lighting.OutdoorAmbient:Lerp(UW.amb, uwK * 0.6)
 		end
 		if cc then
 			cc.TintColor = L.tint

@@ -1,5 +1,8 @@
--- Swim (client): keeps the character floating at the sea surface, slows walking to a swim, shows a breath bar
--- and lets you jump out onto docks. The server (PlayerService) enforces the breath limit independently.
+-- Swim (client): keeps the character floating at the sea surface, slows walking to a swim, lets you DIVE (v0.22.4)
+-- and jump out onto docks. Hold Ctrl (or the 🤿 button on phones, L2 on a gamepad) to dive, hold Space / Jump to
+-- swim up, let go and you drift back up slowly. Breath only runs out under the surface; out of breath you are pushed
+-- up. Swimming on top is limited too (Swim.SeaSeconds) so the sea is crossed by ship. The server (PlayerService)
+-- enforces both limits independently. The underwater look and sound are in Controllers/Underwater.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -17,17 +20,34 @@ local New = UI.New
 local swimming = false
 local sinkWarned = false
 local breath = CFG.BreathSeconds
+local seaTime = 0
+local depth = 0 -- studs below the normal floating height
+local diveHeld = false
+local riseUntil = 0
+local outOfBreath = false
 local float, normalSpeed
-local bar, barFill, barText
+local bar, barFill, barText, diveBtn
 
-local function groundBelow(root, hum)
+local function rayParams()
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	local world = workspace:FindFirstChild("World")
-	params.FilterDescendantsInstances = { player.Character, world and world:FindFirstChild("Ocean"), workspace:FindFirstChild("ReadabilityFX"), workspace:FindFirstChild("ClientFX") }
+	params.FilterDescendantsInstances = { player.Character, world and world:FindFirstChild("Ocean"), workspace:FindFirstChild("ReadabilityFX"), workspace:FindFirstChild("ClientFX"), workspace:FindFirstChild("GVUnderwaterFX") }
 	params.RespectCanCollide = true
+	return params
+end
+
+local function groundBelow(root, hum)
 	local reach = hum.HipHeight + root.Size.Y / 2 + 1.6
-	return workspace:Raycast(root.Position, Vector3.new(0, -reach, 0), params) ~= nil
+	return workspace:Raycast(root.Position, Vector3.new(0, -reach, 0), rayParams()) ~= nil
+end
+
+-- how deep you can go here: the sea floor (or a reef / island slope) minus a little room
+local function maxDepthHere(root, hum)
+	local base = GameConfig.SeaLevel - CFG.SurfaceOffset
+	local hit = workspace:Raycast(root.Position, Vector3.new(0, -(CFG.MaxDepth + 20), 0), rayParams())
+	local floorLimit = hit and (base - (hit.Position.Y + hum.HipHeight + root.Size.Y / 2 + 0.5)) or CFG.MaxDepth
+	return math.clamp(math.min(CFG.MaxDepth, floorLimit), 0, CFG.MaxDepth)
 end
 
 local function buildBar()
@@ -38,6 +58,22 @@ local function buildBar()
 	UI.Corner(barFill, 13)
 	UI.Gradient(barFill, Color3.fromRGB(150, 230, 255), Color3.fromRGB(40, 140, 230), 90)
 	barText = UI.Text(bar, "🫧 BREATH", 16, Color3.new(1, 1, 1), "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 3 })
+	-- phones: hold to dive (the jump button swims up)
+	if UI.IsMobile then
+		diveBtn = New("TextButton", { Name = "Dive", Text = "🤿", TextSize = 40, AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -150, 1, -250), Size = UDim2.fromOffset(84, 84), BackgroundColor3 = Color3.fromRGB(40, 140, 230), Visible = false, AutoButtonColor = false, Parent = UI.Root })
+		UI.Corner(diveBtn, 42)
+		UI.Stroke(diveBtn, T.Edge, 3)
+		diveBtn.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+				diveHeld = true
+			end
+		end)
+		diveBtn.InputEnded:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+				diveHeld = false
+			end
+		end)
+	end
 end
 
 local function setSwimming(on, root, hum)
@@ -48,6 +84,7 @@ local function setSwimming(on, root, hum)
 	if on then
 		normalSpeed = hum.WalkSpeed
 		hum.WalkSpeed = CFG.Speed
+		depth = math.clamp(GameConfig.SeaLevel - CFG.SurfaceOffset - root.Position.Y, 0, CFG.MaxDepth)
 		local att = root:FindFirstChild("RootAttachment") or New("Attachment", { Name = "RootAttachment", Parent = root })
 		float = New("LinearVelocity", {
 			Name = "SwimFloat",
@@ -65,6 +102,9 @@ local function setSwimming(on, root, hum)
 		Audio.Play("Splash", { pos = root.Position })
 		bar.Visible = true
 		UI.Pop(bar, 0.7)
+		if diveBtn then
+			diveBtn.Visible = true
+		end
 	else
 		if float then
 			float:Destroy()
@@ -74,10 +114,18 @@ local function setSwimming(on, root, hum)
 			hum.WalkSpeed = normalSpeed
 		end
 		bar.Visible = false
+		depth = 0
+		seaTime = 0
+		if diveBtn then
+			diveBtn.Visible = false
+		end
 	end
 end
 Swim.IsSwimming = function()
 	return swimming
+end
+Swim.Depth = function()
+	return depth
 end
 
 function Swim.Start()
@@ -91,7 +139,8 @@ function Swim.Start()
 			return
 		end
 		local surface = GameConfig.SeaLevel
-		local inWater = root.Position.Y < surface + 0.5 and not hum.Sit and not groundBelow(root, hum)
+		-- deep enough counts as water even right above a reef or an island slope
+		local inWater = root.Position.Y < surface + 0.5 and not hum.Sit and (not groundBelow(root, hum) or root.Position.Y < surface - 3)
 		if inWater and player:GetAttribute("Fruit") then
 			-- Cursed Fruit users sink like a stone and drown (the server drains their HP)
 			if not sinkWarned then
@@ -105,9 +154,21 @@ function Swim.Start()
 		sinkWarned = false
 		setSwimming(inWater, root, hum)
 		if swimming then
-			breath = math.max(0, breath - dt)
-			local targetY = surface - CFG.SurfaceOffset + math.sin(os.clock() * 2) * 0.15
-			float.LineVelocity = math.clamp((targetY - root.Position.Y) * 6, -25, 25)
+			local maxD = maxDepthHere(root, hum)
+			local rising = os.clock() < riseUntil or UserInputService:IsKeyDown(Enum.KeyCode.Space)
+			if outOfBreath then
+				depth = math.max(0, depth - CFG.RiseSpeed * 1.4 * dt)
+			elseif diveHeld and not rising then
+				depth = math.min(maxD, depth + CFG.DiveSpeed * dt)
+			elseif rising then
+				depth = math.max(0, depth - CFG.RiseSpeed * dt)
+			else
+				depth = math.max(0, depth - CFG.Buoyancy * dt)
+			end
+			depth = math.min(depth, maxD)
+			local bob = depth < 0.5 and math.sin(os.clock() * 2) * 0.15 or 0
+			local targetY = surface - CFG.SurfaceOffset - depth + bob
+			float.LineVelocity = math.clamp((targetY - root.Position.Y) * 6, -30, 30)
 			acc += dt
 			if acc > 0.4 then
 				acc = 0
@@ -117,37 +178,83 @@ function Swim.Start()
 					end)
 				end
 			end
-			local k = breath / CFG.BreathSeconds
+			local submerged = depth > 1.2
+			seaTime += dt
+			if submerged then
+				breath = math.max(0, breath - dt)
+				if breath <= 0 and not outOfBreath then
+					outOfBreath = true
+					UI.Notice("🫧 OUT OF BREATH! SWIM UP!", T.Red)
+				end
+			else
+				breath = math.min(CFG.BreathSeconds, breath + dt * 6)
+				if breath >= CFG.BreathSeconds * 0.5 then
+					outOfBreath = false
+				end
+			end
+			-- one bar: breath while under (or refilling), otherwise how long you can keep swimming
+			local k, label
+			if submerged or breath < CFG.BreathSeconds - 0.05 then
+				k, label = breath / CFG.BreathSeconds, "🫧 BREATH"
+			else
+				k, label = math.max(0, 1 - seaTime / CFG.SeaSeconds), "🏊 SWIM"
+			end
 			barFill.Size = UDim2.fromScale(k, 1)
-			barText.Text = k < 0.25 and "🫧 OUT OF BREATH!" or "🫧 BREATH"
+			barText.Text = k < 0.25 and (submerged and "🫧 OUT OF BREATH!" or "🏊 TIRED: GET OUT!") or label
 			barText.TextColor3 = k < 0.25 and Color3.fromRGB(255, 120, 120) or Color3.new(1, 1, 1)
 		else
 			breath = math.min(CFG.BreathSeconds, breath + dt * 6)
+			outOfBreath = false
 		end
 	end)
-	-- jump out of the water (onto docks and beaches)
+	-- dive: Ctrl (either), gamepad L2
+	UserInputService.InputBegan:Connect(function(input, processed)
+		if processed then
+			return
+		end
+		local kc = input.KeyCode
+		if kc == Enum.KeyCode.LeftControl or kc == Enum.KeyCode.RightControl or kc == Enum.KeyCode.ButtonL2 then
+			diveHeld = true
+		end
+	end)
+	UserInputService.InputEnded:Connect(function(input)
+		local kc = input.KeyCode
+		if kc == Enum.KeyCode.LeftControl or kc == Enum.KeyCode.RightControl or kc == Enum.KeyCode.ButtonL2 then
+			diveHeld = false
+		end
+	end)
+	-- Jump: under water it swims you up; at the surface it jumps out (onto docks and beaches)
 	UserInputService.JumpRequest:Connect(function()
 		local char = player.Character
 		local root = char and char:FindFirstChild("HumanoidRootPart")
-		if swimming and root then
-			local v = root.AssemblyLinearVelocity
-			root.AssemblyLinearVelocity = Vector3.new(v.X, CFG.JumpOutVelocity, v.Z)
-			if float then
-				float.Enabled = false
-				task.delay(0.6, function()
-					if float then
-						float.Enabled = true
-					end
-				end)
-			end
+		if not swimming or not root then
+			return
+		end
+		if depth > 1 then
+			riseUntil = os.clock() + 0.35
+			return
+		end
+		local v = root.AssemblyLinearVelocity
+		root.AssemblyLinearVelocity = Vector3.new(v.X, CFG.JumpOutVelocity, v.Z)
+		if float then
+			float.Enabled = false
+			task.delay(0.6, function()
+				if float then
+					float.Enabled = true
+				end
+			end)
 		end
 	end)
 	player.CharacterAdded:Connect(function()
 		swimming = false
 		float = nil
 		breath = CFG.BreathSeconds
+		depth, seaTime, outOfBreath, diveHeld = 0, 0, false, false
 		if bar then
 			bar.Visible = false
+		end
+		if diveBtn then
+			diveBtn.Visible = false
 		end
 	end)
 end

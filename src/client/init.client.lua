@@ -26,6 +26,9 @@ local GrassField = require(script.Controllers.GrassField)
 local CreatureAnim = require(script.Controllers.CreatureAnim)
 local CharAnim = require(script.Controllers.CharAnim)
 local Interact = require(script.Controllers.Interact)
+local ChartsView = require(script.Controllers.ChartsView)
+local ShipBars = require(script.Controllers.ShipBars)
+local Underwater = require(script.Controllers.Underwater)
 local Quest = require(script.UI.Quest)
 
 pcall(function()
@@ -103,7 +106,7 @@ local handlers = {
 		UI.Banner("New Title!", "« " .. tostring(d.name) .. " »  •  wear it from your Bag", Rarity.Get(d.tier or "Rare").color, d.tier)
 	end,
 	PearlGain = function(d)
-		UI.Toast("+" .. d.amount .. " 🦪 Pearls" .. (d.capped and "  (daily cap reached)" or ""), "good")
+		UI.Toast("+" .. d.amount .. " 💎 Gems" .. (d.capped and "  (daily cap reached)" or ""), "good")
 	end,
 	ChestOpened = function(d)
 		Quest.OnChest(d)
@@ -173,7 +176,7 @@ start("Quest", Quest)
 for _, c in ipairs({
 	{ "Sailing", Sailing }, { "Builder", Builder }, { "VFX", VFX }, { "Readability", Readability }, { "Swim", Swim },
 	{ "Pets", PetsCtl }, { "Titles", Titles }, { "Ocean", Ocean }, { "Atmos", Atmos }, { "GrassField", GrassField },
-	{ "CreatureAnim", CreatureAnim }, { "CharAnim", CharAnim }, { "Interact", Interact },
+	{ "CreatureAnim", CreatureAnim }, { "CharAnim", CharAnim }, { "Interact", Interact }, { "ChartsView", ChartsView }, { "ShipBars", ShipBars }, { "Underwater", Underwater },
 }) do
 	task.spawn(start, c[1], c[2])
 end

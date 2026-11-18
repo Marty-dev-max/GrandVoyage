@@ -274,12 +274,26 @@ function Kit._bush(pos, size, color)
 end
 
 local flowerColors = { Color3.fromRGB(255, 110, 140), Color3.fromRGB(255, 220, 80), Color3.fromRGB(255, 255, 255), Color3.fromRGB(180, 120, 255), Color3.fromRGB(255, 150, 60) }
+-- a single stylized plant (Assets.Env kind: Flowers, LeafPlant, Fern, GrassTuft, Mushroom) standing on `base`; the
+-- ball is only the placeholder until DressWorld swaps in the mesh. No rng.
+function Kit.Plant(kind, base, height, color)
+	return prop(kind, base, height, function()
+		Ball(height * 0.7, color or C.Leaf, base + Vector3.new(0, height * 0.4, 0), decor({ collide = false, shadow = false, material = M.Grass }))
+	end)
+end
+
+-- Each flower is an EnvProp "Flowers": DressWorld swaps the stem + ball placeholder for the petal flower meshes
+-- (Assets.Env/Flowers_n), like the plants Greenery scatters (owner, v0.22.4: the round ball flowers looked wrong).
+-- Same rng calls as before (2 numbers + 1 integer per flower) so every island keeps its layout.
 function Kit.Flowers(pos, radius, count)
 	for _ = 1, count or 8 do
 		local a, r = rng:NextNumber(0, 6.28), rng:NextNumber(0, radius or 4)
 		local p = pos + Vector3.new(math.cos(a) * r, 0.5, math.sin(a) * r)
-		P(Vector3.new(0.2, 1, 0.2), C.Leaf, CFrame.new(p), decor({ collide = false, shadow = false }))
-		Ball(0.8, flowerColors[rng:NextInteger(1, #flowerColors)], p + Vector3.new(0, 0.6, 0), decor({ collide = false, shadow = false }))
+		local color = flowerColors[rng:NextInteger(1, #flowerColors)]
+		prop("Flowers", p - Vector3.new(0, 0.5, 0), 1.4, function()
+			P(Vector3.new(0.2, 1, 0.2), C.Leaf, CFrame.new(p), decor({ collide = false, shadow = false }))
+			Ball(0.8, color, p + Vector3.new(0, 0.6, 0), decor({ collide = false, shadow = false }))
+		end)
 	end
 end
 

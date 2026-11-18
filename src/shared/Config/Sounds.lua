@@ -74,8 +74,12 @@ add("ShipHit", "SFX", 0.7, BOOM, { pitch = 0.8, rolloff = 500 })
 add("ShipCreak", "SFX", 0.35, BOOM, { pitch = 0.3 })
 add("Bell", "SFX", 0.6, PING, { pitch = 0.5 })
 -- Loops
-add("AmbienceSea", "Ambience", 0.35, "", { looped = true })
+add("AmbienceSea", "Ambience", 0.45, "", { looped = true })
 add("AmbienceWind", "Ambience", 0.25, "", { looped = true })
+add("AmbienceIsland", "Ambience", 0.45, "", { looped = true }) -- v0.22.4: breeze in leaves + distant surf + far birds
+add("AmbienceUnderwater", "Ambience", 0.6, "", { looped = true })
+add("WaterPlunge", "SFX", 0.6, SPLASH)
+add("WaterSurface", "SFX", 0.5, SPLASH)
 add("MusicIsland", "Music", 0.35, "", { looped = true })
 add("MusicSea", "Music", 0.35, "", { looped = true })
 add("MusicBoss", "Music", 0.45, "", { looped = true })
@@ -92,8 +96,11 @@ add("MusicBoss", "Music", 0.45, "", { looped = true })
 
 
 
+
 -- ===== uploaded asset ids (written by tools/upload_sfx.py) =====
-S.AmbienceSea.id = "rbxassetid://138177780191891"
+S.AmbienceIsland.id = "rbxassetid://79015973549602"
+S.AmbienceSea.id = "rbxassetid://130875975365866"
+S.AmbienceUnderwater.id = "rbxassetid://78222530583237"
 S.AmbienceWind.id = "rbxassetid://121665322013245"
 S.AnvilClang.id = "rbxassetid://119416036242324"
 S.Bell.id = "rbxassetid://117065599726354"
@@ -143,6 +150,8 @@ S.UIClick.id = "rbxassetid://85047146917342"
 S.UIClose.id = "rbxassetid://107881653592113"
 S.UIHover.id = "rbxassetid://78923618171273"
 S.UIOpen.id = "rbxassetid://101070708256347"
+S.WaterPlunge.id = "rbxassetid://111315992685095"
+S.WaterSurface.id = "rbxassetid://102497499792719"
 S.Whoosh.id = "rbxassetid://87542042603708"
 S.WindGust.id = "rbxassetid://72703815837799"
 S.ZapHit.id = "rbxassetid://73320420962425"

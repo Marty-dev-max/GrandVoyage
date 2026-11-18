@@ -238,6 +238,15 @@ def pearl():
     ball(0.5, (0, -0.35, -0.05), mat(WHITE, 0.05, coat=1.0))
     ball(0.12, (0.18, -0.78, 0.15), mat(WHITE, 0.0, emit=2.0))
 
+def gem():
+    """the premium currency (v0.22.4: Pearls became Gems): a brilliant-cut blue gem with a sparkle"""
+    body = mat("#3cc8ff", 0.04, emit=0.35, coat=1.0)
+    deep = mat("#1b7ff0", 0.05, emit=0.25, coat=1.0)
+    # crown (top, faceted) + table + pavilion (pointed bottom)
+    cone(1.0, 0.62, 0.42, (0, 0, 0.21), body, verts=8)
+    cyl(0.62, 0.04, (0, 0, 0.43), mat("#bff0ff", 0.02, emit=0.6, coat=1.0), verts=8, bevel=0.0)
+    cone(1.0, 0.0, 1.05, (0, 0, -0.525), deep, rot=(math.pi, 0, 0), verts=8)
+
 def chest():
     box((1.7, 1.1, 0.8), (0, 0, -0.35), mat(WOOD, 0.5))
     lid = box((1.75, 1.15, 0.5), (0, 0.05, 0.3), mat(WOOD, 0.5), rot=(math.radians(-8), 0, 0))
@@ -513,7 +522,7 @@ def potion_red():
 
 ICONS = {
     # menu + currencies
-    "coin": (coin, (-15, 10)), "pearl": (pearl, (-20, 0)), "chest": (chest, (-25, 15)), "bag": (bag, (-20, 0)),
+    "coin": (coin, (-15, 10)), "pearl": (pearl, (-20, 0)), "gem": (gem, (22, 0)), "chest": (chest, (-25, 15)), "bag": (bag, (-20, 0)),
     "stats": (stats, (-25, 10)), "skills": (skills, (-15, 0)), "ship": (ship, (-30, 10)), "anchor": (anchor, (-20, 0)),
     "flag": (flag, (-25, 5)), "party": (party, (-20, 0)), "map": (mapicon, (-20, 15)), "crown": (crown, (-20, 20)),
     "scroll": (scroll, (-20, 5)), "paw": (paw, (-15, 0)), "gear": (gear, (-25, 10)), "skull": (skull, (-20, 5)),

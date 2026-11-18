@@ -134,6 +134,11 @@ def main():
         dd = np.abs(np.angle(np.exp(1j * (ang - a0))))
         spikes4 = np.maximum(spikes4, np.clip(1 - dd / (0.16 * (1 - r) + 0.01), 0, 1) * (r < 1))
     save('impact', np.maximum(spikes4, np.exp(-(r ** 2) * 14)), blur=1)
+    # underwater bubble (v0.22.4): thin bright rim, faint body, a highlight glint up-left
+    rim = np.exp(-((r - 0.82) ** 2) / 0.003)
+    body = 0.12 * (r < 0.84)
+    glint = np.exp(-(((xx - cx + 40) ** 2 + (yy - cy + 44) ** 2) / (S * 0.09) ** 2) * 1.0) * 0.9
+    save('bubble', np.maximum(rim, body) + glint * (r < 0.8), blur=1)
     print('wrote', sorted(os.listdir(OUT)))
 
 if __name__ == '__main__':

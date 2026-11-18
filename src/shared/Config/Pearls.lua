@@ -2,7 +2,7 @@
 -- spendable in the Pearl Shop and tradable in player stalls under strict rules (anti-inflation, anti-bot, anti-RMT).
 local P = {}
 
-P.Icon = "🦪"
+P.Icon = "💎"
 P.DailyCap = 300 -- max Pearls EARNED per player per day (UTC). Market income and Robux purchases do not count.
 
 -- Earn sources
@@ -39,9 +39,9 @@ P.Shop = {
 -- Robux developer products (create them in the Creator Hub, then paste the ids). 0 = not on sale yet.
 -- Robux Pearls are BOUND: usable in the Pearl Shop, never tradable.
 P.Products = {
-	{ productId = 3732181648, pearls = 100, name = "Pouch of Pearls" },
-	{ productId = 3732181740, pearls = 550, name = "Chest of Pearls" },
-	{ productId = 3732181832, pearls = 1200, name = "Treasure of Pearls" },
+	{ productId = 3732181648, pearls = 100, name = "Pouch of Gems" },
+	{ productId = 3732181740, pearls = 550, name = "Chest of Gems" },
+	{ productId = 3732181832, pearls = 1200, name = "Treasure of Gems" },
 }
 
 P.LedgerStore = "GV_PearlLedger_v1"

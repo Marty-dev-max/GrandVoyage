@@ -267,7 +267,7 @@ function Themes.Windmill(ctx)
 		local base = ctx.at(x, -40)
 		P(Vector3.new(3, 1, 24), Color3.fromRGB(130, 90, 60), CFrame.new(base + Vector3.new(0, 0.4, 0)), Kit.decor({ material = M.Ground }))
 		for k = 0, 5 do
-			Ball(1.8, row % 2 == 0 and Color3.fromRGB(140, 220, 90) or Color3.fromRGB(255, 210, 90), base + Vector3.new(0, 1.3, -10 + k * 4), Kit.decor({ collide = false, material = M.Grass }))
+			Kit.Plant(row % 2 == 0 and "LeafPlant" or "Flowers", base + Vector3.new(0, 0.9, -10 + k * 4), row % 2 == 0 and 2.2 or 1.6, row % 2 == 0 and Color3.fromRGB(140, 220, 90) or Color3.fromRGB(255, 210, 90))
 		end
 	end
 	Kit.Fence(ctx.at(-164, -54), ctx.at(-130, -54))

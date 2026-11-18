@@ -36,6 +36,7 @@ local AchievementsCfg = require(ReplicatedStorage.Shared.Config.Achievements)
 local QuestsCfg = require(ReplicatedStorage.Shared.Config.Quests)
 local TitlesCfg = require(ReplicatedStorage.Shared.Config.Titles)
 local TitleStyle = require(script.Parent.TitleStyle)
+local ChartsView = require(script.Parent.Parent.Controllers.ChartsView)
 
 local function req(action, payload, okSound)
 	local res = Net.Request(action, payload)
@@ -1967,12 +1968,13 @@ function Panels.FastTravel()
 	for i, isl in ipairs(Islands.List) do
 		local x = (i - 0.5) / (n + 1)
 		local unlocked = p.unlocked[isl.id]
+		local charted = ChartsView.Known(isl.id)
 		local dot = New("TextButton", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(x, 0.5), Size = UDim2.fromOffset(110, 110), BackgroundColor3 = Color3.new(1, 1, 1), Text = "", AutoButtonColor = false, Parent = strip })
 		UI.Corner(dot, 55)
 		UI.Gradient(dot, unlocked and isl.palette.grass:Lerp(Color3.new(1, 1, 1), 0.2) or Color3.fromRGB(150, 160, 170), unlocked and isl.palette.sand or Color3.fromRGB(100, 110, 120), 90)
 		UI.Stroke(dot, unlocked and T.Gold or T.Edge, 3.5)
 		UI.Tactile(dot)
-		UI.Text(dot, isl.name, 16, T.Text, "Display", { Position = UDim2.fromOffset(4, 22), Size = UDim2.new(1, -8, 0, 40), TextXAlignment = Enum.TextXAlignment.Center })
+		UI.Text(dot, charted and isl.name or "???", 16, T.Text, "Display", { Position = UDim2.fromOffset(4, 22), Size = UDim2.new(1, -8, 0, 40), TextXAlignment = Enum.TextXAlignment.Center })
 		UI.Text(dot, "Lv." .. isl.levels[1] .. "-" .. isl.levels[2], 14, Rarity.LevelColor(player:GetAttribute("Level") or 1, isl.levels[1]), "Number", { Position = UDim2.fromOffset(0, 66), Size = UDim2.new(1, 0, 0, 18), TextXAlignment = Enum.TextXAlignment.Center })
 		if not unlocked then
 			UI.Text(dot, "🔒", 22, T.Text, "Display", { Position = UDim2.fromOffset(0, 82), Size = UDim2.new(1, 0, 0, 24), TextXAlignment = Enum.TextXAlignment.Center })
@@ -1991,7 +1993,7 @@ function Panels.FastTravel()
 		end
 		dot.Activated:Connect(function()
 			if not unlocked then
-				UI.Toast("Not discovered yet: sail there first", "bad")
+				UI.Toast(charted and "Not discovered yet: sail there first" or "Uncharted: finish this island's story and your compass will point the way", "bad")
 				return
 			end
 			UI.Confirm("Fly by courier gull to " .. isl.name .. "?\nCost " .. COIN .. " " .. (100 * i), function()
@@ -2004,7 +2006,7 @@ function Panels.FastTravel()
 	UI.Corner(rl, 16)
 	UI.Stroke(rl, T.Edge, 3)
 	UI.Text(rl, string.upper(Islands.RedLine.name) .. "\n⛰\nLv." .. GameConfig.GrandLineLevel, 18, T.Text, "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center })
-	UI.Text(win.body, "Islands lie in a straight line: sail east to reach the next one. Stay in the windy lane: the Doldrums at the edges have no wind and Leviathans. Past " .. Islands.List[n].name .. ", " .. Islands.RedLine.peakName .. " leads to the " .. Islands.RedLine.nextSea .. " (next update).", 16, T.TextSoft, "Semi", { Position = UDim2.new(0, 0, 0.5, 112), Size = UDim2.new(1, 0, 0, 60), TextXAlignment = Enum.TextXAlignment.Center })
+	UI.Text(win.body, "Islands lie in a straight line: sail east to reach the next one. Stay in the windy lane: the Doldrums at the edges have no wind and Leviathans. Past the last island, " .. Islands.RedLine.peakName .. " leads to the " .. Islands.RedLine.nextSea .. " (next update).", 16, T.TextSoft, "Semi", { Position = UDim2.new(0, 0, 0.5, 112), Size = UDim2.new(1, 0, 0, 60), TextXAlignment = Enum.TextXAlignment.Center })
 end
 Panels.Map = Panels.FastTravel
 
@@ -2049,7 +2051,7 @@ function Panels.BossBoard()
 				UI.Pad(card, 8)
 				UI.Text(card, "☠ " .. b.name, 19, b.alive and T.Red or T.Text, "Display", { Size = UDim2.new(1, 0, 0, 22) })
 				local left = b.nextSpawn - board.serverTime - (os.clock() - (board.receivedAt or os.clock()))
-				UI.Text(card, "Lv." .. b.level .. "  •  " .. b.island .. "  •  " .. (b.alive and "ALIVE NOW!" or string.format("respawns in %d:%02d", math.max(0, left) // 60, math.max(0, left) % 60)), 15, b.alive and T.Gold or T.TextSoft, "Semi", { Position = UDim2.fromOffset(0, 26) })
+				UI.Text(card, "Lv." .. b.level .. "  •  " .. ChartsView.NameOf(b.island) .. "  •  " .. (b.alive and "ALIVE NOW!" or string.format("respawns in %d:%02d", math.max(0, left) // 60, math.max(0, left) % 60)), 15, b.alive and T.Gold or T.TextSoft, "Semi", { Position = UDim2.fromOffset(0, 26) })
 			end
 		end
 		local gw = State.guildWar
@@ -2248,7 +2250,7 @@ function Panels.Stall(args)
 	local pearlStall = data.currency == "pearls"
 	local CUR = pearlStall and PearlsCfg.Icon or COIN
 	local have = pearlStall and (State.profile.pearls or 0) or State.profile.beli
-	UI.Text(win.body, "Seller: " .. data.seller .. "   •   You have " .. CUR .. " " .. UI.Format(have) .. (pearlStall and " tradable Pearls" or ""), 16, T.TextSoft, "Semi")
+	UI.Text(win.body, "Seller: " .. data.seller .. "   •   You have " .. CUR .. " " .. UI.Format(have) .. (pearlStall and " tradable Gems" or ""), 16, T.TextSoft, "Semi")
 	local list = UI.Scroll(win.body, UDim2.new(1, 0, 1, -32))
 	list.Position = UDim2.fromOffset(0, 32)
 	UI.List(list, nil, 6)
@@ -2299,7 +2301,7 @@ function Panels.StallSetup()
 			currency = id
 			drawCurrency()
 			if id == "pearls" then
-				UI.Toast("Pearl stalls: Lv." .. PearlsCfg.Trade.MinLevel .. "+, " .. math.floor(PearlsCfg.Trade.TaxRate * 100) .. "% tax, " .. math.floor(PearlsCfg.Trade.ListingFeeRate * 100) .. "% listing fee, items held " .. PearlsCfg.Trade.LockHours .. "h can't be listed", "info")
+				UI.Toast("Gem stalls: Lv." .. PearlsCfg.Trade.MinLevel .. "+, " .. math.floor(PearlsCfg.Trade.TaxRate * 100) .. "% tax, " .. math.floor(PearlsCfg.Trade.ListingFeeRate * 100) .. "% listing fee, items held " .. PearlsCfg.Trade.LockHours .. "h can't be listed", "info")
 			end
 		end, 36)
 	end
@@ -2762,7 +2764,7 @@ function Panels.Quests(args)
 				local doneN = math.clamp(cur - ch.first, 0, total)
 				local state = doneN >= total and "✅" or (doneN > 0 or cur == ch.first) and "▶" or "🔒"
 				local card = UI.Card(body, UDim2.new(1, -12, 0, 64), (state == "▶" and T.Gold or T.Panel):Lerp(T.Panel, state == "▶" and 0.7 or 0))
-				UI.Text(card, state .. "  " .. (isl and isl.name or islandId) .. (islandId == "Daybreak" and "  (tutorial)" or ""), 20, T.Text, "Display", { Position = UDim2.fromOffset(16, 6), Size = UDim2.new(1, -32, 0, 24) })
+				UI.Text(card, state .. "  " .. ChartsView.Name(isl or islandId) .. (islandId == "Daybreak" and "  (tutorial)" or ""), 20, T.Text, "Display", { Position = UDim2.fromOffset(16, 6), Size = UDim2.new(1, -32, 0, 24) })
 				local bar = UI.Bar(card, T.Gold, UDim2.new(1, -32, 0, 14), doneN .. " / " .. total)
 				bar.back.Position = UDim2.fromOffset(16, 38)
 				bar:Set(doneN / total)
@@ -2965,11 +2967,11 @@ function Panels.PearlShop()
 		end
 		local d = res.data
 		UI.List(body, nil, 8)
-		local _, right = UI.Section(body, PearlsCfg.Icon, "Your Pearls", T.Ocean, UI.Format(d.pearls + d.bound))
+		local _, right = UI.Section(body, PearlsCfg.Icon, "Your Gems", T.Ocean, UI.Format(d.pearls + d.bound))
 		local _ = right
 		UI.Text(body, string.format("Tradable %s   •   Shop-only %s   •   Earned today %d / %d", UI.Format(d.pearls), UI.Format(d.bound), d.earnedToday, d.cap), 14, T.TextSoft, "Semi")
-		UI.Text(body, d.canTrade and "✅ You can buy and sell items for Pearls in stalls." or ("🔒 " .. (d.tradeWhy or "")), 14, d.canTrade and T.Green or T.Gold, "Bold")
-		UI.Section(body, "🛍️", "Pearl Shop", T.Gold)
+		UI.Text(body, d.canTrade and "✅ You can buy and sell items for Gems in stalls." or ("🔒 " .. (d.tradeWhy or "")), 14, d.canTrade and T.Green or T.Gold, "Bold")
+		UI.Section(body, "🛍️", "Gem Shop", T.Gold)
 		-- one row of cards that always fits the window: card width follows the item count
 		local n = #PearlsCfg.Shop
 		local perRow = math.min(n, 5)
@@ -2995,7 +2997,7 @@ function Panels.PearlShop()
 				end
 			end)
 		end
-		UI.Section(body, "💎", "Get Pearls", T.Purple, "Robux Pearls are shop-only")
+		UI.Section(body, "💎", "Get Gems", T.Purple, "Robux Gems are shop-only")
 		local row = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 44), Parent = body })
 		UI.List(row, Enum.FillDirection.Horizontal, 8)
 		for _, prod in ipairs(d.products) do
@@ -3008,7 +3010,7 @@ function Panels.PearlShop()
 				req("PearlBuyProduct", { productId = prod.productId })
 			end)
 		end
-		UI.Text(body, "Earn Pearls from first-time chests, exploring whole islands, story quests and MVP bosses (max " .. d.cap .. " per day).", 13, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 34) })
+		UI.Text(body, "Earn Gems from first-time chests, exploring whole islands, story quests and MVP bosses (max " .. d.cap .. " per day).", 13, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 34) })
 	end
 	render()
 end

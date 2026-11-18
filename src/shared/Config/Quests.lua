@@ -114,7 +114,14 @@ Q.Main = {
 		at = { npc = "Shipwright" }, reward = { beli = 300, exp = 100, job = 50, items = { { "RepairKit", 2 } } },
 	},
 	{
-		id = "T12", island = "Daybreak", title = "Next Port: Conch Bay",
+		id = "T12", island = "Daybreak", title = "The Serpent at the Gate",
+		dialog = { "Hold fast! A Bay Serpent nests on the old wreck deck right outside our harbor. Nothing gets past it to the open sea.", "Sail out, climb onto its deck and put it down. Watch the ground: red lines show where it lunges and spits. Dash (Q) out of them!", "Beat it and this old compass is yours. It shows the way to the next port." },
+		goal = { kind = "Kill", target = "BaySerpent", count = 1 }, text = "Defeat the Bay Serpent",
+		hint = "Its arena is at sea, straight east of the harbor. Bring friends if it is too strong.",
+		at = { boss = "Daybreak" }, reward = { beli = 600, exp = 500, job = 250, items = { { "SeaCompass", 1 }, { "MeatOnBone", 5 } } },
+	},
+	{
+		id = "T13", island = "Daybreak", title = "Next Port: Conch Bay",
 		dialog = { "Sail east, follow the yellow dots and stay in the windy lane. The dark, still water at the edges is the Doldrums: no wind, and Leviathans." },
 		goal = { kind = "Reach", target = "ConchBay" }, text = "Sail to Conch Bay",
 		hint = "Follow the dotted line east. Dock with E near the pier.",
@@ -335,7 +342,9 @@ Q.Main = {
 	},
 }
 
-Q.TutorialEnd = 12 -- steps 1..12 are the Daybreak tutorial (skippable)
+Q.TutorialEnd = 13 -- steps 1..13 are the Daybreak tutorial (skippable)
+-- quest save version: v2 inserted T12 (Bay Serpent) before "Next Port: Conch Bay" (QuestService migrates old saves)
+Q.SaveVersion = 2
 
 Q.ById = {}
 for i, s in ipairs(Q.Main) do

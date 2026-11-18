@@ -92,6 +92,30 @@ function Audio.Play(name, opts)
 	return s
 end
 
+-- Underwater (v0.22.4): everything you hear in the world goes dull and heavy: an equalizer on the SFX, Ambience and
+-- Music groups cuts the highs and mids (UI clicks stay crisp). k = 0 (dry) .. 1 (fully submerged).
+local muffles = {}
+for _, name in ipairs({ "SFX", "Ambience", "Music" }) do
+	local eq = Instance.new("EqualizerSoundEffect")
+	eq.Name = "Underwater"
+	eq.LowGain, eq.MidGain, eq.HighGain = 0, 0, 0
+	eq.Priority = 10
+	eq.Enabled = false
+	eq.Parent = groups[name]
+	muffles[name] = eq
+end
+function Audio.SetUnderwater(k)
+	for name, eq in pairs(muffles) do
+		eq.Enabled = k > 0.01
+		eq.LowGain = 4 * k
+		eq.MidGain = -14 * k
+		eq.HighGain = -48 * k
+		-- the surface world fades back while the underwater bed takes over
+		local g = groups[name]
+		g.Volume = (g:GetAttribute("Base") or 1) * master * (1 - (name == "Music" and 0.55 or 0.35) * k)
+	end
+end
+
 -- Looping music/ambience with crossfade
 local loops = {}
 function Audio.Loop(channel, name, fade)

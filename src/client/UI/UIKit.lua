@@ -460,7 +460,7 @@ local Icons = require(ReplicatedStorage.Shared.Config.Icons)
 UI.Icons = Icons
 local EMOJI_ICON = {
 	["🎒"] = "bag", ["📊"] = "stats", ["✨"] = "skills", ["⚓"] = "anchor", ["🏴"] = "flag", ["👥"] = "party",
-	["🗺️"] = "map", ["👑"] = "crown", ["📜"] = "scroll", ["🐾"] = "paw", ["🦪"] = "pearl", ["⚙️"] = "gear",
+	["🗺️"] = "map", ["👑"] = "crown", ["📜"] = "scroll", ["🐾"] = "paw", ["💎"] = "gem", ["⚙️"] = "gear",
 	["🪙"] = "coin", ["☠"] = "skull", ["☠️"] = "skull", ["🏳"] = "whiteflag", ["🔨"] = "hammer", ["🃏"] = "card",
 	["🥚"] = "egg", ["🪺"] = "golden_egg", ["🪤"] = "bait", ["🧰"] = "chest", ["📘"] = "book", ["⛵"] = "ship",
 	["🧿"] = "charm", ["🍖"] = "meat", ["🪵"] = "wood", ["⚔️"] = "sword", ["👊"] = "knuckles", ["🛍️"] = "chest",

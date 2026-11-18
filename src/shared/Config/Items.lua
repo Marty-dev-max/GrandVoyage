@@ -105,6 +105,9 @@ local mats = {
 for _, m in ipairs(mats) do
 	add(m[1], { name = m[2], kind = "Material", price = m[3], stack = true, rarity = m[4], desc = m[5] })
 end
+-- story key item (quest T12): the next island's name only shows once your compass points to it (owner, v0.22.4)
+add("SeaCompass", { name = "Sea Compass", kind = "Material", price = 0, stack = true, rarity = "Epic", key = true,
+	desc = "An old brass compass. Each time you finish an island's story, it points to the next port and reveals its name." })
 
 -- ===== Cursed Fruits (uneaten: tradable items) =====
 local Fruits = require(script.Parent.Fruits)

@@ -21,6 +21,7 @@ return {
 	fruit_split = "rbxassetid://120605792206063",
 	fruit_ward = "rbxassetid://89095356546848",
 	gear = "rbxassetid://93381117535730",
+	gem = "rbxassetid://90708622226789",
 	golden_egg = "rbxassetid://116248912344218",
 	hammer = "rbxassetid://90138181739067",
 	hat = "rbxassetid://110080420698443",

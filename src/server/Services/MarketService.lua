@@ -163,7 +163,7 @@ function Market.Start()
 				end
 				local okPrice, lo, hi = R.PearlService.PriceOk(entry.id, price)
 				if not okPrice then
-					return false, (def and def.name or "Item") .. ": Pearl price must be " .. lo .. "-" .. hi
+					return false, (def and def.name or "Item") .. ": Gem price must be " .. lo .. "-" .. hi
 				end
 			end
 			local qty = math.clamp(math.floor(tonumber(it.qty) or 1), 1, entry.qty or 1)
@@ -178,7 +178,7 @@ function Market.Start()
 			end
 			local fee = math.max(1, math.floor(value * PearlsCfg.Trade.ListingFeeRate))
 			if not R.PearlService.Spend(player, fee, "listing fee", false) then
-				return false, "Listing fee: " .. fee .. " Pearls"
+				return false, "Listing fee: " .. fee .. " Gems"
 			end
 		end
 		-- Move items into escrow
@@ -250,7 +250,7 @@ function Market.Start()
 				return false, why
 			end
 			if not R.PearlService.Spend(buyer, total, "market buy", false) then
-				return false, "Not enough tradable Pearls"
+				return false, "Not enough tradable Gems"
 			end
 		else
 			if bp.beli < total then

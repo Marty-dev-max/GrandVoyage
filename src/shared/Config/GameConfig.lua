@@ -2,7 +2,7 @@
 return {
 	GameName = "Grand Voyage",
 	-- bump on every change: shown bottom-right in game and printed in Output, so you can tell which code is running
-	Version = "0.22.3",
+	Version = "0.22.4",
 	SagaName = "Azure East Saga",
 	DataStoreName = "GV_Player_v1",
 	GuildStoreName = "GV_Guild_v1",
@@ -113,7 +113,15 @@ return {
 	-- to cross the sea. The server enforces BreathSeconds, so exploiters cannot swim forever.
 	Swim = {
 		Speed = 12,
-		BreathSeconds = 45,
+		-- v0.22.4 diving: breath only runs out UNDER the surface; swimming on top is limited by SeaSeconds instead
+		-- (you still cannot swim from island to island: sail)
+		BreathSeconds = 30,
+		SeaSeconds = 90,
+		MaxDepth = 40, -- studs below the surface
+		DiveSpeed = 11,
+		RiseSpeed = 13,
+		Buoyancy = 2.5, -- drift back up when you let go
+		SeaFloorY = -44, -- the island bases reach down to here
 		SurfaceOffset = 1.4, -- root part sits this far below the sea surface (head above water)
 		JumpOutVelocity = 58, -- enough to climb onto a dock
 	},

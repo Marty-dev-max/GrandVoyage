@@ -298,7 +298,7 @@ end
 local function updateAudio(zone, onIsland)
 	if onIsland and zone ~= "CalmBelt" then
 		Audio.Loop("music", "MusicIsland")
-		Audio.Loop("ambience", "AmbienceWind")
+		Audio.Loop("ambience", "AmbienceIsland")
 	else
 		Audio.Loop("music", "MusicSea")
 		Audio.Loop("ambience", "AmbienceSea")

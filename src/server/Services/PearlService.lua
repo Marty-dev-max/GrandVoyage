@@ -104,7 +104,7 @@ local function credit(player, amount, source)
 	if source == "market" and h.income > Pearls.Trade.HourlyIncomeFlag and not p.pearlFrozen then
 		p.pearlFrozen = true
 		warn("[PearlService] trading frozen for review:", player.UserId, h.income)
-		R.PlayerService.Notify(player, "Pearl trading is paused for a review of unusual activity.", "bad")
+		R.PlayerService.Notify(player, "Gem trading is paused for a review of unusual activity.", "bad")
 	end
 	sync(player, p)
 end
@@ -147,13 +147,13 @@ function PS.CanTrade(player)
 		return false, "Not loaded"
 	end
 	if p.pearlFrozen then
-		return false, "Your Pearl trading is paused for review"
+		return false, "Your Gem trading is paused for review"
 	end
 	if p.baseLevel < Pearls.Trade.MinLevel then
-		return false, "Pearl trading unlocks at Lv." .. Pearls.Trade.MinLevel
+		return false, "Gem trading unlocks at Lv." .. Pearls.Trade.MinLevel
 	end
 	if player.AccountAge < Pearls.Trade.MinAccountAgeDays then
-		return false, "Your Roblox account must be " .. Pearls.Trade.MinAccountAgeDays .. " days old to trade Pearls"
+		return false, "Your Roblox account must be " .. Pearls.Trade.MinAccountAgeDays .. " days old to trade Gems"
 	end
 	return true
 end
@@ -271,7 +271,7 @@ function PS.Start()
 			return false, "You already own this"
 		end
 		if not PS.Spend(player, item.price, "shop:" .. item.id, true) then
-			return false, "Not enough Pearls"
+			return false, "Not enough Gems"
 		end
 		if item.kind == "item" then
 			R.InventoryService.AddItem(player, item.item, item.qty)

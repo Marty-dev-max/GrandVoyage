@@ -487,8 +487,8 @@ local function monkeyGrove(ctx, zone, r)
 	for i = 0, 5 do
 		local a = i / 6 * math.pi * 2 + 0.3
 		local p = ctx.at(zone.X + math.cos(a) * (r + 3), zone.Y + math.sin(a) * (r + 3))
-		Ball(1.1, Color3.fromRGB(255, 220, 70), p + Vector3.new(0, 0.6, 0), decor({ collide = false }))
-		Ball(1.0, Color3.fromRGB(250, 200, 60), p + Vector3.new(0.8, 0.5, 0.4), decor({ collide = false }))
+		Kit.Plant("Flowers", p, 1.5, Color3.fromRGB(255, 220, 70))
+		Kit.Plant("Flowers", p + Vector3.new(0.9, 0, 0.5), 1.2, Color3.fromRGB(250, 200, 60))
 	end
 end
 
@@ -521,7 +521,7 @@ local function meadow(ctx, zone, r)
 		local base = f + Vector3.new(-15 + row * 5, 0, 0)
 		P(Vector3.new(3, 0.8, 26), Color3.fromRGB(130, 90, 60), CFrame.new(base + Vector3.new(0, 0.35, 0)), decor({ material = M.Ground }))
 		for k = 0, 6 do
-			Ball(1.8, row % 2 == 0 and Color3.fromRGB(140, 220, 90) or Color3.fromRGB(255, 205, 80), base + Vector3.new(0, 1.2, -11 + k * 3.7), decor({ collide = false, material = M.Grass }))
+			Kit.Plant(row % 2 == 0 and "LeafPlant" or "Flowers", base + Vector3.new(0, 0.75, -11 + k * 3.7), row % 2 == 0 and 2.2 or 1.6, row % 2 == 0 and Color3.fromRGB(140, 220, 90) or Color3.fromRGB(255, 205, 80))
 		end
 	end
 	Kit.Fence(f + Vector3.new(-19, 0, -15), f + Vector3.new(19, 0, -15))
@@ -859,12 +859,9 @@ function D.Build(island, api)
 	lampsAlong(ctx, trail, 7, 8)
 	lampsAlong(ctx, meadowLane, 6, 6.5)
 	lampsAlong(ctx, lightLane, 6, 6.5)
+	-- places only: no signs pointing at monster grounds (owner, v0.22.4: they looked unrealistic)
 	signpost(ctx, "◀ JUNGLE CAMP", v2(-122, 12), CAMP, 13)
-	signpost(ctx, "MONKEY GROVE ▲", CAMP + v2(14, 22), CAMP, 13)
-	signpost(ctx, "TIGER DEN ▼", CAMP + v2(14, -22), CAMP, 11)
-	signpost(ctx, "BANDIT HILL", v2(-20, -26), v2(-4, -10), 11)
 	signpost(ctx, "WINDMILL VILLAGE ▶", v2(-48, 8), v2(-82, 22), 15)
-	signpost(ctx, "BOAR MEADOW", v2(74, -56), PLAZA, 12)
 	signpost(ctx, "LIGHTHOUSE", v2(96, 64), PLAZA, 11)
 	signpost(ctx, "HARBOR ▶", v2(108, -12), PLAZA, 10)
 	Kit.Flag(ctx.at(BANDIT_HILL.X + 4, BANDIT_HILL.Y + 30), Color3.fromRGB(40, 40, 44), 10, true)

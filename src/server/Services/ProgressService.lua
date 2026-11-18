@@ -261,7 +261,7 @@ function PG.Start()
 		-- achievements are one-time, so they do not use up the daily Pearl cap
 		R.PearlService.Earn(player, a.pearls, "achievement", true)
 		R.PlayerService.MarkDirty(player)
-		return true, "+" .. a.pearls .. " Pearls"
+		return true, "+" .. a.pearls .. " Gems"
 	end, 0.5)
 
 end

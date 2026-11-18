@@ -6,6 +6,8 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local Quests = require(Shared.Config.Quests)
+local Islands = require(Shared.Config.Islands)
+local Charts = require(Shared.Modules.Charts)
 local Net = require(Shared.Modules.Net)
 
 local QS = {}
@@ -28,7 +30,15 @@ local function questOf(p)
 	if type(p.quest) ~= "table" then
 		p.quest = { step = 1, progress = 0 }
 	end
-	return p.quest
+	local q = p.quest
+	if (q.v or 1) < Quests.SaveVersion then
+		-- v2 inserted the Bay Serpent step at 12: saves already at the old step 12+ move up one (nobody redoes a step)
+		if q.step >= 12 then
+			q.step += 1
+		end
+		q.v = Quests.SaveVersion
+	end
+	return q
 end
 
 local function stepOf(p)
@@ -73,6 +83,23 @@ local function grant(player, reward)
 	Net.Push(player, "Loot", { beli = reward.beli, items = got })
 end
 
+-- the island's story is done: the Sea Compass points to the next port and its name shows from now on (Charts)
+local function chartNext(player, step)
+	local id = Charts.RevealedBy(step)
+	local isl = id and Islands.ById[id]
+	if not isl then
+		return
+	end
+	if R.InventoryService.Count(player, "SeaCompass") <= 0 then
+		R.InventoryService.AddItem(player, "SeaCompass", 1)
+	end
+	task.delay(2.5, function()
+		if player.Parent then
+			Net.Push(player, "Banner", { title = "🧭 New Course Charted", subtitle = "Your compass points to " .. isl.name })
+		end
+	end)
+end
+
 local function complete(player)
 	local p = R.PlayerService.Profile(player)
 	local s = stepOf(p)
@@ -87,6 +114,7 @@ local function complete(player)
 	local PearlsCfg = require(Shared.Config.Pearls)
 	R.PearlService.Earn(player, PearlsCfg.Sources.QuestStep + (s.index == Quests.TutorialEnd and PearlsCfg.Sources.TutorialDone or 0), "quest")
 	Net.Push(player, "QuestComplete", { title = s.title, reward = s.reward })
+	chartNext(player, q.step)
 	push(player, true)
 	-- the next step may already be satisfied (e.g. you were already Job Lv.10)
 	task.defer(QS.Check, player)
@@ -211,6 +239,9 @@ function QS.Start()
 		end
 		q.step = Quests.TutorialEnd + 1
 		q.progress = 0
+		if R.InventoryService.Count(player, "SeaCompass") <= 0 then
+			R.InventoryService.AddItem(player, "SeaCompass", 1)
+		end
 		R.PlayerService.MarkDirty(player)
 		push(player, true)
 		task.defer(QS.Check, player)

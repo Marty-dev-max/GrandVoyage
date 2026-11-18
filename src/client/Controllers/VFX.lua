@@ -1114,12 +1114,84 @@ handlers.MobDeath = function(d)
 		VFX.Ring(d.pos - Vector3.new(0, 3, 0), 30, Color3.fromRGB(255, 220, 120), 0.8)
 	end
 end
+-- telegraphs (v0.22.5): a red zone on the ground that fills up, then flashes when the hit lands.
+-- kind = "line" (from, to, width) or "circle" (pos on the ground, radius); no kind = the old boss slam ring at pos.
+local function flashOut(parts, t)
+	task.delay(t, function()
+		for _, p in ipairs(parts) do
+			if p.Parent then
+				p.Color = Color3.fromRGB(255, 240, 220)
+				p.Transparency = 0.2
+				tween(p, 0.25, { Transparency = 1 })
+				Debris:AddItem(p, 0.3)
+			end
+		end
+	end)
+end
+local function telegraphLine(d)
+	local from, to = d.from, d.to
+	local flat = Vector3.new(to.X - from.X, 0, to.Z - from.Z)
+	local len = flat.Magnitude
+	if len < 0.5 then
+		return
+	end
+	local dir = flat.Unit
+	local base = CFrame.lookAt(from, from + dir)
+	local outline = part(Vector3.new(d.width, 0.12, len), Color3.fromRGB(255, 50, 50), base * CFrame.new(0, 0.06, -len / 2), nil, Enum.Material.Neon, 0.6)
+	local fill = part(Vector3.new(d.width - 0.6, 0.14, 0.2), Color3.fromRGB(255, 120, 60), base * CFrame.new(0, 0.1, -0.1), nil, Enum.Material.Neon, 0.25)
+	tween(fill, d.time, { Size = Vector3.new(d.width - 0.6, 0.14, len), CFrame = base * CFrame.new(0, 0.1, -len / 2) }, Enum.EasingStyle.Linear)
+	-- chevrons pointing the way it will come
+	local chev = {}
+	for k = 1, math.floor(len / 8) do
+		local c = part(Vector3.new(d.width * 0.5, 0.16, 0.6), Color3.fromRGB(255, 220, 200), base * CFrame.new(0, 0.12, -k * 8) * CFrame.Angles(0, math.rad(35), 0), nil, Enum.Material.Neon, 0.45)
+		table.insert(chev, c)
+	end
+	flashOut({ outline, fill, table.unpack(chev) }, d.time)
+end
+local function telegraphCircle(d)
+	local cf = CFrame.new(d.pos + Vector3.new(0, 0.08, 0)) * CFrame.Angles(0, 0, math.pi / 2)
+	local outline = part(Vector3.new(0.12, d.radius * 2, d.radius * 2), Color3.fromRGB(255, 50, 50), cf, Enum.PartType.Cylinder, Enum.Material.Neon, 0.6)
+	local fill = part(Vector3.new(0.14, 0.5, 0.5), Color3.fromRGB(255, 120, 60), cf * CFrame.new(0.02, 0, 0), Enum.PartType.Cylinder, Enum.Material.Neon, 0.25)
+	tween(fill, d.time, { Size = Vector3.new(0.14, d.radius * 2, d.radius * 2) }, Enum.EasingStyle.Linear)
+	flashOut({ outline, fill }, d.time)
+end
 handlers.Telegraph = function(d)
+	if d.kind == "line" then
+		return telegraphLine(d)
+	elseif d.kind == "circle" then
+		return telegraphCircle(d)
+	end
 	local p = part(Vector3.new(0.4, d.radius * 2, d.radius * 2), Color3.fromRGB(255, 60, 60), CFrame.new(d.pos - Vector3.new(0, 2.5, 0)) * CFrame.Angles(0, 0, math.pi / 2), Enum.PartType.Cylinder, Enum.Material.Neon, 0.6)
 	local inner = part(Vector3.new(0.5, 1, 1), Color3.fromRGB(255, 120, 60), p.CFrame, Enum.PartType.Cylinder, Enum.Material.Neon, 0.3)
 	tween(inner, d.time, { Size = Vector3.new(0.5, d.radius * 2, d.radius * 2) }, Enum.EasingStyle.Linear)
 	Debris:AddItem(p, d.time)
 	Debris:AddItem(inner, d.time)
+end
+-- Bay Serpent attacks
+handlers.SerpentBite = function(d)
+	VFX.Beam(d.from + Vector3.new(0, 5, 0), d.to + Vector3.new(0, 5, 0), Color3.fromRGB(200, 240, 255), 4, 0.25)
+	task.delay(0.18, function()
+		VFX.Impact(d.to + Vector3.new(0, 4, 0), Color3.fromRGB(255, 150, 150), 5)
+		VFX.Sparks(d.to + Vector3.new(0, 3, 0), Color3.fromRGB(255, 230, 230), 14, 10)
+		VFX.Ring(d.to + Vector3.new(0, 0.3, 0), 9, Color3.fromRGB(255, 200, 200), 0.35)
+	end)
+end
+handlers.SerpentSpit = function(d)
+	local water = Color3.fromRGB(110, 210, 255)
+	VFX.Beam(d.from, d.to, water, 3.2, 0.5)
+	VFX.Beam(d.from, d.to, Color3.fromRGB(230, 250, 255), 1.2, 0.4)
+	local n = 5
+	for k = 1, n do
+		local p = d.from:Lerp(d.to, k / n)
+		task.delay(k * 0.04, function()
+			VFX.Splash(Vector3.new(p.X, d.to.Y - 1, p.Z), 5 + k)
+			VFX.Sparks(p, water, 6, 8)
+		end)
+	end
+end
+handlers.SerpentTail = function(d)
+	local SerpentBody = require(script.Parent.SerpentBody)
+	SerpentBody.TailSlam(d.model, d.time)
 end
 handlers.Slam = function(d)
 	VFX.Ring(d.pos - Vector3.new(0, 2, 0), d.radius, Color3.fromRGB(255, 180, 100), 0.45)
@@ -1246,6 +1318,12 @@ local fxSounds = {
 	end,
 	RefineSuccess = function(d)
 		return "RefineSuccess", d.pos
+	end,
+	SerpentBite = function(d)
+		return "PunchHeavy", d.to, 0.7
+	end,
+	SerpentSpit = function(d)
+		return "Splash", d.from, 0.8
 	end,
 	MobAlert = function(d)
 		local m = d.model

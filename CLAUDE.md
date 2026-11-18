@@ -173,6 +173,14 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   Audio.SetUnderwater EQ muffling, AmbienceUnderwater loop, WaterPlunge/WaterSurface). Sea floor + reefs: WorldBuilder
   buildSeaFloor (own Random). Ambience loops come from `tools/gen_ambience.py` (numpy + scipy, 44.1 kHz, seamless).
   Kit.Flowers / Kit.Plant are EnvProps dressed with the Env meshes (no more ball flowers); no monster-area signposts.
+- v0.22.5 Bay Serpent = full body: head is the monster (`Mon_BaySerpent`, parts Head + Jaw hinged at its back),
+  body/tail pieces `Serp_Seg` / `Serp_Tail` (Assets.Serpent, tools/blender/serpent.py) chained along the head's trail by
+  `Shared/Modules/SerpentChain` (server: BodyPts attribute -> Reach.Gap counts the whole body; client:
+  `Controllers/SerpentBody` draws + slithers, body parts carry SerpentOf = MobUid for clicks). Monsters def.serpent
+  enables it; MonsterService serpentAttack = telegraphed lunge bite / water spit / tail slam (Telegraph FX kind
+  line|circle, SerpentBite/SerpentSpit/SerpentTail FX, Mon_SerpentBite/Mon_SerpentSpit clips). Daybreak paths: no
+  coplanar overlaps (exact segment lengths, lower joints, per-path height step, clipped at the plaza ring), quay blocks
+  alternate height; no direction signposts on Daybreak (owner). Island music = MusicJazz (owner's track, assets/music).
 - Dev tab "New Player" (`Admin` cmd `resetall`, `DataService.ResetProfile`): fresh save in place (keeps receipts, perks, guild).
 - Card drops play `UI/CardReveal.lua` (tension + orbs, whip flip + hitstop, rune rings + golden lightning, foil sheen,
   monster pops out of the frame, stars, RGB split from Mythic; intensity and pitch scale with rarity, tap skips).

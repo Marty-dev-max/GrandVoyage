@@ -26,6 +26,8 @@ return {
 	Mon_Attack = 80187819193707,
 	Mon_Hit = 120251683301700,
 	Mon_Idle = 138523875386542,
+	Mon_SerpentBite = 127676990905522,
+	Mon_SerpentSpit = 82548201541110,
 	Mon_Walk = 118967884472792,
 	Skill_Bless = 99592825957569,
 	Skill_Cast = 89459425171590,

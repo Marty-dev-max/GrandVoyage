@@ -8,6 +8,7 @@ local Islands = require(Shared.Config.Islands)
 local ItemDB = require(Shared.Modules.ItemDB)
 local Net = require(Shared.Modules.Net)
 local Anim = require(Shared.Modules.Anim)
+local SerpentChain = require(Shared.Modules.SerpentChain)
 local ModelFactory = require(script.Parent.Parent.World.ModelFactory)
 
 local MS = {}
@@ -393,6 +394,161 @@ local function bossSpecial(mob)
 	end)
 end
 
+-- ===== full-length serpents (v0.22.5: Bay Serpent) =====
+-- The head walks with its Humanoid; the body + tail follow its trail (Modules/SerpentChain). Every 0.2 s the body's
+-- piece centers go out as the BodyPts attribute: Reach measures hits against the whole body, and clients draw it.
+-- Attacks are telegraphed on the deck first (red line / circle that fills up), then land:
+--   lunge bite (close): the head darts along a 28-stud line;  water spit (far): a 50-stud jet;  tail slam: a circle
+--   around the tail. Every third attack is a tail slam.
+local function serpentAnchor(mob)
+	return mob.root.CFrame:PointToWorldSpace(mob.neckOffset)
+end
+
+local function serpentInit(mob)
+	local spec = mob.def.serpent
+	local cf, ext = mob.model:GetBoundingBox()
+	local rel = mob.root.CFrame:PointToObjectSpace(cf.Position)
+	-- the neck end: back (+Z) of the head model, at body height above its lowest point
+	mob.neckOffset = rel + Vector3.new(0, -ext.Y / 2 + spec.radius, ext.Z / 2 - 1.5)
+	mob.headHalf = ext.Z / 2
+	mob.model:SetAttribute("NeckOffset", mob.neckOffset)
+	mob.model:SetAttribute("BodyRadius", spec.radius)
+	mob.chain = SerpentChain.New(spec)
+	SerpentChain.Reset(mob.chain, serpentAnchor(mob), -mob.root.CFrame.LookVector)
+end
+
+local function serpentBody(mob)
+	local anchor = serpentAnchor(mob)
+	SerpentChain.Push(mob.chain, anchor)
+	mob.pieces = SerpentChain.Pieces(mob.chain, anchor)
+	mob.model:SetAttribute("BodyPts", SerpentChain.Pack(mob.pieces))
+end
+
+local function playersInLine(from, to, width)
+	local out = {}
+	local d = Vector3.new(to.X - from.X, 0, to.Z - from.Z)
+	local len = d.Magnitude
+	if len < 0.1 then
+		return out
+	end
+	d = d.Unit
+	for _, pl in ipairs(Players:GetPlayers()) do
+		local root = R.PlayerService.Root(pl)
+		if root then
+			local rel = root.Position - from
+			local along = rel.X * d.X + rel.Z * d.Z
+			local side = math.abs(rel.X * d.Z - rel.Z * d.X)
+			if along >= -3 and along <= len + 2 and side <= width / 2 + 1.5 and math.abs(rel.Y) < 16 then
+				table.insert(out, pl)
+			end
+		end
+	end
+	return out
+end
+
+local function serpentAttack(mob, troot, now)
+	local def, root, hum = mob.def, mob.root, mob.hum
+	local gy = mob.home.Y + 0.25
+	local head = root.Position
+	local flat = Vector3.new(troot.Position.X - head.X, 0, troot.Position.Z - head.Z)
+	local dir = flat.Magnitude > 0.5 and flat.Unit or root.CFrame.LookVector
+	dir = Vector3.new(dir.X, 0, dir.Z).Unit
+	hum:MoveTo(root.Position)
+	root.CFrame = CFrame.lookAt(head, head + dir)
+	mob.attackN = (mob.attackN or 0) + 1
+	local from = Vector3.new(head.X, gy, head.Z)
+	if mob.attackN % 3 == 0 and mob.pieces then
+		-- TAIL SLAM: the tail rises and crashes down
+		local tail = mob.pieces[#mob.pieces].pos
+		local center = Vector3.new(tail.X, gy, tail.Z)
+		local radius = 15
+		mob.busyUntil = now + 1.6
+		Net.FX("Telegraph", { kind = "circle", pos = center, radius = radius, time = 1.1 }, center, 320)
+		Net.FX("SerpentTail", { model = mob.model, time = 1.1 }, center, 320)
+		task.delay(1.1, function()
+			if mob.dead then
+				return
+			end
+			Net.FX("Slam", { pos = center + Vector3.new(0, 2.5, 0), radius = radius }, center, 320)
+			for _, pl in ipairs(Players:GetPlayers()) do
+				local r = R.PlayerService.Root(pl)
+				if r and (Vector3.new(r.Position.X, 0, r.Position.Z) - Vector3.new(center.X, 0, center.Z)).Magnitude <= radius + 1 and math.abs(r.Position.Y - center.Y) < 14 then
+					R.CombatService.MonsterHit(mob, pl, 1.5)
+				end
+			end
+		end)
+	elseif flat.Magnitude <= 26 then
+		-- LUNGE BITE along a line
+		local to = from + dir * 28
+		mob.busyUntil = now + 1.8
+		Net.FX("Telegraph", { kind = "line", from = from, to = to, width = 9, time = 0.85 }, head, 320)
+		task.delay(0.6, function()
+			if not mob.dead then
+				Anim.Play(hum, "Mon_SerpentBite", { fade = 0.05 })
+			end
+		end)
+		task.delay(0.85, function()
+			if mob.dead then
+				return
+			end
+			hum.WalkSpeed = 80
+			hum:MoveTo(to)
+			Net.FX("SerpentBite", { from = from, to = to }, head, 320)
+			task.delay(0.15, function()
+				if not mob.dead then
+					for _, pl in ipairs(playersInLine(from, to, 9)) do
+						R.CombatService.MonsterHit(mob, pl, 1.7)
+					end
+				end
+			end)
+			task.delay(0.5, function()
+				if not mob.dead and hum.Parent then
+					hum.WalkSpeed = def.moveSpeed
+					hum:MoveTo(root.Position)
+				end
+			end)
+		end)
+	else
+		-- WATER SPIT: a long jet along a line
+		local to = from + dir * 50
+		mob.busyUntil = now + 1.9
+		Net.FX("Telegraph", { kind = "line", from = from, to = to, width = 7, time = 1.1 }, head, 320)
+		task.delay(0.6, function()
+			if not mob.dead then
+				Anim.Play(hum, "Mon_SerpentSpit", { fade = 0.05 })
+			end
+		end)
+		task.delay(1.1, function()
+			if mob.dead then
+				return
+			end
+			local mouth = root.CFrame * Vector3.new(0, 1.5, -(mob.headHalf or 10) + 1)
+			Net.FX("SerpentSpit", { from = mouth, to = to + Vector3.new(0, 1.2, 0) }, head, 320)
+			for _, pl in ipairs(playersInLine(from, to, 7)) do
+				R.CombatService.MonsterHit(mob, pl, 1.3)
+			end
+		end)
+	end
+end
+
+local function serpentStep(mob, troot, now)
+	if mob.busyUntil and now < mob.busyUntil then
+		return
+	end
+	local head = mob.root.Position
+	local flat = Vector3.new(troot.Position.X - head.X, 0, troot.Position.Z - head.Z)
+	if flat.Magnitude > 18 and now - mob.lastMove > 0.35 then
+		mob.lastMove = now
+		mob.hum:MoveTo(troot.Position)
+	elseif flat.Magnitude <= 18 then
+		mob.hum:MoveTo(mob.root.Position)
+	end
+	if now - mob.lastAttack >= mob.def.attackSpeed and flat.Magnitude <= 48 then
+		mob.lastAttack = now
+		serpentAttack(mob, troot, now)
+	end
+end
+
 local function syncTarget(mob)
 	local id = mob.target and mob.target.UserId or 0
 	if mob.lastTargetId ~= id then
@@ -424,6 +580,16 @@ local function step(mob, now)
 		if def.aggro then
 			mob.target = findAggroTarget(mob)
 			ok, troot = validTarget(mob, mob.target)
+		end
+	end
+	if def.serpent and not mob.chain and mob.hum then
+		serpentInit(mob)
+	end
+	if mob.chain then
+		serpentBody(mob)
+		if ok and troot and mob.hum then
+			serpentStep(mob, troot, now)
+			return
 		end
 	end
 	if ok and troot then

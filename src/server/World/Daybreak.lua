@@ -92,28 +92,66 @@ local function spline(pts, step)
 	return out
 end
 
+-- v0.22.5 (owner: paths overlapped and flickered): no two path surfaces share a height any more. Segments are cut to
+-- their exact length (no overlap), the round joints sit a little LOWER (they only fill the gaps at bends), every path
+-- gets its own small height step (where two paths cross, one lies cleanly on the other), and paths stop at the
+-- plaza's outer ring instead of running over the paving.
+local PLAZA_CLIP = PLAZA_R + 2.2
+local pathCount = 0
+local function clipToPlaza(a, b)
+	local ina, inb = (a - PLAZA).Magnitude < PLAZA_CLIP, (b - PLAZA).Magnitude < PLAZA_CLIP
+	if ina and inb then
+		return nil
+	end
+	if not ina and not inb then
+		return a, b
+	end
+	-- move the inside end out to the ring (circle-segment intersection)
+	local o, i = ina and b or a, ina and a or b
+	local d = i - o
+	local f = o - PLAZA
+	local A, B, C = d:Dot(d), 2 * f:Dot(d), f:Dot(f) - PLAZA_CLIP * PLAZA_CLIP
+	local disc = math.max(0, B * B - 4 * A * C)
+	local t = math.clamp((-B - math.sqrt(disc)) / (2 * A), 0, 1)
+	local hit = o + d * t
+	if ina then
+		return hit, b
+	end
+	return a, hit
+end
+
 local function path(ctx, pts, width, opts)
 	opts = opts or {}
+	pathCount += 1
+	local lift = 0.2 + (pathCount % 4) * 0.06
 	local samples = spline(pts, 5)
 	for i = 1, #samples - 1 do
-		local a, b = samples[i], samples[i + 1]
-		local pa, pb = ctx.at(a.X, a.Y), ctx.at(b.X, b.Y)
-		local mid = (pa + pb) / 2 + Vector3.new(0, 0.2, 0)
-		local len = (pb - pa).Magnitude
-		local cf = CFrame.lookAt(mid, Vector3.new(pb.X, mid.Y, pb.Z))
-		P(Vector3.new(width, 0.3, len + 1.6), opts.color or PATH, cf, { material = opts.material or M.Ground, shadow = false, name = "Path" })
-		-- soft darker rim so the trail reads from above
-		P(Vector3.new(width + 2.4, 0.24, len + 1.6), PATH_EDGE, cf * CFrame.new(0, -0.08, 0), { material = M.Ground, shadow = false, collide = false })
-		-- round joints so bends read as one smooth trail
-		local jcf = CFrame.new(pa + Vector3.new(0, 0.2, 0)) * CFrame.Angles(0, 0, math.pi / 2)
-		P(Vector3.new(0.3, width, width), opts.color or PATH, jcf, { material = opts.material or M.Ground, shadow = false, shape = Enum.PartType.Cylinder, name = "Path" })
-		P(Vector3.new(0.24, width + 2.4, width + 2.4), PATH_EDGE, jcf * CFrame.new(-0.08, 0, 0), { material = M.Ground, shadow = false, collide = false, shape = Enum.PartType.Cylinder })
-		ctx.reserve(a.X, a.Y, width * 0.5 + 3)
+		local a, b = clipToPlaza(samples[i], samples[i + 1])
+		local cf
+		if a then
+			local pa, pb = ctx.at(a.X, a.Y), ctx.at(b.X, b.Y)
+			local mid = (pa + pb) / 2 + Vector3.new(0, lift, 0)
+			local len = (pb - pa).Magnitude
+			cf = CFrame.lookAt(mid, Vector3.new(pb.X, mid.Y, pb.Z))
+			P(Vector3.new(width, 0.3, len), opts.color or PATH, cf, { material = opts.material or M.Ground, shadow = false, name = "Path" })
+			-- soft darker rim so the trail reads from above
+			P(Vector3.new(width + 2.4, 0.24, len), PATH_EDGE, cf * CFrame.new(0, -0.1, 0), { material = M.Ground, shadow = false, collide = false })
+			-- round joints (slightly lower) so bends read as one smooth trail
+			if i > 1 and (samples[i] - PLAZA).Magnitude >= PLAZA_CLIP then
+				local jcf = CFrame.new(pa + Vector3.new(0, lift - 0.07, 0)) * CFrame.Angles(0, 0, math.pi / 2)
+				P(Vector3.new(0.3, width, width), opts.color or PATH, jcf, { material = opts.material or M.Ground, shadow = false, shape = Enum.PartType.Cylinder, name = "Path" })
+				P(Vector3.new(0.24, width + 2.4, width + 2.4), PATH_EDGE, jcf * CFrame.new(-0.1, 0, 0), { material = M.Ground, shadow = false, collide = false, shape = Enum.PartType.Cylinder })
+			end
+			ctx.reserve(a.X, a.Y, width * 0.5 + 3)
+		end
 		if not opts.noStones and i % 3 == 0 then
 			for _, side in ipairs({ -1, 1 }) do
 				if rng:NextNumber() > 0.45 then
-					local p = cf * Vector3.new(side * (width / 2 + 1.6), 0, rng:NextNumber(-2, 2))
-					Kit.Rock(p + Vector3.new(0, 0.3, 0), rng:NextNumber(1.2, 2.2), Color3.fromRGB(196, 190, 178)).CanCollide = false
+					local off, size = rng:NextNumber(-2, 2), rng:NextNumber(1.2, 2.2)
+					if cf then
+						local p = cf * Vector3.new(side * (width / 2 + 1.6), 0, off)
+						Kit.Rock(p + Vector3.new(0, 0.3, 0), size, Color3.fromRGB(196, 190, 178)).CanCollide = false
+					end
 				end
 			end
 		end
@@ -585,15 +623,19 @@ local function harbor(ctx)
 	-- stone quay: a band of cobblestone between QUAY_IN and the sea wall along the harbor arc
 	local seg = 0.04
 	local a = -HARBOR_ARC
+	local k = 0
 	while a < HARBOR_ARC - 0.001 do
+		k += 1
+		-- neighbouring blocks overlap a little: every other one sits 0.12 higher / further out (no z-fighting flicker)
+		local alt = (k % 2) * 0.12
 		local am = a + seg / 2
 		local dir = Vector3.new(math.cos(am), 0, math.sin(am))
 		local depth = r - QUAY_IN
 		local w = r * seg + 1.2
 		local mid = c + dir * (QUAY_IN + depth / 2)
-		P(Vector3.new(w, 2.4, depth), Color3.fromRGB(204, 192, 172), CFrame.lookAt(mid + Vector3.new(0, 6.4, 0), mid + Vector3.new(0, 6.4, 0) + dir), { material = M.Cobblestone })
+		P(Vector3.new(w, 2.4, depth), Color3.fromRGB(204, 192, 172), CFrame.lookAt(mid + Vector3.new(0, 6.4 + alt, 0), mid + Vector3.new(0, 6.4 + alt, 0) + dir), { material = M.Cobblestone })
 		-- sea wall face
-		local wall = c + dir * (r + 0.5)
+		local wall = c + dir * (r + 0.5 + alt)
 		P(Vector3.new(w, 15, 3), Color3.fromRGB(168, 160, 150), CFrame.lookAt(wall + Vector3.new(0, 0.1, 0), wall + Vector3.new(0, 0.1, 0) + dir), { material = M.Slate })
 		local nearDock = false
 		for _, dz in ipairs(DOCK_Z) do
@@ -602,7 +644,7 @@ local function harbor(ctx)
 			end
 		end
 		if not nearDock then
-			P(Vector3.new(w, 0.8, 3.6), Color3.fromRGB(214, 204, 186), CFrame.lookAt(wall + Vector3.new(0, 7.9, 0), wall + Vector3.new(0, 7.9, 0) + dir), decor({ material = M.Cobblestone }))
+			P(Vector3.new(w, 0.8, 3.6), Color3.fromRGB(214, 204, 186), CFrame.lookAt(wall + Vector3.new(0, 7.9 + alt, 0), wall + Vector3.new(0, 7.9 + alt, 0) + dir), decor({ material = M.Cobblestone }))
 		end
 		a += seg
 	end
@@ -693,7 +735,7 @@ end
 
 local function harborStreet(ctx)
 	-- cobbled street from the plaza to the quay
-	local x0, x1 = PLAZA.X + PLAZA_R - 2, QUAY_IN + 2
+	local x0, x1 = PLAZA.X + PLAZA_R + 2.2, QUAY_IN + 0.5
 	local mid = ctx.at((x0 + x1) / 2, 0)
 	P(Vector3.new(x1 - x0, 0.3, 16), Color3.fromRGB(214, 200, 174), CFrame.new(mid + Vector3.new(0, 0.12, 0)), { material = M.Cobblestone, shadow = false, name = "Path" })
 	P(Vector3.new(x1 - x0, 0.24, 19), Color3.fromRGB(176, 164, 146), CFrame.new(mid + Vector3.new(0, 0.06, 0)), { material = M.Cobblestone, shadow = false, collide = false })
@@ -855,15 +897,10 @@ function D.Build(island, api)
 		end
 	end
 
-	-- 4. lighting and details: lamps on the trails, signposts at every fork
+	-- 4. lighting and details: lamps on the trails (no direction signs: owner, v0.22.5)
 	lampsAlong(ctx, trail, 7, 8)
 	lampsAlong(ctx, meadowLane, 6, 6.5)
 	lampsAlong(ctx, lightLane, 6, 6.5)
-	-- places only: no signs pointing at monster grounds (owner, v0.22.4: they looked unrealistic)
-	signpost(ctx, "◀ JUNGLE CAMP", v2(-122, 12), CAMP, 13)
-	signpost(ctx, "WINDMILL VILLAGE ▶", v2(-48, 8), v2(-82, 22), 15)
-	signpost(ctx, "LIGHTHOUSE", v2(96, 64), PLAZA, 11)
-	signpost(ctx, "HARBOR ▶", v2(108, -12), PLAZA, 10)
 	Kit.Flag(ctx.at(BANDIT_HILL.X + 4, BANDIT_HILL.Y + 30), Color3.fromRGB(40, 40, 44), 10, true)
 
 	-- spawn point in the camp clearing (players start and respawn here)

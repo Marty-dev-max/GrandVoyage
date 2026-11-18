@@ -44,6 +44,17 @@ local function weaponType()
 end
 
 local function mobModel(inst)
+	-- a serpent's body piece (Controllers/SerpentBody) points at its head model
+	local of = inst and inst:GetAttribute("SerpentOf")
+	if of then
+		local folder = workspace:FindFirstChild("Monsters")
+		for _, m in ipairs(folder and folder:GetChildren() or {}) do
+			if m:GetAttribute("MobUid") == of then
+				return m
+			end
+		end
+		return nil
+	end
 	while inst and inst ~= workspace do
 		if inst:IsA("Model") and inst:GetAttribute("MobUid") then
 			return inst

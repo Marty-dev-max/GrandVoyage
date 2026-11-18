@@ -280,8 +280,8 @@
   "sha1": "650a1f928f9c6fb02ad53de70a2bf4ddd4c4e92e"
  },
  "Mon_BaySerpent": {
-  "id": "129684468906851",
-  "sha1": "e1a90f77ac73819bbd69298a47daaa65cf89c7e4"
+  "id": "85416259338880",
+  "sha1": "37f9aecc556ebdae6057094dd6c60a78840331be"
  },
  "Mon_BeachCrab": {
   "id": "104717029602303",
@@ -410,6 +410,14 @@
  "Puffer_3": {
   "id": "136221444560725",
   "sha1": "6c6abf7bb698374091dea0a45ce66ad96f0f9b79"
+ },
+ "Serp_Seg": {
+  "id": "112109123502706",
+  "sha1": "f5798856d41f3cb4183055939a2c6bbb0eaed2ba"
+ },
+ "Serp_Tail": {
+  "id": "135775855018985",
+  "sha1": "147ba5e9e47e580ba8d88f16edba79e9c2b01590"
  },
  "Wep_Hammer": {
   "id": "81214219279307",

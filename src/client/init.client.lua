@@ -29,6 +29,7 @@ local Interact = require(script.Controllers.Interact)
 local ChartsView = require(script.Controllers.ChartsView)
 local ShipBars = require(script.Controllers.ShipBars)
 local Underwater = require(script.Controllers.Underwater)
+local SerpentBody = require(script.Controllers.SerpentBody)
 local Quest = require(script.UI.Quest)
 
 pcall(function()
@@ -176,7 +177,7 @@ start("Quest", Quest)
 for _, c in ipairs({
 	{ "Sailing", Sailing }, { "Builder", Builder }, { "VFX", VFX }, { "Readability", Readability }, { "Swim", Swim },
 	{ "Pets", PetsCtl }, { "Titles", Titles }, { "Ocean", Ocean }, { "Atmos", Atmos }, { "GrassField", GrassField },
-	{ "CreatureAnim", CreatureAnim }, { "CharAnim", CharAnim }, { "Interact", Interact }, { "ChartsView", ChartsView }, { "ShipBars", ShipBars }, { "Underwater", Underwater },
+	{ "CreatureAnim", CreatureAnim }, { "CharAnim", CharAnim }, { "Interact", Interact }, { "ChartsView", ChartsView }, { "ShipBars", ShipBars }, { "Underwater", Underwater }, { "SerpentBody", SerpentBody },
 }) do
 	task.spawn(start, c[1], c[2])
 end

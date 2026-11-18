@@ -22,7 +22,9 @@ local PET_SIZE_MULT = { Leviathan = 1.25, Puffer = 0.9 }
 local FRUIT_SIZE = 2.6
 local MonstersCfg = require(ReplicatedStorage.Shared.Config.Monsters)
 -- explicit sizes (longest side); otherwise size = base-by-shape x the monster's style.scale
-local MONSTER_SIZE = { BaySerpent = 40, Leviathan = 46, FortCore = 20 }
+local MONSTER_SIZE = { BaySerpent = 35, Leviathan = 46, FortCore = 20 }
+-- Bay Serpent body pieces (tools/blender/serpent.py, same scale as the 35-stud head): longest side in studs
+local SERPENT_SIZE = { Seg = 13.8, Tail = 25.2 }
 local SHAPE_SIZE = { humanoid = 6.5, fishman = 6.8, crab = 6, monkey = 5.5, snail = 7, seaking = 14 }
 -- if an import ever faces the wrong way, fix it here (radians around Y) instead of re-exporting everything
 local YAW_FIX = 0
@@ -61,6 +63,10 @@ local function target(name)
 	local wep = string.match(name, "^Wep_(%w+)$")
 	if wep then
 		return "Weapons", wep, (AS.WEAPONS[wep] or { size = 3 }).size
+	end
+	local serp = string.match(name, "^Serp_(%w+)$")
+	if serp then
+		return "Serpent", serp, SERPENT_SIZE[serp] or 12
 	end
 	local env = string.match(name, "^Env_(%w+_%d+)$")
 	if env then
@@ -166,6 +172,8 @@ local function monsterRig(m)
 				hinge = Vector3.new(0, -size.Y / 2, 0) -- neck
 			elseif string.sub(n, 1, 4) == "Wing" then
 				hinge = Vector3.new((p.Position.X > cf.Position.X) and -size.X / 2 or size.X / 2, 0, 0)
+			elseif n == "Jaw" then
+				hinge = Vector3.new(0, size.Y * 0.3, size.Z / 2) -- the back of the lower jaw (+Z = back)
 			elseif n == "Tail" then
 				hinge = Vector3.new(0, 0, -size.Z / 2) -- where it meets the body (front end)
 			end

@@ -112,8 +112,12 @@ local function boss(id, def)
 	def.moveSpeed = def.moveSpeed or 16
 	mob(id, def)
 end
-boss("BaySerpent", { name = "Bay Serpent", level = 12, hp = 9000, atk = 60, def = 20, exp = 1500, jobExp = 1000, beli = { 2000, 4000 },
-	style = { shape = "seaking", color = Color3.fromRGB(70, 140, 120), scale = 2.2 }, attackRange = 26,
+-- v0.22.5: a full-length serpent (head = the monster model, body + tail follow its path: Modules/SerpentChain,
+-- Controllers/SerpentBody). Story boss of quest T12, so tuned for one Lv ~10-12 player with care (or a small party).
+-- Attacks are telegraphed with red lines/circles on the deck: lunge bite, water spit, tail slam (MonsterService).
+boss("BaySerpent", { name = "Bay Serpent", level = 12, hp = 4800, atk = 46, def = 16, exp = 1500, jobExp = 1000, beli = { 2000, 4000 },
+	style = { shape = "seaking", color = Color3.fromRGB(70, 140, 120), scale = 2.2 }, attackRange = 22, attackSpeed = 3.4, moveSpeed = 13,
+	serpent = { segments = 9, spacing = 9.6, shrink = 0.035, radius = 6.6, tailLength = 25 },
 	drops = { { "LeviathanScale", 1, 1, 2 }, { "Sword_Keen", 0.15, 1, 1 }, { "SunHat", 0.2, 1, 1 } } })
 boss("AxeCaptain", { name = "Axe-Arm Captain", level = 22, hp = 22000, atk = 120, def = 40, exp = 4500, jobExp = 3000, beli = { 5000, 9000 },
 	style = { shape = "humanoid", color = Color3.fromRGB(240, 240, 250), scale = 2.2, hat = "marine" },

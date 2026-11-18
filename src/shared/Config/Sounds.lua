@@ -81,6 +81,8 @@ add("AmbienceUnderwater", "Ambience", 0.6, "", { looped = true })
 add("WaterPlunge", "SFX", 0.6, SPLASH)
 add("WaterSurface", "SFX", 0.5, SPLASH)
 add("MusicIsland", "Music", 0.35, "", { looped = true })
+-- owner's pick (v0.22.5): jazz piano track played on the islands / when you join (assets/music/MusicJazz.mp3)
+add("MusicJazz", "Music", 0.4, "", { looped = true, id = "rbxassetid://78909647577056" })
 add("MusicSea", "Music", 0.35, "", { looped = true })
 add("MusicBoss", "Music", 0.45, "", { looped = true })
 

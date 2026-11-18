@@ -273,6 +273,12 @@ def shot(name, loc, target, ortho=None, lens=35):
 
 # island center in Blender: Daybreak x = 0
 import os as _os
+if _os.environ.get("ONLY") == "plaza":
+    scene.render.resolution_x, scene.render.resolution_y = 1000, 1000
+    shot("plaza", (60, 0, 400), (60, 0.001, 0), ortho=130)
+    scene.render.resolution_x, scene.render.resolution_y = 1200, 800
+    shot("quay", (300, -50, 60), (225, 0, 7), lens=35)
+    raise SystemExit
 if _os.environ.get("ONLY") == "close":
     scene.render.resolution_x, scene.render.resolution_y = 1200, 800
     shot("close", (150, -60, 40), (70, 0, 12), lens=35)

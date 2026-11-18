@@ -290,6 +290,22 @@ C.Mon_Attack = { rig = "Mon", priority = "Action", strike = 0.24, keys = {
 	{ t = 0.24, pose = { ArmR = { 55, 0, 0 }, ArmL = { 35, 0, 0 }, Body = { -16, 0, 0 }, Head = { -24, 0, 0 }, LegFL = { 40, 0, 0 }, LegFR = { 40, 0, 0 }, Tail = { 0, -30, 0 }, WingL = { 0, 0, -40 }, WingR = { 0, 0, 40 } } },
 	{ t = 0.52 },
 } }
+-- Bay Serpent (v0.22.5; parts Head + Jaw, Jaw hinged at its back): rear back with the jaw gaping, then snap / spit.
+-- +X tips the front up (rear back), -X snaps it down; the jaw opens with -X.
+C.Mon_SerpentBite = { rig = "Mon", priority = "Action", strike = 0.25, keys = {
+	{ t = 0 },
+	{ t = 0.18, pose = { Head = { 16, 0, 0 }, Jaw = { -38, 0, 0 } } },
+	{ t = 0.25, pose = { Head = { -14, 0, 0 }, Jaw = { -42, 0, 0 } } },
+	{ t = 0.36, pose = { Head = { -10, 0, 0 }, Jaw = { 0, 0, 0 } } },
+	{ t = 0.75 },
+} }
+C.Mon_SerpentSpit = { rig = "Mon", priority = "Action", strike = 0.5, keys = {
+	{ t = 0 },
+	{ t = 0.4, pose = { Head = { 22, 0, 0 }, Jaw = { -20, 0, 0 } } },
+	{ t = 0.5, pose = { Head = { -8, 0, 0 }, Jaw = { -40, 0, 0 } } },
+	{ t = 0.95, pose = { Head = { -6, 0, 0 }, Jaw = { -36, 0, 0 } } },
+	{ t = 1.2 },
+} }
 C.Mon_Hit = { rig = "Mon", priority = "Action2", keys = {
 	{ t = 0 },
 	{ t = 0.07, pose = { Body = { 14, 0, 0 }, Head = { 18, 0, 0 }, ArmL = { -20, 0, 0 }, ArmR = { -20, 0, 0 }, Tail = { 0, 15, 0 } } },

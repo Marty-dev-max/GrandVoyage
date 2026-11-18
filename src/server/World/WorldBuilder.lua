@@ -661,13 +661,32 @@ function WB.Build()
 		hm.Name = "Handmade"
 		hm.Parent = workspace
 	end
-	local old = workspace:FindFirstChild("World")
-	if old and old:GetAttribute("WorldVersion") == WB.WORLD_VERSION then
-		return old
+	-- A place can hold more than one generated map (a second "World", a renamed copy, an old bake pasted in):
+	-- keep only one current-version World and throw every other generated map away, or islands draw on top of
+	-- each other. A generated map is recognised by its WorldVersion attribute or by its Ocean + Daybreak children.
+	local keep
+	for _, c in ipairs(workspace:GetChildren()) do
+		local generated = c:GetAttribute("WorldVersion") ~= nil or (c:FindFirstChild("Ocean") ~= nil and c:FindFirstChild("Daybreak") ~= nil)
+		if generated then
+			if not keep and c.Name == "World" and c:GetAttribute("WorldVersion") == WB.WORLD_VERSION then
+				keep = c
+			else
+				print("[GrandVoyage] removing old map " .. c:GetFullName() .. " (version " .. tostring(c:GetAttribute("WorldVersion")) .. "), building v" .. WB.WORLD_VERSION)
+				c:Destroy()
+			end
+		end
 	end
-	if old then
-		print("[GrandVoyage] baked World is version " .. tostring(old:GetAttribute("WorldVersion")) .. ", rebuilding v" .. WB.WORLD_VERSION)
-		old:Destroy()
+	-- hand-made content is never deleted, but say so when a whole generated island ended up in there
+	local hm = workspace:FindFirstChild("Handmade")
+	if hm then
+		for _, d in ipairs(hm:GetDescendants()) do
+			if (d.Name == "World" or d.Name == "Daybreak" or d.Name == "Ocean") and (d:IsA("Model") or d:IsA("Folder")) then
+				warn("[GrandVoyage] workspace.Handmade contains " .. d:GetFullName() .. ": an old copy of the map? It will overlap the islands; delete it if it is not hand-made.")
+			end
+		end
+	end
+	if keep then
+		return keep
 	end
 	local world = Instance.new("Model")
 	world.Name = "World"

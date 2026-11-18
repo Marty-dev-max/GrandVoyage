@@ -228,6 +228,32 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
 - UI is built only from `src/client/UI/UIKit.lua` helpers (Window, Section, TabBar, IconChip, Button, Bar, Card, Toast, Notice...).
   Hover makes buttons "jump"; keep that for new buttons by using `UI.Button` / `UI.Tactile`.
 
+- **v0.24 voxel overhaul (owner, 18 Nov 2026): EVERYTHING is voxel from now on** (characters, map, ships, UI, FX). New art
+  defaults to blocks. Reference clips: a voxel pirate game (only the genre/feel, never its names or assets).
+  * Title menu (`UI/Menu.lua`, GameConfig.TitleMenu): PLAY / CHARACTER, 3 slots (`Looks.Slots`; slot 1 = old key `p_<id>`,
+    others `p_<id>_s<n>`), creator with color wheel. `Players.CharacterAutoLoads = false`; `Net.SetGate` refuses every
+    request not marked `open` (4th arg of Net.Handle) until `MenuPlay` loads a slot; `DataService.Loaded` fires then
+    (hooks that ran on PlayerAdded now use it). Respawn = `PlayerService.Respawn` (LoadCharacterWithHumanoidDescription +
+    `Shared/Modules/VoxelChar.Apply`), never `player:LoadCharacter()`.
+  * Looks (`Config/Looks.lua`): styles + hex colors (Color 1/2 per part, skin). Faces = images from `tools/gen_faces.py`
+    (`Config/FaceImages`, eye layers white/iris/iris2/over, mouths untinted). Heritages: Islander, Skyborn, Tidekin,
+    Beastkin, Oni, Cinderwing (0.1%, locked look, FLAME/CALM via `HeritageMode`, key G). Never use One Piece race names
+    (Skypian, Fishman, Mink, Lunarian...). Spins: slot spins + account bank (`acct_<id>` key, `Config/Spins` products).
+  * Preview any look offline: `lune run tools/export_char.luau build/GrandVoyage.rbxlx out.json lineup|styles` +
+    `python3 tools/blender/render_parts.py -- out.json out.png three` (also ships: `tools/export_ship.luau`).
+  * UI: `UI/PixelUI.lua` pixel font (Enum.Font.Arcade = Press Start 2P) + text scale 0.56 + square corners on every
+    PlayerGui; UI sounds `Blk*` (`tools/gen_ui_sfx.py`, Sounds `prefer`). The UI harness snapshots the menu screens too.
+  * FX: `Controllers/Voxels.lua` (Blocks = real cubes, Pixels = square particles); VFX swaps every texture for its
+    `px_` twin (`tools/gen_vfx.py`). Monsters die by toppling then dissolving (`CreatureAnim.deathFall`, server keeps
+    the body 2.6 s).
+  * Map: `World/Voxelize.lua` runs at the end of WB.Build (balls -> cubes, cylinders -> posts / plus prisms, wedges ->
+    invisible collider + visible block steps); env meshes from `tools/blender/voxel_env.py` (same Env_ names);
+    pixel materials `tools/gen_pixel_materials.py` + `PX=1 python3 tools/gen_materials.py --project`.
+  * Ships: stepped block prow, square beams; Dinghy <= 7 rows (starter 3x6), NPC crews (`ShipService.addCrew`);
+    player shots lead the aimed ship and hit by hull footprint.
+  * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
+    owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
+
 ## Decisions already made with the owner
 
 - **Cursed Fruits (all 6 in the first sea)**, original names in the form "<Word> <Word> no Mi" (owner's choice), a separate power layer (not a class):

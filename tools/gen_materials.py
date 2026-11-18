@@ -305,7 +305,10 @@ VARIANTS = {  # MaterialVariant name -> (base material, color/normal/rough file 
 
 
 def write_project():
-    ids = json.load(open(os.path.join(OUT, "uploaded.json")))
+    # PX=1: the pixel-art (voxel look) set from tools/gen_pixel_materials.py, tiled on a regular grid
+    px = os.environ.get("PX") == "1"
+    src = os.path.join(ROOT, "assets", "materials_px") if px else OUT
+    ids = json.load(open(os.path.join(src, "uploaded.json")))
     pj_path = os.path.join(ROOT, "default.project.json")
     pj = json.load(open(pj_path))
     ms = {"$className": "MaterialService", "$properties": {"Use2022Materials": True}}
@@ -318,7 +321,7 @@ def write_project():
             "NormalMap": "rbxassetid://" + ids[pre + "_normal"]["id"],
             "RoughnessMap": "rbxassetid://" + ids[pre + "_rough"]["id"],
         }
-        if base in ("WoodPlanks", "Cobblestone"):
+        if base in ("WoodPlanks", "Cobblestone") or px:
             props["MaterialPattern"] = "Regular"
         ms[vname] = {"$className": "MaterialVariant", "$properties": props}
         # base material override: every Part with this Material uses the variant (no world code changes).

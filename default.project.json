@@ -61,55 +61,55 @@
         "$className": "MaterialVariant",
         "$properties": {
           "BaseMaterial": "Grass",
-          "MaterialPattern": "Organic",
+          "MaterialPattern": "Regular",
           "StudsPerTile": 18,
-          "ColorMap": "rbxassetid://112393645424160",
-          "NormalMap": "rbxassetid://77335482909230",
-          "RoughnessMap": "rbxassetid://128512302849828"
+          "ColorMap": "rbxassetid://105509900540177",
+          "NormalMap": "rbxassetid://80576742666791",
+          "RoughnessMap": "rbxassetid://94274478324906"
         }
       },
       "GV_Rock": {
         "$className": "MaterialVariant",
         "$properties": {
           "BaseMaterial": "Rock",
-          "MaterialPattern": "Organic",
+          "MaterialPattern": "Regular",
           "StudsPerTile": 28,
-          "ColorMap": "rbxassetid://80964877926001",
-          "NormalMap": "rbxassetid://94135655765189",
-          "RoughnessMap": "rbxassetid://86203648333788"
+          "ColorMap": "rbxassetid://91589121130798",
+          "NormalMap": "rbxassetid://85780195207907",
+          "RoughnessMap": "rbxassetid://82077031571782"
         }
       },
       "GV_Slate": {
         "$className": "MaterialVariant",
         "$properties": {
           "BaseMaterial": "Slate",
-          "MaterialPattern": "Organic",
+          "MaterialPattern": "Regular",
           "StudsPerTile": 10,
-          "ColorMap": "rbxassetid://91203954277794",
-          "NormalMap": "rbxassetid://121573227265291",
-          "RoughnessMap": "rbxassetid://123786897214159"
+          "ColorMap": "rbxassetid://137498971993280",
+          "NormalMap": "rbxassetid://138710721072362",
+          "RoughnessMap": "rbxassetid://78118270461027"
         }
       },
       "GV_Sand": {
         "$className": "MaterialVariant",
         "$properties": {
           "BaseMaterial": "Sand",
-          "MaterialPattern": "Organic",
+          "MaterialPattern": "Regular",
           "StudsPerTile": 26,
-          "ColorMap": "rbxassetid://93880721908526",
-          "NormalMap": "rbxassetid://83254137358998",
-          "RoughnessMap": "rbxassetid://114811338798215"
+          "ColorMap": "rbxassetid://130773670491702",
+          "NormalMap": "rbxassetid://125208572194990",
+          "RoughnessMap": "rbxassetid://104887294654338"
         }
       },
       "GV_Wood": {
         "$className": "MaterialVariant",
         "$properties": {
           "BaseMaterial": "Wood",
-          "MaterialPattern": "Organic",
+          "MaterialPattern": "Regular",
           "StudsPerTile": 8,
-          "ColorMap": "rbxassetid://99405883507242",
-          "NormalMap": "rbxassetid://93292012080731",
-          "RoughnessMap": "rbxassetid://114287815639479"
+          "ColorMap": "rbxassetid://103542139806636",
+          "NormalMap": "rbxassetid://86284667740685",
+          "RoughnessMap": "rbxassetid://82642122715845"
         }
       },
       "GV_WoodPlanks": {
@@ -118,9 +118,9 @@
           "BaseMaterial": "WoodPlanks",
           "MaterialPattern": "Regular",
           "StudsPerTile": 10,
-          "ColorMap": "rbxassetid://86747188530534",
-          "NormalMap": "rbxassetid://103418702796139",
-          "RoughnessMap": "rbxassetid://100442828853377"
+          "ColorMap": "rbxassetid://92235103198194",
+          "NormalMap": "rbxassetid://89295526926426",
+          "RoughnessMap": "rbxassetid://128290417111970"
         }
       },
       "GV_Cobblestone": {
@@ -129,9 +129,9 @@
           "BaseMaterial": "Cobblestone",
           "MaterialPattern": "Regular",
           "StudsPerTile": 10,
-          "ColorMap": "rbxassetid://82075802118967",
-          "NormalMap": "rbxassetid://116926226459908",
-          "RoughnessMap": "rbxassetid://72444459337414"
+          "ColorMap": "rbxassetid://134467703518024",
+          "NormalMap": "rbxassetid://76002589080645",
+          "RoughnessMap": "rbxassetid://106560682299095"
         }
       }
     }

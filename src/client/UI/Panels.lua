@@ -2465,7 +2465,7 @@ function Panels.Settings()
 					end)
 				end
 			end
-			devGrid("Player", "🧪", T.Accent, { { "Reset Lv1", "resetlevel" }, { "Lv70", "level" }, { "Job Lv.10", "joblevel" }, { "+1M " .. COIN, "beli" }, { "Materials", "items" }, { "+1000 " .. PearlsCfg.Icon, "pearls" }, { "Next Quest", "questnext" } })
+			devGrid("Player", "🧪", T.Accent, { { "New Player", "resetall" }, { "Reset Lv1", "resetlevel" }, { "Lv70", "level" }, { "Job Lv.10", "joblevel" }, { "+1M " .. COIN, "beli" }, { "Materials", "items" }, { "+1000 " .. PearlsCfg.Icon, "pearls" }, { "Next Quest", "questnext" } })
 			local fruitButtons = {}
 			for _, f in ipairs(FruitsCfg.List) do
 				table.insert(fruitButtons, { f.icon .. " " .. f.id, "fruit", f.id })

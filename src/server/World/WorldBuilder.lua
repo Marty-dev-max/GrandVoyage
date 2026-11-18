@@ -655,6 +655,83 @@ end
 -- (tagged EnvProp/EnvPart) are dressed with the stylized meshes like the generated ones.
 WB.WORLD_VERSION = 6
 
+-- Old copies of the map can hide anywhere in Workspace: a renamed or regrouped World, an island dragged into
+-- Handmade, single NPCs / chests / docks pasted from an old bake. They draw on top of the new islands and register
+-- duplicate NPCs, chests, docks and spawns. Owner's call (v0.22.2): only the current map may exist, so every generated
+-- piece outside `keep` is removed, wherever it is (Handmade included). Generated pieces are recognised by what
+-- WorldBuilder puts on them: a whole island folder holds its IslandSpawn part / IslandBanner, a whole map has a
+-- WorldVersion attribute or an Ocean, and NPC / Chest / Dock / Plot tags mark the working props.
+local MARKER_TAGS = { "IslandSpawn", "Dock", "Plot", "Chest", "NPC" }
+function WB.RemoveStaleMaps(keep)
+	local doomed = {}
+	local function outside(inst)
+		return inst.Parent ~= nil and inst ~= keep and not inst:IsDescendantOf(keep) and inst:IsDescendantOf(workspace)
+	end
+	local function container(inst)
+		-- never the workspace or the Handmade folder itself
+		local p = inst
+		if p == workspace or (p.Parent == workspace and p.Name == "Handmade") then
+			return nil
+		end
+		return p
+	end
+	-- a list, not a table keyed by instance: the Lune bake hands out a new userdata per access
+	local function mark(inst, why)
+		inst = inst and container(inst)
+		if not (inst and outside(inst)) then
+			return
+		end
+		for _, e in ipairs(doomed) do
+			if e.inst == inst then
+				return
+			end
+		end
+		table.insert(doomed, { inst = inst, why = why })
+	end
+	for _, d in ipairs(workspace:GetDescendants()) do
+		if outside(d) then
+			if d:GetAttribute("WorldVersion") ~= nil then
+				mark(d, "old map")
+			elseif d:GetAttribute("IslandBanner") ~= nil or d:HasTag("IslandSpawn") then
+				-- the island's spawn point and banner sit directly in its island folder
+				mark(d.Parent, "old island " .. tostring(d:GetAttribute("IslandBanner") or d:GetAttribute("Island")))
+			elseif d.Name == "Ocean" and (d:IsA("Model") or d:IsA("Folder")) and d:FindFirstChild("Water") then
+				mark(d, "old ocean")
+			end
+			for _, tag in ipairs(MARKER_TAGS) do
+				if d:HasTag(tag) then
+					mark(d, "old " .. tag .. " " .. d.Name)
+					break
+				end
+			end
+		end
+	end
+	-- keep only the outermost pieces (decide everything before destroying anything)
+	local roots = {}
+	for _, e in ipairs(doomed) do
+		local covered = false
+		for _, o in ipairs(doomed) do
+			if o.inst ~= e.inst and e.inst:IsDescendantOf(o.inst) then
+				covered = true
+				break
+			end
+		end
+		if not covered then
+			table.insert(roots, e)
+		end
+	end
+	local n = 0
+	for _, r in ipairs(roots) do
+		print("[GrandVoyage] removing " .. r.why .. ": " .. r.inst:GetFullName())
+		r.inst:Destroy()
+		n += 1
+	end
+	if n > 0 then
+		print(string.format("[GrandVoyage] removed %d leftover piece(s) of old maps; only the v%d World is left", n, WB.WORLD_VERSION))
+	end
+	return n
+end
+
 function WB.Build()
 	if not workspace:FindFirstChild("Handmade") then
 		local hm = Instance.new("Folder")
@@ -676,16 +753,8 @@ function WB.Build()
 			end
 		end
 	end
-	-- hand-made content is never deleted, but say so when a whole generated island ended up in there
-	local hm = workspace:FindFirstChild("Handmade")
-	if hm then
-		for _, d in ipairs(hm:GetDescendants()) do
-			if (d.Name == "World" or d.Name == "Daybreak" or d.Name == "Ocean") and (d:IsA("Model") or d:IsA("Folder")) then
-				warn("[GrandVoyage] workspace.Handmade contains " .. d:GetFullName() .. ": an old copy of the map? It will overlap the islands; delete it if it is not hand-made.")
-			end
-		end
-	end
 	if keep then
+		WB.RemoveStaleMaps(keep)
 		return keep
 	end
 	local world = Instance.new("Model")
@@ -700,6 +769,7 @@ function WB.Build()
 	buildForts()
 	buildRedLine(world)
 	setupLighting()
+	WB.RemoveStaleMaps(world)
 	return world
 end
 

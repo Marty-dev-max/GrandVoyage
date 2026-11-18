@@ -75,6 +75,9 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   The smooth `Mesa_n` ledge meshes were rejected (looked like plastic, layers blended). Bump `WorldBuilder.WORLD_VERSION` when world code changes:
   a baked World with an older version is destroyed and rebuilt at runtime (the owner's published place keeps a baked World).
   Hand-made map edits in Studio belong in `workspace.Handmade` (never touched by rebuilds); layout changes go in World/*.lua.
+  Owner rule (v0.22.2): only the current map may exist. `WB.RemoveStaleMaps` deletes every generated piece outside the kept
+  World at server start, Handmade included (island folders found by their IslandSpawn/IslandBanner, maps by WorldVersion,
+  stray NPC/Chest/Dock/Plot-tagged props); plain hand-made parts are kept.
 - Owner decisions on art: voxel style for pets, fruits and monsters; textured (SurfaceAppearance-like) stylized look for the map.
 - Animation = real Roblox animations, never hand-posed joints. v0.13-v0.14 posed Motor6D.C0 / attachments from client
   scripts and NOTHING moved in the owner's Studio (twice), so do not go back to that. Clips are data in
@@ -150,6 +153,10 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   ball, ThunderCall / CycloneCall skill FX. Own crits: gradient "CRITICAL!" number on an impact star + `VFX.ImpactFrame()`.
   Overhead mob bars are dressed like HUD bars (stroke, gloss, white flash, shake) in CreatureAnim.juiceBar.
 - Class switch auto-equips the best owned class weapon (PlayerService). Loadout drag uses UIDragDetector.
+- Card ladder (owner, v0.22.2): Common gray 1 star, Uncommon green 2, Rare blue 3, Epic purple 4, Mythic rainbow prismatic 5
+  (`Rarity.Stars`, Mythic tier has `prismatic = true`: pastel rainbow that spins, `UI.PrismaticSequence` / `UI.SpinGradient`).
+  Regular cards by monster level (<10 Common, <30 Uncommon, else Rare), MVP boss cards Epic, captains + Leviathan Mythic.
+- Dev tab "New Player" (`Admin` cmd `resetall`, `DataService.ResetProfile`): fresh save in place (keeps receipts, perks, guild).
 - Card drops play `UI/CardReveal.lua` (tension + orbs, whip flip + hitstop, rune rings + golden lightning, foil sheen,
   monster pops out of the frame, stars, RGB split from Mythic; intensity and pitch scale with rarity, tap skips).
 - Style meter = vertical tube middle-right (left of the menu column; `UI.PlaceStyleMeter` from HUD.Layout), liquid on a

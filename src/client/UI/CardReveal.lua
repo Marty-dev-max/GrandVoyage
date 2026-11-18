@@ -1,4 +1,4 @@
--- CardReveal: center-screen card drop reveal. Everything scales with rarity (Rare -> Secret):
+-- CardReveal: center-screen card drop reveal. Everything scales with rarity (Common 1 star -> Mythic 5 stars, prismatic):
 --  1. tension: the face-down card floats up and vibrates faster and faster while glowing orbs get sucked in (rising charge)
 --  2. whip flip: a snap flip with ghost trails, a 4-frame hitstop, then a bouncy landing (flip whoosh)
 --  3. arcane shockwave rune rings + golden lightning (bass drop)
@@ -110,8 +110,15 @@ local function buildFace(card, def, tier, k)
 	local g = New("UIGradient", { Color = ColorSequence.new(tier.top, tier.bottom), Rotation = 90, Parent = face })
 	if tier.rainbow then
 		g.Color = ColorSequence.new(Color3.fromRGB(60, 50, 80), Color3.fromRGB(12, 10, 20))
+	elseif tier.prismatic then
+		-- Mythic: rainbow prismatic face that shimmers, with a turning rainbow rim
+		g.Color = UI.PrismaticSequence
+		UI.SpinGradient(g)
 	end
-	UI.Stroke(face, tier.rainbow and Color3.new(1, 1, 1) or tier.color:Lerp(Color3.new(1, 1, 1), 0.4), 4)
+	local rim = UI.Stroke(face, (tier.rainbow or tier.prismatic) and Color3.new(1, 1, 1) or tier.color:Lerp(Color3.new(1, 1, 1), 0.4), 4)
+	if tier.prismatic then
+		UI.SpinGradient(New("UIGradient", { Color = UI.RainbowSequence, Parent = rim }))
+	end
 	-- inner art window
 	local art = New("Frame", { Name = "Art", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 16), Size = UDim2.new(1, -28, 0, 150), BackgroundColor3 = Color3.fromRGB(20, 18, 34), BackgroundTransparency = 0.25, ZIndex = 7, Parent = face })
 	UI.Corner(art, 10)
@@ -120,7 +127,7 @@ local function buildFace(card, def, tier, k)
 	-- holographic foil: two moving rarity-tinted bands across the whole face
 	local foil = New("Frame", { Name = "Foil", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.35, ZIndex = 12, Parent = face })
 	UI.Corner(foil, 16)
-	local fc = tier.rainbow and UI.RainbowSequence or ColorSequence.new({
+	local fc = (tier.rainbow or tier.prismatic) and UI.RainbowSequence or ColorSequence.new({
 		ColorSequenceKeypoint.new(0, tier.color),
 		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(150, 255, 240)),
 		ColorSequenceKeypoint.new(1, tier.top),
@@ -174,7 +181,7 @@ local function buildFace(card, def, tier, k)
 		end
 	end
 	local starRow = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 202), Size = UDim2.fromOffset(180, 28), ZIndex = 11, Parent = face })
-	local nStars = math.clamp(tier.rank - 2, 1, 5)
+	local nStars = UI.Rarity.StarsOf(tier.id) -- Common 1 .. Mythic 5
 	local stars = {}
 	for i = 1, nStars do
 		local st = UI.Text(starRow, "★", 26, i <= nStars and GOLD or Color3.new(0.3, 0.3, 0.3), "Display", {

@@ -142,6 +142,30 @@ function DataService.Load(player)
 	return data
 end
 
+-- Dev tool (Settings -> Developer -> Reset to New Player): turn the loaded save into a brand-new one. The same table is
+-- refilled so every service holding it sees the change. Kept: real-money records (receipts, perks: a Robux purchase must
+-- never be granted twice) and the guild membership (guild member lists live in the guild store).
+function DataService.ResetProfile(player)
+	local data = profiles[player]
+	if not data then
+		return nil
+	end
+	local keep = { receipts = data.receipts, perks = data.perks, guildId = data.guildId, __noSave = data.__noSave }
+	if data.guildId then
+		keep.faction = data.faction
+	end
+	for k in pairs(data) do
+		data[k] = nil
+	end
+	for k, v in pairs(template()) do
+		data[k] = v
+	end
+	for k, v in pairs(keep) do
+		data[k] = v
+	end
+	return data
+end
+
 function DataService.Get(player)
 	return profiles[player]
 end

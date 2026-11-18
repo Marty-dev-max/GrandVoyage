@@ -167,6 +167,25 @@ function GW.Start()
 			end
 			R.PlayerService.Recompute(player)
 			return true, "Reset to Lv 1"
+		elseif data.cmd == "resetall" then
+			-- like joining for the very first time: fresh Lv 1 Brawler, starter kit, tutorial quest, start island
+			pcall(R.ShipService.DespawnShipOf, player)
+			pcall(R.MarketService.CloseStall, player)
+			pcall(R.FruitService.RemoveFruit, player)
+			pcall(R.CombatService.ClearBuffs, player)
+			R.PearlService.DevReset(player)
+			R.DataService.ResetProfile(player)
+			R.PlayerService.SetAttributes(player)
+			pcall(R.TitleService.Refresh, player, true)
+			R.PlayerService.Recompute(player)
+			R.PlayerService.MarkDirty(player)
+			R.QuestService.Push(player, true)
+			task.defer(function()
+				if player.Parent then
+					player:LoadCharacter()
+				end
+			end)
+			return true, "Reset to a brand-new player"
 		elseif data.cmd == "removefruit" then
 			if not R.FruitService.RemoveFruit(player) then
 				return false, "No fruit to remove"

@@ -182,6 +182,22 @@ local RAINBOW = ColorSequence.new({
 	ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 80, 80)),
 })
 UI.RainbowSequence = RAINBOW
+-- Mythic: bright pastel rainbow (prismatic) for backgrounds; spins slowly so it shimmers
+local PRISM = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 170, 200)),
+	ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 226, 150)),
+	ColorSequenceKeypoint.new(0.34, Color3.fromRGB(170, 250, 180)),
+	ColorSequenceKeypoint.new(0.5, Color3.fromRGB(150, 236, 255)),
+	ColorSequenceKeypoint.new(0.67, Color3.fromRGB(170, 180, 255)),
+	ColorSequenceKeypoint.new(0.84, Color3.fromRGB(230, 170, 255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 170, 200)),
+})
+UI.PrismaticSequence = PRISM
+-- keep a UIGradient turning (rainbow / prismatic shimmer)
+function UI.SpinGradient(g)
+	rainbows[g] = true
+	return g
+end
 
 function UI.Shine(frame, phase)
 	local overlay = New("Frame", { Name = "Shine", BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0, Size = UDim2.fromScale(1, 1), ZIndex = (frame.ZIndex or 1) + 2, Parent = frame })
@@ -204,11 +220,14 @@ function UI.RarityStyle(frame, rarityId, strong)
 	local tier = Rarity.Get(rarityId)
 	frame.BackgroundColor3 = Color3.new(1, 1, 1)
 	local g = frame:FindFirstChild("RarityGradient") or New("UIGradient", { Name = "RarityGradient", Rotation = 90, Parent = frame })
-	g.Color = ColorSequence.new(tier.top, tier.bottom)
+	g.Color = tier.prismatic and PRISM or ColorSequence.new(tier.top, tier.bottom)
+	if tier.prismatic then
+		rainbows[g] = true
+	end
 	local s = frame:FindFirstChild("RarityStroke") or UI.Stroke(frame, tier.color, strong and 3.5 or 2.5)
 	s.Name = "RarityStroke"
-	s.Color = tier.rainbow and Color3.new(1, 1, 1) or tier.color:Lerp(Color3.new(0, 0, 0), 0.25)
-	if tier.rainbow then
+	s.Color = (tier.rainbow or tier.prismatic) and Color3.new(1, 1, 1) or tier.color:Lerp(Color3.new(0, 0, 0), 0.25)
+	if tier.rainbow or tier.prismatic then
 		local sg = s:FindFirstChild("Rainbow") or New("UIGradient", { Name = "Rainbow", Color = RAINBOW, Parent = s })
 		rainbows[sg] = true
 	end
@@ -1090,8 +1109,8 @@ showBanner = function(title, subtitle, color, rarityId, hold)
 	UI.Stroke(t, T.Edge, 5, Enum.ApplyStrokeMode.Contextual)
 	if rarityId then
 		local tier = Rarity.Get(rarityId)
-		if tier.rainbow then
-			tg.Color = RAINBOW
+		if tier.rainbow or tier.prismatic then
+			tg.Color = tier.prismatic and PRISM or RAINBOW
 			rainbows[tg] = true
 		end
 		Audio.Play("Rarity" .. tier.id)

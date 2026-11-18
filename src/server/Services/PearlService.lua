@@ -127,6 +127,20 @@ function PS.Spend(player, amount, reason, allowBound)
 	return true
 end
 
+-- Dev reset: the balance goes to 0 and the ledger says why
+function PS.DevReset(player)
+	local p = prof(player)
+	if not p then
+		return
+	end
+	local total = p.pearls + p.pearlsBound
+	if total > 0 then
+		p.pearls, p.pearlsBound = 0, 0
+		log(player, -total, "dev_reset", p)
+	end
+	sync(player, p)
+end
+
 function PS.CanTrade(player)
 	local p = prof(player)
 	if not p then

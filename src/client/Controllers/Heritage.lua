@@ -75,6 +75,46 @@ function Heritage.Start()
 	chipText.Parent = chip
 	UI.Tactile(chip)
 	chip.Activated:Connect(toggle)
+	-- Store boost timers (2x EXP / 2x Drop / Fruit Notifier): small chips under the mode chip
+	local boostCol = Instance.new("Frame")
+	boostCol.BackgroundTransparency = 1
+	boostCol.AnchorPoint = Vector2.new(1, 0)
+	boostCol.Position = UDim2.new(1, -14, 0.36, 28)
+	boostCol.Size = UDim2.fromOffset(170, 120)
+	boostCol.Parent = gui
+	local lay = Instance.new("UIListLayout")
+	lay.Padding = UDim.new(0, 4)
+	lay.HorizontalAlignment = Enum.HorizontalAlignment.Right
+	lay.Parent = boostCol
+	local BOOSTS = { { "BoostExp", "2x EXP", Color3.fromRGB(255, 206, 70) }, { "BoostDrop", "2x DROP", Color3.fromRGB(120, 220, 120) }, { "BoostFruit", "FRUIT RADAR", Color3.fromRGB(240, 120, 200) } }
+	local chips = {}
+	for i, b in ipairs(BOOSTS) do
+		local l = Instance.new("TextLabel")
+		l.LayoutOrder = i
+		l.Size = UDim2.fromOffset(170, 24)
+		l.BackgroundColor3 = Color3.fromRGB(16, 16, 28)
+		l.BackgroundTransparency = 0.2
+		l.TextColor3 = b[3]
+		l.FontFace = UI.Fonts.Display
+		l.TextSize = 13
+		l.Visible = false
+		l.Parent = boostCol
+		chips[b[1]] = { label = l, name = b[2] }
+	end
+	task.spawn(function()
+		while true do
+			local now = workspace:GetServerTimeNow()
+			for attr, c in pairs(chips) do
+				local untilT = player:GetAttribute(attr)
+				local left = untilT and (untilT - now) or 0
+				c.label.Visible = left > 0
+				if left > 0 then
+					c.label.Text = string.format("%s %d:%02d", c.name, math.floor(left / 60), math.floor(left % 60))
+				end
+			end
+			task.wait(1)
+		end
+	end)
 	player:GetAttributeChangedSignal("Heritage"):Connect(refreshChip)
 	player:GetAttributeChangedSignal("HeritageMode"):Connect(refreshChip)
 	refreshChip()

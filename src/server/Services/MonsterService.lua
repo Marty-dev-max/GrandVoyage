@@ -161,6 +161,9 @@ end
 
 local function rollDrops(player, def, mult, pos)
 	local d = R.PlayerService.Derived(player)
+	if R.StoreService and R.StoreService.BoostActive(player, "drop") then
+		mult = (mult or 1) * 2 -- Store 2x Drop
+	end
 	local got = {}
 	for _, drop in ipairs(def.drops or {}) do
 		local id, chance, mn, mx = drop[1], drop[2], drop[3] or 1, drop[4] or 1

@@ -191,6 +191,11 @@ for _, sp in ipairs(SpinsCfg.Products) do
 end
 
 local function processReceipt(info)
+	-- Store benefits / boosts (StoreService)
+	local storeDecision = R.StoreService and R.StoreService.Receipt(info)
+	if storeDecision then
+		return storeDecision
+	end
 	local pack = spinPackById[info.ProductId]
 	if pack then
 		if not R.DataService.GrantBankSpins(info.PlayerId, info.PurchaseId, pack.spins) then
@@ -239,9 +244,8 @@ function PS.Start()
 	pcall(function()
 		ledgerStore = DataStoreService:GetDataStore(Pearls.LedgerStore)
 	end)
-	if next(productById) or next(spinPackById) then
-		MarketplaceService.ProcessReceipt = processReceipt
-	end
+	-- always installed: Store products and spin packs can be added any time (0 = not on sale)
+	MarketplaceService.ProcessReceipt = processReceipt
 	R.DataService.Loaded:Connect(function(player) -- v0.24.0: once a character slot is loaded (title menu)
 		task.delay(3, function()
 			local p = prof(player)

@@ -2923,17 +2923,124 @@ function Panels.Pets()
 end
 
 -- ===================== PEARL SHOP =====================
-function Panels.PearlShop()
+-- Store (v0.24.0): GEMS (the Gem shop + Robux Gem packs) | BENEFITS | BOOSTS (Config/Store). Every benefit and boost
+-- costs Gems or Robux and can be bought FOR ME or as a GIFT for a player in this server.
+local storeTab = "Gems"
+local function buyFor(it, currency, after)
+	local Players = game:GetService("Players")
+	local me = Players.LocalPlayer
+	local others = {}
+	for _, pl in ipairs(Players:GetPlayers()) do
+		if pl ~= me then
+			table.insert(others, pl)
+		end
+	end
+	local function go(toUserId)
+		local res
+		if currency == "gems" then
+			res = req("StoreBuyGems", { id = it.id, to = toUserId }, "Purchase")
+		else
+			res = req("StoreBuyRobux", { id = it.id, to = toUserId })
+		end
+		if after then
+			after(res)
+		end
+	end
+	-- the chooser: for me / gift to someone
+	local win = UI.Window("StoreGift", it.name, UDim2.fromOffset(420, math.min(560, 200 + #others * 46)), T.Purple, it.icon or "🎁")
+	local body = win.body
+	UI.List(body, nil, 8, Enum.HorizontalAlignment.Center)
+	UI.Text(body, (currency == "gems" and (PearlsCfg.Icon .. " " .. it.gems) or ("R$ " .. it.robux)) .. "  -  who is it for?", 15, T.Gold, "Display", { TextXAlignment = Enum.TextXAlignment.Center })
+	UI.Button(body, "FOR ME", T.Green, UDim2.fromOffset(300, 44), function()
+		UI.CloseWindow("StoreGift")
+		go(nil)
+	end)
+	UI.Text(body, #others > 0 and "GIFT TO A PLAYER:" or "No one else is in this server to gift", 12, T.TextSoft, "Semi", { TextXAlignment = Enum.TextXAlignment.Center })
+	local list = UI.Scroll(body, UDim2.new(1, 0, 0, math.min(320, #others * 46)))
+	UI.List(list, nil, 6, Enum.HorizontalAlignment.Center)
+	for _, pl in ipairs(others) do
+		UI.Button(list, "🎁 " .. pl.DisplayName, T.Purple, UDim2.fromOffset(300, 40), function()
+			UI.CloseWindow("StoreGift")
+			go(pl.UserId)
+		end)
+	end
+end
+
+function Panels.PearlShop(args)
+	if args and args.tab then
+		storeTab = args.tab
+	end
 	local win = UI.Window("PearlShop", "Shop", UDim2.fromOffset(820, 580), T.Ocean, "🛍️", { fullscreen = true })
 	local body = win.body
-	local function render()
+	local StoreCfg = require(ReplicatedStorage.Shared.Config.Store)
+	local render
+	local function renderStore(list, title, color)
+		local res = Net.Request("StoreInfo")
+		local info = res.ok and res.data or { boosts = {}, tokens = {}, gems = 0 }
+		UI.Section(body, list == StoreCfg.Boosts and "⚡" or "🎟️", title, color, PearlsCfg.Icon .. " " .. UI.Format(info.gems or 0))
+		local okW, absW = pcall(function()
+			return body.AbsoluteSize.X / math.max(0.01, UI.GetScale())
+		end)
+		local W = (okW and absW and absW > 0) and absW or 800
+		local perRow = math.max(1, math.min(#list, math.floor((W + 8) / 236)))
+		local cellW = math.floor((W - (perRow - 1) * 8) / perRow)
+		local rows = math.ceil(#list / perRow)
+		local grid = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, rows * 258 - 8), Parent = body })
+		New("UIGridLayout", { CellSize = UDim2.fromOffset(cellW, 250), CellPadding = UDim2.fromOffset(8, 8), Parent = grid })
+		for _, it in ipairs(list) do
+			local card = UI.Card(grid, nil, color:Lerp(T.Panel, 0.7))
+			UI.Pad(card, 10)
+			UI.List(card, nil, 4, Enum.HorizontalAlignment.Center)
+			UI.IconChip(card, it.icon, color, 48)
+			UI.Text(card, it.name, 15, T.Text, "Display", { TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 36), TextYAlignment = Enum.TextYAlignment.Center })
+			local active = it.boost and info.boosts and (info.boosts[it.boost] or 0) > os.time()
+			local tokens = info.tokens and info.tokens[it.id] or 0
+			UI.Text(card, active and ("ACTIVE: " .. math.ceil(((info.boosts[it.boost] or 0) - os.time()) / 60) .. " min left (buying adds time)") or it.desc, 11, active and T.Green or T.TextSoft, "Semi", { TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 44) })
+			local row = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 38), Parent = card })
+			UI.List(row, Enum.FillDirection.Horizontal, 6, Enum.HorizontalAlignment.Center)
+			UI.Button(row, PearlsCfg.Icon .. " " .. it.gems, T.Ocean, UDim2.new(0.5, -3, 0, 36), function()
+				buyFor(it, "gems", function(r)
+					if r and r.ok then
+						render()
+					end
+				end)
+			end)
+			UI.Button(row, "R$ " .. it.robux, (it.productId and it.productId ~= 0) and T.Green or T.Grey, UDim2.new(0.5, -3, 0, 36), function()
+				if not it.productId or it.productId == 0 then
+					UI.Toast("Robux purchase coming soon (use Gems)", "info")
+					return
+				end
+				buyFor(it, "robux")
+			end)
+			if tokens > 0 then
+				UI.Button(card, "USE (" .. tokens .. ")", T.Gold, UDim2.new(1, 0, 0, 32), function()
+					local r = req("StoreUseToken", { id = it.id })
+					if r.ok then
+						render()
+					end
+				end)
+			end
+		end
+	end
+	render = function()
 		clear(body)
+		UI.List(body, nil, 8)
+		UI.TabBar(body, { { "Gems", "💎", "GEMS", T.Ocean }, { "Benefits", "🎟️", "BENEFITS", T.Purple }, { "Boosts", "⚡", "BOOSTS", T.Orange } }, storeTab, function(tab)
+			storeTab = tab
+			render()
+		end)
+		if storeTab == "Benefits" then
+			renderStore(StoreCfg.Benefits, "Benefits", T.Purple)
+			return
+		elseif storeTab == "Boosts" then
+			renderStore(StoreCfg.Boosts, "Boosts", T.Orange)
+			return
+		end
 		local res = Net.Request("PearlInfo")
 		if not res.ok or not win.frame.Parent then
 			return
 		end
 		local d = res.data
-		UI.List(body, nil, 8)
 		local _, right = UI.Section(body, PearlsCfg.Icon, "Your Gems", T.Ocean, UI.Format(d.pearls + d.bound))
 		local _ = right
 		UI.Text(body, string.format("Tradable %s   •   Shop-only %s   •   Earned today %d / %d", UI.Format(d.pearls), UI.Format(d.bound), d.earnedToday, d.cap), 14, T.TextSoft, "Semi")
@@ -2980,6 +3087,7 @@ function Panels.PearlShop()
 		UI.Text(body, "Earn Gems from first-time chests, exploring whole islands, story quests and MVP bosses (max " .. d.cap .. " per day).", 13, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 34) })
 	end
 	render()
+	win.resized.Event:Connect(render)
 end
 
 function Panels.Open(name, args)

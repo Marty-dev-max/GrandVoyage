@@ -203,6 +203,7 @@ local fakeResponses = {
 	MenuSlots = { ok = true, data = { bank = 2, slots = { { look = { hair = 18, eyes = 6, mouth = 2, shirt = 6, pants = 1, shoes = 2, hair1 = "F4F4F4" }, heritage = "Skyborn", variant = 3, spins = 1, level = 12, class = "Brawler", jobLevel = 9, played = 5 }, false, false } } },
 	MenuSpin = { ok = true, data = { heritage = "Cinderwing", variant = 1, bank = 1, summary = { look = {}, heritage = "Cinderwing", variant = 1, spins = 0, level = 1, class = "Brawler", jobLevel = 1, played = 0 } } },
 	MenuSaveLook = { ok = true, data = { look = {}, heritage = "Islander", variant = 1, spins = 3, level = 1, class = "Brawler", jobLevel = 1, played = 0 } },
+	StoreInfo = { ok = true, data = { gems = 960, boosts = { exp = os.time() + 600 }, tokens = { FruitRemover = 1 } } },
 	GuildList = { ok = true, data = { { id = "a", name = "Sea Wolves", faction = "Pirate", count = 12 }, { id = "b", name = "Blue Anchor", faction = "Marine", count = 8 } } },
 }
 roblox.implementMethod("RemoteFunction", "InvokeServer", function(_, action)
@@ -558,7 +559,7 @@ end
 local panels = {
 	{ "Inventory" }, { "Inventory", { select = "w", tab = "Detail" } }, { "Stats" }, { "Skills" }, { "Skills", { tab = "Loadout" } }, { "JobMaster" }, { "Refine" }, { "Shop" }, { "Tavern" }, { "Shipwright" },
 	{ "Map" }, { "BossBoard" }, { "Guild" }, { "Dungeon", { dungeonId = "CircusTent" } }, { "Party" },
-	{ "Stall", { sellerId = 2 } }, { "StallSetup" }, { "PearlShop" }, { "Pets" }, { "Quests" }, { "Quests", { tab = "Ach" } }, { "Quests", { tab = "Story" } }, { "MenuHub" }, { "Settings" },
+	{ "Stall", { sellerId = 2 } }, { "StallSetup" }, { "PearlShop" }, { "PearlShop", { tab = "Benefits" } }, { "PearlShop", { tab = "Boosts" } }, { "Pets" }, { "Quests" }, { "Quests", { tab = "Ach" } }, { "Quests", { tab = "Story" } }, { "MenuHub" }, { "Settings" },
 }
 for _, p in panels do
 	step("CloseAll", UI.CloseAll)

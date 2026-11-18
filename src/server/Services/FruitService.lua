@@ -274,7 +274,11 @@ function FS.SpawnTreeFruit()
 	local f = pickFruit()
 	local m, prompt = fruitModel(f, pos)
 	spawned = m
-	Net.PushAll("Announce", { text = "🍎 A strange fruit has appeared somewhere on " .. island.name .. "!", rarity = "Epic" })
+	-- Fruit Notifier holders (Store) learn the island; everyone else only hears that a fruit appeared
+	for _, pl in ipairs(game:GetService("Players"):GetPlayers()) do
+		local knows = R.StoreService and R.StoreService.BoostActive(pl, "fruit")
+		Net.Push(pl, "Announce", { text = knows and ("📡 A strange fruit has appeared on " .. island.name .. "!") or "🍎 A strange fruit has appeared somewhere in the sea!", rarity = "Epic" })
+	end
 	prompt.Triggered:Connect(function(player)
 		local root = R.PlayerService.Root(player)
 		if not m.Parent or not root or (root.Position - m.PrimaryPart.Position).Magnitude > 16 then

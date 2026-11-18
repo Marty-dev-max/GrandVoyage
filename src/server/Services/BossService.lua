@@ -47,6 +47,20 @@ function Boss.Broadcast()
 	Net.PushAll("BossBoard", { list = list, serverTime = os.time() })
 end
 
+-- Store "Boss Respawn" (v0.24.0): every defeated boss on this server comes back within a few seconds
+function Boss.RespawnAllNow()
+	local n = 0
+	local now = os.time()
+	for _, island in ipairs(Islands.List) do
+		local st = state[island.id]
+		if st and not st.alive then
+			st.nextSpawn = now
+			n += 1
+		end
+	end
+	return n
+end
+
 function Boss.Start()
 	for _, island in ipairs(Islands.List) do
 		if island.boss then

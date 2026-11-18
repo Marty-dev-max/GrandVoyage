@@ -96,8 +96,11 @@ end
 -- their exact length (no overlap), the round joints sit a little LOWER (they only fill the gaps at bends), every path
 -- gets its own small height step (where two paths cross, one lies cleanly on the other), and paths stop at the
 -- plaza's outer ring instead of running over the paving.
-local PLAZA_CLIP = PLAZA_R + 2.2
+-- v0.22.9 (concept review): a paved street ring runs around the plaza in front of the houses; trails stop at its edge
+local STREET_IN, STREET_OUT = PLAZA_R + 2.5, 57
+local PLAZA_CLIP = STREET_OUT + 0.5
 local pathCount = 0
+local pathPts = {} -- every trail sample with its half width (hill mounds keep clear of them)
 local function clipToPlaza(a, b)
 	local ina, inb = (a - PLAZA).Magnitude < PLAZA_CLIP, (b - PLAZA).Magnitude < PLAZA_CLIP
 	if ina and inb then
@@ -125,6 +128,9 @@ local function path(ctx, pts, width, opts)
 	pathCount += 1
 	local lift = 0.2 + (pathCount % 4) * 0.06
 	local samples = spline(pts, 5)
+	for _, sp in ipairs(samples) do
+		table.insert(pathPts, { p = sp, r = width / 2 + 2.4 })
+	end
 	for i = 1, #samples - 1 do
 		local a, b = clipToPlaza(samples[i], samples[i + 1])
 		local cf
@@ -326,6 +332,76 @@ local function plaza(ctx)
 	ctx.reserve(PLAZA.X, PLAZA.Y, PLAZA_R - 2)
 end
 
+-- paved street ring between the plaza and the house fronts (blocks alternate 0.05 in height: they overlap a
+-- little on the inner side and must never share a surface)
+local function streetRing(ctx)
+	local c = ctx.at(PLAZA.X, PLAZA.Y)
+	local n = 56
+	local depth = STREET_OUT - STREET_IN
+	local w = 2 * math.pi * STREET_OUT / n + 0.6
+	for i = 0, n - 1 do
+		local a = (i + 0.5) / n * math.pi * 2
+		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+		local mid = c + dir * (STREET_IN + depth / 2)
+		local y = 7.43 + (i % 2) * 0.05
+		P(Vector3.new(w, 0.3, depth), Color3.fromRGB(206, 194, 170):Lerp(Color3.fromRGB(190, 178, 156), (i % 3) / 3), CFrame.lookAt(Vector3.new(mid.X, y, mid.Z), Vector3.new(mid.X, y, mid.Z) + dir), { material = M.Cobblestone, shadow = false, name = "Path" })
+	end
+	-- a darker kerb along the outer edge
+	for i = 0, n - 1 do
+		local a = (i + 0.5) / n * math.pi * 2
+		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+		local mid = c + dir * (STREET_OUT + 0.4)
+		local y = 7.5 + (i % 2) * 0.05
+		P(Vector3.new(w, 0.3, 0.8), Color3.fromRGB(150, 140, 126), CFrame.lookAt(Vector3.new(mid.X, y, mid.Z), Vector3.new(mid.X, y, mid.Z) + dir), decor({ material = M.Cobblestone, collide = false, shadow = false }))
+	end
+end
+
+-- paving from a house's door out to the street (dir2 = from the house toward the plaza)
+local function doorApron(ctx, front, dir2, width)
+	local plazaDist = (front - PLAZA).Magnitude
+	local len = math.max(0.5, plazaDist - STREET_OUT + 0.6)
+	local mid2 = front + dir2 * (len / 2 - 0.3)
+	local mid = ctx.at(mid2.X, mid2.Y)
+	local y = 7.56
+	P(Vector3.new(width, 0.3, len), Color3.fromRGB(200, 188, 164), CFrame.lookAt(Vector3.new(mid.X, y, mid.Z), Vector3.new(mid.X + dir2.X, y, mid.Z + dir2.Y)), decor({ material = M.Cobblestone, collide = false, shadow = false }))
+end
+
+-- the Sunrise Tavern's porch: a plank deck, posts, a striped awning, lanterns and a hanging tankard sign
+local function tavernPorch(ctx, front, dir2, w)
+	local f = ctx.at(front.X, front.Y)
+	local d3 = Vector3.new(dir2.X, 0, dir2.Y)
+	local cf = CFrame.lookAt(f, f + d3) -- -Z = toward the plaza
+	local depth = 7
+	P(Vector3.new(w - 4, 0.6, depth), Color3.fromRGB(176, 124, 78), cf * CFrame.new(0, 0.3, -depth / 2), { material = M.WoodPlanks })
+	for _, sx in ipairs({ -1, 1 }) do
+		P(Vector3.new(0.7, 7, 0.7), C.DarkWood, cf * CFrame.new(sx * (w / 2 - 2.6), 3.8, -depth + 0.4), { material = M.Wood })
+		-- lantern on each post
+		local lamp = P(Vector3.new(0.9, 1.2, 0.9), Color3.fromRGB(255, 210, 110), cf * CFrame.new(sx * (w / 2 - 2.6), 6.2, -depth - 0.2), decor({ material = M.Neon, collide = false }))
+		local light = Instance.new("PointLight")
+		light.Range = 16
+		light.Brightness = 1.2
+		light.Color = Color3.fromRGB(255, 200, 120)
+		light.Parent = lamp
+	end
+	-- striped awning sloping down toward the street
+	for k = 0, 5 do
+		local stripe = (w - 3) / 6
+		Wedge(Vector3.new(stripe, 1.4, depth + 1), k % 2 == 0 and Color3.fromRGB(196, 52, 46) or Color3.fromRGB(250, 240, 220),
+			cf * CFrame.new(-(w - 3) / 2 + stripe * (k + 0.5), 8, -depth / 2) * CFrame.Angles(0, math.pi, 0), decor({ material = M.Fabric, collide = false }))
+	end
+	-- hanging sign: an iron arm off the right post with a board and a big tankard on it
+	local arm = cf * CFrame.new(w / 2 - 2.6, 7.6, -depth - 0.2)
+	P(Vector3.new(0.3, 0.3, 4), C.DarkWood, arm * CFrame.new(0, 0, -2), decor({ material = M.Metal, collide = false }))
+	P(Vector3.new(0.25, 2.6, 3.2), Color3.fromRGB(150, 98, 58), arm * CFrame.new(0, -1.9, -3), decor({ material = M.Wood, collide = false }))
+	local mug = arm * CFrame.new(0, -1.9, -3)
+	Cyl(1.8, 1.5, Color3.fromRGB(240, 196, 70), (mug * CFrame.new(0.5, 0, 0)).Position, decor({ material = M.Metal, collide = false }))
+	P(Vector3.new(0.3, 1.1, 0.3), Color3.fromRGB(240, 196, 70), mug * CFrame.new(0.5, 0, 1.05), decor({ material = M.Metal, collide = false }))
+	P(Vector3.new(1.4, 0.35, 1.4), Color3.fromRGB(255, 252, 240), mug * CFrame.new(0.5, 0.95, 0), decor({ collide = false }))
+	-- barrels and a bench by the door
+	Kit.Barrel(f + d3 * 2 + cf.RightVector * (w / 2 - 1))
+	Kit.Barrel(f + d3 * 3.5 + cf.RightVector * (w / 2 - 1.4))
+end
+
 local function houses(ctx)
 	-- ring around the plaza; gaps for the trail (west), the harbor street (east), the meadow lane (south) and
 	-- the lighthouse lane (north-east)
@@ -341,6 +417,14 @@ local function houses(ctx)
 			opts.sign = "ROWAN'S RIGGING"
 		end
 		timberHouse(ctx, x, z, w, d, opts, PLAZA)
+		local dir2 = (PLAZA - Vector2.new(x, z)).Unit
+		local front = Vector2.new(x, z) + dir2 * (d / 2)
+		if opts.sign == "SUNRISE TAVERN" then
+			tavernPorch(ctx, front, dir2, w)
+			doorApron(ctx, front + dir2 * 7, dir2, 10)
+		else
+			doorApron(ctx, front, dir2, 6)
+		end
 		-- garden props by the doors
 		local door = Vector2.new(x, z) + (PLAZA - Vector2.new(x, z)).Unit * (d / 2 + 4)
 		local side = Vector2.new(-(PLAZA - Vector2.new(x, z)).Unit.Y, (PLAZA - Vector2.new(x, z)).Unit.X)
@@ -426,19 +510,62 @@ local function windmill(ctx, x, z, scale)
 	ctx.reserve(x, z, 8 * scale)
 end
 
+-- soften a hill's foot: grassy mounds and bushes that hide the sharp edge where the cliff meets the ground, plus a
+-- few extra rock outcrops so the cliff ring is not a perfect cylinder (v0.22.9 concept review)
+local function blendHill(ctx, x, z, r, stairs)
+	local n = math.floor(2 * math.pi * r / 8)
+	for i = 0, n - 1 do
+		local a = i / n * math.pi * 2 + rng:NextNumber(-0.08, 0.08)
+		local nearStairs = false
+		for _, sa in ipairs(stairs or {}) do
+			if math.abs(math.atan2(math.sin(a - sa), math.cos(a - sa))) < 0.4 then
+				nearStairs = true
+			end
+		end
+		local d = r + rng:NextNumber(1, 3.5)
+		local px, pz = x + math.cos(a) * d, z + math.sin(a) * d
+		for _, pp in ipairs(pathPts) do
+			if (pp.p - Vector2.new(px, pz)).Magnitude < pp.r + 5 then
+				nearStairs = true -- (a trail runs here: keep its edge clean)
+				break
+			end
+		end
+		if not nearStairs then
+			local g = ctx.at(px, pz)
+			local size = rng:NextNumber(7, 11)
+			Ball(size, ctx.pal.grass:Lerp(Color3.fromRGB(60, 140, 50), rng:NextNumber(0, 0.25)), g - Vector3.new(0, size * 0.32, 0), { material = M.Grass, shadow = false })
+			if i % 3 == 0 then
+				Kit.Bush(g + Vector3.new(math.cos(a) * 2, 0, math.sin(a) * 2), rng:NextNumber(3, 4.5), Color3.fromRGB(96, 186, 80))
+			elseif i % 4 == 1 then
+				-- an outcrop leaning out of the cliff face
+				local hh = rng:NextNumber(5, 9)
+				local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+				local at = ctx.at(x + math.cos(a) * (r - 0.5), z + math.sin(a) * (r - 0.5)) + Vector3.new(0, hh / 2 - 0.5, 0)
+				local tone = rng:NextNumber() > 0.4 and ROCK or Color3.fromRGB(150, 120, 96)
+				local slab = P(Vector3.new(rng:NextNumber(6, 9), hh, rng:NextNumber(4, 6)), tone, CFrame.lookAt(at, at + dir) * CFrame.Angles(rng:NextNumber(-0.25, 0.1), rng:NextNumber(-0.3, 0.3), rng:NextNumber(-0.15, 0.15)), { material = M.Rock })
+				slab:SetAttribute("Kind", "Cliff" .. Kit.RockTone(tone))
+				CollectionService:AddTag(slab, "EnvPart")
+			end
+		end
+	end
+end
+
 local function hills(ctx)
 	local N, S, E = -math.pi / 2, math.pi / 2, 0
 	-- North Windmill Hill: the big mill, Captain's Chest on top
 	L.Mesa(ctx, NORTH_HILL.X, NORTH_HILL.Y, 32, 11, { N }, nil)
+	table.insert(ctx.blendLater, { NORTH_HILL.X, NORTH_HILL.Y, 32, { N } })
 	windmill(ctx, NORTH_HILL.X - 4, NORTH_HILL.Y + 4, 1.45)
 	Kit.Fence(ctx.at(NORTH_HILL.X - 22, NORTH_HILL.Y - 8), ctx.at(NORTH_HILL.X - 8, NORTH_HILL.Y - 22))
 	ctx.reserve(NORTH_HILL.X, NORTH_HILL.Y, 34)
 	-- lower terrace with the small mill, between the village and the trail
 	L.Mesa(ctx, TERRACE.X, TERRACE.Y, 18, 6, { E }, nil)
+	table.insert(ctx.blendLater, { TERRACE.X, TERRACE.Y, 18, { E } })
 	windmill(ctx, TERRACE.X - 3, TERRACE.Y + 2, 1.0)
 	ctx.reserve(TERRACE.X, TERRACE.Y, 22)
 	-- Bandit Hill: the bandits took this windmill; their camp sits on the hilltop
 	L.Mesa(ctx, BANDIT_HILL.X, BANDIT_HILL.Y, 36, 13, { S }, nil)
+	table.insert(ctx.blendLater, { BANDIT_HILL.X, BANDIT_HILL.Y, 36, { S } })
 	local mill = BANDIT_HILL + Vector2.new(-17, -15)
 	windmill(ctx, mill.X, mill.Y, 1.15)
 	ctx.reserve(BANDIT_HILL.X, BANDIT_HILL.Y, 38)
@@ -510,6 +637,37 @@ local function camp(ctx)
 			giantTree(ctx, x, z, rng:NextNumber(2.1, 2.6))
 		end
 	end
+	-- close the clearing with jungle all round, except the three trail mouths (v0.22.9 concept review)
+	local mouths = { math.atan2(6, 14), math.atan2(18, 4), math.atan2(-16, 4) }
+	local a = 0
+	while a < math.pi * 2 do
+		local open = false
+		for _, m in ipairs(mouths) do
+			local da = math.abs(math.atan2(math.sin(a - m), math.cos(a - m)))
+			if da < 0.32 then
+				open = true
+			end
+		end
+		if not open then
+			local rr = rng:NextNumber(34, 40)
+			local x, z = CAMP.X + math.cos(a) * rr, CAMP.Y + math.sin(a) * rr
+			if ctx.free(x, z, 3) then
+				if rng:NextNumber() < 0.35 then
+					Kit.Palm(ctx.at(x, z), rng:NextNumber(13, 17))
+				else
+					Kit.RoundTree(ctx.at(x, z), rng:NextNumber(1.1, 1.5), Color3.fromRGB(70, 168, 66))
+				end
+				Kit.Bush(ctx.at(x + math.cos(a) * -4, z + math.sin(a) * -4), rng:NextNumber(3, 4.5), Color3.fromRGB(84, 170, 70))
+			end
+		end
+		a += 0.24
+	end
+	-- two lanterns flank the main trail's mouth: the way to the village
+	local m = mouths[1]
+	for _, side in ipairs({ -1, 1 }) do
+		local aa = m + side * 0.2
+		Kit.Lamp(ctx.at(CAMP.X + math.cos(aa) * 30, CAMP.Y + math.sin(aa) * 30))
+	end
 	ctx.reserve(CAMP.X, CAMP.Y, 30)
 end
 
@@ -579,8 +737,9 @@ end
 -- ===== coast =====
 local function base(ctx)
 	local c, r, pal = ctx.c, ctx.r, ctx.pal
-	-- shallow turquoise lagoon all around, sand shelf below
-	Cyl(2, r * 2 + 150, Color3.fromRGB(96, 222, 214), c + Vector3.new(0, -6, 0), { material = M.Sand, shadow = false, collide = false })
+	-- shallow turquoise lagoon all around, sand shelf below (v0.22.9: deeper and darker; the pale one read as white
+	-- water between the docks under the glassy sea surface)
+	Cyl(2, r * 2 + 150, Color3.fromRGB(34, 168, 186), c + Vector3.new(0, -9, 0), { material = M.Sand, shadow = false, collide = false })
 	Cyl(40, r * 2 + 40, pal.sand:Lerp(Color3.fromRGB(90, 140, 150), 0.5), c + Vector3.new(0, -24, 0), { material = M.Sand })
 	-- island body: earth under a grass cap
 	Cyl(12, (r - 4) * 2, Color3.fromRGB(150, 120, 90), c + Vector3.new(0, -2, 0), { material = M.Ground })
@@ -729,6 +888,9 @@ local function harborDetails(ctx)
 		Kit.Barrel(Vector3.new(c.X + p[1], 7.6, p[2]))
 	end
 	sailboat(CFrame.new(c.X + 300, 0.2, 21) * CFrame.Angles(0, math.pi / 2, 0))
+	-- small boats moored beside the outer piers (the middle launch dock stays clear)
+	sailboat(CFrame.new(c.X + 282, 0.2, 54) * CFrame.Angles(0, math.pi / 2, 0))
+	Kit.Rowboat(CFrame.new(c.X + 268, 0.3, -56) * CFrame.Angles(0, math.pi / 2, 0), Color3.fromRGB(200, 90, 70))
 	-- steps from the shipyard platform (top 5) up to the quay (top 7.6), where the quay meets the platform
 	local qx = math.sqrt((ctx.r + 0.5) ^ 2 - 64 ^ 2)
 	Kit.Stairs(Vector3.new(c.X + qx + 4.8, 5, -64), Vector3.new(-1, 0, 0), 2.6, 8)
@@ -736,7 +898,7 @@ end
 
 local function harborStreet(ctx)
 	-- cobbled street from the plaza to the quay
-	local x0, x1 = PLAZA.X + PLAZA_R + 2.2, QUAY_IN + 0.5
+	local x0, x1 = PLAZA.X + STREET_OUT, QUAY_IN + 0.5
 	local mid = ctx.at((x0 + x1) / 2, 0)
 	P(Vector3.new(x1 - x0, 0.3, 16), Color3.fromRGB(214, 200, 174), CFrame.new(mid + Vector3.new(0, 0.12, 0)), { material = M.Cobblestone, shadow = false, name = "Path" })
 	P(Vector3.new(x1 - x0, 0.24, 19), Color3.fromRGB(176, 164, 146), CFrame.new(mid + Vector3.new(0, 0.06, 0)), { material = M.Cobblestone, shadow = false, collide = false })
@@ -816,6 +978,8 @@ function D.Build(island, api)
 	harbor(ctx)
 
 	-- 1. terrain: hills and the lighthouse rock, then the trails
+	ctx.blendLater = {}
+	pathCount, pathPts = 0, {}
 	hills(ctx)
 	local lightTop = lighthouse(ctx)
 	local spawnsByMonster = {}
@@ -823,8 +987,9 @@ function D.Build(island, api)
 		spawnsByMonster[sp.monster] = sp
 	end
 	local trail = path(ctx, { CAMP + v2(14, 6), v2(-132, 18), v2(-108, 34), v2(-82, 22), v2(-58, -2), v2(-30, -18), v2(-4, -10), PLAZA - v2(PLAZA_R - 2, 0) }, 11)
-	path(ctx, { CAMP + v2(4, 18), v2(-160, 42), v2(-152, 60) }, 8)
-	path(ctx, { CAMP + v2(4, -16), v2(-160, -40), v2(-150, -66) }, 8)
+	-- side trails into the groves stay narrow: the wide main trail is the obvious way to the village
+	path(ctx, { CAMP + v2(4, 18), v2(-160, 42), v2(-152, 60) }, 6)
+	path(ctx, { CAMP + v2(4, -16), v2(-160, -40), v2(-150, -66) }, 6)
 	path(ctx, { v2(-30, -18), v2(-34, -36), v2(-35, -46) }, 8)
 	local meadowLane = path(ctx, { PLAZA - v2(0, PLAZA_R - 2), v2(64, -72), v2(72, -110), v2(75, -122) }, 9)
 	local lightLane = path(ctx, { PLAZA + v2(26, 29), v2(100, 80), v2(118, 118), v2(130, 142) }, 8)
@@ -833,6 +998,10 @@ function D.Build(island, api)
 
 	-- 2. buildings and landmarks
 	plaza(ctx)
+	streetRing(ctx)
+	for _, h in ipairs(ctx.blendLater) do
+		blendHill(ctx, h[1], h[2], h[3], h[4])
+	end
 	houses(ctx)
 	camp(ctx)
 	local bandits = spawnsByMonster.MountainBandit
@@ -905,7 +1074,10 @@ function D.Build(island, api)
 	Kit.Flag(ctx.at(BANDIT_HILL.X + 4, BANDIT_HILL.Y + 30), Color3.fromRGB(40, 40, 44), 10, true)
 
 	-- spawn point in the camp clearing (players start and respawn here)
-	local spawnPart = P(Vector3.new(8, 1, 8), Color3.fromRGB(255, 240, 160), CFrame.new(ctx.at(SPAWN.X, SPAWN.Y) + Vector3.new(0, 0.2, 0)), { name = "SpawnPoint", material = M.Neon, transparency = 1, collide = false, shadow = false })
+	-- facing down the main trail toward the village roofs (players spawn looking that way)
+	local sp = ctx.at(SPAWN.X, SPAWN.Y) + Vector3.new(0, 0.2, 0)
+	local toward = ctx.at(-108, 34)
+	local spawnPart = P(Vector3.new(8, 1, 8), Color3.fromRGB(255, 240, 160), CFrame.lookAt(sp, Vector3.new(toward.X, sp.Y, toward.Z)), { name = "SpawnPoint", material = M.Neon, transparency = 1, collide = false, shadow = false })
 	spawnPart:SetAttribute("Island", island.id)
 	CollectionService:AddTag(spawnPart, "IslandSpawn")
 

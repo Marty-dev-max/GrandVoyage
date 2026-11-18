@@ -38,9 +38,10 @@ local function dress(part, low)
 		table.insert(layers, { tex = texture(part, Tex.foam, 120, calm and 0.75 or 0.35, Color3.new(1, 1, 1), 3), du = 4.5, dv = 0.6 })
 	end
 	-- sun glitter (warm white sparkles), shimmering
-	table.insert(layers, { tex = texture(part, Tex.glitter, 38, 0.2, Color3.fromRGB(255, 250, 225), 4), du = 1.2, dv = -0.8, flicker = math.random() * 10 })
+	-- (v0.22.9: softer, so shallow turquoise water near the islands reads as turquoise, not white)
+	table.insert(layers, { tex = texture(part, Tex.glitter, 38, 0.5, Color3.fromRGB(230, 245, 255), 4), du = 1.2, dv = -0.8, flicker = math.random() * 10 })
 	if not low then
-		table.insert(layers, { tex = texture(part, Tex.glitter, 23, 0.4, Color3.fromRGB(255, 255, 255), 5), du = -0.9, dv = 1.5, flicker = math.random() * 10 })
+		table.insert(layers, { tex = texture(part, Tex.glitter, 23, 0.6, Color3.fromRGB(235, 248, 255), 5), du = -0.9, dv = 1.5, flicker = math.random() * 10 })
 	end
 end
 
@@ -105,7 +106,7 @@ function Ocean.Start()
 				tex.OffsetStudsV = (tex.OffsetStudsV + l.dv * step) % tex.StudsPerTileV
 				if l.flicker then
 					-- shimmer: sparkles fade in and out like light catching the waves
-					tex.Transparency = 0.15 + 0.55 * (0.5 + 0.5 * math.sin(t * 2.3 + l.flicker)) ^ 2
+					tex.Transparency = 0.45 + 0.45 * (0.5 + 0.5 * math.sin(t * 2.3 + l.flicker)) ^ 2
 				end
 			end
 			for _, r in ipairs(rings) do

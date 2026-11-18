@@ -186,6 +186,10 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   coplanar overlaps (exact segment lengths, lower joints, per-path height step, clipped at the plaza ring), quay blocks
   alternate height (paths also alternate 0.05 per segment: bends overlap); no direction signposts on Daybreak (owner).
   Serpent v0.22.8: 13 overlapping segments (spacing 6.4 < 10.8 length), each faces along its neighbours, gentle wiggle;
+  v0.22.9 concept review: paved street ring STREET_IN..STREET_OUT (42.5..57) around the plaza (trails clip at 57.5,
+  door aprons, Sunrise Tavern porch + awning + tankard sign), jungle clearing closed except 3 trail mouths + lanterns,
+  spawn faces the village, blendHill (mounds/bushes/outcrops, run after the trails and kept off them), darker lagoon,
+  softer ocean glitter. Render review shots: ONLY=review render_island.py.
   Manual mode swings at the air when nothing is in reach (`Swing` request -> BasicAttack FX with miss = true). Island music = MusicJazz (owner's track, assets/music).
 - Lune's CFrame.lookAt is WRONG (flips Z). tools/bake.luau passes a fixed `CFrame.lookAt` (fromMatrix) to the world code;
   before v0.22.6 every lookAt-placed part of the baked map faced the wrong way (overlapping paths / quay). Any new

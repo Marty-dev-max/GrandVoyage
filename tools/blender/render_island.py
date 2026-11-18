@@ -273,6 +273,15 @@ def shot(name, loc, target, ortho=None, lens=35):
 
 # island center in Blender: Daybreak x = 0
 import os as _os
+if _os.environ.get("ONLY") == "review":
+    # Roblox (x, y, z) -> Blender (x, -z, y)
+    scene.render.resolution_x, scene.render.resolution_y = 1200, 760
+    shot("village", (0, 90, 70), (60, 0, 8), lens=28)               # like the owner's screenshot 2
+    shot("tavern", (86, 16, 20), (112, 37, 9), lens=35)
+    shot("spawn", (-152, -10, 14), (-108, -34, 12), lens=30)        # eye level at the spawn, looking down the trail
+    shot("hill", (35, -150, 50), (-40, -110, 12), lens=32)
+    shot("harbor", (330, 0, 60), (230, 0, 0), lens=35)
+    raise SystemExit
 if _os.environ.get("ONLY") == "plaza":
     scene.render.resolution_x, scene.render.resolution_y = 1000, 1000
     shot("plaza", (60, 0, 400), (60, 0.001, 0), ortho=130)

@@ -1192,6 +1192,43 @@ handlers.SerpentSpit = function(d)
 		end)
 	end
 end
+-- the sea serpent bursts out of the water
+handlers.SerpentRise = function(d)
+	local p = d.pos
+	VFX.Splash(p, 26)
+	VFX.Ring(p + Vector3.new(0, 0.3, 0), 30, Color3.fromRGB(220, 245, 255), 0.6)
+	VFX.Smoke(p + Vector3.new(0, 4, 0), Color3.fromRGB(235, 248, 255), 16, 10)
+	VFX.Sparks(p + Vector3.new(0, 6, 0), Color3.fromRGB(150, 220, 255), 30, 24)
+	task.delay(0.35, function()
+		VFX.Splash(p + Vector3.new(6, 0, -4), 18)
+	end)
+end
+-- wooden splinters and planks flying off a smashed ship
+handlers.ShipDebris = function(d)
+	local woods = { Color3.fromRGB(150, 100, 60), Color3.fromRGB(120, 80, 48), Color3.fromRGB(176, 124, 78) }
+	for _ = 1, 14 do
+		local s = math.random() * 1.4 + 0.5
+		local b = Instance.new("Part")
+		b.Size = Vector3.new(s * (1 + math.random()), s * 0.5, s * (1 + math.random() * 2))
+		b.Color = woods[math.random(1, #woods)]
+		b.Material = Enum.Material.WoodPlanks
+		b.CanCollide = false
+		b.CanQuery = false
+		b.CanTouch = false
+		b.CFrame = CFrame.new(d.pos + Vector3.new(math.random() * 4 - 2, math.random() * 2, math.random() * 4 - 2)) * CFrame.Angles(math.random() * 6, math.random() * 6, math.random() * 6)
+		b.Parent = workspace
+		b.AssemblyLinearVelocity = Vector3.new(math.random(-30, 30), math.random(25, 50), math.random(-30, 30))
+		b.AssemblyAngularVelocity = Vector3.new(math.random(-12, 12), math.random(-12, 12), math.random(-12, 12))
+		task.delay(2.2, function()
+			if b.Parent then
+				tween(b, 0.6, { Transparency = 1 })
+			end
+		end)
+		Debris:AddItem(b, 3)
+	end
+	VFX.Splash(Vector3.new(d.pos.X, 0, d.pos.Z), 8)
+	VFX.Smoke(d.pos, Color3.fromRGB(200, 190, 175), 8, 4)
+end
 handlers.SerpentTail = function(d)
 	local SerpentBody = require(script.Parent.SerpentBody)
 	SerpentBody.TailSlam(d.model, d.time)
@@ -1327,6 +1364,12 @@ local fxSounds = {
 	end,
 	SerpentSpit = function(d)
 		return "Splash", d.from, 0.8
+	end,
+	SerpentRise = function(d)
+		return "WaterPlunge", d.pos, 0.6
+	end,
+	ShipDebris = function(d)
+		return "ShipHit", d.pos, 0.9
 	end,
 	MobAlert = function(d)
 		local m = d.model

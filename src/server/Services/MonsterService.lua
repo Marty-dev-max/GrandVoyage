@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local Reach = require(Shared.Modules.Reach)
 local Monsters = require(Shared.Config.Monsters)
+local GameConfig = require(Shared.Config.GameConfig)
 local Islands = require(Shared.Config.Islands)
 local ItemDB = require(Shared.Modules.ItemDB)
 local Net = require(Shared.Modules.Net)
@@ -265,6 +266,9 @@ function MS.Provoke(mob, player)
 		return
 	end
 	mob.target = player
+	if mob.sea then
+		return -- the sea serpent wakes and moves on its own (seaStep)
+	end
 	local proot = R.PlayerService.Root(player)
 	Net.FX("MobAlert", { model = mob.model }, mob.root.Position, 250)
 	if mob.def.static or mob.opts.static or not proot then
@@ -411,6 +415,7 @@ local function serpentInit(mob)
 	-- the neck end: back (+Z) of the head model, at body height above its lowest point
 	mob.neckOffset = rel + Vector3.new(0, -ext.Y / 2 + spec.radius, ext.Z / 2 - 1.5)
 	mob.headHalf = ext.Z / 2
+	mob.headHalfY = ext.Y / 2
 	mob.model:SetAttribute("NeckOffset", mob.neckOffset)
 	mob.model:SetAttribute("BodyRadius", spec.radius)
 	mob.chain = SerpentChain.New(spec)
@@ -419,6 +424,10 @@ end
 
 local function serpentBody(mob)
 	local anchor = serpentAnchor(mob)
+	if mob.bodyY then
+		-- at sea the body swims along the water line; only the neck rises when the head rears up (client lifts it)
+		anchor = Vector3.new(anchor.X, math.min(anchor.Y, mob.bodyY), anchor.Z)
+	end
 	SerpentChain.Push(mob.chain, anchor)
 	mob.pieces = SerpentChain.Pieces(mob.chain, anchor)
 	mob.model:SetAttribute("BodyPts", SerpentChain.Pack(mob.pieces))
@@ -549,6 +558,270 @@ local function serpentStep(mob, troot, now)
 	end
 end
 
+-- ===== sea serpent (v0.23.0, owner): no arena. It lies under the water at its spawn point and rises when a player
+-- comes within wakeRadius (usually sailing past). It swims around its target's ship, rears its neck high before every
+-- attack (the client curls the body up after the head), spits a water jet / lunges and bites / slams its tail; hits
+-- damage the ship and break planks off it (ShipService.Smash). With nobody near it dives back and heals.
+local SEA = GameConfig.SeaLevel
+
+local function seaInit(mob)
+	local root, hum = mob.root, mob.hum
+	hum.PlatformStand = true
+	hum.WalkSpeed = 0
+	for _, p in ipairs(mob.model:GetDescendants()) do
+		if p:IsA("BasePart") then
+			p.CanCollide = false
+			p.CanTouch = false
+			if p ~= root then
+				p.Massless = true
+			end
+		end
+	end
+	root.Anchored = false
+	local att = Instance.new("Attachment")
+	att.Name = "SeaAttach"
+	att.Parent = root
+	local ap = Instance.new("AlignPosition")
+	ap.Mode = Enum.PositionAlignmentMode.OneAttachment
+	ap.Attachment0 = att
+	ap.MaxForce = 1e9
+	ap.MaxVelocity = 30
+	ap.Responsiveness = 18
+	ap.Parent = root
+	local ao = Instance.new("AlignOrientation")
+	ao.Mode = Enum.OrientationAlignmentMode.OneAttachment
+	ao.Attachment0 = att
+	ao.MaxTorque = 1e9
+	ao.Responsiveness = 10
+	ao.Parent = root
+	local half = mob.headHalfY or 10
+	mob.bodyY = SEA - 1
+	mob.swimY = SEA - 3 + half
+	mob.hiddenY = SEA - half * 2 - 10
+	mob.model:SetAttribute("BodyY", mob.bodyY)
+	mob.sea = { state = "hidden", rear = 0, until_ = 0, angle = math.random() * math.pi * 2, look = -root.CFrame.LookVector }
+	ap.Position = Vector3.new(mob.home.X, mob.hiddenY, mob.home.Z)
+	ao.CFrame = CFrame.lookAt(Vector3.zero, Vector3.new(1, 0, 0))
+	root.CFrame = CFrame.new(ap.Position)
+	mob.ap, mob.ao = ap, ao
+	pcall(function()
+		root:SetNetworkOwner(nil)
+	end)
+end
+
+local function flatDist(a, b)
+	return Vector2.new(a.X - b.X, a.Z - b.Z).Magnitude
+end
+
+local function seaPlayers(mob, radius, from)
+	local best, bestD = nil, radius
+	for _, pl in ipairs(Players:GetPlayers()) do
+		local r = R.PlayerService.Root(pl)
+		local h = R.PlayerService.Humanoid(pl)
+		if r and h and h.Health > 0 then
+			local d = flatDist(r.Position, from)
+			if d < bestD then
+				best, bestD = pl, d
+			end
+		end
+	end
+	return best
+end
+
+-- damage the ships a strike crosses, and break planks off them where it lands
+local function hitShips(list, mob, mult, smashAt, pieces)
+	for _, ship in ipairs(list) do
+		R.ShipService.DamageShip(ship, mob.def.atk * 6 * mult, nil, nil)
+		R.ShipService.Smash(ship, smashAt and smashAt(ship) or ship.root.Position, pieces)
+	end
+end
+
+local function seaAttack(mob, troot, now)
+	local root, sea = mob.root, mob.sea
+	local head = root.Position
+	local tpos = troot.Position
+	local flat = Vector3.new(tpos.X - head.X, 0, tpos.Z - head.Z)
+	local dir = flat.Magnitude > 0.5 and flat.Unit or root.CFrame.LookVector
+	sea.look = dir
+	mob.attackN = (mob.attackN or 0) + 1
+	local wy = SEA + 0.4
+	local from = Vector3.new(head.X, wy, head.Z)
+	-- rear up first: the head climbs high above the water, the neck curls up behind it
+	sea.rear = 22
+	local function settle(t)
+		task.delay(t, function()
+			if not mob.dead then
+				sea.rear = 0
+				mob.ap.MaxVelocity = mob.def.moveSpeed * 1.6
+			end
+		end)
+	end
+	if mob.attackN % 3 == 0 and mob.pieces then
+		local tail = mob.pieces[#mob.pieces].pos
+		local center = Vector3.new(tail.X, wy, tail.Z)
+		local radius = 18
+		sea.until_ = now + 1.8
+		Net.FX("Telegraph", { kind = "circle", pos = center, radius = radius, time = 1.2 }, center, 500)
+		Net.FX("SerpentTail", { model = mob.model, time = 1.2 }, center, 500)
+		task.delay(1.2, function()
+			if mob.dead then
+				return
+			end
+			Net.FX("Slam", { pos = center + Vector3.new(0, 2, 0), radius = radius }, center, 500)
+			Net.FX("Splash", { pos = center }, center, 500)
+			for _, pl in ipairs(Players:GetPlayers()) do
+				local r = R.PlayerService.Root(pl)
+				if r and flatDist(r.Position, center) <= radius + 1 and math.abs(r.Position.Y - center.Y) < 18 then
+					R.CombatService.MonsterHit(mob, pl, 1.4)
+				end
+			end
+			hitShips(R.ShipService.InCircle(center, radius), mob, 1.2, function()
+				return center + Vector3.new(0, 3, 0)
+			end, 4)
+		end)
+		settle(1.6)
+	elseif flat.Magnitude <= 40 then
+		-- LUNGE: rear, then the head dives along the line onto the ship and bites
+		local to = from + dir * math.min(flat.Magnitude + 8, 46)
+		sea.until_ = now + 2.1
+		Net.FX("Telegraph", { kind = "line", from = from, to = to, width = 11, time = 0.9 }, head, 500)
+		task.delay(0.65, function()
+			if not mob.dead then
+				Anim.Play(mob.hum, "Mon_SerpentBite", { fade = 0.05 })
+			end
+		end)
+		task.delay(0.9, function()
+			if mob.dead then
+				return
+			end
+			sea.rear = 4
+			sea.lunge = to
+			mob.ap.MaxVelocity = 110
+			Net.FX("SerpentBite", { from = from, to = to }, head, 500)
+			task.delay(0.2, function()
+				if mob.dead then
+					return
+				end
+				for _, pl in ipairs(playersInLine(from, to, 11)) do
+					R.CombatService.MonsterHit(mob, pl, 1.7)
+				end
+				hitShips(R.ShipService.InLine(from, to, 11), mob, 1.5, function(ship)
+					return ship.root.Position:Lerp(from, 0.25) + Vector3.new(0, 3, 0)
+				end, 5)
+			end)
+			task.delay(0.7, function()
+				sea.lunge = nil
+			end)
+		end)
+		settle(1.7)
+	else
+		-- WATER SPIT: rear high and blast a jet along the line
+		local to = from + dir * math.min(flat.Magnitude + 10, 70)
+		sea.until_ = now + 2.0
+		Net.FX("Telegraph", { kind = "line", from = from, to = to, width = 8, time = 1.1 }, head, 500)
+		task.delay(0.6, function()
+			if not mob.dead then
+				Anim.Play(mob.hum, "Mon_SerpentSpit", { fade = 0.05 })
+			end
+		end)
+		task.delay(1.1, function()
+			if mob.dead then
+				return
+			end
+			local mouth = root.CFrame * Vector3.new(0, 1.5, -(mob.headHalf or 10) + 1)
+			Net.FX("SerpentSpit", { from = mouth, to = to + Vector3.new(0, 2, 0) }, head, 500)
+			for _, pl in ipairs(playersInLine(from, to, 8)) do
+				R.CombatService.MonsterHit(mob, pl, 1.3)
+			end
+			hitShips(R.ShipService.InLine(from, to, 8), mob, 1.0, function(ship)
+				return ship.root.Position:Lerp(from, 0.3) + Vector3.new(0, 3, 0)
+			end, 3)
+		end)
+		settle(1.6)
+	end
+end
+
+local function seaStep(mob, now)
+	local sea, root, def = mob.sea, mob.root, mob.def
+	local home = mob.home
+	local wake = (mob.zone and mob.zone.radius) or 150
+	local pos = root.Position
+	local target = Vector3.new(home.X, mob.hiddenY, home.Z)
+	if sea.state == "hidden" then
+		local pl = seaPlayers(mob, wake, home)
+		if pl then
+			mob.target = pl
+			sea.state = "rising"
+			sea.until_ = now + 1.8
+			local up = Vector3.new(home.X, SEA, home.Z)
+			Net.FX("SerpentRise", { pos = up }, up, 700)
+			Net.FX("MobAlert", { model = mob.model }, up, 700)
+		end
+	elseif sea.state == "rising" then
+		target = Vector3.new(home.X, mob.swimY + 8, home.Z)
+		mob.ap.MaxVelocity = 26
+		if now >= sea.until_ then
+			sea.state = "fight"
+			mob.ap.MaxVelocity = def.moveSpeed * 1.6
+		end
+	elseif sea.state == "fight" then
+		local ok = mob.target and mob.target.Parent and R.PlayerService.Root(mob.target)
+		local troot = ok and R.PlayerService.Root(mob.target)
+		if not troot or flatDist(troot.Position, home) > wake + 140 or (R.PlayerService.Humanoid(mob.target) and R.PlayerService.Humanoid(mob.target).Health <= 0) then
+			mob.target = seaPlayers(mob, wake + 60, home)
+			troot = mob.target and R.PlayerService.Root(mob.target)
+		end
+		if not troot then
+			sea.state = "diving"
+			sea.until_ = now + 3
+			sea.rear = 0
+		else
+			if sea.lunge then
+				target = Vector3.new(sea.lunge.X, mob.swimY + sea.rear, sea.lunge.Z)
+			else
+				-- circle the target at a standoff distance, then attack
+				sea.angle += 0.06
+				local standoff = 30
+				local desired = troot.Position + Vector3.new(math.cos(sea.angle), 0, math.sin(sea.angle)) * standoff
+				if now < sea.until_ then
+					desired = pos -- hold still while winding up
+				end
+				target = Vector3.new(desired.X, mob.swimY + sea.rear, desired.Z)
+				local move = Vector3.new(desired.X - pos.X, 0, desired.Z - pos.Z)
+				if now >= sea.until_ and move.Magnitude > 2 then
+					sea.look = move.Unit
+				else
+					local t = Vector3.new(troot.Position.X - pos.X, 0, troot.Position.Z - pos.Z)
+					if t.Magnitude > 1 then
+						sea.look = t.Unit
+					end
+				end
+				if now >= sea.until_ and now - mob.lastAttack >= def.attackSpeed then
+					mob.lastAttack = now
+					seaAttack(mob, troot, now)
+				end
+			end
+		end
+	elseif sea.state == "diving" then
+		target = Vector3.new(pos.X, mob.hiddenY, pos.Z)
+		if now >= sea.until_ then
+			sea.state = "hidden"
+			mob.hp = mob.maxHp
+			mob.damageBy = {}
+			mob.target = nil
+			updateBar(mob)
+			root.CFrame = CFrame.new(home.X, mob.hiddenY, home.Z)
+		end
+	end
+	mob.ap.Position = target
+	mob.ao.CFrame = CFrame.lookAt(Vector3.zero, sea.look or Vector3.new(1, 0, 0))
+	-- no name plate floating over empty water while it lies hidden
+	local bb = root:FindFirstChildWhichIsA("BillboardGui")
+	if bb then
+		bb.Enabled = sea.state ~= "hidden"
+	end
+end
+
 local function syncTarget(mob)
 	local id = mob.target and mob.target.UserId or 0
 	if mob.lastTargetId ~= id then
@@ -584,6 +857,14 @@ local function step(mob, now)
 	end
 	if def.serpent and not mob.chain and mob.hum then
 		serpentInit(mob)
+		if mob.opts.seaBoss then
+			seaInit(mob)
+		end
+	end
+	if mob.sea then
+		seaStep(mob, now)
+		serpentBody(mob)
+		return
 	end
 	if mob.chain then
 		serpentBody(mob)

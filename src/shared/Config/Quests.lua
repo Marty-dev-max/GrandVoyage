@@ -115,9 +115,9 @@ Q.Main = {
 	},
 	{
 		id = "T12", island = "Daybreak", title = "The Serpent at the Gate",
-		dialog = { "Hold fast! A Bay Serpent nests on the old wreck deck right outside our harbor. Nothing gets past it to the open sea.", "Sail out, climb onto its deck and put it down. Watch the ground: red lines show where it lunges and spits. Dash (Q) out of them!", "Beat it and this old compass is yours. It shows the way to the next port." },
+		dialog = { "Hold fast! A Bay Serpent lurks in the water right outside our harbor. Nothing sails past it to the open sea.", "Sail east past the red buoys and it will rise to meet you. Fight it from your deck: punch it when it comes close, fire your cannons, and watch the water: red lines show where it lunges and spits.", "It will chew planks off your hull, so keep your eye on your ship's health. Beat it and this old compass is yours." },
 		goal = { kind = "Kill", target = "BaySerpent", count = 1 }, text = "Defeat the Bay Serpent",
-		hint = "Its arena is at sea, straight east of the harbor. Bring friends if it is too strong.",
+		hint = "Sail east of the harbor past the red buoys: it rises when you come near. Bring friends if it is too strong.",
 		at = { boss = "Daybreak" }, reward = { beli = 600, exp = 500, job = 250, items = { { "SeaCompass", 1 }, { "MeatOnBone", 5 } } },
 	},
 	{

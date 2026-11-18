@@ -682,15 +682,16 @@ function Kit.Mesa(base, radius, h, grass, rock, rim, opts)
 			slab:SetAttribute("Kind", "Cliff" .. tone)
 			CollectionService:AddTag(slab, "EnvPart")
 		end
-		-- the grass layer on top (-> GrassCap_n mesh): a separate band that overhangs the rock rim
-		local half = (l[3] + 2.2) * 1.08
+		-- the grass layer on top (-> GrassCap_n mesh): flush with the rock rim (owner, v0.23.0: the overhanging grass
+		-- stuck out past the cliff); no rng change, so every island keeps its layout
+		local half = l[3] + 0.9
 		local capH = 3.2
 		local cap = P(Vector3.new(half * 2, capH, half * 2), grass, CFrame.new(c.X, top + 1.0 - capH / 2, c.Z) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0), { material = M.Grass, collide = false, transparency = 1, shadow = false })
 		cap.CanQuery = false
 		cap:SetAttribute("Kind", "GrassCap")
 		cap:SetAttribute("MesaId", mesaCount)
 		CollectionService:AddTag(cap, "EnvPart")
-		Cyl(2.2, l[3] * 2 + 3, grass, c + Vector3.new(0, top - 0.1, 0), { material = M.Grass }):SetAttribute("MesaId", mesaCount)
+		Cyl(2.2, l[3] * 2 + 1, grass, c + Vector3.new(0, top - 0.1, 0), { material = M.Grass }):SetAttribute("MesaId", mesaCount)
 	end
 	for i = 1, math.floor(radius / 5) do
 		local a = rng:NextNumber(0, math.pi * 2)

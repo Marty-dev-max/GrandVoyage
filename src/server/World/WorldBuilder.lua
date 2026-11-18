@@ -419,8 +419,26 @@ function addBannerAndArena(island, c)
 	t3.TextColor3 = Color3.fromRGB(255, 220, 90)
 	t3:SetAttribute("MinLevel", island.levels[1])
 	t3.Parent = bb
-	-- boss arena at sea
-	if island.boss and island.boss.atSea then
+	-- a sea boss with no arena (v0.23.0, Bay Serpent): only a ring of red buoys and a warning sign over the water
+	if island.boss and island.boss.atSea and island.boss.sea then
+		local bp = Vector3.new(island.x + island.boss.offset.X, 0, island.boss.offset.Y)
+		for i = 0, 7 do
+			local a = i / 8 * math.pi * 2
+			local p = bp + Vector3.new(math.cos(a) * 95, 0, math.sin(a) * 95)
+			Cyl(5, 3.2, Color3.fromRGB(230, 60, 50), p + Vector3.new(0, 0.6, 0), { collide = false })
+			Ball(1.2, Color3.fromRGB(255, 230, 140), p + Vector3.new(0, 3.6, 0), { material = M.Neon, collide = false, decor = true })
+		end
+		local marker = P(Vector3.new(1, 1, 1), Color3.new(1, 1, 1), CFrame.new(bp + Vector3.new(0, 30, 0)), { transparency = 1, collide = false })
+		local bbb = Instance.new("BillboardGui")
+		bbb.Size = UDim2.fromOffset(320, 50)
+		bbb.MaxDistance = 900
+		bbb.Parent = marker
+		local bt = t:Clone()
+		bt.Size = UDim2.fromScale(1, 1)
+		bt.Text = "☠ SERPENT WATERS"
+		bt.TextColor3 = Color3.fromRGB(255, 110, 110)
+		bt.Parent = bbb
+	elseif island.boss and island.boss.atSea then
 		local bp = Vector3.new(island.x + island.boss.offset.X, 0, island.boss.offset.Y)
 		local ar = island.boss.arenaRadius or 42 -- deck radius
 		Cyl(30, ar * 2 + 6, Color3.fromRGB(120, 125, 130), bp + Vector3.new(0, -10, 0), { material = M.Slate })
@@ -712,7 +730,7 @@ end
 -- away and rebuilt from code at server start (so the owner's published place updates through Rojo too).
 -- Hand-built content made in Studio goes in workspace.Handmade (never touched by rebuilds). Kit props placed there
 -- (tagged EnvProp/EnvPart) are dressed with the stylized meshes like the generated ones.
-WB.WORLD_VERSION = 9
+WB.WORLD_VERSION = 11
 
 -- Old copies of the map can hide anywhere in Workspace: a renamed or regrouped World, an island dragged into
 -- Handmade, single NPCs / chests / docks pasted from an old bake. They draw on top of the new islands and register

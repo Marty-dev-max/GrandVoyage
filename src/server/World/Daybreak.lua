@@ -455,8 +455,54 @@ local function houses(ctx)
 	end
 end
 
+-- A grassy ramp from a hilltop down to the ground (owner, v0.23.0: instead of stone stairs): the walkable slope is
+-- grass, its sides are rock (a slightly wider rock wedge under it + cliff slabs along both sides that shrink toward
+-- the foot), and bushes sit at the bottom corners.
+local RAMP_SLOPE = math.rad(27)
+local function grassRamp(ctx, x, z, r, topY, a, width)
+	width = width or 14
+	local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+	local g = ctx.g
+	local h = topY - g
+	local run = h / math.tan(RAMP_SLOPE)
+	local into = 4 -- tucked into the hill so the top edge meets the grass cap
+	local len = run + into
+	local c = Vector3.new(ctx.c.X + x, 0, z)
+	local midXZ = c + dir * (r - into + len / 2)
+	local slopeTop = h * (len / run) -- the wedge keeps rising inside the hill
+	local mid = Vector3.new(midXZ.X, g + slopeTop / 2, midXZ.Z)
+	-- WedgePart: high end at +Z, so -Z (LookVector) points down the slope, outward
+	local cf = CFrame.lookAt(mid, mid + dir)
+	Wedge(Vector3.new(width, slopeTop, len), ctx.pal.grass, cf, { material = M.Grass })
+	Wedge(Vector3.new(width + 1.8, slopeTop, len), ROCK:Lerp(Color3.fromRGB(150, 120, 96), 0.3), cf * CFrame.new(0, -0.7, -0.4), { material = M.Rock })
+	local right = dir:Cross(Vector3.yAxis)
+	for _, side in ipairs({ -1, 1 }) do
+		local k = 0
+		local t = 0.08
+		while t < 0.95 do
+			k += 1
+			local along = (r - 1) + run * t
+			local hh = math.max(1.5, h * (1 - t) + 1.2)
+			local at = c + dir * along + right * side * (width / 2 + 1.2) + Vector3.new(0, g + hh / 2 - 0.8, 0)
+			local tone = rng:NextNumber() > 0.45 and ROCK or Color3.fromRGB(150, 120, 96)
+			local slab = P(Vector3.new(4.5, hh, run / 5 + 1.5), tone, CFrame.lookAt(at, at + right * side) * CFrame.Angles(rng:NextNumber(-0.08, 0.08), rng:NextNumber(-0.12, 0.12), 0), { material = M.Rock, collide = false })
+			slab:SetAttribute("Kind", "Cliff" .. Kit.RockTone(tone))
+			CollectionService:AddTag(slab, "EnvPart")
+			t += 0.2
+		end
+		Kit.Bush(c + dir * (r + run + 1) + right * side * (width / 2 + 2) + Vector3.new(0, g, 0), rng:NextNumber(3, 4.2), Color3.fromRGB(96, 186, 80))
+	end
+	-- keep trees and props off the ramp
+	for k = 0, 4 do
+		local p = Vector3.new(x, 0, z) + dir * (r + run * k / 4)
+		ctx.reserve(p.X, p.Z, width / 2 + 3)
+	end
+	return run
+end
+
 local function lighthouse(ctx)
-	local top = L.Mesa(ctx, LIGHTHOUSE.X, LIGHTHOUSE.Y, 20, 8, { -2.15 }, nil)
+	local top = L.Mesa(ctx, LIGHTHOUSE.X, LIGHTHOUSE.Y, 20, 8, nil, nil)
+	grassRamp(ctx, LIGHTHOUSE.X, LIGHTHOUSE.Y, 20, top, -2.15, 12)
 	local base = Vector3.new(ctx.c.X + LIGHTHOUSE.X, top, LIGHTHOUSE.Y)
 	local s = 1.25
 	local white, band = Color3.fromRGB(250, 246, 236), Color3.fromRGB(150, 84, 52)
@@ -553,18 +599,18 @@ end
 local function hills(ctx)
 	local N, S, E = -math.pi / 2, math.pi / 2, 0
 	-- North Windmill Hill: the big mill, Captain's Chest on top
-	L.Mesa(ctx, NORTH_HILL.X, NORTH_HILL.Y, 32, 11, { N }, nil)
+	grassRamp(ctx, NORTH_HILL.X, NORTH_HILL.Y, 32, L.Mesa(ctx, NORTH_HILL.X, NORTH_HILL.Y, 32, 11, nil, nil), N)
 	table.insert(ctx.blendLater, { NORTH_HILL.X, NORTH_HILL.Y, 32, { N } })
 	windmill(ctx, NORTH_HILL.X - 4, NORTH_HILL.Y + 4, 1.45)
 	Kit.Fence(ctx.at(NORTH_HILL.X - 22, NORTH_HILL.Y - 8), ctx.at(NORTH_HILL.X - 8, NORTH_HILL.Y - 22))
 	ctx.reserve(NORTH_HILL.X, NORTH_HILL.Y, 34)
 	-- lower terrace with the small mill, between the village and the trail
-	L.Mesa(ctx, TERRACE.X, TERRACE.Y, 18, 6, { E }, nil)
+	grassRamp(ctx, TERRACE.X, TERRACE.Y, 18, L.Mesa(ctx, TERRACE.X, TERRACE.Y, 18, 6, nil, nil), E, 12)
 	table.insert(ctx.blendLater, { TERRACE.X, TERRACE.Y, 18, { E } })
 	windmill(ctx, TERRACE.X - 3, TERRACE.Y + 2, 1.0)
 	ctx.reserve(TERRACE.X, TERRACE.Y, 22)
 	-- Bandit Hill: the bandits took this windmill; their camp sits on the hilltop
-	L.Mesa(ctx, BANDIT_HILL.X, BANDIT_HILL.Y, 36, 13, { S }, nil)
+	grassRamp(ctx, BANDIT_HILL.X, BANDIT_HILL.Y, 36, L.Mesa(ctx, BANDIT_HILL.X, BANDIT_HILL.Y, 36, 13, nil, nil), S)
 	table.insert(ctx.blendLater, { BANDIT_HILL.X, BANDIT_HILL.Y, 36, { S } })
 	local mill = BANDIT_HILL + Vector2.new(-17, -15)
 	windmill(ctx, mill.X, mill.Y, 1.15)

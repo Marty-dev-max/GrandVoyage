@@ -17,11 +17,13 @@ local function spawnBoss(island)
 	local b = island.boss
 	local def = Monsters[b.id]
 	local x, z = island.x + b.offset.X, b.offset.Y
-	local pos = R.MonsterService.GroundAt(x, z)
+	-- sea bosses lie under the water at their spot until a ship comes near (MonsterService seaStep)
+	local pos = b.sea and Vector3.new(x, -30, z) or R.MonsterService.GroundAt(x, z)
 	local st = state[island.id]
 	st.alive = true
 	R.MonsterService.Spawn(b.id, pos, {
-		zone = { center = pos, radius = (b.arenaRadius or 42) - 8 },
+		zone = { center = pos, radius = b.sea and (b.wakeRadius or 150) or ((b.arenaRadius or 42) - 8) },
+		seaBoss = b.sea == true,
 		noRespawn = true,
 		onDeath = function()
 			st.alive = false

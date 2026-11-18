@@ -116,7 +116,7 @@ end
 -- Controllers/SerpentBody). Story boss of quest T12, so tuned for one Lv ~10-12 player with care (or a small party).
 -- Attacks are telegraphed with red lines/circles on the deck: lunge bite, water spit, tail slam (MonsterService).
 boss("BaySerpent", { name = "Bay Serpent", level = 12, hp = 4800, atk = 46, def = 16, exp = 1500, jobExp = 1000, beli = { 2000, 4000 },
-	style = { shape = "seaking", color = Color3.fromRGB(70, 140, 120), scale = 2.2 }, attackRange = 22, attackSpeed = 3.4, moveSpeed = 13,
+	style = { shape = "seaking", color = Color3.fromRGB(70, 140, 120), scale = 2.2 }, attackRange = 22, attackSpeed = 4.2, moveSpeed = 16,
 	-- segments overlap a lot (spacing well under the 10.8-stud segment length) so the body reads as one piece (v0.22.8)
 	serpent = { segments = 13, spacing = 6.4, shrink = 0.024, radius = 6.6, tailLength = 25 },
 	drops = { { "LeviathanScale", 1, 1, 2 }, { "Sword_Keen", 0.15, 1, 1 }, { "SunHat", 0.2, 1, 1 } } })

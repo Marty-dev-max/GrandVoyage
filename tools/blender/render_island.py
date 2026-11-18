@@ -273,6 +273,12 @@ def shot(name, loc, target, ortho=None, lens=35):
 
 # island center in Blender: Daybreak x = 0
 import os as _os
+if _os.environ.get("ONLY") == "ramps":
+    scene.render.resolution_x, scene.render.resolution_y = 1200, 760
+    shot("ramp_terrace", (40, -40, 22), (-12, -64, 8), lens=30)      # the terrace ramp (east side), like the owner's screenshot
+    shot("ramp_north", (-45, -40, 40), (-45, -100, 12), lens=30)     # north hill ramp (faces the village side, -Z)
+    shot("ramp_bandit", (-35, 50, 45), (-35, 110, 12), lens=30)
+    raise SystemExit
 if _os.environ.get("ONLY") == "review":
     # Roblox (x, y, z) -> Blender (x, -z, y)
     scene.render.resolution_x, scene.render.resolution_y = 1200, 760

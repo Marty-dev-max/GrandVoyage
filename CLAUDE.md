@@ -69,6 +69,8 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   (GrassTuft/Flowers/Fern/LeafPlant/Mushroom/Bush) on Grass parts; `Controllers/GrassField.lua` sways only the plants near the
   camera (BulkMoveTo). A dense 3D grass carpet lagged (v0.10.1): owner wants few plants, AV-like soft look. Do NOT use Terrain for ground: its 4-stud voxels swallowed
   paths/houses and left ridges (tried in v0.10.0).
+  v0.23.0 (owner): GrassCap is flush with the rock rim (no overhang); Daybreak hills use grass ramps with rock sides
+  (Daybreak grassRamp) instead of Kit.Stairs.
   Mesas (owner wants clear layers + stylized 3D rock): rock cylinder + grass cylinder (collision, hidden once dressed via
   MesaId) + a ring of angular rock cliff slabs (`Cliff<Tone>_n`, tone Brown/Gray from `Kit.RockTone`, Red on the Red Line)
   + a separate grass layer mesh on top that overhangs the rim (`GrassCap_n`). Overlapping lobes read as connected hills.
@@ -190,6 +192,11 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   door aprons, Sunrise Tavern porch + awning + tankard sign), jungle clearing closed except 3 trail mouths + lanterns,
   spawn faces the village, blendHill (mounds/bushes/outcrops, run after the trails and kept off them), darker lagoon,
   softer ocean glitter. Render review shots: ONLY=review render_island.py.
+  v0.23.0 sea boss: Bay Serpent has NO arena (boss.sea): buoys + sign at its spot; BossService spawns it under water;
+  MonsterService seaInit/seaStep (AlignPosition + AlignOrientation, Humanoid PlatformStand) hidden -> rising (player
+  within wakeRadius) -> fight (circles the target's ship, rears 22 studs before each attack: spit / lunge bite / tail
+  slam, hits ShipService.InLine/InCircle -> DamageShip + Smash = hull planks fly off, ShipDebris FX) -> diving (heal).
+  Body swims at BodyY (attribute); SerpentBody curls the neck up after the head (rise).
   Manual mode swings at the air when nothing is in reach (`Swing` request -> BasicAttack FX with miss = true). Island music = MusicJazz (owner's track, assets/music).
 - Lune's CFrame.lookAt is WRONG (flips Z). tools/bake.luau passes a fixed `CFrame.lookAt` (fromMatrix) to the world code;
   before v0.22.6 every lookAt-placed part of the baked map faced the wrong way (overlapping paths / quay). Any new

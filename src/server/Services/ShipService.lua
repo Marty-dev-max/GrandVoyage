@@ -275,6 +275,89 @@ end
 
 local sink
 
+-- ===== sea monsters (v0.23.0: the Bay Serpent fights ships) =====
+local function shipRadius(ship)
+	return ship.radius or (ship.root and math.max(ship.root.Size.X, ship.root.Size.Z) / 2) or 10
+end
+
+-- ships whose hull is crossed by a strike line (from -> to, width)
+function Ship.InLine(from, to, width)
+	local out = {}
+	local d = Vector3.new(to.X - from.X, 0, to.Z - from.Z)
+	local len = d.Magnitude
+	if len < 0.1 then
+		return out
+	end
+	d = d.Unit
+	for _, ship in pairs(ships) do
+		if ship.root and not ship.sinking then
+			local rel = ship.root.Position - from
+			local along = rel.X * d.X + rel.Z * d.Z
+			local side = math.abs(rel.X * d.Z - rel.Z * d.X)
+			local r = shipRadius(ship)
+			if along >= -r and along <= len + r and side <= width / 2 + r * 0.6 then
+				table.insert(out, ship)
+			end
+		end
+	end
+	return out
+end
+
+function Ship.InCircle(center, radius)
+	local out = {}
+	for _, ship in pairs(ships) do
+		if ship.root and not ship.sinking then
+			local p = ship.root.Position
+			if (Vector2.new(p.X, p.Z) - Vector2.new(center.X, center.Z)).Magnitude <= radius + shipRadius(ship) * 0.7 then
+				table.insert(out, ship)
+			end
+		end
+	end
+	return out
+end
+
+-- a heavy blow: hull planks and deck pieces near `pos` break off and tumble into the sea, wood splinters fly
+function Ship.Smash(ship, pos, count)
+	if not ship.model or ship.sinking then
+		return
+	end
+	local near = {}
+	for _, p in ipairs(ship.model:GetDescendants()) do
+		if p:IsA("BasePart") and p ~= ship.root and p.Transparency < 0.9 then
+			-- only the hull planks (ShipModel.DressHull) and bow wedges break off: never the deck you stand on,
+			-- the helm, masts or cannons
+			local m = p:FindFirstAncestorOfClass("Model")
+			local n = m and m.Name or ""
+			local hullPiece = n == "Hull" or string.find(n, "Wedge", 1, true)
+			if hullPiece then
+				local dd = (p.Position - pos).Magnitude
+				if dd < 14 then
+					table.insert(near, { p = p, d = dd })
+				end
+			end
+		end
+	end
+	table.sort(near, function(a, b)
+		return a.d < b.d
+	end)
+	for i = 1, math.min(count or 3, #near) do
+		local p = near[i].p
+		for _, w in ipairs(p:GetChildren()) do
+			if w:IsA("WeldConstraint") then
+				w:Destroy()
+			end
+		end
+		p.Massless = false
+		p.CanCollide = false
+		p.Color = p.Color:Lerp(Color3.new(0.12, 0.1, 0.08), 0.35)
+		p.Parent = workspace
+		p.AssemblyLinearVelocity = (p.Position - pos).Unit * math.random(18, 34) + Vector3.new(0, math.random(22, 38), 0)
+		p.AssemblyAngularVelocity = Vector3.new(math.random(-8, 8), math.random(-8, 8), math.random(-8, 8))
+		game:GetService("Debris"):AddItem(p, 5)
+	end
+	Net.FX("ShipDebris", { pos = pos }, pos, 500)
+end
+
 function Ship.DamageShip(ship, dmg, srcShip, player)
 	if ship.sinking then
 		return

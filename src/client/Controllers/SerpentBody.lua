@@ -102,7 +102,11 @@ local function update(st, dt)
 		return
 	end
 	local neck = model:GetAttribute("NeckOffset") or Vector3.new(0, -4, 8)
-	local anchor = root.CFrame:PointToWorldSpace(neck)
+	local head = root.CFrame:PointToWorldSpace(neck)
+	-- at sea (BodyY) the body swims along the water line; when the head rears up, the neck curls up after it
+	local bodyY = model:GetAttribute("BodyY")
+	local anchor = bodyY and Vector3.new(head.X, math.min(head.Y, bodyY), head.Z) or head
+	local rise = bodyY and math.max(0, head.Y - bodyY) or 0
 	Chain.Push(st.chain, anchor)
 	local v = root.AssemblyLinearVelocity
 	local speed = Vector3.new(v.X, 0, v.Z).Magnitude
@@ -122,6 +126,10 @@ local function update(st, dt)
 		local right = flat:Cross(UP)
 		local wave = math.sin(st.phase - pc.d * 0.11) * amp * math.clamp(pc.d / 16, 0, 1)
 		local p = pc.pos + right * wave
+		if rise > 0 then
+			local k = math.max(0, 1 - pc.d / (8 + rise * 0.75))
+			p += UP * rise * k ^ 1.4
+		end
 		-- tail slam: the last pieces rise while it winds up, then drop
 		if slamLeft > -0.25 and i >= n - 2 then
 			local k = (i - (n - 3)) / 3
@@ -132,7 +140,7 @@ local function update(st, dt)
 	for i = 1, n do
 		local piece = st.pieces[i]
 		if piece then
-			local ahead = i == 1 and anchor or pos[i - 1]
+			local ahead = i == 1 and head or pos[i - 1]
 			local behind = pos[i + 1] or (pos[i] - (ahead - pos[i]))
 			local look = ahead - behind
 			look = look.Magnitude > 1e-3 and look.Unit or Vector3.new(0, 0, -1)

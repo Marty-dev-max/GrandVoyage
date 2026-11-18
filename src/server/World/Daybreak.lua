@@ -870,7 +870,7 @@ function D.Build(island, api)
 	Kit.Flag(ctx.at(BANDIT_HILL.X + 4, BANDIT_HILL.Y + 30), Color3.fromRGB(40, 40, 44), 10, true)
 
 	-- spawn point in the camp clearing (players start and respawn here)
-	local spawnPart = P(Vector3.new(8, 1, 8), Color3.fromRGB(255, 240, 160), CFrame.new(ctx.at(SPAWN.X, SPAWN.Y) + Vector3.new(0, 0.2, 0)), { name = "SpawnPoint", material = M.Neon, transparency = 0.5, collide = false })
+	local spawnPart = P(Vector3.new(8, 1, 8), Color3.fromRGB(255, 240, 160), CFrame.new(ctx.at(SPAWN.X, SPAWN.Y) + Vector3.new(0, 0.2, 0)), { name = "SpawnPoint", material = M.Neon, transparency = 1, collide = false, shadow = false })
 	spawnPart:SetAttribute("Island", island.id)
 	CollectionService:AddTag(spawnPart, "IslandSpawn")
 

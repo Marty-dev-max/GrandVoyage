@@ -376,7 +376,7 @@ local function buildIslandGeneric(island)
 	buildDock(island, 1)
 	buildDock(island, -1)
 	buildShipyard(island)
-	local spawnPart = P(Vector3.new(8, 1, 8), Color3.fromRGB(255, 240, 160), CFrame.new(c + Vector3.new(r * 0.45, g + 0.2, 20)), { name = "SpawnPoint", material = M.Neon, transparency = 0.5, collide = false })
+	local spawnPart = P(Vector3.new(8, 1, 8), Color3.fromRGB(255, 240, 160), CFrame.new(c + Vector3.new(r * 0.45, g + 0.2, 20)), { name = "SpawnPoint", material = M.Neon, transparency = 1, collide = false, shadow = false })
 	spawnPart:SetAttribute("Island", island.id)
 	CollectionService:AddTag(spawnPart, "IslandSpawn")
 	addBannerAndArena(island, c)
@@ -801,6 +801,9 @@ local function register()
 		table.insert(docks, { islandId = d:GetAttribute("Island"), pos = d.Position, launchCf = d:GetAttribute("LaunchCf"), landCf = d:GetAttribute("LandCf") })
 	end
 	for _, s in ipairs(CollectionService:GetTagged("IslandSpawn")) do
+		-- owner (v0.22.3): no glowing spawn pad, players just appear (also hides the pad in maps baked before that)
+		s.Transparency = 1
+		s.CastShadow = false
 		spawns[s:GetAttribute("Island")] = s.CFrame
 	end
 end

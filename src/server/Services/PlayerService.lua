@@ -60,7 +60,7 @@ function PS.AutoStats(player)
 		return
 	end
 	local build = STAT_BUILD[p.class] or { STR = 1, AGI = 1, VIT = 1, DEX = 1 }
-	local spent = false
+	local spent = 0
 	for _ = 1, 400 do
 		-- the stat furthest behind its share of the build
 		local best, bestRatio
@@ -82,10 +82,13 @@ function PS.AutoStats(player)
 		end
 		p.statPoints -= cost
 		p.stats[best] += 1
-		spent = true
+		spent += 1
 	end
-	if spent then
+	if spent > 0 then
 		PS.Recompute(player)
+		if R.QuestService then
+			R.QuestService.Event(player, "Stat", nil, spent)
+		end
 	end
 end
 
@@ -500,11 +503,17 @@ local function setupHandlers()
 		if total > p.statPoints then
 			return false, "Not enough stat points"
 		end
+		local raised = 0
 		for stat, n in pairs(plan) do
 			p.stats[stat] += n
+			raised += n
 		end
 		p.statPoints -= total
 		PS.Recompute(player)
+		-- "Train Your Body" counts stat points raised (the Stats window applies a whole plan in one request)
+		if R.QuestService then
+			R.QuestService.Event(player, "Stat", nil, raised)
+		end
 		return true, "Stats raised"
 	end, 0.3)
 

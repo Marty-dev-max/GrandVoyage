@@ -12,6 +12,7 @@ local QS = {}
 local R
 
 -- successful request -> quest event kind
+-- (stat points from the Stats window's Apply / Auto upgrade are reported by PlayerService with the amount raised)
 local ACTION_EVENTS = {
 	AllocateStat = "Stat",
 	EquipItem = "Equip",
@@ -124,6 +125,17 @@ end
 function QS.Check(player)
 	local p = R.PlayerService.Profile(player)
 	local s = p and stepOf(p)
+	if s and s.goal.kind == "Stat" and p.stats then
+		-- already trained enough (by hand earlier, or by Auto upgrade): done; saves that got stuck here before v0.22.3
+		local raised = 0
+		for _, v in pairs(p.stats) do
+			raised += math.max(0, v - 1)
+		end
+		if raised >= (s.goal.count or 1) then
+			complete(player)
+		end
+		return
+	end
 	if not s or not STATE_KINDS[s.goal.kind] then
 		return
 	end

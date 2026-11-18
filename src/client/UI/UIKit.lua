@@ -651,7 +651,7 @@ function UI.CharacterView(parent, props)
 			Sword = { { "RightHand", CFrame.new(0, -0.15, 0) * A(math.rad(-35), 0, 0) } },
 			Slingshot = { { "LeftHand", CFrame.new(0, -0.15, 0) } },
 			MedKit = { { "RightHand", CFrame.new(0, -0.45, -0.1) } },
-			Knuckles = { { "RightHand", CFrame.new(0, -0.1, 0) }, { "LeftHand", CFrame.new(0, -0.1, 0) } },
+			Knuckles = {}, -- bare fists / bare legs
 			Shoes = {},
 			Fists = {},
 		}

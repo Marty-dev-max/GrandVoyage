@@ -148,3 +148,8 @@ save('CardBass', mix((0, sweep(110, 32, 0.9, 'sine', 3) * 1.2), (0, lowpass(qnoi
 save('CardFlip', mix((0, bandish(qnoise(0.16, 6), 2, 10)), (0.12, lowpass(qnoise(0.03, 40), 2) * 0.6)), 0.6)
 save('CardChime', mix(*[(k * 0.06, tone(N(m), 1.2, 'bell', curve=3) * 0.5) for k, m in enumerate((84, 88, 91, 96, 100))], (0.3, mix(*[(j * 0.03, tone(N(100 + (j % 4) * 3), 0.4, 'sine', curve=6) * 0.2) for j in range(12)]))), 0.7)
 
+
+# v0.22.3 monster startle ("!" over its head): a quick rising "bwip" chirp + a bright double ding, anime surprise style
+save('MobAlert', mix((0, sweep(420, 1500, 0.11, 'square', 1.5) * 0.45),
+                     (0.09, tone(N(88), 0.35, 'bell', curve=7) * 0.6),
+                     (0.15, tone(N(95), 0.45, 'bell', curve=6) * 0.5)), 0.7)

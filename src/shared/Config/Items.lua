@@ -24,10 +24,11 @@ end
 local WeaponLines = {
 	Sword = { magic = false, label = "Sword", names = { "Driftwood Katana", "Seagull Katana", "Tidecutter", "Moonwave Blade", "Stormfang" } },
 	Slingshot = { magic = false, label = "Slingshot", names = { "Twig Slingshot", "Brass Slingshot", "Falcon Sling", "Stardrop Sling", "Skybreaker" } },
-	Shoes = { magic = false, label = "Battle Boots", names = { "Deck Boots", "Chef Loafers", "Iron-Toe Boots", "Flamewalk Boots", "Skystep Boots" } },
+	-- Sea Cook and Brawler fight with their bare legs / fists (owner, v0.22.3): these lines are fighting styles, nothing is worn
+	Shoes = { magic = false, label = "Leg Style", names = { "Deckhand Leg", "Galley Leg", "Iron Leg", "Ember Leg", "Cloudstride Leg" } },
 	StormBaton = { magic = true, label = "Storm Baton", names = { "Bamboo Staff", "Weather Rod", "Storm Baton", "Tempest Rod", "Skyweaver Baton" } },
 	MedKit = { magic = true, label = "Powder Pouch", names = { "Herb Pouch", "Field Powders", "Surgeon's Dust", "Miracle Powder", "Panacea Pouch" } },
-	Knuckles = { magic = false, label = "Knuckles", names = { "Brass Knuckles", "Iron Knuckles", "Sharktooth Knuckles", "Thunderclap Fists", "Titan Gauntlets" } },
+	Knuckles = { magic = false, label = "Fist Style", names = { "Street Fists", "Iron Fists", "Sharktooth Fists", "Thunderclap Fists", "Titan Fists" } },
 	Hammer = { magic = false, label = "Hammer", names = { "Wooden Mallet", "Shipwright Hammer", "Keel Breaker", "Galley Maul", "Dockyard Titan" } },
 }
 local gradeLevels = { 1, 15, 30, 50, 75 }

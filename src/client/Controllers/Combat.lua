@@ -1,4 +1,7 @@
--- Combat (client): click-to-target, Ragnarok-style chase & attack, skills, Auto Battle + auto potions
+-- Combat (client): two modes (owner, v0.22.3)
+--  * Manual (Auto Battle off): you steer yourself; click / tap (hold to keep swinging) attacks the monster under the
+--    pointer, or the closest one in front of you within weapon reach. Nothing walks you anywhere; skills fire only in reach.
+--  * Auto Battle (T / AUTO): finds, chases and fights monsters near where it was switched on, with auto skills + potions.
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -12,6 +15,7 @@ local UI = require(script.Parent.Parent.UI.UIKit)
 
 local Combat = {}
 local player = Players.LocalPlayer
+local RunService = game:GetService("RunService")
 -- client walking range = a bit inside the server limit (Modules/WeaponInfo)
 local WeaponRange = {}
 for k, v in pairs(require(game:GetService("ReplicatedStorage").Shared.Modules.WeaponInfo).Range) do
@@ -102,9 +106,13 @@ function Combat.CastSkill(skillId, targetModel)
 		local r = root()
 		local range = (skill.range or 10)
 		if r and Reach.Gap(r.Position, target) > range + 2 then
-			local h = hum()
-			if h then
-				h:MoveTo(Reach.Closest(r.Position, target))
+			if State.auto then
+				local h = hum()
+				if h then
+					h:MoveTo(Reach.Closest(r.Position, target))
+				end
+			else
+				UI.Toast("Too far: get closer", "info")
 			end
 			return false
 		end
@@ -166,15 +174,94 @@ function Combat.PickMob(screenPos)
 	return best
 end
 
+-- ===== Manual mode =====
+local function attackReach()
+	return (WeaponRange[weaponType()] or 8) + 2.5 -- the server allows a little more (lag)
+end
+
+-- what a swing should hit: the monster under the pointer, the current target, else the closest one within reach
+-- (monsters in front of you win over ones behind)
+local function manualTarget(screenPos)
+	local r = root()
+	if not r then
+		return nil
+	end
+	local reach = attackReach()
+	local picked = screenPos and Combat.PickMob(screenPos)
+	if picked and Reach.Gap(r.Position, picked) <= reach then
+		return picked
+	end
+	if alive(State.target) and Reach.Gap(r.Position, State.target) <= reach then
+		return State.target
+	end
+	local folder = workspace:FindFirstChild("Monsters")
+	local best, bestScore
+	local look = r.CFrame.LookVector
+	for _, m in ipairs(folder and folder:GetChildren() or {}) do
+		if alive(m) and m:GetAttribute("MonsterId") ~= "FortCore" then
+			local gap = Reach.Gap(r.Position, m)
+			if gap <= reach then
+				local to = (m.PrimaryPart.Position - r.Position) * Vector3.new(1, 0, 1)
+				local facing = to.Magnitude > 0.1 and look:Dot(to.Unit) or 1
+				local score = gap - facing * 4
+				if not bestScore or score < bestScore then
+					best, bestScore = m, score
+				end
+			end
+		end
+	end
+	return best
+end
+
+-- one swing (rate-limited to your attack speed); screenPos = pointer position or nil (attack button)
+function Combat.ManualAttack(screenPos)
+	if State.auto or State.build.active or player:GetAttribute("Vending") or onShip() then
+		return
+	end
+	local r, h = root(), hum()
+	if not r or not h or h.Health <= 0 then
+		return
+	end
+	local target = manualTarget(screenPos)
+	if not target then
+		-- nothing in reach: still select what you clicked (HP bar, skills), but never walk there
+		local picked = screenPos and Combat.PickMob(screenPos)
+		if picked and picked ~= State.target then
+			Combat.SetTarget(picked)
+		end
+		return
+	end
+	if target ~= State.target then
+		Combat.SetTarget(target)
+	end
+	local d = State.derived
+	local interval = d and d.attackInterval or 1.2
+	if os.clock() - lastAttack < interval then
+		return
+	end
+	lastAttack = os.clock()
+	local tpos = target.PrimaryPart.Position
+	local lookAt = Vector3.new(tpos.X, r.Position.Y, tpos.Z)
+	if (lookAt - r.Position).Magnitude > 0.5 then
+		r.CFrame = CFrame.lookAt(r.Position, lookAt)
+	end
+	task.spawn(Net.Request, "Attack", { target = target })
+end
+
 function Combat.ClickAt(screenPos)
 	if State.build.active or onShip() then
 		return
 	end
-	local m = Combat.PickMob(Vector2.new(screenPos.X, screenPos.Y))
-	if m then
-		Combat.SetTarget(m)
-		State.chasing = true
+	local pos = Vector2.new(screenPos.X, screenPos.Y)
+	if State.auto then
+		-- Auto Battle: a click picks what it fights next
+		local m = Combat.PickMob(pos)
+		if m then
+			Combat.SetTarget(m)
+		end
+		return
 	end
+	Combat.ManualAttack(pos)
 end
 
 -- Chase the target, then attack at the ASPD interval
@@ -316,7 +403,6 @@ function Combat.Dash()
 		dir = r.CFrame.LookVector
 	end
 	dir = Vector3.new(dir.X, 0, dir.Z).Unit
-	State.chasing = false
 	local att = Instance.new("Attachment")
 	att.Parent = r
 	local lv = Instance.new("LinearVelocity")
@@ -394,22 +480,9 @@ local function tick()
 					end
 				end
 			end
-		elseif State.chasing and alive(State.target) then
-			if shouldDrop(State.target) then
-				Combat.SetTarget(nil)
-				State.chasing = false
-				local h = hum()
-				if h then
-					h:MoveTo(r.Position) -- stop walking toward it
-				end
-				UI.Toast("Target out of reach", "info")
-			else
-				engage(State.target, false)
-			end
 		end
 		if State.target and not alive(State.target) then
 			Combat.SetTarget(nil)
-			State.chasing = false
 		end
 	end
 	busy = false
@@ -439,12 +512,14 @@ function Combat.UseQuickItem(i)
 end
 
 function Combat.Start()
-	-- Click a monster to attack it (keeps attacking the same target)
+	-- Left click: attack (manual) / pick a target (Auto). Holding the button keeps swinging in manual mode.
+	local holding, holdPos = false, nil
 	UserInputService.InputBegan:Connect(function(input, processed)
 		if processed then
 			return
 		end
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			holding, holdPos = true, input.Position
 			Combat.ClickAt(input.Position)
 		elseif input.KeyCode == Enum.KeyCode.T then
 			Combat.ToggleAuto()
@@ -454,7 +529,6 @@ function Combat.Start()
 			local r = root()
 			if r then
 				Combat.SetTarget(findNearestMob(r.Position, State.SearchRadius()))
-				State.chasing = State.target ~= nil
 			end
 		else
 			-- skills: 1-6 on the main row, 7 8 9 0 - = on the second row; quick items: F1-F8
@@ -475,14 +549,19 @@ function Combat.Start()
 			Combat.ClickAt(pos)
 		end
 	end)
-	-- Moving manually cancels the chase
-	UserInputService.InputBegan:Connect(function(input, processed)
-		if processed then
-			return
+	UserInputService.InputChanged:Connect(function(input)
+		if holding and input.UserInputType == Enum.UserInputType.MouseMovement then
+			holdPos = input.Position
 		end
-		local k = input.KeyCode
-		if k == Enum.KeyCode.W or k == Enum.KeyCode.A or k == Enum.KeyCode.S or k == Enum.KeyCode.D then
-			State.chasing = false
+	end)
+	UserInputService.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			holding = false
+		end
+	end)
+	RunService.Heartbeat:Connect(function()
+		if holding and holdPos and not State.auto then
+			Combat.ManualAttack(Vector2.new(holdPos.X, holdPos.Y))
 		end
 	end)
 	task.spawn(function()
@@ -503,16 +582,16 @@ function Combat.Start()
 	end)
 end
 
--- Mobile attack button: target the nearest monster and attack
+-- Mobile attack button: swing at the closest monster in reach (manual), or pick the nearest one for Auto Battle
 function Combat.AttackNearest()
-	local r = root()
-	if not r then
+	if not State.auto then
+		Combat.ManualAttack(nil)
 		return
 	end
-	if not alive(State.target) then
+	local r = root()
+	if r and not alive(State.target) then
 		Combat.SetTarget(findNearestMob(r.Position, 60))
 	end
-	State.chasing = State.target ~= nil
 end
 
 return Combat

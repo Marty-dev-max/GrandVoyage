@@ -1043,6 +1043,67 @@ handlers.MobAttack = function(d)
 		end)
 	end
 end
+-- a monster you just attacked startles: a yellow "!" pops over its head, bobs, then fades (MonsterService.Provoke)
+handlers.MobAlert = function(d)
+	local model = d.model
+	if typeof(model) ~= "Instance" or not model.Parent then
+		return
+	end
+	local anchor = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
+	if not anchor then
+		return
+	end
+	local old = anchor:FindFirstChild("GVAlert")
+	if old then
+		old:Destroy()
+	end
+	local cf, size = model:GetBoundingBox()
+	local bb = Instance.new("BillboardGui")
+	bb.Name = "GVAlert"
+	bb.Adornee = anchor
+	bb.Size = UDim2.fromOffset(70, 90)
+	bb.StudsOffsetWorldSpace = Vector3.new(0, (cf.Position.Y + size.Y / 2) - anchor.Position.Y + 1.6, 0)
+	bb.AlwaysOnTop = true
+	bb.LightInfluence = 0
+	bb.MaxDistance = 260
+	local t = Instance.new("TextLabel")
+	t.BackgroundTransparency = 1
+	t.AnchorPoint = Vector2.new(0.5, 1)
+	t.Position = UDim2.fromScale(0.5, 1)
+	t.Size = UDim2.fromScale(1, 1)
+	t.Text = "!"
+	t.TextScaled = true
+	t.FontFace = Font.new("rbxasset://fonts/families/FredokaOne.json")
+	t.TextColor3 = Color3.fromRGB(255, 226, 60)
+	t.Parent = bb
+	local st = Instance.new("UIStroke")
+	st.Thickness = 4
+	st.Color = Color3.fromRGB(70, 30, 10)
+	st.Parent = t
+	local g = Instance.new("UIGradient")
+	g.Color = ColorSequence.new(Color3.fromRGB(255, 255, 200), Color3.fromRGB(255, 150, 40))
+	g.Rotation = 90
+	g.Parent = t
+	local sc = Instance.new("UIScale")
+	sc.Scale = 0.1
+	sc.Parent = t
+	bb.Parent = anchor
+	-- pop in with an overshoot, hop once, hold, fade
+	TweenService:Create(sc, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1.25 }):Play()
+	task.delay(0.22, function()
+		TweenService:Create(sc, TweenInfo.new(0.15), { Scale = 1 }):Play()
+		TweenService:Create(t, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 1, true), { Position = UDim2.fromScale(0.5, 0.82) }):Play()
+	end)
+	task.delay(1.1, function()
+		if bb.Parent then
+			TweenService:Create(t, TweenInfo.new(0.3), { TextTransparency = 1 }):Play()
+			TweenService:Create(st, TweenInfo.new(0.3), { Transparency = 1 }):Play()
+			task.delay(0.32, function()
+				bb:Destroy()
+			end)
+		end
+	end)
+end
 handlers.MobDeath = function(d)
 	-- defeated monsters pop into a puff of smoke and sparkles (chibi anime style)
 	VFX.Burst(d.pos, d.boss and 18 or 5, d.color or Color3.fromRGB(255, 255, 255), 0.35)
@@ -1185,6 +1246,11 @@ local fxSounds = {
 	end,
 	RefineSuccess = function(d)
 		return "RefineSuccess", d.pos
+	end,
+	MobAlert = function(d)
+		local m = d.model
+		local p = typeof(m) == "Instance" and m.PrimaryPart
+		return "MobAlert", p and p.Position or nil
 	end,
 }
 

@@ -167,6 +167,8 @@ local function hitTarget(attacker, target, mult, magic, opts)
 		local flee = mob.def.level * 1.3 + 10
 		if not magic and math.random() > Formulas.HitChance(d.hit, flee) then
 			Net.FX("Miss", { pos = mob.root.Position + Vector3.new(0, 3, 0) }, mob.root.Position, 200)
+			-- a swing that misses still starts the fight (owner, v0.22.3)
+			R.MonsterService.Provoke(mob, attacker)
 			return
 		end
 		local bonus = 1

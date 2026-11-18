@@ -57,6 +57,7 @@ add("CardBass", "SFX", 0.75, BOOM)
 add("CardFlip", "SFX", 0.55, CLICK)
 add("CardChime", "SFX", 0.65, PING)
 add("Crit", "SFX", 0.55, HIT, { pitch = 1.05 })
+add("MobAlert", "SFX", 0.6, PING) -- a monster startles when you attack it ("!" over its head)
 add("Slash", "SFX", 0.45, SWORD)
 add("Whoosh", "SFX", 0.4, "rbxasset://sounds/swordlunge.wav")
 add("MagicCast", "SFX", 0.5, PING, { pitch = 0.7 })
@@ -78,6 +79,7 @@ add("AmbienceWind", "Ambience", 0.25, "", { looped = true })
 add("MusicIsland", "Music", 0.35, "", { looped = true })
 add("MusicSea", "Music", 0.35, "", { looped = true })
 add("MusicBoss", "Music", 0.45, "", { looped = true })
+
 
 
 
@@ -113,6 +115,7 @@ S.Heal.id = "rbxassetid://85090704433715"
 S.Hit.id = "rbxassetid://109631882003396"
 S.LevelUp.id = "rbxassetid://85566351375372"
 S.MagicCast.id = "rbxassetid://111922509561668"
+S.MobAlert.id = "rbxassetid://92103419072756"
 S.MonsterDie.id = "rbxassetid://100509063761680"
 S.MusicIsland.id = "rbxassetid://90901813437721"
 S.PowderPoof.id = "rbxassetid://84483622469930"

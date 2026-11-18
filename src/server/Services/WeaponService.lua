@@ -1,8 +1,10 @@
 -- WeaponService: what each player carries, always visible to everyone.
 --  * Holstered (calm): the class weapon rests on the body - cutlass in its scabbard at the left hip, hammer across the
---    back, the folded storm staff and the powder pouch on the belt; knuckles are tucked away.
+--    back, the folded storm staff and the powder pouch on the belt.
 --  * Drawn (fighting): attacking or casting puts it in the hands for 8 s (scabbard stays at the hip), then it goes back.
---  * Always worn: Sea Cook shin guards, the Sharpshooter's satchel on a strap across the chest.
+--  * Always worn: the Sharpshooter's satchel on a strap across the chest.
+--  * Brawler (Knuckles = Fist Style) and Sea Cook (Shoes = Leg Style) fight bare-handed / bare-legged: nothing is mounted
+--    (owner, v0.22.3: no brass knuckles, no shin guards; plain punches and kicks).
 -- Models: ReplicatedStorage.Assets.Weapons/<Name> (tools/blender/voxel_weapons.py; long axis along Z, striking end -Z).
 -- Character attributes: Weapon = <WeaponType>, WeaponOut = true while drawn (CharAnim plays the stance from these).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -23,7 +25,7 @@ local DRAWN = {
 	StormBaton = { { "RightHand", "StormBaton", CFrame.new(0, -0.15, 0) } },
 	Slingshot = { { "LeftHand", "Slingshot", CFrame.new(0, -0.15, 0) } },
 	MedKit = { { "RightHand", "MedKit", CFrame.new(0, -0.45, -0.1) } },
-	Knuckles = { { "RightHand", "Knuckles", CFrame.new(0, -0.1, 0) }, { "LeftHand", "Knuckles", CFrame.new(0, -0.1, 0) } },
+	Knuckles = {},
 	Shoes = {},
 	Fists = {},
 }
@@ -41,7 +43,6 @@ local HOLSTERED = {
 }
 -- worn the whole time for these weapon types
 local WORN = {
-	Shoes = { { "RightLowerLeg", "Shoes", CFrame.new(0, -0.1, 0) }, { "LeftLowerLeg", "Shoes", CFrame.new(0, -0.1, 0) } },
 	Slingshot = { { "LowerTorso", "SlingBag", CFrame.new(-1.15, -0.55, 0.15) * A(0, rad(90), 0) } },
 }
 

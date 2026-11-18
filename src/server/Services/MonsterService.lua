@@ -253,6 +253,41 @@ local function die(mob, killer)
 	end
 end
 
+-- Attacked (hit or miss) while not fighting anyone: the monster startles ("!" pops over its head with a gasp, MobAlert FX),
+-- snaps around to face the attacker and charges in at double speed for a moment, then fights as usual (owner, v0.22.3).
+local CHARGE_TIME, CHARGE_SPEED = 1.6, 2
+function MS.Provoke(mob, player)
+	if mob.dead or not player or mob.target ~= nil or not mob.root then
+		return
+	end
+	if mob.opts.canDamage and not mob.opts.canDamage(player) then
+		return
+	end
+	mob.target = player
+	local proot = R.PlayerService.Root(player)
+	Net.FX("MobAlert", { model = mob.model }, mob.root.Position, 250)
+	if mob.def.static or mob.opts.static or not proot then
+		return
+	end
+	local look = Vector3.new(proot.Position.X, mob.root.Position.Y, proot.Position.Z)
+	if (look - mob.root.Position).Magnitude > 0.5 then
+		mob.root.CFrame = CFrame.lookAt(mob.root.Position, look)
+	end
+	if mob.hum then
+		mob.hum.WalkSpeed = mob.def.moveSpeed * CHARGE_SPEED
+		mob.hum:MoveTo(proot.Position)
+		mob.lastMove = os.clock()
+		-- ready to swing as soon as it arrives
+		mob.lastAttack = math.min(mob.lastAttack, os.clock() - mob.def.attackSpeed * 0.6)
+		local hum = mob.hum
+		task.delay(CHARGE_TIME, function()
+			if hum.Parent and not mob.dead then
+				hum.WalkSpeed = mob.def.moveSpeed
+			end
+		end)
+	end
+end
+
 -- kind (optional) colors the number on clients: fire, burn, poison, ice, shock, pierce, pet, cannon
 function MS.Damage(mob, amount, player, crit, kind)
 	if mob.dead then
@@ -266,9 +301,7 @@ function MS.Damage(mob, amount, player, crit, kind)
 	mob.hp -= amount
 	if player then
 		mob.damageBy[player] = (mob.damageBy[player] or 0) + amount
-		if not mob.target then
-			mob.target = player
-		end
+		MS.Provoke(mob, player)
 	end
 	Net.FX("Damage", { pos = mob.root.Position + Vector3.new(0, 3, 0), amount = amount, crit = crit, kind = kind, src = player and player.UserId or 0, model = mob.model }, mob.root.Position, 250)
 	if mob.walkTrack and os.clock() - (mob.hitAnimAt or 0) > 0.35 then

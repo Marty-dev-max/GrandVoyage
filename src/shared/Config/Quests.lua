@@ -45,9 +45,9 @@ Q.Main = {
 	},
 	{
 		id = "T02", island = "Daybreak", title = "Monkey Business",
-		dialog = { "Forest Monkeys raided my camp and ran off with the supplies. They're in the grove just north of the fire.", "Click a monkey to chase and attack it. Tab picks the nearest one. The white ring is your attack range, the blue ring is how far you look for prey." },
+		dialog = { "Forest Monkeys raided my camp and ran off with the supplies. They're in the grove just north of the fire.", "Walk up to a monkey and click to punch it (hold to keep swinging). The white ring is your reach. Auto Battle (T) will hunt for you later." },
 		goal = { kind = "Kill", target = "ForestMonkey", count = 5 }, text = "Defeat Forest Monkeys",
-		hint = "Click or tap a monkey. Press Tab to target the nearest.",
+		hint = "Walk close, then click or tap the attack button. Hold to keep swinging.",
 		at = { spawn = "ForestMonkey" }, reward = { beli = 150, exp = 60, job = 40, items = { { "MeatOnBone", 5 } } },
 	},
 	{

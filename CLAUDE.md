@@ -156,6 +156,12 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
 - Card ladder (owner, v0.22.2): Common gray 1 star, Uncommon green 2, Rare blue 3, Epic purple 4, Mythic rainbow prismatic 5
   (`Rarity.Stars`, Mythic tier has `prismatic = true`: pastel rainbow that spins, `UI.PrismaticSequence` / `UI.SpinGradient`).
   Regular cards by monster level (<10 Common, <30 Uncommon, else Rare), MVP boss cards Epic, captains + Leviathan Mythic.
+- v0.22.3 owner rules: Brawler fights bare-fisted and Sea Cook bare-legged (weapon lines "Fist Style" / "Leg Style",
+  ids still Knuckles_* / Shoes_*, nothing mounted by WeaponService or the Bag statue; never the name "Black Leg", that is One Piece).
+  Monsters startle when attacked, hit OR miss (`MonsterService.Provoke`: target, face, `MobAlert` FX = "!" billboard +
+  `MobAlert` sound, charge at 2x speed for 1.6 s). Manual mode = Auto Battle off (`Combat.ManualAttack`): no click-to-chase,
+  click/tap/hold swings at the pointed or closest monster in reach, skills out of reach say "Too far". Spawn pads are invisible.
+  Stat quest goal counts points raised (AllocateStats + AutoStats report `Stat` with the amount).
 - Dev tab "New Player" (`Admin` cmd `resetall`, `DataService.ResetProfile`): fresh save in place (keeps receipts, perks, guild).
 - Card drops play `UI/CardReveal.lua` (tension + orbs, whip flip + hitstop, rune rings + golden lightning, foil sheen,
   monster pops out of the frame, stars, RGB split from Mythic; intensity and pitch scale with rarity, tap skips).

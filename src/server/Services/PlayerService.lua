@@ -631,7 +631,7 @@ local function setupMenuHandlers()
 		end
 		local h = Looks.HeritageById[rolled]
 		if h and h.chance <= 2 then
-			Net.PushAll("Announce", { text = "✨ " .. player.DisplayName .. " rolled the " .. h.chance .. "% " .. h.name .. " heritage!", rarity = h.chance <= 0.5 and "Mythic" or "Legendary" })
+			Net.PushAll("Announce", { text = "✨ " .. player.DisplayName .. " rolled the " .. h.chance .. "% " .. h.name .. " race!", rarity = h.chance <= 0.5 and "Mythic" or "Legendary" })
 		end
 		return true, nil, { summary = sum, heritage = rolled, variant = sum.variant, bank = R.DataService.BankSpins(player.UserId) }
 	end, 0.45, true)
@@ -640,7 +640,7 @@ local function setupMenuHandlers()
 		local p = PS.Profile(player)
 		local h = p and Looks.HeritageById[p.heritage or ""]
 		if not h or not h.modes then
-			return false, "Your heritage has no modes"
+			return false, "Your race has no modes"
 		end
 		p.heritageMode = p.heritageMode == "calm" and "flame" or "calm"
 		player:SetAttribute("HeritageMode", p.heritageMode)

@@ -15,14 +15,14 @@ archived/disabled in Creator Hub.
 Roblox for its buttons (`src/client/UI/Prices.lua`), falling back to the `robux` number in the config. Turn Managed
 pricing off on a product if it must always cost exactly the listed price.
 
-## Heritage spins (character creator, "+" button) — `src/shared/Config/Spins.lua`
+## Race spins (character creator, "+" button) — `src/shared/Config/Spins.lua`
 
 | Name | Description | Price (R$) | Paste ID into |
 |---|---|---|---|
-| 1 Heritage Spin | One spin to roll your character's heritage. Usable on any character slot. | 29 | `{ productId = 0, spins = 1, ...` |
-| 3 Heritage Spins | Three spins to roll your character's heritage. Usable on any character slot. | 85 | `{ productId = 0, spins = 3, ...` |
-| 5 Heritage Spins | Five spins to roll your character's heritage. Usable on any character slot. | 140 | `{ productId = 0, spins = 5, ...` |
-| 15 Heritage Spins | Fifteen spins to roll your character's heritage. Usable on any character slot. | 429 | `{ productId = 0, spins = 15, ...` |
+| 1 Race Spin | One spin to roll your character's race. Usable on any character slot. | 29 | `{ productId = 0, spins = 1, ...` |
+| 3 Race Spins | Three spins to roll your character's race. Usable on any character slot. | 85 | `{ productId = 0, spins = 3, ...` |
+| 5 Race Spins | Five spins to roll your character's race. Usable on any character slot. | 140 | `{ productId = 0, spins = 5, ...` |
+| 15 Race Spins | Fifteen spins to roll your character's race. Usable on any character slot. | 429 | `{ productId = 0, spins = 15, ...` |
 
 ## Character slot 3 unlock — `src/shared/Config/Spins.lua` (`SlotUnlock`)
 

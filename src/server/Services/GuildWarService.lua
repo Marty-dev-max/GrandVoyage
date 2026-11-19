@@ -192,7 +192,7 @@ function GW.Start()
 			local id, var = string.match(tostring(data.value or ""), "^(%w+):?(%d*)$")
 			local h = id and Looks.HeritageById[id]
 			if not h then
-				return false, "Unknown heritage"
+				return false, "Unknown race"
 			end
 			local p = R.DataService.Get(player)
 			p.heritage = id
@@ -206,7 +206,7 @@ function GW.Start()
 					R.PlayerService.Respawn(player)
 				end
 			end)
-			return true, "Heritage: " .. h.name
+			return true, "Race: " .. h.name
 		elseif data.cmd == "removefruit" then
 			if not R.FruitService.RemoveFruit(player) then
 				return false, "No fruit to remove"

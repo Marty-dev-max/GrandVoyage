@@ -742,7 +742,7 @@ local function buildSkillBar()
 		end)
 	end)
 	UI.Tooltip(her.slot, function()
-		return "<b>Heritage mode</b>  [V]\nFLAME: +25% ATK/MATK.  CALM: +20% speed, +10% FLEE.", T.Orange
+		return "<b>Race mode</b>  [V]\nFLAME: +25% ATK/MATK.  CALM: +20% speed, +10% FLEE.", T.Orange
 	end)
 	player:GetAttributeChangedSignal("Heritage"):Connect(refreshHeritage)
 	player:GetAttributeChangedSignal("HeritageMode"):Connect(refreshHeritage)

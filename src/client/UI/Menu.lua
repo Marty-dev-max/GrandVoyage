@@ -596,7 +596,7 @@ local function buildEdit()
 	end
 	rule(left, 340, PIXEL.line, 30)
 	-- heritage
-	label(left, "HERITAGE", 14, PIXEL.cream, { LayoutOrder = 31, Size = UDim2.new(1, 0, 0, 18) })
+	label(left, "RACE", 14, PIXEL.cream, { LayoutOrder = 31, Size = UDim2.new(1, 0, 0, 18) })
 	local chances = New("Frame", { BackgroundTransparency = 1, LayoutOrder = 32, Size = UDim2.new(1, 0, 0, 44), Parent = left })
 	New("UIGridLayout", { CellSize = UDim2.fromOffset(186, 14), CellPadding = UDim2.fromOffset(4, 2), SortOrder = Enum.SortOrder.LayoutOrder, Parent = chances })
 	for i, h in ipairs(Looks.Heritages) do
@@ -896,7 +896,7 @@ function Menu.Spin()
 			Audio.Play((h and h.chance <= 2) and "LevelUp" or "BlkReward")
 			UI.Toast("You're " .. heritageLabel(final, finalVariant) .. "!", "good")
 			if h and h.chance <= 10 then
-				UI.Banner(string.upper(h.name) .. "!", h.chance .. "% heritage  •  " .. h.perk, h.color, h.mythic and "Mythic" or (h.chance <= 2 and "Legendary" or "Epic"))
+				UI.Banner(string.upper(h.name) .. "!", h.chance .. "% race  •  " .. h.perk, h.color, h.mythic and "Mythic" or (h.chance <= 2 and "Legendary" or "Epic"))
 			end
 		else
 			Audio.Play("BlkTick", { pitch = 0.8 })
@@ -985,7 +985,7 @@ function Menu.BuySpins()
 	local col = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 1, -24), ZIndex = 42, Parent = box })
 	UI.List(col, Enum.FillDirection.Vertical, 10, Enum.HorizontalAlignment.Center)
 	label(col, "BUY SPINS", 22, PIXEL.cream, { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 28), ZIndex = 42 })
-	label(col, "Heritage spins for every character!", 9, PIXEL.gold, { LayoutOrder = 2, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 14), ZIndex = 42 })
+	label(col, "Race spins for every character!", 9, PIXEL.gold, { LayoutOrder = 2, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 14), ZIndex = 42 })
 	rule(col, 300, PIXEL.line, 3)
 	for i, pack in ipairs(SpinsCfg.Products) do
 		local b
@@ -1240,7 +1240,7 @@ function Menu.Start()
 	Net.OnPush(function(kind, d)
 		if kind == "SpinsBought" and type(d) == "table" then
 			bankSpins = tonumber(d.bank) or bankSpins
-			UI.Toast("+" .. tostring(d.spins) .. " heritage spins!", "good")
+			UI.Toast("+" .. tostring(d.spins) .. " race spins!", "good")
 			if buyFrame then
 				buyFrame.Visible = false
 			end

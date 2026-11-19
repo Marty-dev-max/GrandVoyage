@@ -2444,7 +2444,7 @@ function Panels.Settings()
 					table.insert(herButtons, { (#h.variants > 1) and v.name or h.name, "heritage", h.id .. ":" .. vi })
 				end
 			end
-			devGrid("Heritage", "🧬", T.Orange, herButtons)
+			devGrid("Race", "🧬", T.Orange, herButtons)
 			local fruitButtons = {}
 			for _, f in ipairs(FruitsCfg.List) do
 				table.insert(fruitButtons, { f.icon .. " " .. f.id, "fruit", f.id })

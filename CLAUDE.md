@@ -282,6 +282,7 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     dist, power)` (LinearVelocity plane skid, AI paused, walls/cliffs/sea respected; bosses/huge only for power >= 2.4
     at 45%), CombatService opts.knock on combo finishers, crits (2.5), last hit of damage skills; `Knockback` FX = dust
     + scuff lines. Coin loot no longer plays the Legendary jingle; Coin -> `BlkCoin`, item pickup -> `Pickup`/`BlkPouch`.
+  * v0.24.13 (owner): players see **Race** (never "Heritage") in every text; code, attributes, saves keep heritage.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

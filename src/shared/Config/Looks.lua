@@ -86,7 +86,7 @@ L.Heritages = {
 		} },
 	{ id = "Cinderwing", name = "Cinderwing", chance = 0.1, color = Color3.fromRGB(255, 120, 40), mythic = true,
 		desc = "A near-lost people: great black wings and a living flame on the back.",
-		perk = "Glide, +10% HP. FLAME: +25% ATK/MATK. CALM: +20% speed, +10% FLEE", glide = true, modes = true,
+		perk = "Free flight, +10% HP. FLAME: +25% ATK/MATK. CALM: +20% speed, +10% FLEE", glide = true, fly = true, modes = true,
 		lock = { skin = "6E4630", hair1 = "F4F4F4", hair2 = "D2D4DE" },
 		variants = { { name = "Cinderwing", weight = 1 } } },
 }

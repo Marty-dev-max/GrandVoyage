@@ -137,7 +137,7 @@ local services = {
 	Players = { LocalPlayer = player, PlayerAdded = dummy, PlayerRemoving = dummy },
 	RunService = { RenderStepped = renderStepped, Heartbeat = renderStepped, Stepped = renderStepped, IsStudio = function() return true end, IsServer = function() return false end, IsClient = function() return true end },
 	GuiService = { TopbarInset = { Max = Vector2.new(VIEW.X, TOPBAR), Min = Vector2.new(120, 0) }, GetPropertyChangedSignal = function() return dummy end, GetGuiInset = function() return Vector2.new(0, TOPBAR), Vector2.new(0, 0) end },
-	UserInputService = { TouchEnabled = PHONE, KeyboardEnabled = not PHONE, MouseEnabled = not PHONE, TouchTapInWorld = dummy, JumpRequest = dummy, InputBegan = dummy, InputEnded = dummy, InputChanged = dummy, GetMouseLocation = function() return Vector2.new(0, 0) end },
+	UserInputService = { TouchEnabled = PHONE, KeyboardEnabled = not PHONE, MouseEnabled = not PHONE, TouchTapInWorld = dummy, JumpRequest = dummy, InputBegan = dummy, InputEnded = dummy, InputChanged = dummy, TouchPinch = dummy, GetMouseLocation = function() return Vector2.new(0, 0) end },
 	TweenService = {
 		Create = function(_, inst, _info, props)
 			return {

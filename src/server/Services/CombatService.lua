@@ -442,7 +442,30 @@ local function setup()
 			skillOpts = { element = el, dot = el == "fire" and { "burn", 0.2, 3 } or nil }
 		end
 
-		if kind == "Melee" or kind == "Ranged" then
+		local aimDir = typeof(data.dir) == "Vector3" and Vector3.new(data.dir.X, 0, data.dir.Z) or nil
+		if aimDir and (aimDir.Magnitude < 0.5 or aimDir.Magnitude ~= aimDir.Magnitude) then
+			aimDir = nil
+		end
+		aimDir = aimDir and aimDir.Unit
+		if (kind == "Melee" or kind == "Ranged") and aimDir and not resolveTarget(player, data.target) then
+			-- manual mode, aimed at nothing in particular: the skill goes out along the aim and hits what is in its path
+			local range = skill.range or 10
+			root.CFrame = CFrame.lookAt(root.Position, root.Position + aimDir)
+			fxData.to = root.Position + aimDir * range
+			local land = strike + (kind == "Ranged" and 0.2 or 0)
+			local seen = {}
+			for step = 2, range, 3 do
+				for _, tt in ipairs(inRadiusTargets(player, root.Position + aimDir * step, 4.5)) do
+					local key = tt.mob or tt.player
+					if key and not seen[key] then
+						seen[key] = true
+						for i = 1, skill.hits or 1 do
+							hitLater(land + 0.09 * (i - 1), player, tt, mult, magic, skillOpts)
+						end
+					end
+				end
+			end
+		elseif kind == "Melee" or kind == "Ranged" then
 			local target = resolveTarget(player, data.target)
 			if not target then
 				return false, "No target"
@@ -461,7 +484,7 @@ local function setup()
 		elseif kind == "Dash" then
 			-- dash toward the target (or straight ahead), hitting everything along the way
 			local t = resolveTarget(player, data.target)
-			local dir = t and (t.pos - root.Position) or root.CFrame.LookVector
+			local dir = t and (t.pos - root.Position) or aimDir or root.CFrame.LookVector
 			dir = Vector3.new(dir.X, 0, dir.Z)
 			if dir.Magnitude < 0.1 then
 				dir = root.CFrame.LookVector

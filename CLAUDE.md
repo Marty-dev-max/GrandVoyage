@@ -251,6 +251,13 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     pixel materials `tools/gen_pixel_materials.py` + `PX=1 python3 tools/gen_materials.py --project`.
   * Ships: stepped block prow, square beams; Dinghy <= 7 rows (starter 3x6), NPC crews (`ShipService.addCrew`);
     player shots lead the aimed ship and hit by hull footprint.
+  * v0.24.6: in-game MENU button (Menu.Start one-time setup, Menu.Open re-runnable; server `MenuReturn` saves +
+    releases the slot), creator orbit camera (drag/wheel/pinch), menu text grown + fitted (growText), PixelUI fits
+    fixed-size text into its box (TextScaled + size cap 0.74x), HUD status/currency = soft fading panels, heritage mode
+    slot left of Dash (HUD), generic `Controllers/Flight` (Flight.Allow(source); Cinderwing `fly = true`; hold Jump in
+    air, Q = barrel roll), manual-mode aiming (`Combat.AimInfo`: skills fire along the pointer/crosshair, server takes
+    `dir`), `Controllers/Crosshair` pixel "^" with Shift Lock, quiet pickup sounds + `BlkLevelUp` chime.
+    Developer Products to create: `docs/DevProducts.md`.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

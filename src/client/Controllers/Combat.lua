@@ -88,6 +88,55 @@ local function onShip()
 end
 Combat.OnShip = onShip
 
+-- manual mode aiming (v0.24.6, owner): skills go where you point (mouse, or the screen center with Shift Lock /
+-- touch), no monster lock needed. Returns flat direction, aimed world point, monster under the pointer (or nil)
+local function aimInfo()
+	local r = root()
+	local cam = workspace.CurrentCamera
+	if not r or not cam then
+		return nil
+	end
+	local vp = cam.ViewportSize
+	local pt = UserInputService.MouseEnabled and UserInputService:GetMouseLocation() or Vector2.new(vp.X / 2, vp.Y / 2)
+	local ray = cam:ViewportPointToRay(pt.X, pt.Y)
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { char(), workspace:FindFirstChild("ClientFX"), workspace:FindFirstChild("VoxelFX"), workspace:FindFirstChild("ReadabilityFX") }
+	local hit = workspace:Raycast(ray.Origin, ray.Direction * 500, params)
+	local pos = hit and hit.Position or (ray.Origin + ray.Direction * 80)
+	local flat = Vector3.new(pos.X - r.Position.X, 0, pos.Z - r.Position.Z)
+	if flat.Magnitude < 1 then
+		local lv = cam.CFrame.LookVector
+		flat = Vector3.new(lv.X, 0, lv.Z)
+	end
+	local mob = hit and mobModel(hit.Instance)
+	return flat.Unit, pos, (mob and alive(mob)) and mob or nil
+end
+Combat.AimInfo = aimInfo
+
+-- the monster a manual skill should hit: the one under the pointer, else the closest one inside a cone along the aim
+local function aimedTarget(dir, mob, range)
+	local r = root()
+	if not r then
+		return nil
+	end
+	if mob and Reach.Gap(r.Position, mob) <= range + 2 then
+		return mob
+	end
+	local folder = workspace:FindFirstChild("Monsters")
+	local best, bestD
+	for _, m in ipairs(folder and folder:GetChildren() or {}) do
+		if alive(m) and m:GetAttribute("MonsterId") ~= "FortCore" then
+			local gap = Reach.Gap(r.Position, m)
+			local to = (m.PrimaryPart.Position - r.Position) * Vector3.new(1, 0, 1)
+			if gap <= range + 2 and to.Magnitude > 0.1 and dir:Dot(to.Unit) > 0.72 and (not bestD or gap < bestD) then
+				best, bestD = m, gap
+			end
+		end
+	end
+	return best
+end
+
 function Combat.CastSkill(skillId, targetModel)
 	local skill = ClassesCfg.SkillById[skillId]
 	if not skill then
@@ -104,6 +153,47 @@ function Combat.CastSkill(skillId, targetModel)
 	local target = targetModel or State.target
 	local payload = { skillId = skillId }
 	local kind = skill.kind
+	if not State.auto and not targetModel and (kind == "Melee" or kind == "Ranged" or kind == "GroundAoE" or kind == "Dash") then
+		-- manual mode: aim with the pointer / crosshair, turn that way, fire even with nothing there
+		local dir, pos, mob = aimInfo()
+		local r = root()
+		if dir and r then
+			local aimed = kind ~= "GroundAoE" and aimedTarget(dir, mob, skill.range or 10) or nil
+			local face = aimed and ((aimed.PrimaryPart.Position - r.Position) * Vector3.new(1, 0, 1)) or dir
+			if face.Magnitude > 0.1 then
+				r.CFrame = CFrame.lookAt(r.Position, r.Position + face.Unit)
+			end
+			if kind == "GroundAoE" then
+				local off = pos - r.Position
+				local range = skill.range or 40
+				if off.Magnitude > range then
+					pos = r.Position + off.Unit * range
+				end
+				payload.pos = pos
+			elseif aimed then
+				payload.target = aimed
+				payload.pos = aimed.PrimaryPart.Position
+				if aimed ~= State.target then
+					Combat.SetTarget(aimed)
+				end
+			else
+				payload.dir = dir
+			end
+			State.cooldowns[skillId] = now + skill.cd
+			State.Fire("cooldown")
+			task.spawn(function()
+				local res = Net.Request("CastSkill", payload)
+				if not res.ok then
+					State.cooldowns[skillId] = 0
+					State.Fire("cooldown")
+					if res.msg and res.msg ~= "On cooldown" then
+						UI.Toast(res.msg, "bad")
+					end
+				end
+			end)
+			return true
+		end
+	end
 	if kind == "Dash" and alive(target) then
 		payload.target = target -- dash toward the target; without one it dashes straight ahead
 	end
@@ -423,6 +513,12 @@ end
 -- the cooldown and tells everyone else to draw the streak.
 Combat.dashReadyAt = 0
 function Combat.Dash()
+	-- in flight, Q is a barrel roll (Controllers/Flight)
+	local Flight = require(script.Parent.Flight)
+	if Flight.IsFlying() then
+		Flight.Roll()
+		return
+	end
 	local r, h = root(), hum()
 	local cfg = GameConfig.Dash
 	if not r or not h or h.Health <= 0 or os.clock() < Combat.dashReadyAt then

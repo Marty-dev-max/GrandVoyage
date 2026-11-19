@@ -38,11 +38,13 @@ add("UIClick", "UI", 0.5, CLICK, { prefer = "BlkClick" })
 add("UIOpen", "UI", 0.45, PING, { pitch = 0.8, prefer = "BlkOpen" })
 add("UIClose", "UI", 0.4, PING, { pitch = 0.6, prefer = "BlkClose" })
 add("Error", "UI", 0.5, "rbxasset://sounds/uuhhh.mp3", { pitch = 1.4 })
-add("Coin", "UI", 0.4, PING, { pitch = 0.72 }) -- the synth coin is high: play it lower (the owner found it shrill)
+-- v0.24.6 (owner): EXP / coin / item pickups are background ticks now (quiet); the level up is the loud reward
+add("Coin", "UI", 0.16, PING, { pitch = 0.72 }) -- the synth coin is high: play it lower (the owner found it shrill)
 add("Purchase", "UI", 0.55, PING, { pitch = 1.25 })
 add("Equip", "UI", 0.5, "rbxasset://sounds/unsheath.wav")
 -- Progression
-add("LevelUp", "SFX", 0.7, PING, { pitch = 1.1 })
+add("BlkLevelUp", "UI", 1.0, PING)
+add("LevelUp", "SFX", 1.0, PING, { pitch = 1.1, prefer = "BlkLevelUp" })
 for i, tier in ipairs({ "Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic", "Secret" }) do
 	add("Rarity" .. tier, "SFX", 0.45 + i * 0.05, PING, { pitch = 0.8 + i * 0.1 })
 end
@@ -113,6 +115,7 @@ add("MusicBoss", "Music", 0.45, "", { looped = true })
 
 
 
+
 -- ===== uploaded asset ids (written by tools/upload_sfx.py) =====
 S.AmbienceWind.id = "rbxassetid://121665322013245"
 S.AnvilClang.id = "rbxassetid://119416036242324"
@@ -121,6 +124,7 @@ S.BlkClick.id = "rbxassetid://94805456841567"
 S.BlkClose.id = "rbxassetid://92109534077260"
 S.BlkDrop.id = "rbxassetid://76975682776406"
 S.BlkHover.id = "rbxassetid://75768589544700"
+S.BlkLevelUp.id = "rbxassetid://85060242277391"
 S.BlkOpen.id = "rbxassetid://126008511330983"
 S.BlkReward.id = "rbxassetid://85351416155642"
 S.BlkSwap.id = "rbxassetid://90095917810902"

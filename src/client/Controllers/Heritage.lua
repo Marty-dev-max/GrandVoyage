@@ -21,11 +21,10 @@ local function her()
 end
 
 local function refreshChip()
-	local h = her()
 	if not chip then
 		return
 	end
-	chip.Visible = h ~= nil and h.modes == true
+	chip.Visible = false
 	local calm = player:GetAttribute("HeritageMode") == "calm"
 	chipText.Text = calm and "CALM [G]" or "FLAME [G]"
 	chip.BackgroundColor3 = calm and Color3.fromRGB(70, 150, 230) or Color3.fromRGB(240, 110, 40)
@@ -52,7 +51,7 @@ function Heritage.Start()
 	gui.ResetOnSpawn = false
 	gui.IgnoreGuiInset = true
 	gui.Parent = player:WaitForChild("PlayerGui")
-	chip = Instance.new("TextButton")
+	chip = Instance.new("TextButton") -- (v0.24.6: the mode lives in the HUD slot left of Dash; this chip stays hidden)
 	chip.AnchorPoint = Vector2.new(1, 0.5)
 	chip.Position = UDim2.new(1, -14, 0.36, 0)
 	chip.Size = UDim2.fromOffset(150, 40)
@@ -78,13 +77,13 @@ function Heritage.Start()
 	-- Store boost timers (2x EXP / 2x Drop / Fruit Notifier): small chips under the mode chip
 	local boostCol = Instance.new("Frame")
 	boostCol.BackgroundTransparency = 1
-	boostCol.AnchorPoint = Vector2.new(1, 0)
-	boostCol.Position = UDim2.new(1, -14, 0.36, 28)
+	boostCol.AnchorPoint = Vector2.new(0, 0)
+	boostCol.Position = UDim2.new(0, 14, 0, 236) -- under the status card (left), clear of the menu column
 	boostCol.Size = UDim2.fromOffset(170, 120)
 	boostCol.Parent = gui
 	local lay = Instance.new("UIListLayout")
 	lay.Padding = UDim.new(0, 4)
-	lay.HorizontalAlignment = Enum.HorizontalAlignment.Right
+	lay.HorizontalAlignment = Enum.HorizontalAlignment.Left
 	lay.Parent = boostCol
 	local BOOSTS = { { "BoostExp", "2x EXP", Color3.fromRGB(255, 206, 70) }, { "BoostDrop", "2x DROP", Color3.fromRGB(120, 220, 120) }, { "BoostFruit", "FRUIT RADAR", Color3.fromRGB(240, 120, 200) } }
 	local chips = {}

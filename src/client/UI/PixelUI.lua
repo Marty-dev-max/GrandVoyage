@@ -8,8 +8,11 @@
 local Players = game:GetService("Players")
 
 local PixelUI = {}
-PixelUI.TEXT_SCALE = 0.56
-PixelUI.MIN_TEXT = 8
+-- v0.24.6 (owner: text looked too small, and out of proportion when the UI scale changes): fixed-size text becomes
+-- "fit to its box" (TextScaled with a size cap at TEXT_SCALE x the old size), so it is as big as the box allows at
+-- every UI scale and never spills out of it. Auto-sized labels keep a plain scaled TextSize.
+PixelUI.TEXT_SCALE = 0.74
+PixelUI.MIN_TEXT = 10
 PixelUI.Font = Font.fromEnum(Enum.Font.Arcade) -- Press Start 2P
 
 local function keep(obj)
@@ -34,7 +37,16 @@ function PixelUI.Apply(obj)
 		obj:SetAttribute("PxDone", true)
 		obj.FontFace = PixelUI.Font
 		if not obj.TextScaled then
-			obj.TextSize = math.max(PixelUI.MIN_TEXT, math.floor(obj.TextSize * PixelUI.TEXT_SCALE + 0.5))
+			local target = math.max(PixelUI.MIN_TEXT, math.floor(obj.TextSize * PixelUI.TEXT_SCALE + 0.5))
+			obj.TextSize = target
+			if obj.AutomaticSize == Enum.AutomaticSize.None and not obj:IsA("TextBox") and not obj:FindFirstChildOfClass("UITextSizeConstraint") then
+				local c = Instance.new("UITextSizeConstraint")
+				c.MaxTextSize = target
+				c.MinTextSize = math.min(8, target)
+				c:SetAttribute("PxDone", true)
+				c.Parent = obj
+				obj.TextScaled = true
+			end
 		end
 		-- pixel fonts look best with a hard 1px dark outline instead of a soft stroke
 		obj.LineHeight = math.max(obj.LineHeight, 1.15)
@@ -47,8 +59,8 @@ function PixelUI.Apply(obj)
 	elseif obj:IsA("UITextSizeConstraint") then
 		if not obj:GetAttribute("PxDone") then
 			obj:SetAttribute("PxDone", true)
-			obj.MaxTextSize = math.max(PixelUI.MIN_TEXT + 1, math.floor(obj.MaxTextSize * PixelUI.TEXT_SCALE + 0.5))
-			obj.MinTextSize = math.max(6, math.floor(obj.MinTextSize * PixelUI.TEXT_SCALE + 0.5))
+			obj.MaxTextSize = math.max(PixelUI.MIN_TEXT + 1, math.floor(obj.MaxTextSize * 0.8 + 0.5))
+			obj.MinTextSize = math.max(7, math.floor(obj.MinTextSize * 0.7 + 0.5))
 		end
 	end
 end

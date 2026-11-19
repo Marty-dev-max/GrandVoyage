@@ -130,6 +130,28 @@ local function pixelButton(parent, text, color, size, onClick, props)
 	return btn, holder
 end
 
+-- the menu's text, one size step up from the build sizes (owner: the text looked small in the big frames)
+local MENU_TEXT = 1.35
+local function growText(root)
+	for _, d in ipairs(root:GetDescendants()) do
+		if (d:IsA("TextLabel") or d:IsA("TextButton")) and not d:GetAttribute("MenuGrown") then
+			d:SetAttribute("MenuGrown", true)
+			if not d.TextScaled then
+				-- grown, but fitted to its box so nothing spills over its neighbours
+				local size = math.floor(d.TextSize * MENU_TEXT + 0.5)
+				d.TextSize = size
+				if d.AutomaticSize == Enum.AutomaticSize.None then
+					local c = Instance.new("UITextSizeConstraint")
+					c.MaxTextSize = size
+					c.MinTextSize = 7
+					c.Parent = d
+					d.TextScaled = true
+				end
+			end
+		end
+	end
+end
+
 -- ===== scene =====
 local function block(parent, size, cf, color, material, props)
 	local p = Instance.new("Part")
@@ -269,6 +291,9 @@ local CAMS = {
 	edit = { pos = Vector3.new(0.4, 4.4, -10.5), at = Vector3.new(0.4, 3.6, 0), fov = 42 },
 }
 local camPos, camAt
+-- creator camera: free orbit around the character (drag = turn around it / look up-down, wheel or pinch = zoom)
+local orbit = { yaw = 0, pitch = 0.12, dist = 10.5 }
+local ORBIT_AT = Vector3.new(0, 3.4, 0)
 local function stepCamera(dt)
 	local cam = workspace.CurrentCamera
 	if not cam then
@@ -280,14 +305,21 @@ local function stepCamera(dt)
 	local sway = Vector3.new(math.sin(t * 0.25) * 0.5, math.sin(t * 0.33) * 0.25, 0)
 	local wantPos = STAGE_CF:PointToWorldSpace(c.pos + sway)
 	local wantAt = STAGE_CF:PointToWorldSpace(c.at)
-	local k = 1 - math.exp(-dt * 4)
+	if camMode == "edit" then
+		local cp = math.cos(orbit.pitch)
+		local off = Vector3.new(math.sin(orbit.yaw) * cp, math.sin(orbit.pitch), -math.cos(orbit.yaw) * cp) * orbit.dist
+		-- the character sits a little right of the screen center so the left panel never covers it
+		wantAt = STAGE_CF:PointToWorldSpace(ORBIT_AT)
+		wantPos = STAGE_CF:PointToWorldSpace(ORBIT_AT + off)
+	end
+	local k = 1 - math.exp(-dt * (camMode == "edit" and 12 or 4))
 	camPos = camPos and camPos:Lerp(wantPos, k) or wantPos
 	camAt = camAt and camAt:Lerp(wantAt, k) or wantAt
 	cam.CFrame = CFrame.lookAt(camPos, camAt)
 	cam.FieldOfView += (c.fov - cam.FieldOfView) * k
 	if preview then
 		local bob = math.sin(t * 2.2) * 0.04
-		preview:PivotTo(STAGE_CF * CFrame.new(0, bob, 0) * CFrame.Angles(0, yaw, 0))
+		preview:PivotTo(STAGE_CF * CFrame.new(0, bob, 0) * CFrame.Angles(0, camMode == "edit" and 0 or yaw, 0))
 	end
 	if not dragging then
 		-- drift back to facing the camera after a turn
@@ -301,7 +333,7 @@ end
 local function hideOtherGuis()
 	local pg = player:WaitForChild("PlayerGui")
 	local function hide(g)
-		if g == gui or not g:IsA("ScreenGui") or hidden[g] ~= nil then
+		if g == gui or not g:IsA("ScreenGui") or hidden[g] ~= nil or g:GetAttribute("MenuKeep") then
 			return
 		end
 		hidden[g] = g.Enabled
@@ -487,14 +519,17 @@ local function buildEdit()
 	local left = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(28, 40), Size = UDim2.fromOffset(380, 760), Parent = f })
 	UI.List(left, Enum.FillDirection.Vertical, 6)
 	label(left, "CUSTOMIZE", 24, PIXEL.cream, { LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 30) })
-	label(left, "Pick a part, then its colors on the right", 9, Color3.fromRGB(190, 200, 230), { LayoutOrder = 2 })
+	label(left, "Drag to look around, wheel / pinch to zoom", 9, Color3.fromRGB(190, 200, 230), { LayoutOrder = 2 })
 	rule(left, 340, PIXEL.line, 3)
 	local rows = {}
 	for i, cat in ipairs(Looks.Categories) do
 		local row = pixelFrame(left, { Size = UDim2.new(1, 0, 0, 34), LayoutOrder = 10 + i, BackgroundColor3 = PIXEL.panelHi })
 		local pick = New("TextButton", { BackgroundTransparency = 1, Text = "", Size = UDim2.new(0, 96, 1, 0), Parent = row })
 		local name = label(row, cat.label, 11, PIXEL.cream, { Position = UDim2.fromOffset(10, 0), Size = UDim2.new(0, 90, 1, 0), TextYAlignment = Enum.TextYAlignment.Center })
-		local value = label(row, "", 9, PIXEL.gold, { Position = UDim2.fromOffset(134, 0), Size = UDim2.new(0, 196, 1, 0), TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Center })
+		local value = label(row, "", 9, PIXEL.gold, { Position = UDim2.fromOffset(134, 0), Size = UDim2.new(0, 196, 1, 0), TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Center, TextWrapped = false })
+		value:SetAttribute("MenuGrown", true)
+		value.TextScaled = true
+		New("UITextSizeConstraint", { MaxTextSize = 13, MinTextSize = 7, Parent = value })
 		local function choose()
 			category = cat.key
 			target = cat.colors[1] or target
@@ -771,6 +806,7 @@ function Menu.Edit(i)
 		spins = s and s.spins or Looks.Spins,
 	}
 	yaw = 0
+	orbit.yaw, orbit.pitch, orbit.dist = 0, 0.12, 10.5
 	show("edit")
 	refreshEdit()
 end
@@ -824,7 +860,7 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local SpinsCfg = require(ReplicatedStorage.Shared.Config.Spins)
 local buyFrame
 function Menu.BuySpins()
-	if buyFrame then
+	if buyFrame and buyFrame.Parent then
 		buyFrame.Visible = true
 		return
 	end
@@ -857,6 +893,7 @@ function Menu.BuySpins()
 			d.ZIndex = math.max(d.ZIndex, 41)
 		end
 	end
+	growText(buyFrame)
 end
 
 function Menu.Done()
@@ -903,6 +940,11 @@ function Menu.Close()
 		return
 	end
 	Menu.IsOpen = false
+	playing = false
+	editing = nil
+	if Menu.menuButton then
+		Menu.menuButton.Enabled = true
+	end
 	if camConn then
 		camConn:Disconnect()
 		camConn = nil
@@ -957,17 +999,43 @@ local function hookDrag()
 			return
 		end
 		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-			yaw += input.Delta.X * 0.012
+			if camMode == "edit" then
+				orbit.yaw -= input.Delta.X * 0.01
+				orbit.pitch = math.clamp(orbit.pitch + input.Delta.Y * 0.008, -0.35, 1.25)
+			else
+				yaw += input.Delta.X * 0.012
+			end
 			lastDrag = os.clock()
+		end
+	end)
+	-- zoom (creator): mouse wheel and pinch
+	UserInputService.InputChanged:Connect(function(input, processed)
+		if Menu.IsOpen and camMode == "edit" and input.UserInputType == Enum.UserInputType.MouseWheel and not processed then
+			orbit.dist = math.clamp(orbit.dist - input.Position.Z * 1.2, 4, 22)
+		end
+	end)
+	local pinch = UserInputService.TouchPinch
+	if not pinch then
+		return
+	end
+	pinch:Connect(function(_, scale, _, state)
+		if Menu.IsOpen and camMode == "edit" and state == Enum.UserInputState.Change then
+			orbit.dist = math.clamp(orbit.dist / math.max(0.5, scale ^ 0.08), 4, 22)
 		end
 	end)
 end
 
-function Menu.Start()
-	if not GameConfig.TitleMenu then
+local setupDone = false
+function Menu.Open()
+	if Menu.IsOpen or not GameConfig.TitleMenu then
 		return
 	end
 	Menu.IsOpen = true
+	screens = {}
+	camPos, camAt = nil, nil
+	if Menu.menuButton then
+		Menu.menuButton.Enabled = false
+	end
 	gui = New("ScreenGui", { Name = "TitleMenu", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 60, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, Parent = player:WaitForChild("PlayerGui") })
 	scaleObj = New("UIScale", { Parent = gui })
 	local function rescale()
@@ -992,7 +1060,10 @@ function Menu.Start()
 	buildTitle()
 	buildSlots()
 	buildEdit()
-	hookDrag()
+	if not setupDone then
+		setupDone = true
+		hookDrag()
+	end
 	-- design size: the screens are authored at 1300x820 and centered
 	for _, f in pairs(screens) do
 		f.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -1009,6 +1080,20 @@ function Menu.Start()
 	end
 	fitScreens()
 	scaleObj:GetPropertyChangedSignal("Scale"):Connect(fitScreens)
+	growText(gui)
+	Audio.SetMenuMusic("MusicJazz", 2)
+	camConn = RunService.RenderStepped:Connect(stepCamera)
+	show("title")
+	refreshTitle()
+	UI.Tween(fade, 1.2, { BackgroundTransparency = 1 })
+	Menu.LoadSlots()
+end
+
+-- one-time: pushes + the in-game MENU button (top-left, next to Roblox's buttons) that brings you back here
+function Menu.Start()
+	if not GameConfig.TitleMenu then
+		return
+	end
 	Net.OnPush(function(kind, d)
 		if kind == "SpinsBought" and type(d) == "table" then
 			bankSpins = tonumber(d.bank) or bankSpins
@@ -1021,12 +1106,36 @@ function Menu.Start()
 			end
 		end
 	end)
-	Audio.SetMenuMusic("MusicJazz", 2)
-	camConn = RunService.RenderStepped:Connect(stepCamera)
-	show("title")
-	refreshTitle()
-	UI.Tween(fade, 1.2, { BackgroundTransparency = 1 })
-	-- load the account's slots
+	local btnGui = New("ScreenGui", { Name = "MenuButton", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 20, Enabled = false, Parent = player:WaitForChild("PlayerGui") })
+	btnGui:SetAttribute("MenuKeep", true)
+	Menu.menuButton = btnGui
+	local GuiService = game:GetService("GuiService")
+	local b = pixelButton(btnGui, "MENU", PIXEL.panelHi, UDim2.fromOffset(84, 34), function()
+		UI.Confirm("Back to the title menu? Your progress is saved.", function()
+			local res = Net.Request("MenuReturn")
+			if res.ok then
+				Menu.Open()
+			else
+				UI.Toast(res.msg or "Could not return to the menu", "bad")
+			end
+		end)
+	end)
+	b.TextSize = 14
+	local function place()
+		local inset = GuiService.TopbarInset
+		local h = inset.Max.Y - inset.Min.Y
+		h = h > 0 and h or 58
+		b.Parent.Position = UDim2.fromOffset(inset.Min.X + 8, math.max(4, (h - 34) / 2))
+	end
+	place()
+	pcall(function()
+		GuiService:GetPropertyChangedSignal("TopbarInset"):Connect(place)
+	end)
+	Menu.Open()
+end
+
+-- the account's slots (title + slot cards)
+function Menu.LoadSlots()
 	task.spawn(function()
 		local res
 		for _ = 1, 5 do

@@ -728,13 +728,13 @@ function UI.TabBar(parent, tabs, current, onPick, height)
 	for i, t in ipairs(tabs) do
 		local on = t[1] == current
 		local ts = math.floor(height * 0.46)
-		local w = math.floor(30 + (#t[3] + 2) * ts * 0.56)
+		local w = math.floor(30 + (#t[3] + 2) * ts * 0.74)
 		local btn, holder = UI.Button(bar, t[2] .. " " .. t[3], on and (t[4] or T.Orange) or T.Grey, UDim2.fromOffset(w, height), function()
 			onPick(t[1])
 		end)
 		holder.LayoutOrder = i
 		btn.TextScaled = false
-		btn.TextSize = math.max(8, math.floor(ts * 0.56)) -- (pixel font: PixelUI.TEXT_SCALE, set after PixelUI ran)
+		btn.TextSize = math.max(8, math.floor(ts * 0.74)) -- (pixel font: PixelUI.TEXT_SCALE, set after PixelUI ran)
 		if not on then
 			btn.TextColor3 = Color3.fromRGB(215, 212, 235)
 		end

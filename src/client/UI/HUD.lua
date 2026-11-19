@@ -39,6 +39,22 @@ local function glass(parent, size, pos, anchor)
 	return f
 end
 
+-- v0.24.6 (owner): the status card and the currency row are soft fades now, not hard grey boxes: a dark panel that
+-- melts away toward its open side (fadeTo = "right" | "left"), no outline
+local function softPanel(parent, size, pos, anchor, fadeTo)
+	local f = New("Frame", { BackgroundColor3 = Color3.fromRGB(12, 12, 22), BackgroundTransparency = 0.25, BorderSizePixel = 0, Size = size, Position = pos, AnchorPoint = anchor or Vector2.zero, Parent = parent })
+	f:SetAttribute("PxKeep", true)
+	New("UIGradient", {
+		Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, fadeTo == "left" and 1 or 0.15),
+			NumberSequenceKeypoint.new(0.55, 0.35),
+			NumberSequenceKeypoint.new(1, fadeTo == "left" and 0.15 or 1),
+		}),
+		Parent = f,
+	})
+	return f
+end
+
 -- swap a pill's icon (rendered image or emoji text)
 local function setPillIcon(obj, icon)
 	if obj:IsA("ImageLabel") then
@@ -276,9 +292,8 @@ local skillIconId, skillColor = SkillLook.IconId, SkillLook.Color
 
 local function buildStatus()
 	-- the card sits behind the ring; the ring overlaps its left edge
-	local card = glass(UI.Root, UDim2.fromOffset(356, 128), UDim2.fromOffset(100, 22))
+	local card = softPanel(UI.Root, UDim2.fromOffset(400, 128), UDim2.fromOffset(100, 22), nil, "right")
 	statusCard = card
-	UI.Shine(card, 0.3).BackgroundTransparency = 0.9
 	buildRing(UI.Root, UDim2.fromOffset(14, 10))
 	local name = UI.Text(card, player.DisplayName, 24, T.Text, "Display", { Position = UDim2.fromOffset(70, 6), Size = UDim2.new(1, -80, 0, 28), TextWrapped = false })
 	local cls = UI.Text(card, "", 14, T.TextSoft, "Semi", { Position = UDim2.fromOffset(70, 33), Size = UDim2.new(1, -80, 0, 18), TextWrapped = false })
@@ -299,7 +314,7 @@ local function buildStatus()
 	UI.List(buffRow, Enum.FillDirection.Horizontal, 6)
 
 	-- one compact row of currencies (was three tall pills)
-	local row = glass(UI.Root, UDim2.fromOffset(430, 42), UDim2.new(1, -16, 0, 14), Vector2.new(1, 0))
+	local row = softPanel(UI.Root, UDim2.fromOffset(470, 42), UDim2.new(1, -16, 0, 14), Vector2.new(1, 0), "left")
 	New("UIPadding", { PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 10), Parent = row })
 	UI.List(row, Enum.FillDirection.Horizontal, 4).VerticalAlignment = Enum.VerticalAlignment.Center
 	local function segment(order, icon, color, width, tip)
@@ -633,6 +648,41 @@ local function buildSkillBar()
 	HUD.dashSlot = dash
 	-- the second row starts where the skills start (under it sits the Dash button)
 	New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(SLOT, SLOT), LayoutOrder = 0, Parent = second })
+	-- heritage mode (Cinderwing FLAME / CALM, key G): a fire slot left of Dash, lit or dark; hidden for other heritages
+	local her = makeSlot(main, "G", -1)
+	her.name.Text = "FLAME"
+	her.name.TextSize = 12
+	her.name.Position = UDim2.new(0, 3, 1, -20)
+	her.name.Size = UDim2.new(1, -6, 0, 16)
+	local herIcon = UI.Text(her.slot, "🔥", 26, T.Text, "Display", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.4), Size = UDim2.fromOffset(40, 30), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 3 })
+	local herSpacer = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(SLOT, SLOT), LayoutOrder = -1, Parent = second })
+	local LooksCfg = require(Shared.Config.Looks)
+	local function refreshHeritage()
+		local h = LooksCfg.HeritageById[player:GetAttribute("Heritage") or ""]
+		local show = h ~= nil and h.modes == true
+		her.holder.Visible = show
+		herSpacer.Visible = show
+		local lit = player:GetAttribute("HeritageMode") ~= "calm"
+		her.name.Text = lit and "FLAME" or "CALM"
+		herIcon.TextTransparency = lit and 0 or 0.55
+		herIcon.Text = lit and "🔥" or "💨"
+		her.grad.Color = lit and ColorSequence.new(Color3.fromRGB(255, 150, 60), Color3.fromRGB(150, 40, 20)) or ColorSequence.new(T.PanelTop, T.PanelDeep)
+	end
+	her.slot.Activated:Connect(function()
+		task.spawn(function()
+			local res = Net.Request("HeritageMode")
+			if res.msg then
+				UI.Toast(res.msg, res.ok and "good" or "bad")
+			end
+		end)
+	end)
+	UI.Tooltip(her.slot, function()
+		return "<b>Heritage mode</b>  [G]\nFLAME: +25% ATK/MATK.  CALM: +20% speed, +10% FLEE.", T.Orange
+	end)
+	player:GetAttributeChangedSignal("Heritage"):Connect(refreshHeritage)
+	player:GetAttributeChangedSignal("HeritageMode"):Connect(refreshHeritage)
+	refreshHeritage()
+	HUD.heritageSlot = her
 
 	skillSlots = {}
 	for i = 1, GameConfig.SkillBarSize do
@@ -874,7 +924,7 @@ function HUD.FlyLoot(data)
 		if bagAt then
 			fly(def and def.icon or "📦", 50, from, bagAt, 0.25 + k * 0.12, function()
 				bump(bagTile)
-				Audio.Play("Equip", { volume = 0.4, pitch = 1.2 })
+				Audio.Play("Equip", { volume = 0.18, pitch = 1.2 })
 			end, img)
 		end
 	end
@@ -1130,7 +1180,7 @@ function HUD.Layout()
 	local topY = math.floor(inset / sc) + 4
 	ring.frame.Position = UDim2.fromOffset(14, topY)
 	statusCard.Position = UDim2.fromOffset(100, topY + 12)
-	statusCard.Size = UDim2.fromOffset(compact and 300 or 356, 128)
+	statusCard.Size = UDim2.fromOffset(compact and 330 or 400, 128)
 	buffRow.Position = UDim2.fromOffset(170, topY + 148)
 	-- target frame: narrower on small screens so it clears the status card
 	targetFrame.Size = UDim2.fromOffset(compact and 300 or 380, 70)

@@ -87,6 +87,24 @@ def main():
     # spin land / reward: rising 8-bit fanfare
     notes = [523, 659, 784, 1046]
     save('BlkReward', mix(*[(i * 0.07, square(f, 0.12 if i < 3 else 0.3, 0.5, 6 if i < 3 else 3) * 0.4) for i, f in enumerate(notes)], (0, knock(520, 0.1))))
+    # LEVEL UP (owner: make it stand out and feel great, like levelling up in block games): a bright bell arpeggio
+    # climbing an octave + a sparkling shimmer tail + a soft bass under it
+    def bell(f, d, curve=4.0):
+        tt = t(d)
+        s = np.sin(2 * np.pi * f * tt) + 0.45 * np.sin(2 * np.pi * f * 2.0 * tt) + 0.22 * np.sin(2 * np.pi * f * 3.01 * tt) + 0.1 * np.sin(2 * np.pi * f * 4.2 * tt)
+        return s * env(len(tt), 0.003, curve)
+    arp = [784, 988, 1175, 1568]
+    parts = [(i * 0.085, bell(f, 0.9 if i == 3 else 0.5, 3.5 if i == 3 else 6) * (0.7 if i < 3 else 1.0)) for i, f in enumerate(arp)]
+    parts.append((0.255, bell(2093, 1.1, 3.0) * 0.35))
+    shimmer = np.zeros(int(SR * 1.2))
+    for k in range(22):
+        o = int(SR * (0.25 + k * 0.035))
+        f = 2600 + (k % 5) * 420
+        b = bell(f, 0.12, 14) * 0.12 * (1 - k / 24)
+        shimmer[o:o + len(b)] += b[: len(shimmer) - o]
+    parts.append((0, shimmer))
+    parts.append((0, np.sin(2 * np.pi * 196 * t(0.6)) * env(int(SR * 0.6), 0.005, 5) * 0.45))
+    save('BlkLevelUp', mix(*parts), 0.9)
     print('wrote Blk* ui sounds')
 
 

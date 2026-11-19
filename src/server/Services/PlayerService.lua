@@ -659,6 +659,27 @@ local function setupMenuHandlers()
 		task.spawn(PS.Respawn, player)
 		return true
 	end, 2, true)
+	-- in-game MENU button: save + unload this character and go back to the title menu (pick / edit a slot)
+	Net.Handle("MenuReturn", function(player)
+		if not R.DataService.Get(player) then
+			return false, "Not in game"
+		end
+		for _, fn in ipairs({ R.MarketService.CloseStall, R.ShipService.DespawnShipOf, R.ShipyardService.ExitBuild, R.PartyService.Leave }) do
+			pcall(fn, player)
+		end
+		local char = player.Character
+		player.Character = nil
+		if char then
+			char:Destroy()
+		end
+		R.DataService.Release(player) -- saves (and frees the session lock)
+		derived[player] = nil
+		dirty[player] = nil
+		for _, a in ipairs({ "Slot", "Heritage", "HeritageMode", "BoostExp", "BoostDrop", "BoostFruit" }) do
+			player:SetAttribute(a, nil)
+		end
+		return true
+	end, 3)
 	Players.PlayerRemoving:Connect(function(player)
 		entering[player] = nil
 	end)

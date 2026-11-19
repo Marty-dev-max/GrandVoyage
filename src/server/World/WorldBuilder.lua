@@ -730,7 +730,7 @@ end
 -- away and rebuilt from code at server start (so the owner's published place updates through Rojo too).
 -- Hand-built content made in Studio goes in workspace.Handmade (never touched by rebuilds). Kit props placed there
 -- (tagged EnvProp/EnvPart) are dressed with the stylized meshes like the generated ones.
-WB.WORLD_VERSION = 12 -- v12 (v0.24.0): Voxelize pass (cubes, square posts, stepped roofs/ramps)
+WB.WORLD_VERSION = 13 -- v13 (v0.25.0): voxel NPCs (VoxelChar); v12: Voxelize pass
 
 -- Old copies of the map can hide anywhere in Workspace: a renamed or regrouped World, an island dragged into
 -- Handmade, single NPCs / chests / docks pasted from an old bake. They draw on top of the new islands and register

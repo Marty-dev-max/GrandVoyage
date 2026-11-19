@@ -296,6 +296,8 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     untagged anchored scenery of far islands is parented to nil locally (distance by quality preset, batched, nearest
     first; instant restore when the camera/character is within 120 studs of a hidden island). Tagged things and
     anything inside a tagged model or holding a ProximityPrompt are never culled: tag new gameplay props.
+  * v0.25.0: NPCs are VoxelChar previews (`ModelFactory.NPC`: outfit by title keyword table NPC_STYLE, hair/eyes/skin
+    hashed from the name, voxel hats, NoVoxel, root = HumanoidRootPart 2.6 above the feet). WORLD_VERSION 13.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

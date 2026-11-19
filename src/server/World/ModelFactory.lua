@@ -221,19 +221,118 @@ function MF.Monster(def)
 end
 
 -- Town NPC (with ProximityPrompt)
-function MF.NPC(name, color, hatKind)
-	local def = { id = "NPC", style = { shape = "humanoid", color = color, scale = 1.1, hat = hatKind } }
-	local m = MF.Monster(def)
-	m.Name = name
-	local hum = m:FindFirstChildOfClass("Humanoid")
-	if hum then
-		hum:Destroy()
+-- NPCs (v0.25.0, owner: everything voxel): built with the players' own voxel character system (Shared/Modules/VoxelChar)
+-- so they share the blocky body, anime face and hair. The outfit follows the role (title keywords + hat), colors come
+-- from `color`, and hair / eyes / mouth / skin are picked from the name (stable: the same NPC always looks the same).
+-- The pivot sits 2.6 studs above the feet (where the old chibi models had theirs), so callers place them unchanged.
+local NPC_STYLE = {
+	-- keyword in the title -> { shirt, pants, shoes } (names from Config/Looks)
+	{ "Blacksmith", "Armor Vest", "Overalls", "Boots" },
+	{ "Store", "Polo", "Long Pants", "Sneakers" },
+	{ "Tavern", "Cook Apron", "Long Pants", "Clogs" },
+	{ "Gull", "Sailor Stripes", "Rolled Cuffs", "Sandals" },
+	{ "Shipwright", "Overalls", "Cargo", "Buckle Boots" },
+	{ "Job", "Dojo Gi", "Wide Hakama", "Wraps" },
+	{ "Guild", "Captain Coat", "Long Pants", "Tall Boots" },
+	{ "Bounty", "Open Vest", "Sash Pants", "Boots" },
+	{ "Fruit", "Belted Tunic", "Baggy", "Sandals" },
+	{ "Pet", "Scarf Tee", "Shorts", "Sneakers" },
+	{ "Arena", "Bandage Wrap", "Sash Pants", "Wraps" },
+	{ "Market", "Open Jacket", "Cargo", "Boots" },
+}
+local function nameHash(s, salt)
+	local h = salt or 7
+	for i = 1, #s do
+		h = (h * 31 + string.byte(s, i)) % 100003
 	end
+	return h
+end
+local function pick(list, s, salt)
+	return list[(nameHash(s, salt) % #list) + 1]
+end
+local function idx(list, name)
+	return table.find(list, name) or 1
+end
+local function hex(c)
+	return string.format("%02X%02X%02X", math.floor(c.R * 255 + 0.5), math.floor(c.G * 255 + 0.5), math.floor(c.B * 255 + 0.5))
+end
+
+local function voxelHat(model, kind)
+	if not kind then
+		return
+	end
+	local top = 6.45 -- top of the voxel head cube in the preview's rest pose
+	local function blk(size, color, pos, mat)
+		local b = part(model, Enum.PartType.Block, size, color, CFrame.new(pos), { material = mat or Enum.Material.SmoothPlastic, name = "NpcHat" })
+		b.Anchored = true
+		return b
+	end
+	if kind == "marine" then
+		blk(Vector3.new(2.0, 0.45, 2.0), Color3.new(1, 1, 1), Vector3.new(0, top + 0.2, 0))
+		blk(Vector3.new(2.05, 0.2, 2.05), Color3.fromRGB(40, 90, 200), Vector3.new(0, top + 0.05, 0))
+		blk(Vector3.new(1.0, 0.12, 0.6), Color3.fromRGB(30, 50, 110), Vector3.new(0, top - 0.02, -1.2))
+	elseif kind == "bandana" then
+		blk(Vector3.new(1.95, 0.5, 1.95), Color3.fromRGB(220, 60, 60), Vector3.new(0, top + 0.05, 0))
+		blk(Vector3.new(0.35, 0.35, 0.5), Color3.fromRGB(190, 40, 40), Vector3.new(0, top - 0.25, 1.15))
+	elseif kind == "captain" then
+		blk(Vector3.new(3.0, 0.22, 2.6), Color3.fromRGB(50, 36, 34), Vector3.new(0, top + 0.1, 0))
+		blk(Vector3.new(1.9, 0.75, 1.8), Color3.fromRGB(40, 30, 30), Vector3.new(0, top + 0.55, 0))
+		blk(Vector3.new(1.95, 0.18, 1.85), Color3.fromRGB(255, 200, 60), Vector3.new(0, top + 0.3, 0), Enum.Material.Neon)
+	elseif kind == "helmet" then
+		blk(Vector3.new(2.05, 0.8, 2.05), Color3.fromRGB(150, 150, 160), Vector3.new(0, top + 0.1, 0), Enum.Material.Metal)
+	elseif kind == "cat" then
+		for _, side in ipairs({ -1, 1 }) do
+			blk(Vector3.new(0.45, 0.6, 0.3), Color3.fromRGB(40, 35, 45), Vector3.new(side * 0.6, top + 0.3, 0))
+		end
+	elseif kind == "clown" then
+		blk(Vector3.new(0.45, 0.45, 0.45), Color3.fromRGB(255, 40, 40), Vector3.new(0, 5.35, -0.95))
+	end
+end
+
+function MF.NPC(name, color, hatKind)
+	local Looks = require(ReplicatedStorage.Shared.Config.Looks)
+	local VoxelChar = require(ReplicatedStorage.Shared.Modules.VoxelChar)
+	local style = { "Tee", "Long Pants", "Boots" }
+	for _, row in ipairs(NPC_STYLE) do
+		if string.find(name, row[1], 1, true) then
+			style = { row[2], row[3], row[4] }
+			break
+		end
+	end
+	color = color or Color3.fromRGB(200, 200, 200)
+	local skin = pick(Looks.SkinPresets, name, 3)
+	local hairColors = { "1C1A22", "462C1E", "7A4A28", "C48646", "ECC878", "96989F", "F4F4F4", "C42A2E", "243A96" }
+	local h1 = pick(hairColors, name, 5)
+	local look = {
+		hair = (hatKind == "captain" or hatKind == "marine") and idx(Looks.Hair, pick({ "Short", "Messy", "Swept", "Side Part", "Ponytail" }, name, 11))
+			or ((nameHash(name, 13) % #Looks.Hair) + 1),
+		eyes = idx(Looks.Eyes, pick({ "Bright", "Gentle", "Sharp", "Calm", "Happy", "Determined", "Cool", "Round" }, name, 17)),
+		mouth = idx(Looks.Mouths, pick({ "Smile", "Grin", "Smirk", "Small Smile", "Happy", "Flat" }, name, 19)),
+		shirt = idx(Looks.Shirts, style[1]),
+		pants = idx(Looks.Pants, style[2]),
+		shoes = idx(Looks.Shoes, style[3]),
+		hair1 = h1, hair2 = h1,
+		eyes1 = pick({ "3880EC", "3EAA50", "7A4A28", "961E46", "5A8296" }, name, 23), eyes2 = "181F46",
+		shirt1 = hex(color), shirt2 = hex(color:Lerp(Color3.new(1, 1, 1), 0.55)),
+		pants1 = pick({ "243A96", "462C1E", "545662", "8C6E46", "1C1A22" }, name, 29), pants2 = "181F46",
+		shoes1 = "462C1E", shoes2 = "1C1A22",
+		skin = skin,
+	}
+	local m = VoxelChar.Preview(Looks.Sanitize(look), nil, 1, nil, { lite = true })
+	m.Name = name
+	voxelHat(m, hatKind)
 	for _, p in ipairs(m:GetDescendants()) do
 		if p:IsA("BasePart") then
 			p.Anchored = true
+			p.CanCollide = false
+			p:SetAttribute("NoVoxel", true) -- already blocks: the map's Voxelize pass leaves them alone
 		end
 	end
+	-- pivot 2.6 above the feet, like the old models (WorldBuilder.npc places them with that)
+	local root = m.PrimaryPart
+	root.Name = "HumanoidRootPart"
+	root.Size = Vector3.new(2, 2, 1)
+	root.CFrame = CFrame.new(0, 2.6, 0)
 	return m
 end
 

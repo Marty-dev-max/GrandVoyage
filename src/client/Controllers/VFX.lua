@@ -1153,6 +1153,26 @@ handlers.Knockback = function(d)
 	end
 end
 
+-- Seastone seal (FruitService.TrySeastone, v0.24.14): grey-blue stone chunks clamp around the fruit user and a ring
+-- of square pixels drains down while the seal holds
+handlers.SeastoneSeal = function(d)
+	local char = d.char
+	local root = typeof(char) == "Instance" and char:FindFirstChild("HumanoidRootPart")
+	if not root then
+		return
+	end
+	local stone = { Color3.fromRGB(96, 110, 128), Color3.fromRGB(140, 160, 180), Color3.fromRGB(70, 82, 100) }
+	Voxels.Blocks(root.Position + Vector3.new(0, 1, 0), { count = 12, colors = stone, size = { 0.3, 0.6 }, speed = 6, up = 3, collide = false, life = 0.6, spread = 1.4 })
+	local t0 = os.clock()
+	local secs = tonumber(d.seconds) or 3
+	task.spawn(function()
+		while os.clock() - t0 < secs and root.Parent do
+			Voxels.Pixels(root.Position + Vector3.new(0, 0.5, 0), { count = 6, colors = { Color3.fromRGB(150, 175, 200), Color3.fromRGB(90, 105, 125) }, size = 0.25, speed = 2, up = -1, gravity = 6, life = 0.6, glow = 0.2, spread = 3 })
+			task.wait(0.25)
+		end
+	end)
+end
+
 -- a monster you just attacked startles: a yellow "!" pops over its head, bobs, then fades (MonsterService.Provoke)
 handlers.MobAlert = function(d)
 	local model = d.model
@@ -1478,6 +1498,11 @@ local fxSounds = {
 	end,
 	ShipDebris = function(d)
 		return "ShipHit", d.pos, 0.9
+	end,
+	SeastoneSeal = function(d)
+		local c = d.char
+		local r = typeof(c) == "Instance" and c:FindFirstChild("HumanoidRootPart")
+		return "RefineFail", r and r.Position or nil, 1.2
 	end,
 	Knockback = function(d)
 		local m = d.model

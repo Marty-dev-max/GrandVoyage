@@ -70,6 +70,10 @@ add("ClownNose", { name = "Clown Nose", kind = "Headgear", slot = "headgear", de
 add("CompassCharm", { name = "Compass Charm", kind = "Accessory", slot = "accessory", agi = 2, dex = 2, reqLevel = 1, slots = 1, price = 1500, rarity = "Uncommon" })
 add("TangerinePin", { name = "Tangerine Pin", kind = "Accessory", slot = "accessory", luk = 4, maxSp = 40, reqLevel = 30, slots = 1, price = 15000, rarity = "Epic" })
 add("SharkToothNecklace", { name = "Shark Tooth Necklace", kind = "Accessory", slot = "accessory", str = 5, reqLevel = 50, slots = 1, price = 40000, rarity = "Legendary" })
+-- Seastone gear (v0.24.14, owner's design): MARINES only. In PvP their hits may seal a Cursed Fruit user's powers
+-- (FruitService.TrySeastone: best equipped `seastone = { chance, seconds }`). Fruit users cannot wear Seastone.
+add("SeastoneBracer", { name = "Seastone Bracer", desc = "Marines only. PvP hits have a 20% chance to seal a fruit user's powers for 3 s. Fruit users cannot wear Seastone.", kind = "Accessory", slot = "accessory", vit = 2, reqLevel = 20, slots = 1, price = 12000, rarity = "Rare", faction = "Marine", seastone = { 0.2, 3 }, icon = "⛓️" })
+add("SeastoneShackle", { name = "Seastone Shackle Charm", desc = "Marines only. PvP hits have a 35% chance to seal a fruit user's powers for 4 s. Fruit users cannot wear Seastone.", kind = "Accessory", slot = "accessory", vit = 4, dex = 3, reqLevel = 45, slots = 1, price = 60000, rarity = "Epic", faction = "Marine", seastone = { 0.35, 4 }, icon = "⛓️" })
 
 -- ===== Consumables =====
 add("MeatOnBone", { name = "Meat on the Bone", desc = "Restores 20% HP.", kind = "Consumable", heal = 0.2, price = 80, stack = true, cd = 1.5, rarity = "Common" })
@@ -132,7 +136,7 @@ end
 -- General store stock
 local Shop = {
 	"MeatOnBone", "BigFeast", "TangerineJuice", "RepairKit", "SeaBait", "SteelOre", "Wood", "SailCloth",
-	"SailorVest", "Bandana", "CompassCharm",
+	"SailorVest", "Bandana", "CompassCharm", "SeastoneBracer",
 	"Ammo_Ember", "Ammo_Frost", "Ammo_Spark", "Ammo_Needle", "Ammo_Blast", "Ammo_Star",
 	"Knuckles_Plain", "Sword_Plain", "Slingshot_Plain", "Shoes_Plain", "StormBaton_Plain", "MedKit_Plain", "Hammer_Plain",
 }

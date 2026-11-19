@@ -8,6 +8,7 @@ local Fruits = require(Shared.Config.Fruits)
 local Islands = require(Shared.Config.Islands)
 local Rarity = require(Shared.Modules.Rarity)
 local Formulas = require(Shared.Modules.Formulas)
+local ItemDB = require(Shared.Modules.ItemDB)
 local Net = require(Shared.Modules.Net)
 
 local FS = {}
@@ -133,14 +134,25 @@ function FS.OnKill(player)
 	end
 end
 
--- Marine hits in PvP may seal a fruit user's powers
+-- Marine hits in PvP may seal a fruit user's powers, if the Marine wears Seastone gear (v0.24.14, Items `seastone`)
 function FS.TrySeastone(attacker, victim)
 	if attacker:GetAttribute("Faction") ~= "Marine" or not victim:GetAttribute("Fruit") then
 		return
 	end
-	if math.random() < Fruits.Seastone.Chance then
-		victim:SetAttribute("SeastoneUntil", os.clock() + Fruits.Seastone.Seconds)
-		Net.Push(victim, "Toast", { text = "⛓️ Seastone! Fruit powers sealed for " .. Fruits.Seastone.Seconds .. "s", kind = "bad" })
+	local p = R.PlayerService.Profile(attacker)
+	local chance, seconds = 0, 0
+	for _, uid in pairs(p and p.equipment or {}) do
+		local entry = Formulas.FindItem(p, uid)
+		local def = entry and ItemDB.Get(entry.id)
+		if def and def.seastone and def.seastone[1] > chance then
+			chance, seconds = def.seastone[1], def.seastone[2]
+		end
+	end
+	if chance > 0 and math.random() < chance and (victim:GetAttribute("SeastoneUntil") or 0) < os.clock() then
+		victim:SetAttribute("SeastoneUntil", os.clock() + seconds)
+		Net.Push(victim, "Toast", { text = "⛓️ Seastone! Fruit powers sealed for " .. seconds .. "s", kind = "bad" })
+		Net.Push(attacker, "Toast", { text = "⛓️ Seastone sealed " .. victim.DisplayName .. "'s fruit for " .. seconds .. "s", kind = "good" })
+		Net.FX("SeastoneSeal", { char = victim.Character, seconds = seconds }, R.PlayerService.Root(victim) and R.PlayerService.Root(victim).Position, 200)
 	end
 end
 

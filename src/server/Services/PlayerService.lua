@@ -334,7 +334,7 @@ function PS.GiveExp(player, base, job, pos)
 		return
 	end
 	local mult = 1 + (d and d.expPct or 0) + ((p.expBoostUntil or 0) > os.time() and 0.5 or 0)
-		+ ((p.boosts and (p.boosts.exp or 0) > os.time()) and 1 or 0) -- Store 2x EXP
+		+ ((R.StoreService and R.StoreService.BoostActive(player, "exp")) and 1 or 0) -- Store 2x EXP (account-wide)
 	base = math.floor(base * mult)
 	job = math.floor(job * mult)
 	if base > 0 or job > 0 then

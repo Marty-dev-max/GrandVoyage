@@ -1,0 +1,218 @@
+{
+ "Adrenaline": {
+  "id": "120256234957753",
+  "sha1": "72d830c97185c327e481c5e05ac8e30c787926aa"
+ },
+ "BanquetKick": {
+  "id": "121540136903642",
+  "sha1": "6735c594c633a19a1dd382c95ac021f64ec989db"
+ },
+ "Bash": {
+  "id": "72482882250110",
+  "sha1": "d1fcaa199be474a3b55ce47326e94546314b1d35"
+ },
+ "BlazeShot": {
+  "id": "80700185807311",
+  "sha1": "cc82d911b3c94eda43c875ca81344dee8d1596db"
+ },
+ "BurstTonic": {
+  "id": "106354376483500",
+  "sha1": "38dca5c81791f8dd0de7a0ad78af12fbdb519ffa"
+ },
+ "CannonDrop": {
+  "id": "139189134354411",
+  "sha1": "12262503c7075d76d916cd84230e82a232a76f6a"
+ },
+ "CycloneCall": {
+  "id": "107129318159381",
+  "sha1": "2a33cd69744eef97b2618a2a3e31b2e628939d18"
+ },
+ "EagleEye": {
+  "id": "118283329031388",
+  "sha1": "3392b3760b8fc9a311aaeb29056db1c9362c6b4b"
+ },
+ "F_BalloonBody": {
+  "id": "115094452366244",
+  "sha1": "4e64a9911603235f9fc554cb62a8d4bfaa3cf195"
+ },
+ "F_BarrierBash": {
+  "id": "105849406052911",
+  "sha1": "7b31bbf5f8bd1402feb0e1a1dff800f815450b66"
+ },
+ "F_BarrierCrash": {
+  "id": "87437352206292",
+  "sha1": "7e6f445789457e0d0f71dabf1afbc0024e20d533"
+ },
+ "F_BarrierDome": {
+  "id": "88370481538382",
+  "sha1": "f81be0ff7759518e25bbcf92c99d8adcf152b7a2"
+ },
+ "F_BarrierWall": {
+  "id": "129104325916357",
+  "sha1": "e33bcf2bba0f98d38531ee9c22b0b27487dc9f61"
+ },
+ "F_BounceGatling": {
+  "id": "96142411096971",
+  "sha1": "16ba9d83ba91f80bfe9f514ff88a180d0e7ca0b4"
+ },
+ "F_ChopRush": {
+  "id": "116661614125944",
+  "sha1": "9316e65ec3060d7b5e785b1c974de48939a0e6dc"
+ },
+ "F_FireDash": {
+  "id": "100418934799113",
+  "sha1": "e8581684cb9abb1d84d09285963eb4ba3e088d61"
+ },
+ "F_FireFist": {
+  "id": "122631036050769",
+  "sha1": "d87051dde5ebb91d761185fc13e27e588c3adfa7"
+ },
+ "F_FlamePillar": {
+  "id": "113805787917563",
+  "sha1": "b83e4db7a2dbce081fa475fbd7aaab25915ee867"
+ },
+ "F_GearUp": {
+  "id": "86303017066549",
+  "sha1": "978239f677ec2b7176b5f79b46c7dc16e07da19e"
+ },
+ "F_Inferno": {
+  "id": "89401740979258",
+  "sha1": "ae4e2427d572eddae005b7783abb218b54f8a465"
+ },
+ "F_OilSlick": {
+  "id": "93072940170218",
+  "sha1": "ef2bc6cc92cfc1b5842049215a693338832a7519"
+ },
+ "F_SlickSlide": {
+  "id": "125966238087895",
+  "sha1": "04544c123de9cb73cc29a74cad34a509507381ae"
+ },
+ "F_SlickSpin": {
+  "id": "93114589297050",
+  "sha1": "74e1346f9bf18f15633d97071769ac4b0da8a057"
+ },
+ "F_SlipAway": {
+  "id": "120848988289377",
+  "sha1": "6f8c37e0f42cc4bd1204fcdc8bad71445bc7d03b"
+ },
+ "F_SmokeBody": {
+  "id": "97598379451419",
+  "sha1": "0e3a16cca4a319288926d63b1b0ca173b1a94479"
+ },
+ "F_SmokeGrip": {
+  "id": "78766358226147",
+  "sha1": "0c185ca3f75892364f1932e0989a3437bbba55fc"
+ },
+ "F_SmokeScreen": {
+  "id": "83122921124558",
+  "sha1": "3bdadc1f46b19eb869e5fd676a7a33bbf5ad1615"
+ },
+ "F_SplitCannon": {
+  "id": "137521745258990",
+  "sha1": "bee2b91087480b277aa2221098927e171bea2902"
+ },
+ "F_SplitEscape": {
+  "id": "85452642850139",
+  "sha1": "3ca0950fb3cbe094bcee012ca282ef00bfdbae6f"
+ },
+ "F_SplitFestival": {
+  "id": "72035967733725",
+  "sha1": "ccb8e4b4c9eccdbf545ea3ea7fa66d5f4e61bca2"
+ },
+ "F_StretchPistol": {
+  "id": "76523890002477",
+  "sha1": "5071f4261a140fb26f5c7b965c06249547face42"
+ },
+ "F_WhiteOut": {
+  "id": "99876425209251",
+  "sha1": "16a99238a4c0376ebdebfe967fad7c5f03fb0589"
+ },
+ "FieldRepair": {
+  "id": "75544175863262",
+  "sha1": "4faf7bf003ed7d8642941ab386b4c99ba873d2f8"
+ },
+ "FirstAid": {
+  "id": "82754702834968",
+  "sha1": "66093b04d41cb91b81900550e3349f62bb37a289"
+ },
+ "FlyingSlash": {
+  "id": "94802238464469",
+  "sha1": "f34f00a37f0179b950ac1d259287e640e65b08c9"
+ },
+ "GroundPound": {
+  "id": "96764777375968",
+  "sha1": "007681392a13b25260f154cc7156ef1524af4571"
+ },
+ "HammerSmash": {
+  "id": "70795666486499",
+  "sha1": "ab6b9e3633d6301742f91941eb2e3cfefcd86cfc"
+ },
+ "Heal": {
+  "id": "137116860074835",
+  "sha1": "395e07d55bf2372a07805e26e0b233b10708ff6c"
+ },
+ "HeartyMeal": {
+  "id": "77056286660464",
+  "sha1": "c3826b0c9e720dba185a383bb47f227db3a7c024"
+ },
+ "HeatedLeg": {
+  "id": "101918071791181",
+  "sha1": "be4978730b7d9ef84ecc9b829ef804cb8a203e9a"
+ },
+ "HookKick": {
+  "id": "77911273340846",
+  "sha1": "15e7d807ffa12dfd37e4c19aa8f9d2ec871defca"
+ },
+ "IronBody": {
+  "id": "117654568131791",
+  "sha1": "970e62c01884dcb350969a3871fef6467bf4f93b"
+ },
+ "IronFist": {
+  "id": "103299478186866",
+  "sha1": "0b76fcf4ce1b86d02f471f8f58617676bf8136b7"
+ },
+ "JabRush": {
+  "id": "109128127608854",
+  "sha1": "af66186e65532a7d52c1438225e213375051bb3c"
+ },
+ "LeadPellet": {
+  "id": "139584241293596",
+  "sha1": "c692bc485aa1bf8aa5cdb4f430eea062fba0e44e"
+ },
+ "MirageVeil": {
+  "id": "134266469080889",
+  "sha1": "bb0be1558c19d5c01940ba3abb37de78cd518a54"
+ },
+ "OniSlash": {
+  "id": "71059385896229",
+  "sha1": "a9dc5aabfea899d2db0f7b62141a3b5ca5a09748"
+ },
+ "RisingUppercut": {
+  "id": "120274657795572",
+  "sha1": "a89c397ebf416244c4f013023661467cf376d376"
+ },
+ "Scalpel": {
+  "id": "99406919584383",
+  "sha1": "e5922396b3a273bf7954f230a83a5c4d5ac4570a"
+ },
+ "SmokePellet": {
+  "id": "133672161132178",
+  "sha1": "021348f17f6d74aa5b0437445bdeb639d4d185d3"
+ },
+ "SteelFrame": {
+  "id": "85343471978103",
+  "sha1": "2eba4cdf871f4bb0cf86eaf618ae6d00738539df"
+ },
+ "Tailwind": {
+  "id": "89793266620402",
+  "sha1": "e73bed90a016435903fe6071497cc206d20084bc"
+ },
+ "ThunderCall": {
+  "id": "84647515360064",
+  "sha1": "db98ba4d8b4337f2cdb33f59734bc2f137aea61a"
+ },
+ "TornadoCut": {
+  "id": "131030103418920",
+  "sha1": "10a8579f67522f5650c5012ea3707be770a4a677"
+ }
+}

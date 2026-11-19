@@ -13,7 +13,7 @@ local Ships = {
 	Marine3 = { faction = "Marine", tier = 3, name = "Marine Battleship", level = 60,
 		length = 17, width = 7, masts = 3, cannons = 12, hp = 12000, damage = 110, speed = 32, reload = 3.5,
 		beli = { 12000, 22000 }, exp = 14000,
-		drops = { { "IronIngot", 1, 6, 12 }, { "TidecoreShard", 0.6, 1, 3 }, { "PureTidecore", 0.06, 1, 1 }, { "MarineCaptainCard", 0.01, 1, 1 }, { "Hammer_Master", 0.01, 1, 1 } } },
+		drops = { { "IronIngot", 1, 6, 12 }, { "TidecoreShard", 0.6, 1, 3 }, { "PureTidecore", 0.06, 1, 1 }, { "MarineCaptainCard", 0.01, 1, 1 }, { "SeastoneShackle", 0.03, 1, 1 }, { "Hammer_Master", 0.01, 1, 1 } } },
 	-- Pirates: drop lots of Beli, treasure and maps
 	Pirate1 = { faction = "Pirate", tier = 1, name = "Pirate Dinghy", level = 15,
 		length = 6, width = 3, masts = 1, cannons = 2, hp = 800, damage = 45, speed = 34, reload = 4.5,

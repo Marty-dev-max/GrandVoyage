@@ -277,6 +277,43 @@ function DataService.Account(userId)
 	end)
 	return (ok and res) or { spins = 0, receipts = {}, slots = {} }
 end
+-- Store boosts are ACCOUNT-wide (v0.24.14, owner): { exp = untilTime, drop = ..., fruit = ... } on acct_<id>,
+-- cached for the session
+local acctBoosts = {}
+function DataService.Boosts(userId)
+	if not acctBoosts[userId] then
+		if useMemory then
+			memBank[userId] = memBank[userId] or { spins = 0, receipts = {}, slots = {} }
+			memBank[userId].boosts = memBank[userId].boosts or {}
+			acctBoosts[userId] = memBank[userId].boosts
+		else
+			local acc = DataService.Account(userId)
+			acctBoosts[userId] = acc.boosts or {}
+		end
+	end
+	return acctBoosts[userId]
+end
+-- add `seconds` to a boost (stacks on the time left); returns true once stored
+function DataService.AddBoost(userId, kind, seconds)
+	local b = DataService.Boosts(userId)
+	b[kind] = math.max(b[kind] or 0, os.time()) + seconds
+	if useMemory then
+		return true
+	end
+	local untilT = b[kind]
+	return pcall(function()
+		store:UpdateAsync(bankKey(userId), function(old)
+			old = old or { spins = 0, receipts = {} }
+			old.boosts = old.boosts or {}
+			old.boosts[kind] = math.max(old.boosts[kind] or 0, untilT)
+			return old
+		end)
+	end)
+end
+function DataService.DropAccountCache(userId)
+	acctBoosts[userId] = nil
+end
+
 function DataService.SlotUnlocked(userId, slot)
 	local SpinsCfg = require(Shared.Config.Spins)
 	local locked = SpinsCfg.SlotUnlock and table.find(SpinsCfg.SlotUnlock.slots, slot)
@@ -582,6 +619,7 @@ function DataService.Start()
 	Players.PlayerRemoving:Connect(function(pl)
 		DataService.FlushMenu(pl, true)
 		bankKnown[pl.UserId], bankTake[pl.UserId], bankWrite[pl.UserId] = nil, nil, nil
+		acctBoosts[pl.UserId] = nil
 	end)
 	task.spawn(function()
 		while true do

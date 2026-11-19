@@ -283,6 +283,13 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     at 45%), CombatService opts.knock on combo finishers, crits (2.5), last hit of damage skills; `Knockback` FX = dust
     + scuff lines. Coin loot no longer plays the Legendary jingle; Coin -> `BlkCoin`, item pickup -> `Pickup`/`BlkPouch`.
   * v0.24.13 (owner): players see **Race** (never "Heritage") in every text; code, attributes, saves keep heritage.
+  * v0.24.14: Store boosts are ACCOUNT-wide (`DataService.Boosts/AddBoost` on acct_<id>; old slot boosts migrate on
+    load). Respinning a non-Islander race asks YES/NO (`Menu.Ask`). Creator orbit: left drag grabs the model, right drag
+    looks like Roblox's camera (opposite yaw). Skill icons: `tools/gen_skill_icons.py` (32x32 pixel-art recipes per skill,
+    bevel + outline + class/fruit tile, 8x) -> `Config/SkillIcons` (upload_images.py), used first by SkillLook.IconId;
+    a new skill needs a recipe there. Seastone gear: items with `faction = "Marine"` + `seastone = { chance, seconds }`
+    (SeastoneBracer in the General Store, SeastoneShackle from big Marine ships); InventoryService refuses non-Marines
+    and fruit users; FruitService.TrySeastone uses the best equipped piece (no gear = no seal), `SeastoneSeal` FX.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

@@ -846,13 +846,53 @@ function Menu.Edit(i)
 end
 
 local spinning = false
-function Menu.Spin()
+-- a pixel YES / NO box over the menu (the HUD's windows sit under the menu screen)
+local askFrame
+function Menu.Ask(title, text, onYes)
+	if askFrame then
+		askFrame:Destroy()
+	end
+	askFrame = New("Frame", { BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.45, Size = UDim2.fromScale(4, 4), Position = UDim2.fromScale(-1, -1), ZIndex = 50, Parent = gui })
+	local box = pixelFrame(askFrame, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(460, 230), ZIndex = 51 })
+	box.Position = UDim2.new(0.375, 0, 0.375, 0)
+	local col = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 22), Size = UDim2.new(1, 0, 1, -22), ZIndex = 52, Parent = box })
+	UI.List(col, Enum.FillDirection.Vertical, 12, Enum.HorizontalAlignment.Center)
+	label(col, title, 18, PIXEL.gold, { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, -30, 0, 26) })
+	label(col, text, 11, PIXEL.cream, { LayoutOrder = 2, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, -30, 0, 34), TextWrapped = true })
+	local row = New("Frame", { BackgroundTransparency = 1, LayoutOrder = 3, Size = UDim2.new(1, 0, 0, 56), Parent = col })
+	UI.List(row, Enum.FillDirection.Horizontal, 18, Enum.HorizontalAlignment.Center)
+	pixelButton(row, "YES", PIXEL.green, UDim2.fromOffset(150, 48), function()
+		askFrame:Destroy()
+		askFrame = nil
+		onYes()
+	end, { LayoutOrder = 1 })
+	pixelButton(row, "NO", PIXEL.cream, UDim2.fromOffset(150, 48), function()
+		askFrame:Destroy()
+		askFrame = nil
+	end, { LayoutOrder = 2 })
+	for _, d in ipairs(askFrame:GetDescendants()) do
+		if d:IsA("GuiObject") then
+			d.ZIndex = math.max(d.ZIndex, 51)
+		end
+	end
+	growText(askFrame)
+	Audio.Play("BlkOpen")
+end
+
+function Menu.Spin(confirmed)
 	if not editing or spinning then
 		return
 	end
 	if (editing.spins or 0) + bankSpins <= 0 then
 		UI.Toast("No spins left: tap + to get more", "bad")
 		Menu.BuySpins()
+		return
+	end
+	-- v0.24.14 (owner): holding a race other than Islander? ask first, a spin replaces it
+	if not confirmed and editing.heritage and editing.heritage ~= "Islander" then
+		Menu.Ask("YOU ARE " .. heritageLabel(editing.heritage, editing.variant), "Spin again? This race will be replaced.", function()
+			Menu.Spin(true)
+		end)
 		return
 	end
 	spinning = true
@@ -1143,7 +1183,9 @@ local function hookDrag()
 			end
 			lastPos = input.Position
 			if camMode == "edit" then
-				orbit.yaw -= d.X * 0.01
+				-- left drag / touch = grab and turn the model; right drag = look around like Roblox's own camera
+				-- (v0.24.14, owner: right-click felt inverted), so the two go opposite ways
+				orbit.yaw += (rmb and 1 or -1) * d.X * 0.01
 				orbit.pitch = math.clamp(orbit.pitch + d.Y * 0.008, -0.35, 1.25)
 			else
 				yaw += d.X * 0.012

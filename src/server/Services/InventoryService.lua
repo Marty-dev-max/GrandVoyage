@@ -178,6 +178,12 @@ local function setup()
 		if (def.reqLevel or 1) > p.baseLevel then
 			return false, "Requires Lv." .. def.reqLevel
 		end
+		if def.faction and player:GetAttribute("Faction") ~= def.faction then
+			return false, def.faction .. "s only"
+		end
+		if def.seastone and p.fruit then
+			return false, "Seastone drains Cursed Fruit users: you cannot wear it"
+		end
 		if def.kind == "Weapon" then
 			local cls = Classes[p.class]
 			if not table.find(cls.weapons, def.weaponType) then

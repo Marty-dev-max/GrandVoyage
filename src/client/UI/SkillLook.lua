@@ -1,15 +1,20 @@
 -- SkillLook: how a skill is drawn everywhere (hotbar, Skills window): its icon and its color.
--- Uses the 3D icon pack until skills get their own renders: fruit skills show their fruit, heals a potion,
+-- v0.24.14: every skill has its own pixel-art icon (tools/gen_skill_icons.py -> Config/SkillIcons); new skills without
+-- one fall back to the 3D icon pack: fruit skills show their fruit, heals a potion,
 -- buffs a sparkle, ship skills a ship, everything else the class weapon.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ClassesCfg = require(ReplicatedStorage.Shared.Config.Classes)
 local FruitsCfg = require(ReplicatedStorage.Shared.Config.Fruits)
+local SkillIcons = require(ReplicatedStorage.Shared.Config.SkillIcons) -- v0.24.14: one pixel-art icon per skill
 local UI = require(script.Parent.UIKit)
 
 local SkillLook = {}
 local CLASS_ICON = { Brawler = "knuckles", Swordsman = "sword", Sniper = "slingshot", Cook = "boots", Navigator = "staff", Doctor = "medkit", Shipwright = "hammer", Common = "knuckles" }
 
 function SkillLook.IconId(sk)
+	if sk.id and SkillIcons[sk.id] then
+		return SkillIcons[sk.id]
+	end
 	if sk.fruit then
 		return UI.IconId("fruit_" .. string.lower(sk.fruit))
 	end

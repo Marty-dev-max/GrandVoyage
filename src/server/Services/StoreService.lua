@@ -29,23 +29,33 @@ function Store.Init(registry)
 	R = registry
 end
 
-local function boosts(p)
-	p.boosts = p.boosts or {}
-	return p.boosts
+-- boosts belong to the ACCOUNT (every character slot), v0.24.14 (DataService.Boosts / AddBoost)
+local function boosts(player)
+	return R.DataService.Boosts(player.UserId)
 end
 
 function Store.BoostActive(player, kind)
+	return (boosts(player)[kind] or 0) > os.time()
+end
+
+-- saves from before v0.24.14 kept boosts on the character: move what is left to the account
+local function migrate(player)
 	local p = R.DataService.Get(player)
-	return p ~= nil and (boosts(p)[kind] or 0) > os.time()
+	if p and p.boosts then
+		for kind, untilT in pairs(p.boosts) do
+			local left = (tonumber(untilT) or 0) - os.time()
+			if left > 0 then
+				R.DataService.AddBoost(player.UserId, kind, left)
+			end
+		end
+		p.boosts = nil
+		R.PlayerService.MarkDirty(player)
+	end
 end
 
 function Store.SetAttributes(player)
-	local p = R.DataService.Get(player)
-	if not p then
-		return
-	end
 	for kind, attr in pairs(BOOST_ATTR) do
-		local untilT = boosts(p)[kind] or 0
+		local untilT = boosts(player)[kind] or 0
 		player:SetAttribute(attr, untilT > os.time() and untilT or nil)
 	end
 end
@@ -59,9 +69,8 @@ local function grant(to, it, fromName)
 	p.storeTokens = p.storeTokens or {}
 	local msg
 	if it.boost then
-		local b = boosts(p)
-		b[it.boost] = math.max(b[it.boost] or 0, os.time()) + it.minutes * 60
-		msg = it.name .. " active!"
+		R.DataService.AddBoost(to.UserId, it.boost, it.minutes * 60)
+		msg = it.name .. " active on every character!"
 	elseif it.id == "FruitRemover" then
 		if p.fruit and R.FruitService.RemoveFruit then
 			R.FruitService.RemoveFruit(to)
@@ -152,6 +161,7 @@ end
 
 function Store.Start()
 	R.DataService.Loaded:Connect(function(player)
+		migrate(player)
 		Store.SetAttributes(player)
 	end)
 	Players.PlayerRemoving:Connect(function(player)
@@ -177,7 +187,7 @@ function Store.Start()
 
 	Net.Handle("StoreInfo", function(player)
 		local p = R.DataService.Get(player)
-		return true, nil, { boosts = boosts(p), tokens = p.storeTokens or {}, gems = (p.pearls or 0) + (p.pearlsBound or 0) }
+		return true, nil, { boosts = boosts(player), tokens = p.storeTokens or {}, gems = (p.pearls or 0) + (p.pearlsBound or 0) }
 	end, 0.5)
 
 	Net.Handle("StoreBuyGems", function(player, data)

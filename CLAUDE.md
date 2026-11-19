@@ -1,4 +1,4 @@
-# Grand Voyage: project notes for Claude
+# LarpTales: Voxel Seas (code name Grand Voyage): project notes for Claude
 
 Roblox MMORPG (Ragnarok-style systems in an original pirate-sea world). Luau + Rojo, server-authoritative.
 Player-facing text and code are English. The owner (Roblox user Treezaa2, id 1527424396) talks in Thai: reply in Thai.
@@ -265,6 +265,11 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     push `SlotUnlocked`). Spins 29/85/140/429 R$. Reset Stats removed from the Store. Dev tab Heritage picker (Admin
     cmd `heritage` "Id:variant"). Party = horizontal strip under the character card (`HUD.partyBar`), quest below it.
     Creator: hold right mouse to orbit (MouseBehavior LockCurrentPosition). MonsterDie prefers soft `BlkMobPop`.
+  * v0.24.9: player-facing name is **LarpTales: Voxel Seas** (`GameConfig.GameName`, menu logo `GameConfig.LogoLines`);
+    files, Rojo project, DataStore names and log prefixes keep "GrandVoyage" (renaming them would lose saves).
+    Store fixes: cancelled Robux prompt clears the pending gift (PromptProductPurchaseFinished), Boss Respawn refused
+    while `BossService.DownCount() == 0` (token if it changes mid-purchase), receipt mark kept on a failed save (no
+    double grant), gift recipient saved too; MenuUnlockSlot refuses an already-unlocked slot.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

@@ -1,5 +1,5 @@
 -- Menu (v0.24.0, owner): the title screen you see before playing.
---  * Title: GRAND VOYAGE logo, PLAY (enters the game with the selected character slot) and CHARACTER.
+--  * Title: game logo (GameConfig.LogoLines), PLAY (enters the game with the selected character slot) and CHARACTER.
 --  * Character: the account's character slots (Config/Looks.Slots) as cards with a live voxel preview. Pick one to
 --    open the creator.
 --  * Creator: hair / eyes / mouth / shirt / pants / shoes / skin steppers, color targets + palette, Heritage spin
@@ -396,9 +396,9 @@ end
 local function buildTitle()
 	local f = New("Frame", { Name = "Title", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Parent = gui })
 	screens.title = f
-	-- logo: GRAND / VOYAGE in chunky pixel letters with a hard shadow
+	-- logo: GameConfig.LogoLines (LARPTALES / VOXEL SEAS) in chunky pixel letters with a hard shadow
 	local logo = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 70), Size = UDim2.fromOffset(760, 170), Parent = f })
-	for i, word in ipairs({ "GRAND", "VOYAGE" }) do
+	for i, word in ipairs(GameConfig.LogoLines or { string.upper(GameConfig.GameName) }) do
 		local size = i == 1 and 64 or 52
 		local y = i == 1 and 0 or 78
 		label(logo, word, size, Color3.fromRGB(10, 14, 40), { TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(6, y + 6), Size = UDim2.new(1, 0, 0, size + 8) })

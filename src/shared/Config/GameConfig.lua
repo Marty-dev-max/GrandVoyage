@@ -1,8 +1,9 @@
 -- GameConfig: core constants. Tune game balance here.
 return {
-	GameName = "Grand Voyage",
+	GameName = "LarpTales: Voxel Seas", -- player-facing name (v0.24.9, owner); code/files/DataStores keep the GrandVoyage names
+	LogoLines = { "LARPTALES", "VOXEL SEAS" },
 	-- bump on every change: shown bottom-right in game and printed in Output, so you can tell which code is running
-	Version = "0.24.8",
+	Version = "0.24.9",
 	SagaName = "Azure East Saga",
 	DataStoreName = "GV_Player_v1",
 	GuildStoreName = "GV_Guild_v1",

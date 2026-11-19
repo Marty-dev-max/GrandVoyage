@@ -1,13 +1,13 @@
 -- StoreService (v0.24.0, owner): BENEFITS + BOOSTS (Config/Store), paid with Gems (PearlService.Spend) or Robux
 -- (developer products, PearlService's ProcessReceipt hands them here), for yourself or as a gift to a player in this
 -- server. A Robux gift is registered first (StoreBuyRobux stores the recipient), then the receipt grants it; receipts
--- are recorded in the buyer's profile so a purchase is never granted twice.
+-- are recorded in the buyer's profile so a purchase is never granted twice. v0.24.9: cancelled prompts drop the gift
+-- target, Boss Respawn cannot be bought while every boss is up (kept as a token if that changes mid-purchase).
 local Players = game:GetService("Players")
 local MarketplaceService = game:GetService("MarketplaceService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local Net = require(Shared.Modules.Net)
-local Formulas = require(Shared.Modules.Formulas)
 local StoreCfg = require(Shared.Config.Store)
 
 local Store = {}
@@ -50,20 +50,6 @@ function Store.SetAttributes(player)
 	end
 end
 
--- refund every spent stat point
-local function resetStats(player, p)
-	local refund = 0
-	for _, stat in ipairs(Formulas.StatNames) do
-		for v = 1, (p.stats[stat] or 1) - 1 do
-			refund += Formulas.StatCost(v)
-		end
-		p.stats[stat] = 1
-	end
-	p.statPoints += refund
-	R.PlayerService.Recompute(player)
-	return refund
-end
-
 -- apply an item to `to`. Returns ok, message for the recipient
 local function grant(to, it, fromName)
 	local p = R.DataService.Get(to)
@@ -76,8 +62,6 @@ local function grant(to, it, fromName)
 		local b = boosts(p)
 		b[it.boost] = math.max(b[it.boost] or 0, os.time()) + it.minutes * 60
 		msg = it.name .. " active!"
-	elseif it.id == "ResetStats" then
-		msg = "Stats reset: " .. resetStats(to, p) .. " points refunded"
 	elseif it.id == "FruitRemover" then
 		if p.fruit and R.FruitService.RemoveFruit then
 			R.FruitService.RemoveFruit(to)
@@ -88,8 +72,14 @@ local function grant(to, it, fromName)
 		end
 	elseif it.id == "BossRespawn" then
 		local n = R.BossService.RespawnAllNow and R.BossService.RespawnAllNow() or 0
-		Net.PushAll("Announce", { text = "👑 " .. to.DisplayName .. " called the bosses back! (" .. n .. ")", rarity = "Legendary" })
-		msg = n > 0 and ("Bosses respawning: " .. n) or "Every boss is already up"
+		if n > 0 then
+			Net.PushAll("Announce", { text = "👑 " .. to.DisplayName .. " called the bosses back! (" .. n .. ")", rarity = "Legendary" })
+			msg = "Bosses respawning: " .. n
+		else
+			-- every boss was already up (it respawned between the prompt and the receipt): keep it for later
+			p.storeTokens.BossRespawn = (p.storeTokens.BossRespawn or 0) + 1
+			msg = "Every boss is up: Boss Respawn saved, use it from the Store later"
+		end
 	end
 	Store.SetAttributes(to)
 	R.PlayerService.MarkDirty(to)
@@ -99,6 +89,14 @@ local function grant(to, it, fromName)
 		R.PlayerService.Notify(to, "🛍️ " .. (msg or it.name), "good")
 	end
 	return true, msg
+end
+
+-- an item that would do nothing right now (v0.24.9: Boss Respawn with every boss alive wasted the purchase)
+local function uselessNow(it)
+	if it.id == "BossRespawn" and R.BossService.DownCount and R.BossService.DownCount() == 0 then
+		return "Every boss is already up: buy it when one is defeated"
+	end
+	return nil
 end
 
 local function recipientOf(player, toUserId)
@@ -141,8 +139,12 @@ function Store.Receipt(info)
 	if to ~= buyer then
 		R.PlayerService.Notify(buyer, "🎁 Gift sent to " .. to.DisplayName .. ": " .. it.name, "good")
 	end
+	if to ~= buyer then
+		pcall(R.DataService.Save, to)
+	end
+	-- the item is already applied, so the receipt mark stays in memory either way: if the save failed, Roblox retries
+	-- and this session answers Granted without granting twice (the autosave / leave save writes it later)
 	if R.DataService.Save(buyer) == false then
-		p.receipts[info.PurchaseId] = nil
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
 	return Enum.ProductPurchaseDecision.PurchaseGranted
@@ -154,6 +156,14 @@ function Store.Start()
 	end)
 	Players.PlayerRemoving:Connect(function(player)
 		pendingGift[player] = nil
+	end)
+	-- a cancelled Robux prompt must not leave the gift target behind (the next own purchase would go to them)
+	MarketplaceService.PromptProductPurchaseFinished:Connect(function(userId, productId, purchased)
+		local buyer = Players:GetPlayerByUserId(userId)
+		local pend = buyer and pendingGift[buyer]
+		if pend and not purchased and byProduct[productId] and byProduct[productId].id == pend.id then
+			pendingGift[buyer] = nil
+		end
 	end)
 	-- boost timers run out: clear the attributes (the HUD timer reads them)
 	task.spawn(function()
@@ -174,6 +184,10 @@ function Store.Start()
 		local it = byId[data.id]
 		if not it or not it.gems then
 			return false, "Unknown item"
+		end
+		local why = uselessNow(it)
+		if why then
+			return false, why
 		end
 		local to = recipientOf(player, data.to)
 		if not to then
@@ -197,6 +211,10 @@ function Store.Start()
 		if not it.productId or it.productId == 0 then
 			return false, "Robux purchase coming soon (use Gems)"
 		end
+		local why = uselessNow(it)
+		if why then
+			return false, why
+		end
 		local to = recipientOf(player, data.to)
 		if not to then
 			return false, "That player is not here"
@@ -215,6 +233,10 @@ function Store.Start()
 		end
 		if it.id == "FruitRemover" and not p.fruit then
 			return false, "You have no Cursed Fruit"
+		end
+		local why = uselessNow(it)
+		if why then
+			return false, why
 		end
 		p.storeTokens[it.id] -= 1
 		return grant(player, it)

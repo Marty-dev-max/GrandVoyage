@@ -1,4 +1,4 @@
-# Grand Voyage: Azure East Saga (Roblox)
+# LarpTales: Voxel Seas (Roblox, project code name Grand Voyage)
 
 A Ragnarok-style MMORPG on the open sea. Islands sit in a straight line (Hunting Together-style), but instead of
 climbing stairs to the next stage you **build a ship and sail** there, through wind lanes, the Doldrums and NPC fleets.

@@ -61,6 +61,17 @@ function Boss.RespawnAllNow()
 	return n
 end
 
+-- how many bosses are down right now (the Store refuses Boss Respawn at 0)
+function Boss.DownCount()
+	local n = 0
+	for _, st in pairs(state) do
+		if not st.alive then
+			n += 1
+		end
+	end
+	return n
+end
+
 function Boss.Start()
 	for _, island in ipairs(Islands.List) do
 		if island.boss then

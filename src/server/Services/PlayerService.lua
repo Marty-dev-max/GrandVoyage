@@ -682,6 +682,13 @@ local function setupMenuHandlers()
 		if not su or not su.productId or su.productId == 0 then
 			return false, "Slot unlock is coming soon"
 		end
+		local all = true
+		for _, slot in ipairs(su.slots) do
+			all = all and R.DataService.SlotUnlocked(player.UserId, slot)
+		end
+		if all then
+			return false, "This slot is already unlocked"
+		end
 		game:GetService("MarketplaceService"):PromptProductPurchase(player, su.productId)
 		return true
 	end, 1, true)

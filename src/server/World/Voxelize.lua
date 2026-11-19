@@ -92,9 +92,8 @@ function V.Run(root)
 	local list = {}
 	for _, d in ipairs(root:GetDescendants()) do
 		if d:IsA("BasePart") and d.Transparency < 0.98 and not d:GetAttribute("NoVoxel") and not d:GetAttribute("MesaId") then
-			if d.ClassName == "Part" and (d.Shape == Enum.PartType.Ball or d.Shape == Enum.PartType.Cylinder) then
-				table.insert(list, d)
-			elseif d.ClassName == "WedgePart" then
+			local round = d.ClassName == "Part" and (d.Shape == Enum.PartType.Ball or d.Shape == Enum.PartType.Cylinder)
+			if round or d.ClassName == "WedgePart" then
 				table.insert(list, d)
 			end
 		end

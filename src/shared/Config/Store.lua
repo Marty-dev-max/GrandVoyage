@@ -1,13 +1,12 @@
 -- Store (v0.24.0, owner): BENEFITS + BOOSTS, each bought with Gems or Robux, for yourself or as a GIFT to a player in
 -- the same server. Robux = Developer Products: create one per entry in Creator Hub (Monetization -> Developer
 -- Products) at `robux` and paste its id into `productId` (0 = "coming soon" for the Robux button; Gems still work).
--- Effects (StoreService): FruitRemover removes the Cursed Fruit (kept as a token if you have none), ResetStats refunds
+-- Effects (StoreService): FruitRemover removes the Cursed Fruit (kept as a token if you have none), (ResetStats was removed v0.24.8)
 -- every stat point, BossRespawn brings every defeated MVP boss on the server back now, FruitNotifier shows WHICH
 -- island a fruit appeared on (everyone else only hears that one appeared). Boosts stack their time.
 return {
 	Benefits = {
 		{ id = "FruitRemover", name = "Fruit Remover", icon = "🍏", gems = 300, robux = 99, productId = 0, desc = "Spit out your Cursed Fruit to eat a new one." },
-		{ id = "ResetStats", name = "Reset Stats", icon = "🔄", gems = 200, robux = 79, productId = 0, desc = "Refund every stat point you spent." },
 		{ id = "BossRespawn", name = "Boss Respawn", icon = "👑", gems = 400, robux = 149, productId = 0, desc = "Every defeated MVP boss on this server comes back now." },
 		{ id = "FruitNotifier", name = "Fruit Notifier 1h", icon = "📡", gems = 250, robux = 99, productId = 0, minutes = 60, boost = "fruit", desc = "1 hour: see which island a fruit appears on." },
 	},

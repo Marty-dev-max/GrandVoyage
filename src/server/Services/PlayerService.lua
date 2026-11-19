@@ -559,13 +559,23 @@ local function setupMenuHandlers()
 		if not list then
 			return false, err
 		end
-		return true, nil, { slots = list, bank = R.DataService.BankSpins(player.UserId), inGame = R.DataService.Get(player) ~= nil }
+		local locked = {}
+		for i = 1, Looks.Slots do
+			locked[i] = not R.DataService.SlotUnlocked(player.UserId, i)
+		end
+		return true, nil, { slots = list, locked = locked, bank = R.DataService.BankSpins(player.UserId), inGame = R.DataService.Get(player) ~= nil }
 	end, 1, true)
 	-- save a slot's look (creates the slot if it is empty)
+	local function slotOpen(player, slot)
+		return R.DataService.SlotUnlocked(player.UserId, slot)
+	end
 	Net.Handle("MenuSaveLook", function(player, data)
 		local slot = validSlot(data.slot)
 		if not slot then
 			return false, "Invalid slot"
+		end
+		if not slotOpen(player, slot) then
+			return false, "Unlock this slot first"
 		end
 		local look = Looks.Sanitize(data.look)
 		local sum, err = R.DataService.EditSlot(player, slot, function(d)
@@ -581,6 +591,9 @@ local function setupMenuHandlers()
 		local slot = validSlot(data.slot)
 		if not slot then
 			return false, "Invalid slot"
+		end
+		if not slotOpen(player, slot) then
+			return false, "Unlock this slot first"
 		end
 		local look = data.look and Looks.Sanitize(data.look)
 		local function roll(useBank)
@@ -621,7 +634,7 @@ local function setupMenuHandlers()
 			Net.PushAll("Announce", { text = "✨ " .. player.DisplayName .. " rolled the " .. h.chance .. "% " .. h.name .. " heritage!", rarity = h.chance <= 0.5 and "Mythic" or "Legendary" })
 		end
 		return true, nil, { summary = sum, heritage = rolled, variant = sum.variant, bank = R.DataService.BankSpins(player.UserId) }
-	end, 1.2, true)
+	end, 0.45, true)
 	-- Cinderwing: switch FLAME (hits harder) <-> CALM (moves faster)
 	Net.Handle("HeritageMode", function(player)
 		local p = PS.Profile(player)
@@ -646,6 +659,9 @@ local function setupMenuHandlers()
 		if R.DataService.Get(player) then
 			return false, "Already in game"
 		end
+		if not slotOpen(player, slot) then
+			return false, "Unlock this slot first"
+		end
 		if entering[player] then
 			return false, "Loading..."
 		end
@@ -659,6 +675,16 @@ local function setupMenuHandlers()
 		task.spawn(PS.Respawn, player)
 		return true
 	end, 2, true)
+	-- unlock a locked slot (Config/Spins.SlotUnlock developer product)
+	Net.Handle("MenuUnlockSlot", function(player)
+		local SpinsCfg = require(Shared.Config.Spins)
+		local su = SpinsCfg.SlotUnlock
+		if not su or not su.productId or su.productId == 0 then
+			return false, "Slot unlock is coming soon"
+		end
+		game:GetService("MarketplaceService"):PromptProductPurchase(player, su.productId)
+		return true
+	end, 1, true)
 	-- in-game MENU button: save + unload this character and go back to the title menu (pick / edit a slot)
 	Net.Handle("MenuReturn", function(player)
 		if not R.DataService.Get(player) then

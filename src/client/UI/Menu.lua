@@ -32,6 +32,7 @@ local hidden = {} -- ScreenGui -> Enabled it wants once the menu closes
 local hideConns = {}
 local slots = {} -- [i] = summary | false
 local bankSpins = 0 -- bought spins on the account (any slot can use them)
+local slotLocked = {} -- [i] = true while a paid slot is still locked
 local current = 1 -- selected slot
 local editing -- { slot, look, heritage, spins }
 local stage, preview, previewKey
@@ -449,13 +450,27 @@ local function buildSlots()
 		local btns = New("Frame", { BackgroundTransparency = 1, Position = UDim2.new(0, 14, 1, -66), Size = UDim2.new(1, -28, 0, 52), Parent = card })
 		UI.List(btns, Enum.FillDirection.Horizontal, 8, Enum.HorizontalAlignment.Center)
 		local playBtn = pixelButton(btns, "PLAY", PIXEL.green, UDim2.fromOffset(90, 44), function()
+			if slotLocked[i] then
+				return
+			end
 			current = i
 			Menu.Play()
 		end, { LayoutOrder = 1 })
 		local editBtn = pixelButton(btns, "EDIT", PIXEL.cream, UDim2.fromOffset(90, 44), function()
+			if slotLocked[i] then
+				return
+			end
 			Menu.Edit(i)
 		end, { LayoutOrder = 2 })
-		cards[i] = { title = title, vp = vp, info = info, play = playBtn, edit = editBtn, card = card }
+		local SpinsCfg2 = require(ReplicatedStorage.Shared.Config.Spins)
+		local unlockBtn, unlockHolder = pixelButton(btns, "UNLOCK  R$ " .. (SpinsCfg2.SlotUnlock and SpinsCfg2.SlotUnlock.robux or 0), PIXEL.gold, UDim2.fromOffset(188, 44), function()
+			local res = Net.Request("MenuUnlockSlot")
+			if not res.ok then
+				UI.Toast(res.msg or "Could not unlock", "info")
+			end
+		end, { LayoutOrder = 3 })
+		unlockHolder.Visible = false
+		cards[i] = { title = title, vp = vp, info = info, play = playBtn, edit = editBtn, unlock = unlockHolder, card = card }
 	end
 	pixelButton(f, "BACK", PIXEL.cream, UDim2.fromOffset(200, 46), function()
 		show("title")
@@ -468,13 +483,26 @@ local function buildSlots()
 			local look = s and s.look or Looks.Default()
 			local model = VoxelChar.Preview(look, s and s.heritage, s and s.variant)
 			model.Parent = c.vp
-			model:PivotTo(CFrame.Angles(0, math.rad(200), 0))
+			model:PivotTo(CFrame.Angles(0, math.rad(-18), 0)) -- facing the card (front = -Z, the camera sits at -Z)
 			local cam = Instance.new("Camera")
 			cam.FieldOfView = 30
 			cam.CFrame = CFrame.lookAt(Vector3.new(0, 4.4, -13.5), Vector3.new(0, 3.3, 0))
 			cam.Parent = c.vp
 			c.vp.CurrentCamera = cam
-			if s then
+			local locked = slotLocked[i] == true
+			c.play.Parent.Visible = not locked
+			c.edit.Parent.Visible = not locked
+			c.unlock.Visible = locked
+			if locked then
+				c.info.Text = "LOCKED SLOT\nUnlock it once for your account"
+				for _, p in ipairs(model:GetDescendants()) do
+					if p:IsA("BasePart") then
+						p.Color = Color3.fromRGB(18, 20, 34)
+					elseif p:IsA("Decal") then
+						p.Transparency = 1
+					end
+				end
+			elseif s then
 				local cls = Classes.Classes[s.class]
 				c.info.Text = string.format("LV.%d  %s\n%s", s.level, string.upper(cls and cls.name or s.class), heritageLabel(s.heritage, s.variant))
 				c.play.Text = "PLAY"
@@ -496,7 +524,7 @@ local function buildSlots()
 				end
 			end
 			c.title.TextColor3 = (i == current) and PIXEL.green or PIXEL.gold
-			c.title.Text = (i == current) and ("SLOT " .. i .. "  <") or ("SLOT " .. i)
+			c.title.Text = (slotLocked[i] and "🔒 " or "") .. ((i == current) and ("SLOT " .. i .. "  <") or ("SLOT " .. i))
 		end
 	end
 end
@@ -519,7 +547,7 @@ local function buildEdit()
 	local left = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(28, 40), Size = UDim2.fromOffset(380, 760), Parent = f })
 	UI.List(left, Enum.FillDirection.Vertical, 6)
 	label(left, "CUSTOMIZE", 24, PIXEL.cream, { LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 30) })
-	label(left, "Drag to look around, wheel / pinch to zoom", 9, Color3.fromRGB(190, 200, 230), { LayoutOrder = 2 })
+	label(left, "Hold right mouse (or drag) to look around, wheel / pinch to zoom", 9, Color3.fromRGB(190, 200, 230), { LayoutOrder = 2 })
 	rule(left, 340, PIXEL.line, 3)
 	local rows = {}
 	for i, cat in ipairs(Looks.Categories) do
@@ -829,15 +857,14 @@ function Menu.Spin()
 		return
 	end
 	local final, finalVariant = res.data.heritage, res.data.variant
-	-- quick roulette through the names, landing on the server's roll
+	-- a short, snappy roulette (v0.24.8: spins chain fast), landing on the server's roll with an aura burst
 	task.spawn(function()
-		local steps = 14
-		for k = 1, steps do
+		for k = 1, 6 do
 			editing.heritage = Looks.Heritages[(k % (#Looks.Heritages - 1)) + 1].id
 			editing.variant = 1
 			refreshEdit()
-			Audio.Play("BlkTick", { pitch = 0.8 + k * 0.04 })
-			task.wait(0.04 + k * 0.012)
+			Audio.Play("BlkTick", { pitch = 0.9 + k * 0.06 })
+			task.wait(0.035)
 		end
 		editing.heritage = final
 		editing.variant = finalVariant or 1
@@ -845,14 +872,49 @@ function Menu.Spin()
 		bankSpins = res.data.bank or bankSpins
 		slots[editing.slot] = res.data.summary
 		refreshEdit()
+		spinning = false -- ready to spin again right away
 		local h = Looks.HeritageById[final]
-		Audio.Play((h and h.chance <= 2) and "LevelUp" or "BlkReward")
-		UI.Toast("You're " .. heritageLabel(final, finalVariant) .. "!", "good")
-		if h and h.chance <= 2 then
-			UI.Banner(string.upper(h.name) .. "!", h.chance .. "% heritage  •  " .. h.perk, h.color, h.mythic and "Mythic" or "Legendary")
+		Menu.AuraBurst(h and h.color or Color3.new(1, 1, 1), h and h.chance or 100)
+		if final ~= "Islander" then
+			Audio.Play((h and h.chance <= 2) and "LevelUp" or "BlkReward")
+			UI.Toast("You're " .. heritageLabel(final, finalVariant) .. "!", "good")
+			if h and h.chance <= 10 then
+				UI.Banner(string.upper(h.name) .. "!", h.chance .. "% heritage  •  " .. h.perk, h.color, h.mythic and "Mythic" or (h.chance <= 2 and "Legendary" or "Epic"))
+			end
+		else
+			Audio.Play("BlkTick", { pitch = 0.8 })
 		end
-		spinning = false
 	end)
+end
+
+-- the heritage's color bursts out of the character: a glowing shell that grows and fades, rings of blocks and pixel
+-- sparks (bigger for rarer heritages)
+local Voxels = require(script.Parent.Parent.Controllers.Voxels)
+function Menu.AuraBurst(color, chance)
+	if not preview or not preview.Parent then
+		return
+	end
+	local center = preview:GetPivot().Position + Vector3.new(0, 3.2, 0)
+	local power = chance <= 2 and 2.2 or (chance <= 10 and 1.6 or (chance <= 20 and 1.25 or 0.8))
+	for i = 1, (chance <= 10) and 3 or 1 do
+		task.delay((i - 1) * 0.12, function()
+			local shell = Instance.new("Part")
+			shell.Anchored = true
+			shell.CanCollide = false
+			shell.CanQuery = false
+			shell.CastShadow = false
+			shell.Material = Enum.Material.Neon
+			shell.Color = color
+			shell.Transparency = 0.35
+			shell.Size = Vector3.new(3, 6, 3)
+			shell.CFrame = CFrame.new(center)
+			shell.Parent = stage or workspace
+			UI.Tween(shell, 0.55, { Size = Vector3.new(9, 9, 9) * power, Transparency = 1 })
+			game:GetService("Debris"):AddItem(shell, 0.6)
+		end)
+	end
+	Voxels.Blocks(center, { count = math.floor(14 * power), colors = { color, color:Lerp(Color3.new(1, 1, 1), 0.5) }, size = { 0.25, 0.55 }, speed = 9 * power, up = 8, neon = true, collide = false, life = 0.7, spread = 1.2 })
+	Voxels.Pixels(center, { count = math.floor(40 * power), colors = { color, Color3.new(1, 1, 1) }, size = 0.25, speed = 14 * power, gravity = -4, life = 0.8, glow = 1, spread = 2 })
 end
 
 -- BUY SPINS (Config/Spins developer products; the server grants them to the account spin bank)
@@ -979,6 +1041,9 @@ end
 
 -- drag to turn the character
 local function hookDrag()
+	-- drag = left button / touch on empty space, or RIGHT button anywhere (the mouse is held in place while it turns)
+	local lastPos
+	local rmb = false
 	UserInputService.InputBegan:Connect(function(input, processed)
 		if not Menu.IsOpen then
 			return
@@ -986,12 +1051,22 @@ local function hookDrag()
 		local t = input.UserInputType
 		if t == Enum.UserInputType.MouseButton2 or ((t == Enum.UserInputType.MouseButton1 or t == Enum.UserInputType.Touch) and not processed) then
 			dragging = true
+			lastPos = input.Position
+			if t == Enum.UserInputType.MouseButton2 then
+				rmb = true
+				UserInputService.MouseBehavior = Enum.MouseBehavior.LockCurrentPosition
+			end
 		end
 	end)
 	UserInputService.InputEnded:Connect(function(input)
 		local t = input.UserInputType
 		if t == Enum.UserInputType.MouseButton2 or t == Enum.UserInputType.MouseButton1 or t == Enum.UserInputType.Touch then
 			dragging = false
+			lastPos = nil
+			if rmb and t == Enum.UserInputType.MouseButton2 then
+				rmb = false
+				UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+			end
 		end
 	end)
 	UserInputService.InputChanged:Connect(function(input)
@@ -999,11 +1074,17 @@ local function hookDrag()
 			return
 		end
 		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+			-- Delta is only filled while the mouse is locked: fall back to the position change
+			local d = Vector2.new(input.Delta.X, input.Delta.Y)
+			if d.Magnitude < 0.01 and lastPos then
+				d = Vector2.new(input.Position.X - lastPos.X, input.Position.Y - lastPos.Y)
+			end
+			lastPos = input.Position
 			if camMode == "edit" then
-				orbit.yaw -= input.Delta.X * 0.01
-				orbit.pitch = math.clamp(orbit.pitch + input.Delta.Y * 0.008, -0.35, 1.25)
+				orbit.yaw -= d.X * 0.01
+				orbit.pitch = math.clamp(orbit.pitch + d.Y * 0.008, -0.35, 1.25)
 			else
-				yaw += input.Delta.X * 0.012
+				yaw += d.X * 0.012
 			end
 			lastDrag = os.clock()
 		end
@@ -1106,6 +1187,12 @@ function Menu.Start()
 			end
 		end
 	end)
+	Net.OnPush(function(kind)
+		if kind == "SlotUnlocked" then
+			UI.Toast("Slot unlocked!", "good")
+			Menu.LoadSlots()
+		end
+	end)
 	local btnGui = New("ScreenGui", { Name = "MenuButton", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 20, Enabled = false, Parent = player:WaitForChild("PlayerGui") })
 	btnGui:SetAttribute("MenuKeep", true)
 	Menu.menuButton = btnGui
@@ -1150,6 +1237,7 @@ function Menu.LoadSlots()
 			return
 		end
 		slots = res.data.slots or {}
+		slotLocked = res.data.locked or {}
 		bankSpins = res.data.bank or 0
 		local best, bestT = 1, -1
 		for i = 1, Looks.Slots do

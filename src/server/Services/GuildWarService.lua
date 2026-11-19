@@ -186,6 +186,27 @@ function GW.Start()
 				end
 			end)
 			return true, "Reset to a brand-new player"
+		elseif data.cmd == "heritage" then
+			-- test any heritage (+ variant) on the current character
+			local Looks = require(ReplicatedStorage.Shared.Config.Looks)
+			local id, var = string.match(tostring(data.value or ""), "^(%w+):?(%d*)$")
+			local h = id and Looks.HeritageById[id]
+			if not h then
+				return false, "Unknown heritage"
+			end
+			local p = R.DataService.Get(player)
+			p.heritage = id
+			p.heritageVariant = tonumber(var) or 1
+			p.heritageMode = "flame"
+			player:SetAttribute("Heritage", id)
+			player:SetAttribute("HeritageMode", "flame")
+			R.PlayerService.Recompute(player)
+			task.defer(function()
+				if player.Parent then
+					R.PlayerService.Respawn(player)
+				end
+			end)
+			return true, "Heritage: " .. h.name
 		elseif data.cmd == "removefruit" then
 			if not R.FruitService.RemoveFruit(player) then
 				return false, "No fruit to remove"

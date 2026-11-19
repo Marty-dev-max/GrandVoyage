@@ -1363,7 +1363,8 @@ local fxSounds = {
 		local now = os.clock()
 		VFX.killStreak = (now - (VFX.lastKillAt or 0) < 4) and math.min((VFX.killStreak or 0) + 1, 10) or 0
 		VFX.lastKillAt = now
-		return d.boss and "BossRoar" or "MonsterDie", d.pos, 1 + VFX.killStreak * 0.07
+		-- kill streaks only nudge the pitch a little (owner: a rising pitch got shrill when killing fast)
+		return d.boss and "BossRoar" or "MonsterDie", d.pos, 1 + math.min(VFX.killStreak, 5) * 0.02
 	end,
 	ChestOpen = function(d)
 		return "ChestOpen", d.pos

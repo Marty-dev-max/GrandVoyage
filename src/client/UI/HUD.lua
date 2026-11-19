@@ -311,6 +311,61 @@ local function buildStatus()
 	bars.expText = UI.Text(row, "", 15, T.Green, "Display", { Size = UDim2.fromOffset(110, 18), TextWrapped = false })
 	bars.jobText = UI.Text(row, "", 15, T.Purple, "Display", { Size = UDim2.fromOffset(110, 18), TextWrapped = false })
 	buffRow = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(170, 158), Size = UDim2.fromOffset(300, 30), Parent = UI.Root })
+	-- v0.24.8 (owner): the party sits right under the player card as one horizontal strip (above the quest tracker):
+	-- member chips with name + HP while in a party, else a PARTY button that opens the Party window
+	local partyBar = softPanel(UI.Root, UDim2.fromOffset(400, 36), UDim2.fromOffset(16, 156), nil, "right")
+	HUD.partyBar = partyBar
+	New("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 4), Parent = partyBar })
+	local partyRow = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Parent = partyBar })
+	UI.List(partyRow, Enum.FillDirection.Horizontal, 6).VerticalAlignment = Enum.VerticalAlignment.Center
+	local partyHp = {}
+	local function renderParty()
+		for _, c in ipairs(partyRow:GetChildren()) do
+			if c:IsA("GuiObject") then
+				c:Destroy()
+			end
+		end
+		partyHp = {}
+		local members = State.party or {}
+		if #members == 0 then
+			local b = UI.Button(partyRow, "👥 PARTY", T.Green, UDim2.fromOffset(120, 26), function()
+				Panels.Open("Party")
+			end)
+			b.Parent.LayoutOrder = 1
+			UI.Text(partyRow, "Team up to share EXP", 11, T.TextSoft, "Semi", { LayoutOrder = 2, Size = UDim2.fromOffset(240, 26), TextYAlignment = Enum.TextYAlignment.Center })
+			return
+		end
+		for i, m in ipairs(members) do
+			if type(m) == "table" and m.userId and m.userId ~= player.UserId then
+				local chip = New("TextButton", { Text = "", AutoButtonColor = false, BackgroundColor3 = T.PanelDeep, BackgroundTransparency = 0.2, Size = UDim2.fromOffset(94, 28), LayoutOrder = i, Parent = partyRow })
+				UI.Text(chip, (m.leader and "★" or "") .. tostring(m.name or "?"), 11, m.leader and T.Gold or T.Text, "Bold", { Position = UDim2.fromOffset(4, 1), Size = UDim2.new(1, -8, 0, 14), TextWrapped = false })
+				local back = New("Frame", { BackgroundColor3 = Color3.fromRGB(40, 20, 24), BorderSizePixel = 0, Position = UDim2.new(0, 4, 1, -9), Size = UDim2.new(1, -8, 0, 6), Parent = chip })
+				local fill = New("Frame", { BackgroundColor3 = T.Green, BorderSizePixel = 0, Size = UDim2.fromScale(1, 1), Parent = back })
+				partyHp[m.userId] = fill
+				chip.Activated:Connect(function()
+					Panels.Open("Party")
+				end)
+			end
+		end
+	end
+	State.Changed:Connect(function(kind)
+		if kind == "party" then
+			renderParty()
+		end
+	end)
+	renderParty()
+	task.spawn(function()
+		while true do
+			task.wait(0.5)
+			for uid, fill in pairs(partyHp) do
+				local pl = Players:GetPlayerByUserId(uid)
+				local hum = pl and pl.Character and pl.Character:FindFirstChildOfClass("Humanoid")
+				local k = hum and math.clamp(hum.Health / math.max(1, hum.MaxHealth), 0, 1) or 0
+				fill.Size = UDim2.fromScale(k, 1)
+				fill.BackgroundColor3 = k > 0.5 and T.Green or (k > 0.25 and T.Gold or T.Red)
+			end
+		end
+	end)
 	UI.List(buffRow, Enum.FillDirection.Horizontal, 6)
 
 	-- one compact row of currencies (was three tall pills)
@@ -648,8 +703,8 @@ local function buildSkillBar()
 	HUD.dashSlot = dash
 	-- the second row starts where the skills start (under it sits the Dash button)
 	New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(SLOT, SLOT), LayoutOrder = 0, Parent = second })
-	-- heritage mode (Cinderwing FLAME / CALM, key G): a fire slot left of Dash, lit or dark; hidden for other heritages
-	local her = makeSlot(main, "G", -1)
+	-- heritage mode (Cinderwing FLAME / CALM, key V; G is the Guild window): a fire slot left of Dash, lit or dark; hidden for other heritages
+	local her = makeSlot(main, "V", -1)
 	her.name.Text = "FLAME"
 	her.name.TextSize = 12
 	her.name.Position = UDim2.new(0, 3, 1, -20)
@@ -677,7 +732,7 @@ local function buildSkillBar()
 		end)
 	end)
 	UI.Tooltip(her.slot, function()
-		return "<b>Heritage mode</b>  [G]\nFLAME: +25% ATK/MATK.  CALM: +20% speed, +10% FLEE.", T.Orange
+		return "<b>Heritage mode</b>  [V]\nFLAME: +25% ATK/MATK.  CALM: +20% speed, +10% FLEE.", T.Orange
 	end)
 	player:GetAttributeChangedSignal("Heritage"):Connect(refreshHeritage)
 	player:GetAttributeChangedSignal("HeritageMode"):Connect(refreshHeritage)
@@ -956,7 +1011,7 @@ function HUD.Loot(data)
 		HUD.killStreak = (now - (HUD.lastLootAt or 0) < 4) and math.min((HUD.killStreak or 0) + 1, 12) or 0
 		HUD.lastLootAt = now
 		if not data.pos then
-			Audio.Play("Coin", { pitch = 1 + HUD.killStreak * 0.06 })
+			Audio.Play("Coin", { pitch = 0.85 + math.min(HUD.killStreak, 5) * 0.02, volume = 0.7 })
 		end
 	end
 	for _, it in ipairs(data.items or {}) do
@@ -1181,7 +1236,11 @@ function HUD.Layout()
 	ring.frame.Position = UDim2.fromOffset(14, topY)
 	statusCard.Position = UDim2.fromOffset(100, topY + 12)
 	statusCard.Size = UDim2.fromOffset(compact and 330 or 400, 128)
-	buffRow.Position = UDim2.fromOffset(170, topY + 148)
+	buffRow.Position = UDim2.fromOffset(430, topY + 146)
+	if HUD.partyBar then
+		HUD.partyBar.Position = UDim2.fromOffset(16, topY + 146)
+		HUD.partyBar.Size = UDim2.fromOffset(compact and 330 or 400, 36)
+	end
 	-- target frame: narrower on small screens so it clears the status card
 	targetFrame.Size = UDim2.fromOffset(compact and 300 or 380, 70)
 	-- menu: 3 small columns on phones, 2 big columns elsewhere
@@ -1199,7 +1258,7 @@ function HUD.Layout()
 	end
 	-- quest tracker sits under the player card
 	if HUD.questFrame then
-		HUD.questFrame.Position = UDim2.fromOffset(16, topY + 192)
+		HUD.questFrame.Position = UDim2.fromOffset(16, topY + 196)
 		HUD.questFrame.Size = UDim2.fromOffset(compact and 300 or 330, HUD.questFrame.Size.Y.Offset)
 	end
 	-- loot feed: bottom-left on PC; on touch screens the thumbstick lives there, so stack it under the tracker

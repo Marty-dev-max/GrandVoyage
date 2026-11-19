@@ -75,7 +75,9 @@ add("Slash", "SFX", 0.45, SWORD)
 add("Whoosh", "SFX", 0.4, "rbxasset://sounds/swordlunge.wav")
 add("MagicCast", "SFX", 0.5, PING, { pitch = 0.7 })
 add("Heal", "SFX", 0.5, PING, { pitch = 1.6 })
-add("MonsterDie", "SFX", 0.5, "rbxasset://sounds/splat.wav", { pitch = 0.85 })
+add("BlkMobPop", "SFX", 0.55, "rbxasset://sounds/splat.wav")
+add("BlkFlap", "SFX", 0.45, "rbxasset://sounds/swoosh.wav")
+add("MonsterDie", "SFX", 0.5, "rbxasset://sounds/splat.wav", { pitch = 0.85, prefer = "BlkMobPop" })
 add("ChestOpen", "SFX", 0.6, PING, { pitch = 0.75, alias = "Purchase" }) -- a lower take on the purchase jingle
 add("ChestRattle", "SFX", 0.55, "rbxasset://sounds/clickfast.wav", { pitch = 0.9 })
 add("BossRoar", "SFX", 0.8, BOOM, { pitch = 0.4 })
@@ -116,6 +118,7 @@ add("MusicBoss", "Music", 0.45, "", { looped = true })
 
 
 
+
 -- ===== uploaded asset ids (written by tools/upload_sfx.py) =====
 S.AmbienceWind.id = "rbxassetid://121665322013245"
 S.AnvilClang.id = "rbxassetid://119416036242324"
@@ -123,8 +126,10 @@ S.Bell.id = "rbxassetid://117065599726354"
 S.BlkClick.id = "rbxassetid://94805456841567"
 S.BlkClose.id = "rbxassetid://92109534077260"
 S.BlkDrop.id = "rbxassetid://76975682776406"
+S.BlkFlap.id = "rbxassetid://134588576098871"
 S.BlkHover.id = "rbxassetid://75768589544700"
 S.BlkLevelUp.id = "rbxassetid://85060242277391"
+S.BlkMobPop.id = "rbxassetid://118389684226093"
 S.BlkOpen.id = "rbxassetid://126008511330983"
 S.BlkReward.id = "rbxassetid://85351416155642"
 S.BlkSwap.id = "rbxassetid://90095917810902"

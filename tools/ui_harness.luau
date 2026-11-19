@@ -200,7 +200,7 @@ end
 local fakeResponses = {
 	StallView = { ok = true, data = { title = "Cheap Cards!", seller = "Pirate King", items = { { index = 1, id = "WildBoarCard", qty = 2, price = 5000 }, { index = 2, id = "Sword_Keen", refine = 5, cards = {}, qty = 1, price = 90000 } } } },
 	PearlInfo = { ok = true, data = { pearls = 840, bound = 120, earnedToday = 75, cap = 300, canTrade = true, perks = {}, products = { { productId = 0, pearls = 100, name = "Pouch of Pearls" }, { productId = 0, pearls = 550, name = "Chest of Pearls" } } } },
-	MenuSlots = { ok = true, data = { bank = 2, slots = { { look = { hair = 18, eyes = 6, mouth = 2, shirt = 6, pants = 1, shoes = 2, hair1 = "F4F4F4" }, heritage = "Skyborn", variant = 3, spins = 1, level = 12, class = "Brawler", jobLevel = 9, played = 5 }, false, false } } },
+	MenuSlots = { ok = true, data = { bank = 2, locked = { false, false, true }, slots = { { look = { hair = 18, eyes = 6, mouth = 2, shirt = 6, pants = 1, shoes = 2, hair1 = "F4F4F4" }, heritage = "Skyborn", variant = 3, spins = 1, level = 12, class = "Brawler", jobLevel = 9, played = 5 }, false, false } } },
 	MenuSpin = { ok = true, data = { heritage = "Cinderwing", variant = 1, bank = 1, summary = { look = {}, heritage = "Cinderwing", variant = 1, spins = 0, level = 1, class = "Brawler", jobLevel = 1, played = 0 } } },
 	MenuSaveLook = { ok = true, data = { look = {}, heritage = "Islander", variant = 1, spins = 3, level = 1, class = "Brawler", jobLevel = 1, played = 0 } },
 	StoreInfo = { ok = true, data = { gems = 960, boosts = { exp = os.time() + 600 }, tokens = { FruitRemover = 1 } } },

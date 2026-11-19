@@ -2435,6 +2435,15 @@ function Panels.Settings()
 				end
 			end
 			devGrid("Player", "🧪", T.Accent, { { "New Player", "resetall" }, { "Reset Lv1", "resetlevel" }, { "Lv70", "level" }, { "Job Lv.10", "joblevel" }, { "+1M " .. COIN, "beli" }, { "Materials", "items" }, { "+1000 " .. PearlsCfg.Icon, "pearls" }, { "Next Quest", "questnext" } })
+			-- heritages (and their variants) to test on this character (respawns with the new look)
+			local LooksCfg = require(ReplicatedStorage.Shared.Config.Looks)
+			local herButtons = {}
+			for _, h in ipairs(LooksCfg.Heritages) do
+				for vi, v in ipairs(h.variants or { { name = h.name } }) do
+					table.insert(herButtons, { (#h.variants > 1) and v.name or h.name, "heritage", h.id .. ":" .. vi })
+				end
+			end
+			devGrid("Heritage", "🧬", T.Orange, herButtons)
 			local fruitButtons = {}
 			for _, f in ipairs(FruitsCfg.List) do
 				table.insert(fruitButtons, { f.icon .. " " .. f.id, "fruit", f.id })

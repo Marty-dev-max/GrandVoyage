@@ -250,6 +250,53 @@ local memBank = {}
 local function bankKey(userId)
 	return "acct_" .. userId
 end
+-- account record: { spins, receipts, slots = { [slotIndex] = true } } (bought slot unlocks)
+function DataService.Account(userId)
+	if useMemory then
+		return memBank[userId] or { spins = 0, receipts = {}, slots = {} }
+	end
+	local ok, res = pcall(function()
+		return store:GetAsync(bankKey(userId))
+	end)
+	return (ok and res) or { spins = 0, receipts = {}, slots = {} }
+end
+function DataService.SlotUnlocked(userId, slot)
+	local SpinsCfg = require(Shared.Config.Spins)
+	local locked = SpinsCfg.SlotUnlock and table.find(SpinsCfg.SlotUnlock.slots, slot)
+	if not locked then
+		return true
+	end
+	local acc = DataService.Account(userId)
+	return acc.slots ~= nil and acc.slots[tostring(slot)] == true
+end
+-- unlock slots for a Robux receipt (idempotent on purchaseId)
+function DataService.GrantSlots(userId, purchaseId, slotList)
+	if useMemory then
+		local b = memBank[userId] or { spins = 0, receipts = {}, slots = {} }
+		memBank[userId] = b
+		b.slots = b.slots or {}
+		for _, sl in ipairs(slotList) do
+			b.slots[tostring(sl)] = true
+		end
+		return true
+	end
+	return pcall(function()
+		store:UpdateAsync(bankKey(userId), function(old)
+			old = old or { spins = 0, receipts = {} }
+			old.receipts = old.receipts or {}
+			old.slots = old.slots or {}
+			if old.receipts[purchaseId] then
+				return old
+			end
+			old.receipts[purchaseId] = os.time()
+			for _, sl in ipairs(slotList) do
+				old.slots[tostring(sl)] = true
+			end
+			return old
+		end)
+	end)
+end
+
 function DataService.BankSpins(userId)
 	if useMemory then
 		return (memBank[userId] or {}).spins or 0

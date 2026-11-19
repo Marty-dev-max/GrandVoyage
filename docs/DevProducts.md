@@ -12,17 +12,22 @@ The 3 Gem packs already exist (IDs are set in `src/shared/Config/Pearls.lua`), n
 
 | Name | Description | Price (R$) | Paste ID into |
 |---|---|---|---|
-| 1 Heritage Spin | One spin to roll your character's heritage. Usable on any character slot. | 49 | `{ productId = 0, spins = 1, ...` |
-| 3 Heritage Spins | Three spins to roll your character's heritage. Usable on any character slot. | 129 | `{ productId = 0, spins = 3, ...` |
-| 5 Heritage Spins | Five spins to roll your character's heritage. Usable on any character slot. | 199 | `{ productId = 0, spins = 5, ...` |
-| 15 Heritage Spins | Fifteen spins to roll your character's heritage. Usable on any character slot. | 499 | `{ productId = 0, spins = 15, ...` |
+| 1 Heritage Spin | One spin to roll your character's heritage. Usable on any character slot. | 29 | `{ productId = 0, spins = 1, ...` |
+| 3 Heritage Spins | Three spins to roll your character's heritage. Usable on any character slot. | 85 | `{ productId = 0, spins = 3, ...` |
+| 5 Heritage Spins | Five spins to roll your character's heritage. Usable on any character slot. | 140 | `{ productId = 0, spins = 5, ...` |
+| 15 Heritage Spins | Fifteen spins to roll your character's heritage. Usable on any character slot. | 429 | `{ productId = 0, spins = 15, ...` |
+
+## Character slot 3 unlock — `src/shared/Config/Spins.lua` (`SlotUnlock`)
+
+| Name | Description | Price (R$) | Paste ID into |
+|---|---|---|---|
+| Unlock Slot 3 | Unlock a third character slot on your account, forever. | 99 | `SlotUnlock = { productId = 0, ...` |
 
 ## Store: Benefits — `src/shared/Config/Store.lua` (list `Benefits`)
 
 | Name | Description | Price (R$) | Paste ID into |
 |---|---|---|---|
 | Fruit Remover | Remove your Cursed Fruit so you can eat a new one. | 99 | `id = "FruitRemover"` line, `productId = 0` |
-| Reset Stats | Refund every stat point you have spent. | 79 | `id = "ResetStats"` line |
 | Boss Respawn | Every defeated MVP boss on your server comes back right away. | 149 | `id = "BossRespawn"` line |
 | Fruit Notifier (1 hour) | For 1 hour, see which island a Cursed Fruit appears on. | 99 | `id = "FruitNotifier"` line |
 
@@ -43,7 +48,7 @@ a player's name before the Robux prompt, so no separate gift products are needed
 ## Checklist for whoever does it
 
 1. Experience must be published (the products belong to its universe).
-2. Create the 14 products above (4 spins + 4 benefits + 6 boosts).
+2. Create the 14 products above (4 spins + 1 slot unlock + 3 benefits + 6 boosts).
 3. Paste each ID into the matching `productId = 0` in `Spins.lua` / `Store.lua`.
 4. Game Settings → Security → keep "Allow HTTP Requests" as is; nothing else is needed (receipts are handled in
    `PearlService.processReceipt` → `StoreService.Receipt` / spin bank).

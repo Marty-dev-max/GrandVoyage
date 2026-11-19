@@ -105,6 +105,16 @@ def main():
     parts.append((0, shimmer))
     parts.append((0, np.sin(2 * np.pi * 196 * t(0.6)) * env(int(SR * 0.6), 0.005, 5) * 0.45))
     save('BlkLevelUp', mix(*parts), 0.9)
+    # monster dissolves (v0.24.8, owner: the old one was a shrill "pring"): a soft low thump + blocks tumbling apart
+    thump = np.sin(2 * np.pi * 120 * t(0.22) * (1 - 0.35 * t(0.22) / 0.22)) * env(int(SR * 0.22), 0.002, 9)
+    crumble = mix(*[(0.03 + k * 0.035, knock(260 + (k % 3) * 70, 0.07, 0.4) * (0.7 - k * 0.08)) for k in range(6)])
+    save('BlkMobPop', mix((0, thump), (0, soften(crumble, 9))), 0.7)
+    # wing flap: a short airy whoosh (band-limited noise swelling then falling)
+    n = int(SR * 0.3)
+    noise = rng.uniform(-1, 1, n)
+    lowp = soften(soften(noise, 18), 18)
+    shape = np.sin(np.linspace(0, np.pi, n)) ** 1.6
+    save('BlkFlap', lowp * shape + soften(noise, 6) * shape * 0.15, 0.6)
     print('wrote Blk* ui sounds')
 
 

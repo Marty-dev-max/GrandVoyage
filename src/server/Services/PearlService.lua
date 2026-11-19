@@ -196,6 +196,17 @@ local function processReceipt(info)
 	if storeDecision then
 		return storeDecision
 	end
+	local su = SpinsCfg.SlotUnlock
+	if su and su.productId ~= 0 and info.ProductId == su.productId then
+		if not R.DataService.GrantSlots(info.PlayerId, info.PurchaseId, su.slots) then
+			return Enum.ProductPurchaseDecision.NotProcessedYet
+		end
+		local buyer = Players:GetPlayerByUserId(info.PlayerId)
+		if buyer then
+			Net.Push(buyer, "SlotUnlocked", { slots = su.slots })
+		end
+		return Enum.ProductPurchaseDecision.PurchaseGranted
+	end
 	local pack = spinPackById[info.ProductId]
 	if pack then
 		if not R.DataService.GrantBankSpins(info.PlayerId, info.PurchaseId, pack.spins) then

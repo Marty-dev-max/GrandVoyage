@@ -1,6 +1,6 @@
 -- Heritage (client, v0.24.0): what your heritage (Config/Looks) does in the world.
 --  * Glide: winged heritages (Skyborn, Cinderwing) hold Jump in mid-air to fall slowly.
---  * Cinderwing modes: G (or the chip on the right edge) switches FLAME (hits harder) <-> CALM (moves faster);
+--  * Cinderwing modes: V (G is the Guild window) (or the chip on the right edge) switches FLAME (hits harder) <-> CALM (moves faster);
 --    the server owns the switch (HeritageMode request), this only asks and shows it.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -26,7 +26,7 @@ local function refreshChip()
 	end
 	chip.Visible = false
 	local calm = player:GetAttribute("HeritageMode") == "calm"
-	chipText.Text = calm and "CALM [G]" or "FLAME [G]"
+	chipText.Text = calm and "CALM [V]" or "FLAME [V]"
 	chip.BackgroundColor3 = calm and Color3.fromRGB(70, 150, 230) or Color3.fromRGB(240, 110, 40)
 end
 
@@ -78,7 +78,7 @@ function Heritage.Start()
 	local boostCol = Instance.new("Frame")
 	boostCol.BackgroundTransparency = 1
 	boostCol.AnchorPoint = Vector2.new(0, 0)
-	boostCol.Position = UDim2.new(0, 14, 0, 236) -- under the status card (left), clear of the menu column
+	boostCol.Position = UDim2.new(0, 520, 0, 24) -- right of the player card (the party strip + quest tracker sit under it)
 	boostCol.Size = UDim2.fromOffset(170, 120)
 	boostCol.Parent = gui
 	local lay = Instance.new("UIListLayout")
@@ -119,7 +119,7 @@ function Heritage.Start()
 	refreshChip()
 
 	UserInputService.InputBegan:Connect(function(input, processed)
-		if not processed and input.KeyCode == Enum.KeyCode.G then
+		if not processed and input.KeyCode == Enum.KeyCode.V then
 			toggle()
 		end
 	end)

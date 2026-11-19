@@ -237,7 +237,7 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     `Shared/Modules/VoxelChar.Apply`), never `player:LoadCharacter()`.
   * Looks (`Config/Looks.lua`): styles + hex colors (Color 1/2 per part, skin). Faces = images from `tools/gen_faces.py`
     (`Config/FaceImages`, eye layers white/iris/iris2/over, mouths untinted). Heritages: Islander, Skyborn, Tidekin,
-    Beastkin, Oni, Cinderwing (0.1%, locked look, FLAME/CALM via `HeritageMode`, key G). Never use One Piece race names
+    Beastkin, Oni, Cinderwing (0.1%, locked look, FLAME/CALM via `HeritageMode`, key V since v0.24.8: G is Guild). Never use One Piece race names
     (Skypian, Fishman, Mink, Lunarian...). Spins: slot spins + account bank (`acct_<id>` key, `Config/Spins` products).
   * Preview any look offline: `lune run tools/export_char.luau build/GrandVoyage.rbxlx out.json lineup|styles` +
     `python3 tools/blender/render_parts.py -- out.json out.png three` (also ships: `tools/export_ship.luau`).
@@ -258,6 +258,13 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     air, Q = barrel roll), manual-mode aiming (`Combat.AimInfo`: skills fire along the pointer/crosshair, server takes
     `dir`), `Controllers/Crosshair` pixel "^" with Shift Lock, quiet pickup sounds + `BlkLevelUp` chime.
     Developer Products to create: `docs/DevProducts.md`.
+  * v0.24.8: `Controllers/HeritageAnim` animates heritage blocks on every client (wings beat when flying/airborne +
+    `BlkFlap`, Beastkin tails sway, ears twitch per side, Tidekin fins ripple; horns/back flame rigid): VoxelChar pieces
+    named Wing/WingTip/Tail/TailTip/Ear/Fin are hidden locally and anchored copies are posed with BulkMoveTo.
+    Slot 3 is locked until bought (`Spins.SlotUnlock` product, `DataService.GrantSlots` on `acct_<id>`, `MenuUnlockSlot`,
+    push `SlotUnlocked`). Spins 29/85/140/429 R$. Reset Stats removed from the Store. Dev tab Heritage picker (Admin
+    cmd `heritage` "Id:variant"). Party = horizontal strip under the character card (`HUD.partyBar`), quest below it.
+    Creator: hold right mouse to orbit (MouseBehavior LockCurrentPosition). MonsterDie prefers soft `BlkMobPop`.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

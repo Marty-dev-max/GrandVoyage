@@ -5,9 +5,11 @@
 -- paste each product id below. A pack with productId = 0 shows "coming soon" instead of the purchase prompt.
 return {
 	Products = {
-		{ productId = 0, spins = 1, robux = 49, name = "1 SPIN" },
-		{ productId = 0, spins = 3, robux = 129, name = "3 SPINS" },
-		{ productId = 0, spins = 5, robux = 199, name = "5 SPINS" },
-		{ productId = 0, spins = 15, robux = 499, name = "15 SPINS" },
+		{ productId = 0, spins = 1, robux = 29, name = "1 SPIN" },
+		{ productId = 0, spins = 3, robux = 85, name = "3 SPINS" },
+		{ productId = 0, spins = 5, robux = 140, name = "5 SPINS" },
+		{ productId = 0, spins = 15, robux = 429, name = "15 SPINS" },
 	},
+	-- v0.24.8 (owner): character slot 3 is locked until bought once (account-wide). Same Creator Hub steps as above.
+	SlotUnlock = { productId = 0, robux = 99, name = "Unlock Slot 3", slots = { 3 } },
 }

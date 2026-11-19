@@ -1,6 +1,6 @@
 -- Flight (client, v0.24.6, owner): free flight for whoever is allowed to fly. Generic: a heritage (Config/Looks
 -- `fly = true`, Cinderwing today) or any later source calls Flight.Allow(source, true).
---  * Take off: in the air, HOLD Jump (Space / the jump button) for a moment. Hold Jump to climb, Ctrl to dive.
+--  * Take off: in the air, HOLD Jump (Space / the jump button) for a moment. Hold Jump to climb, Ctrl to dive (C is the Stats window).
 --  * Steer: you fly where the camera looks (move keys / thumbstick are camera-relative, pitch included). With Shift Lock
 --    the body always faces the camera, so you fly exactly along the crosshair.
 --  * Q while flying = barrel roll (a full roll with a speed burst) instead of the ground Dash.
@@ -150,7 +150,7 @@ function Flight.Start()
 		local md = h.MoveDirection
 		local f = md:Dot(flatLook)
 		local s = md:Dot(Vector3.new(right.X, 0, right.Z).Unit)
-		local up = (jumpHeld and 1 or 0) - ((UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or UserInputService:IsKeyDown(Enum.KeyCode.C)) and 1 or 0)
+		local up = (jumpHeld and 1 or 0) - ((UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or UserInputService:IsKeyDown(Enum.KeyCode.RightControl)) and 1 or 0)
 		local vel = (look * f + right * s) * SPEED + Vector3.yAxis * up * CLIMB
 		local boost = 1
 		local rollAngle = 0

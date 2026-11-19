@@ -115,6 +115,18 @@ def main():
     lowp = soften(soften(noise, 18), 18)
     shape = np.sin(np.linspace(0, np.pi, n)) ** 1.6
     save('BlkFlap', lowp * shape + soften(noise, 6) * shape * 0.15, 0.6)
+    # v0.24.12 (owner: pickups sounded shrill): an item dropping into a cloth bag = a soft low "thup" + a little rustle
+    n = int(SR * 0.16)
+    body = np.sin(2 * np.pi * 150 * t(0.16) * (1 - 0.3 * t(0.16) / 0.16)) * env(n, 0.003, 11)
+    rustle = soften(soften(rng.uniform(-1, 1, n), 10), 10) * env(n, 0.002, 16) * 1.6
+    save('BlkPouch', body + rustle, 0.6)
+    # coins into the purse: two muted, low clinks (no high ring) over a small thump
+    def clink(f, d=0.09):
+        tt = t(d)
+        x = np.sin(2 * np.pi * f * tt) + 0.35 * np.sin(2 * np.pi * f * 1.5 * tt)
+        return x * env(len(tt), 0.001, 30)
+    coin = mix((0, clink(880) * 0.6), (0.045, clink(740) * 0.5), (0, np.sin(2 * np.pi * 180 * t(0.08)) * env(int(SR * 0.08), 0.002, 18) * 0.5))
+    save('BlkCoin', soften(coin, 5), 0.5)
     print('wrote Blk* ui sounds')
 
 

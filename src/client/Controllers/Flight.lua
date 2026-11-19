@@ -151,7 +151,9 @@ function Flight.Start()
 		local f = md:Dot(flatLook)
 		local s = md:Dot(Vector3.new(right.X, 0, right.Z).Unit)
 		local up = (jumpHeld and 1 or 0) - ((UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or UserInputService:IsKeyDown(Enum.KeyCode.RightControl)) and 1 or 0)
-		local vel = (look * f + right * s) * SPEED + Vector3.yAxis * up * CLIMB
+		-- Cinderwing CALM mode flies 25% faster than FLAME (v0.24.12, owner)
+		local modeK = player:GetAttribute("HeritageMode") == "calm" and 1.25 or 1
+		local vel = (look * f + right * s) * SPEED * modeK + Vector3.yAxis * up * CLIMB * modeK
 		local boost = 1
 		local rollAngle = 0
 		if roll.active then
@@ -167,7 +169,7 @@ function Flight.Start()
 		-- body: faces the camera with Shift Lock, else the way it flies; leans forward with speed
 		local horiz = Vector3.new(vel.X, 0, vel.Z)
 		local face = shiftLocked() and flatLook or (horiz.Magnitude > 2 and horiz.Unit or Vector3.new(r.CFrame.LookVector.X, 0, r.CFrame.LookVector.Z).Unit)
-		local speedK = math.clamp(vel.Magnitude / SPEED, 0, 1)
+		local speedK = math.clamp(vel.Magnitude / (SPEED * modeK), 0, 1)
 		local pitch = -math.rad(65) * speedK * math.clamp(1 - math.abs(up) * 0.5, 0.3, 1)
 		if shiftLocked() and f > 0.2 then
 			pitch = -math.rad(70) + math.asin(math.clamp(look.Y, -1, 1)) * 0.6

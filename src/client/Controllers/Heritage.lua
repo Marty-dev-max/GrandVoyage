@@ -75,27 +75,47 @@ function Heritage.Start()
 	UI.Tactile(chip)
 	chip.Activated:Connect(toggle)
 	-- Store boost timers (2x EXP / 2x Drop / Fruit Notifier): small chips under the mode chip
+	-- boost timers live in the HUD row under the EXP readouts (HUD.boostRow, v0.24.12); built in a holder first and
+	-- moved there once the HUD is up (never yield Start)
 	local boostCol = Instance.new("Frame")
 	boostCol.BackgroundTransparency = 1
-	boostCol.AnchorPoint = Vector2.new(0, 0)
-	boostCol.Position = UDim2.new(0, 520, 0, 24) -- right of the player card (the party strip + quest tracker sit under it)
+	boostCol.Position = UDim2.new(0, 520, 0, 24)
 	boostCol.Size = UDim2.fromOffset(170, 120)
 	boostCol.Parent = gui
 	local lay = Instance.new("UIListLayout")
 	lay.Padding = UDim.new(0, 4)
-	lay.HorizontalAlignment = Enum.HorizontalAlignment.Left
 	lay.Parent = boostCol
+	task.spawn(function()
+		local HUDmod = require(script.Parent.Parent.UI.HUD)
+		local t0 = os.clock()
+		while not HUDmod.boostRow and os.clock() - t0 < 15 do
+			task.wait(0.2)
+		end
+		if HUDmod.boostRow then
+			for _, c in ipairs(boostCol:GetChildren()) do
+				if c:IsA("TextLabel") then
+					c.Parent = HUDmod.boostRow
+				end
+			end
+		end
+	end)
 	local BOOSTS = { { "BoostExp", "2x EXP", Color3.fromRGB(255, 206, 70) }, { "BoostDrop", "2x DROP", Color3.fromRGB(120, 220, 120) }, { "BoostFruit", "FRUIT RADAR", Color3.fromRGB(240, 120, 200) } }
 	local chips = {}
 	for i, b in ipairs(BOOSTS) do
 		local l = Instance.new("TextLabel")
 		l.LayoutOrder = i
-		l.Size = UDim2.fromOffset(170, 24)
+		l.Size = UDim2.fromOffset(b[1] == "BoostFruit" and 128 or 100, 20)
 		l.BackgroundColor3 = Color3.fromRGB(16, 16, 28)
-		l.BackgroundTransparency = 0.2
+		l.BackgroundTransparency = 0.35
+		l.BorderSizePixel = 0
 		l.TextColor3 = b[3]
 		l.FontFace = UI.Fonts.Display
-		l.TextSize = 13
+		l.TextSize = 11
+		local st = Instance.new("UIStroke")
+		st.Color = b[3]
+		st.Transparency = 0.4
+		st.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		st.Parent = l
 		l.Visible = false
 		l.Parent = boostCol
 		chips[b[1]] = { label = l, name = b[2] }

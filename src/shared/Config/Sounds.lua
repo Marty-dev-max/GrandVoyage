@@ -39,7 +39,11 @@ add("UIOpen", "UI", 0.45, PING, { pitch = 0.8, prefer = "BlkOpen" })
 add("UIClose", "UI", 0.4, PING, { pitch = 0.6, prefer = "BlkClose" })
 add("Error", "UI", 0.5, "rbxasset://sounds/uuhhh.mp3", { pitch = 1.4 })
 -- v0.24.6 (owner): EXP / coin / item pickups are background ticks now (quiet); the level up is the loud reward
-add("Coin", "UI", 0.16, PING, { pitch = 0.72 }) -- the synth coin is high: play it lower (the owner found it shrill)
+add("BlkCoin", "UI", 0.5, PING, { pitch = 0.72 })
+add("BlkPouch", "UI", 0.6, CLICK, { pitch = 0.7 })
+-- v0.24.12 (owner: pickups still sounded shrill): coins = low muted clinks, items = a soft drop into the bag
+add("Coin", "UI", 0.16, PING, { pitch = 0.72, prefer = "BlkCoin" })
+add("Pickup", "UI", 0.5, CLICK, { pitch = 0.7, prefer = "BlkPouch" })
 add("Purchase", "UI", 0.55, PING, { pitch = 1.25 })
 add("Equip", "UI", 0.5, "rbxasset://sounds/unsheath.wav")
 -- Progression
@@ -119,18 +123,21 @@ add("MusicBoss", "Music", 0.45, "", { looped = true })
 
 
 
+
 -- ===== uploaded asset ids (written by tools/upload_sfx.py) =====
 S.AmbienceWind.id = "rbxassetid://121665322013245"
 S.AnvilClang.id = "rbxassetid://119416036242324"
 S.Bell.id = "rbxassetid://117065599726354"
 S.BlkClick.id = "rbxassetid://94805456841567"
 S.BlkClose.id = "rbxassetid://92109534077260"
+S.BlkCoin.id = "rbxassetid://124265145228604"
 S.BlkDrop.id = "rbxassetid://76975682776406"
 S.BlkFlap.id = "rbxassetid://134588576098871"
 S.BlkHover.id = "rbxassetid://75768589544700"
 S.BlkLevelUp.id = "rbxassetid://85060242277391"
 S.BlkMobPop.id = "rbxassetid://118389684226093"
 S.BlkOpen.id = "rbxassetid://126008511330983"
+S.BlkPouch.id = "rbxassetid://101259430436269"
 S.BlkReward.id = "rbxassetid://85351416155642"
 S.BlkSwap.id = "rbxassetid://90095917810902"
 S.BlkTick.id = "rbxassetid://125395146895714"

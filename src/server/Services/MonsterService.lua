@@ -330,6 +330,72 @@ function MS.Damage(mob, amount, player, crit, kind)
 	end
 end
 
+-- Knockback (v0.24.12, owner): a strong hit shoves the monster back a few studs, it skids (clients draw dust lines at
+-- its feet: Knockback FX) and its AI pauses for the skid. power = how hard the hit was (combo finisher 1, Heavy Attack
+-- 2, skills = their damage multiplier). Bosses and huge monsters only budge for power >= BOSS_POWER, and less far.
+local BOSS_POWER = 2.4
+local knockParams = RaycastParams.new()
+knockParams.FilterType = Enum.RaycastFilterType.Exclude
+function MS.Knockback(mob, fromPos, dist, power)
+	if mob.dead or not mob.root or not mob.hum or mob.sea or mob.chain or mob.def.static or mob.opts.static then
+		return
+	end
+	local big = mob.def.isBoss or (mob.def.style and (mob.def.style.scale or 1) >= 2)
+	if big then
+		if (power or 1) < BOSS_POWER then
+			return
+		end
+		dist *= 0.45
+	end
+	local root = mob.root
+	local dir = Vector3.new(root.Position.X - fromPos.X, 0, root.Position.Z - fromPos.Z)
+	if dir.Magnitude < 0.1 then
+		dir = -root.CFrame.LookVector
+	end
+	dir = Vector3.new(dir.X, 0, dir.Z).Unit
+	-- stop at walls / trees, and never shove a monster off a cliff or into the sea
+	knockParams.FilterDescendantsInstances = { mob.model, workspace:FindFirstChild("Monsters") }
+	local wall = workspace:Raycast(root.Position, dir * (dist + 1.5), knockParams)
+	if wall then
+		dist = math.max(0, wall.Distance - 1.5)
+	end
+	local to = root.Position + dir * dist
+	local ground = workspace:Raycast(to + Vector3.new(0, 3, 0), Vector3.new(0, -14, 0), knockParams)
+	if not ground or ground.Material == Enum.Material.Water then
+		dist *= 0.3
+	end
+	if dist < 0.6 then
+		return
+	end
+	local dur = 0.24
+	mob.knockUntil = os.clock() + dur + 0.12
+	mob.hum:MoveTo(root.Position)
+	local att = Instance.new("Attachment")
+	att.Name = "KnockAtt"
+	att.Parent = root
+	local lv = Instance.new("LinearVelocity")
+	lv.Attachment0 = att
+	lv.VelocityConstraintMode = Enum.VelocityConstraintMode.Plane
+	lv.PrimaryTangentAxis = Vector3.xAxis
+	lv.SecondaryTangentAxis = Vector3.zAxis
+	lv.RelativeTo = Enum.ActuatorRelativeTo.World
+	lv.MaxForce = math.huge
+	local speed = dist / dur * 1.35 -- starts fast, eases out below
+	lv.PlaneVelocity = Vector2.new(dir.X, dir.Z) * speed
+	lv.Parent = root
+	task.spawn(function()
+		local t0 = os.clock()
+		while os.clock() - t0 < dur and lv.Parent do
+			local k = (os.clock() - t0) / dur
+			lv.PlaneVelocity = Vector2.new(dir.X, dir.Z) * speed * (1 - k) * 1.3
+			task.wait()
+		end
+		lv:Destroy()
+		att:Destroy()
+	end)
+	Net.FX("Knockback", { model = mob.model, dir = dir, dist = dist, dur = dur, big = big == true }, root.Position, 220)
+end
+
 -- Remove a monster without rewards but keep its spawn point alive (used by pet capture)
 function MS.Remove(mob)
 	if mob.dead then
@@ -844,6 +910,9 @@ end
 local function step(mob, now)
 	if mob.dead or not mob.root or not mob.root.Parent or mob.def.static or mob.opts.static then
 		return
+	end
+	if mob.knockUntil and now < mob.knockUntil then
+		return -- skidding back from a knockback (MS.Knockback)
 	end
 	local def = mob.def
 	syncTarget(mob)

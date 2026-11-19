@@ -272,6 +272,16 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     double grant), gift recipient saved too; MenuUnlockSlot refuses an already-unlocked slot.
   * v0.24.10: every Developer Product ID is filled in (Store, Spins, Gem packs) (`Spins.SlotUnlock` = 3733442306 since v0.24.11). Creator Hub "Managed pricing" can change what a player pays, so Robux labels use `UI/Prices.Apply(productId,
     fallback, fn)` (GetProductInfo PriceInRobux, cached) instead of trusting the config `robux` number.
+  * v0.24.12: menu edits (look, Heritage spins, bank spins) go to a server cache in DataService (`menuCache`,
+    `bankTake`) written in the background (`FlushMenu`, one write per key per 6.5 s; the slot being played rides along
+    with the Load write): DataStore's per-key write limit made quick respins lag. Client roulette starts instantly.
+    Aura on a roll = pixel ParticleEmitters on the preview's body blocks. Menu stays faded until char "Voxelized".
+    Cinderwing CALM flies 25% faster (Flight modeK). HUD: soft ring disc, `HUD.boostRow` under the EXP readouts
+    (boost timers), party strip + quest moved below the level badge. `Controllers/QuestPath`: yellow tile trail to
+    State.questTarget (PathfindingService, straight-line fallback). Knockback: `MonsterService.Knockback(mob, from,
+    dist, power)` (LinearVelocity plane skid, AI paused, walls/cliffs/sea respected; bosses/huge only for power >= 2.4
+    at 45%), CombatService opts.knock on combo finishers, crits (2.5), last hit of damage skills; `Knockback` FX = dust
+    + scuff lines. Coin loot no longer plays the Legendary jingle; Coin -> `BlkCoin`, item pickup -> `Pickup`/`BlkPouch`.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

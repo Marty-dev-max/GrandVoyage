@@ -182,6 +182,14 @@ local function hitTarget(attacker, target, mult, magic, opts)
 		local dmg, isCrit = Formulas.Damage(atk, mdef, mult * bonus, magic and 0 or crit)
 		R.MonsterService.Damage(mob, dmg, attacker, isCrit, opts.element)
 		R.PetService.OnOwnerHit(attacker, mob)
+		-- knockback on the hits that should feel heavy (combo finisher, Heavy Attack, strong skills; crits a little)
+		local knock = opts.knock or (isCrit and 2.5 or nil)
+		if knock and not mob.dead then
+			local aroot = R.PlayerService.Root(attacker)
+			if aroot then
+				R.MonsterService.Knockback(mob, opts.knockFrom or aroot.Position, knock, opts.knockPower or (isCrit and 1 or 1))
+			end
+		end
 		if opts.dot and not mob.dead then
 			applyDot(attacker, mob, opts.dot[1], math.floor(dmg * opts.dot[2]), opts.dot[3])
 		end
@@ -348,6 +356,11 @@ local function setup()
 			-- the Doctor's stinging powder: a little poison on every throw
 			hopts.element, hopts.dot = "poison", { "poison", 0.15, 3 }
 		end
+		-- the last hit of the combo shoves the monster back (v0.24.12, owner)
+		local comboLen = #((AnimClips.Weapons[wType] or AnimClips.Weapons.Fists).combo)
+		if n == comboLen and comboLen > 1 then
+			hopts.knock, hopts.knockPower = 5, 1
+		end
 		hitLater(strike + (SHOT_FLIGHT[wType] or 0), player, target, mult, magic, hopts)
 		return true
 	end, 0.2)
@@ -441,6 +454,17 @@ local function setup()
 			local el = FRUIT_ELEMENT[skill.fruit]
 			skillOpts = { element = el, dot = el == "fire" and { "burn", 0.2, 3 } or nil }
 		end
+		-- knockback (v0.24.12): damage skills shove on their LAST hit; power = the skill's multiplier (Heavy Attack 2.2+)
+		local knockPower = (skill.heavy and math.max(2.2, mult)) or mult
+		local knockDist = math.clamp(2.5 + knockPower * 2, 3, 10)
+		local function lastHitOpts(isLast, from)
+			if not isLast or (kind ~= "Melee" and kind ~= "Ranged" and kind ~= "Dash" and kind ~= "AoE" and kind ~= "GroundAoE") then
+				return skillOpts
+			end
+			local o = table.clone(skillOpts or {})
+			o.knock, o.knockPower, o.knockFrom = knockDist, knockPower, from
+			return o
+		end
 
 		local aimDir = typeof(data.dir) == "Vector3" and Vector3.new(data.dir.X, 0, data.dir.Z) or nil
 		if aimDir and (aimDir.Magnitude < 0.5 or aimDir.Magnitude ~= aimDir.Magnitude) then
@@ -460,7 +484,7 @@ local function setup()
 					if key and not seen[key] then
 						seen[key] = true
 						for i = 1, skill.hits or 1 do
-							hitLater(land + 0.09 * (i - 1), player, tt, mult, magic, skillOpts)
+							hitLater(land + 0.09 * (i - 1), player, tt, mult, magic, lastHitOpts(i == (skill.hits or 1)))
 						end
 					end
 				end
@@ -476,7 +500,7 @@ local function setup()
 			fxData.to = target.pos
 			local land = strike + (kind == "Ranged" and 0.2 or 0)
 			for i = 1, skill.hits or 1 do
-				hitLater(land + 0.09 * (i - 1), player, target, mult, magic, skillOpts)
+				hitLater(land + 0.09 * (i - 1), player, target, mult, magic, lastHitOpts(i == (skill.hits or 1)))
 			end
 			if skill.id == "OniSlash" then
 				hitLater(land + 0.15, player, target, mult * 0.5, magic)
@@ -506,7 +530,7 @@ local function setup()
 					local key = tt.mob or tt.player
 					if key and not seen[key] then
 						seen[key] = true
-						hitLater(0.08 + step / 60, player, tt, mult, magic, skillOpts)
+						hitLater(0.08 + step / 60, player, tt, mult, magic, lastHitOpts(true))
 					end
 				end
 			end
@@ -514,7 +538,7 @@ local function setup()
 			fxData.to = root.Position
 			fxData.radius = skill.radius
 			for _, t in ipairs(inRadiusTargets(player, root.Position, skill.radius)) do
-				hitLater(strike, player, t, mult, magic, skillOpts)
+				hitLater(strike, player, t, mult, magic, lastHitOpts(true, root.Position))
 			end
 		elseif kind == "GroundAoE" then
 			local pos = typeof(data.pos) == "Vector3" and data.pos or nil
@@ -529,7 +553,7 @@ local function setup()
 			fxData.radius = skill.radius
 			task.delay(math.max(0.25, strike), function()
 				for _, t in ipairs(inRadiusTargets(player, pos, skill.radius)) do
-					hitTarget(player, t, mult, magic, skillOpts)
+					hitTarget(player, t, mult, magic, lastHitOpts(true, pos))
 				end
 			end)
 		elseif kind == "Heal" then

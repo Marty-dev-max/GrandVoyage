@@ -1088,6 +1088,71 @@ handlers.MobAttack = function(d)
 		end)
 	end
 end
+-- knockback (MonsterService.Knockback, v0.24.12): the monster skids back; dust kicks up at its feet and two scuff
+-- lines are left on the ground along the slide (in the ground's own color), then fade
+local knockRay = RaycastParams.new()
+knockRay.FilterType = Enum.RaycastFilterType.Exclude
+handlers.Knockback = function(d)
+	local model = d.model
+	if typeof(model) ~= "Instance" or not model.Parent or typeof(d.dir) ~= "Vector3" then
+		return
+	end
+	local cf, size = model:GetBoundingBox()
+	local feetY = cf.Position.Y - size.Y / 2
+	local dir = d.dir
+	local side = Vector3.new(-dir.Z, 0, dir.X)
+	local halfW = math.clamp(math.min(size.X, size.Z) * 0.3, 0.5, 3)
+	local dur = d.dur or 0.24
+	knockRay.FilterDescendantsInstances = { model, workspace:FindFirstChild("VoxelFX") }
+	local function groundAt(p)
+		local hit = workspace:Raycast(Vector3.new(p.X, feetY + 2, p.Z), Vector3.new(0, -6, 0), knockRay)
+		return hit
+	end
+	local startHit = groundAt(cf.Position)
+	local dustColor = startHit and startHit.Instance.Color:Lerp(Color3.fromRGB(225, 210, 180), 0.45) or Color3.fromRGB(200, 185, 150)
+	local startPos = Vector3.new(cf.Position.X, startHit and startHit.Position.Y or feetY, cf.Position.Z)
+	-- dust while it slides
+	task.spawn(function()
+		local t0 = os.clock()
+		while os.clock() - t0 < dur and model.Parent do
+			local c = model:GetBoundingBox()
+			local hit = groundAt(c.Position)
+			local p = Vector3.new(c.Position.X, hit and hit.Position.Y + 0.2 or feetY, c.Position.Z)
+			Voxels.Pixels(p, { count = d.big and 14 or 8, colors = { dustColor, dustColor:Lerp(Color3.new(1, 1, 1), 0.3) }, size = d.big and 0.6 or 0.32, speed = 4, up = 2, gravity = 3, life = 0.55, glow = 0, spread = halfW * 2 })
+			task.wait(0.06)
+		end
+		-- final puff where it stops
+		local c = model.Parent and model:GetBoundingBox()
+		if c then
+			Voxels.Blocks(Vector3.new(c.Position.X, feetY + 0.3, c.Position.Z), { count = d.big and 10 or 5, colors = { dustColor }, size = { 0.18, 0.35 }, speed = 5, up = 4, collide = false, life = 0.45, spread = halfW })
+		end
+	end)
+	-- scuff lines: two flat dark strips per side of the feet along the slide, fading out
+	local dist = d.dist or 4
+	local scuff = (startHit and startHit.Instance.Color or Color3.fromRGB(120, 100, 80)):Lerp(Color3.new(0, 0, 0), 0.35)
+	for _, k in ipairs({ -1, 1 }) do
+		local a = startPos + side * halfW * k * 0.6
+		local mid = a + dir * dist / 2 + Vector3.new(0, 0.06, 0)
+		local line = Instance.new("Part")
+		line.Anchored = true
+		line.CanCollide = false
+		line.CanQuery = false
+		line.CanTouch = false
+		line.CastShadow = false
+		line.Material = Enum.Material.SmoothPlastic
+		line.Color = scuff
+		line.Transparency = 0.25
+		line.Size = Vector3.new(d.big and 0.6 or 0.28, 0.06, 0.1)
+		line.CFrame = CFrame.lookAt(a, a + dir) * CFrame.new(0, 0.06, -0.05)
+		line.Parent = workspace:FindFirstChild("VoxelFX") or workspace
+		TweenService:Create(line, TweenInfo.new(dur, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.new(line.Size.X, 0.06, dist), CFrame = CFrame.lookAt(mid, mid + dir) }):Play()
+		task.delay(dur + 0.9, function()
+			TweenService:Create(line, TweenInfo.new(0.6), { Transparency = 1 }):Play()
+		end)
+		Debris:AddItem(line, dur + 1.6)
+	end
+end
+
 -- a monster you just attacked startles: a yellow "!" pops over its head, bobs, then fades (MonsterService.Provoke)
 handlers.MobAlert = function(d)
 	local model = d.model
@@ -1413,6 +1478,11 @@ local fxSounds = {
 	end,
 	ShipDebris = function(d)
 		return "ShipHit", d.pos, 0.9
+	end,
+	Knockback = function(d)
+		local m = d.model
+		local p = typeof(m) == "Instance" and m.PrimaryPart
+		return "Whoosh", p and p.Position or nil, d.big and 0.55 or 0.75
 	end,
 	MobAlert = function(d)
 		local m = d.model

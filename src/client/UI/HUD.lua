@@ -88,10 +88,15 @@ end
 local function buildRing(parent, pos)
 	local frame = New("Frame", { Size = UDim2.fromOffset(RING_SIZE, RING_SIZE), Position = pos, BackgroundTransparency = 1, ZIndex = 3, Parent = parent })
 	local sc = New("UIScale", { Parent = frame })
-	local disc = New("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), ZIndex = 3, Parent = frame })
+	-- v0.24.12 (owner): the dark disc behind the ring is a soft fade now (no hard grey plate / thick outline)
+	local disc = New("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(12, 12, 22), BackgroundTransparency = 0.25, ZIndex = 3, Parent = frame })
+	disc:SetAttribute("PxKeep", true)
 	UI.Corner(disc, RING_SIZE)
-	New("UIGradient", { Color = ColorSequence.new(T.PanelTop, T.PanelDeep), Rotation = 90, Parent = disc })
-	UI.Stroke(disc, T.Edge, 4)
+	New("UIGradient", {
+		Rotation = 90,
+		Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.55), NumberSequenceKeypoint.new(0.5, 0.35), NumberSequenceKeypoint.new(1, 0.6) }),
+		Parent = disc,
+	})
 	local c, r = RING_SIZE / 2, RING_SIZE / 2 - 13
 	local segs = { base = {}, job = {} }
 	for _, half in ipairs({ "base", "job" }) do
@@ -292,7 +297,7 @@ local skillIconId, skillColor = SkillLook.IconId, SkillLook.Color
 
 local function buildStatus()
 	-- the card sits behind the ring; the ring overlaps its left edge
-	local card = softPanel(UI.Root, UDim2.fromOffset(400, 128), UDim2.fromOffset(100, 22), nil, "right")
+	local card = softPanel(UI.Root, UDim2.fromOffset(400, 150), UDim2.fromOffset(100, 22), nil, "right")
 	statusCard = card
 	buildRing(UI.Root, UDim2.fromOffset(14, 10))
 	local name = UI.Text(card, player.DisplayName, 24, T.Text, "Display", { Position = UDim2.fromOffset(70, 6), Size = UDim2.new(1, -80, 0, 28), TextWrapped = false })
@@ -310,6 +315,10 @@ local function buildStatus()
 	UI.List(row, Enum.FillDirection.Horizontal, 14)
 	bars.expText = UI.Text(row, "", 15, T.Green, "Display", { Size = UDim2.fromOffset(110, 18), TextWrapped = false })
 	bars.jobText = UI.Text(row, "", 15, T.Purple, "Display", { Size = UDim2.fromOffset(110, 18), TextWrapped = false })
+	-- v0.24.12 (owner): Store boost timers (2x EXP / 2x DROP / FRUIT RADAR) sit right under the EXP readouts;
+	-- Controllers/Heritage fills this row
+	HUD.boostRow = New("Frame", { Name = "BoostRow", BackgroundTransparency = 1, Position = UDim2.fromOffset(70, 126), Size = UDim2.new(1, -82, 0, 20), Parent = card })
+	UI.List(HUD.boostRow, Enum.FillDirection.Horizontal, 6)
 	buffRow = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(170, 158), Size = UDim2.fromOffset(300, 30), Parent = UI.Root })
 	-- v0.24.8 (owner): the party sits right under the player card as one horizontal strip (above the quest tracker):
 	-- member chips with name + HP while in a party, else a PARTY button that opens the Party window
@@ -328,16 +337,17 @@ local function buildStatus()
 		partyHp = {}
 		local members = State.party or {}
 		if #members == 0 then
-			local b = UI.Button(partyRow, "👥 PARTY", T.Green, UDim2.fromOffset(120, 26), function()
+			local b = UI.Button(partyRow, "👥 PARTY", T.Green, UDim2.fromOffset(112, 26), function()
 				Panels.Open("Party")
 			end)
 			b.Parent.LayoutOrder = 1
-			UI.Text(partyRow, "Team up to share EXP", 11, T.TextSoft, "Semi", { LayoutOrder = 2, Size = UDim2.fromOffset(240, 26), TextYAlignment = Enum.TextYAlignment.Center })
+			UI.Text(partyRow, "Team up: shared EXP + drops", 11, Color3.fromRGB(200, 210, 230), "Semi", { LayoutOrder = 2, Size = UDim2.fromOffset(250, 26), TextYAlignment = Enum.TextYAlignment.Center, TextWrapped = false })
 			return
 		end
 		for i, m in ipairs(members) do
 			if type(m) == "table" and m.userId and m.userId ~= player.UserId then
-				local chip = New("TextButton", { Text = "", AutoButtonColor = false, BackgroundColor3 = T.PanelDeep, BackgroundTransparency = 0.2, Size = UDim2.fromOffset(94, 28), LayoutOrder = i, Parent = partyRow })
+				local chip = New("TextButton", { Text = "", AutoButtonColor = false, BackgroundColor3 = Color3.fromRGB(20, 22, 36), BackgroundTransparency = 0.15, Size = UDim2.fromOffset(94, 28), LayoutOrder = i, Parent = partyRow })
+				UI.Stroke(chip, m.leader and T.Gold or Color3.fromRGB(90, 100, 130), 1.5)
 				UI.Text(chip, (m.leader and "★" or "") .. tostring(m.name or "?"), 11, m.leader and T.Gold or T.Text, "Bold", { Position = UDim2.fromOffset(4, 1), Size = UDim2.new(1, -8, 0, 14), TextWrapped = false })
 				local back = New("Frame", { BackgroundColor3 = Color3.fromRGB(40, 20, 24), BorderSizePixel = 0, Position = UDim2.new(0, 4, 1, -9), Size = UDim2.new(1, -8, 0, 6), Parent = chip })
 				local fill = New("Frame", { BackgroundColor3 = T.Green, BorderSizePixel = 0, Size = UDim2.fromScale(1, 1), Parent = back })
@@ -979,7 +989,7 @@ function HUD.FlyLoot(data)
 		if bagAt then
 			fly(def and def.icon or "📦", 50, from, bagAt, 0.25 + k * 0.12, function()
 				bump(bagTile)
-				Audio.Play("Equip", { volume = 0.18, pitch = 1.2 })
+				Audio.Play("Pickup", { volume = 0.5, pitch = 0.95 + math.random() * 0.1 })
 			end, img)
 		end
 	end
@@ -987,7 +997,7 @@ end
 
 function HUD.Loot(data)
 	pcall(HUD.FlyLoot, data)
-	local function add(text, rarityId)
+	local function add(text, rarityId, quiet)
 		local tier = Rarity.Get(rarityId)
 		local f = New("Frame", { Size = UDim2.fromOffset(0, 34), AutomaticSize = Enum.AutomaticSize.X, BackgroundColor3 = Color3.new(1, 1, 1), Parent = lootFeed })
 		UI.Corner(f, 12)
@@ -995,7 +1005,7 @@ function HUD.Loot(data)
 		UI.Pad(f, 6)
 		UI.Text(f, text, 17, T.Text, "Bold", { AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 22), TextWrapped = false })
 		UI.Pop(f, 0.5)
-		if tier.rank >= 4 then
+		if tier.rank >= 4 and not quiet then
 			Audio.Play("Rarity" .. tier.id)
 		end
 		task.delay(3, function()
@@ -1005,7 +1015,8 @@ function HUD.Loot(data)
 		end)
 	end
 	if data.beli and data.beli > 0 then
-		add("+" .. UI.Format(data.beli) .. " " .. UI.CurrencyIcon, "Legendary")
+		-- gold style only: the Legendary jingle on every coin drop was the shrill "ping" the owner heard (v0.24.12)
+		add("+" .. UI.Format(data.beli) .. " " .. UI.CurrencyIcon, "Legendary", true)
 		-- kill combo: each loot within 4 s of the last plays the coin a little higher (resets when you stop)
 		local now = os.clock()
 		HUD.killStreak = (now - (HUD.lastLootAt or 0) < 4) and math.min((HUD.killStreak or 0) + 1, 12) or 0
@@ -1235,10 +1246,11 @@ function HUD.Layout()
 	local topY = math.floor(inset / sc) + 4
 	ring.frame.Position = UDim2.fromOffset(14, topY)
 	statusCard.Position = UDim2.fromOffset(100, topY + 12)
-	statusCard.Size = UDim2.fromOffset(compact and 330 or 400, 128)
-	buffRow.Position = UDim2.fromOffset(430, topY + 146)
+	statusCard.Size = UDim2.fromOffset(compact and 330 or 400, 150)
+	-- v0.24.12: party + quest moved below the level badge at the bottom of the ring (it covered the PARTY button)
+	buffRow.Position = UDim2.fromOffset(compact and 356 or 426, topY + 176)
 	if HUD.partyBar then
-		HUD.partyBar.Position = UDim2.fromOffset(16, topY + 146)
+		HUD.partyBar.Position = UDim2.fromOffset(16, topY + 176)
 		HUD.partyBar.Size = UDim2.fromOffset(compact and 330 or 400, 36)
 	end
 	-- target frame: narrower on small screens so it clears the status card
@@ -1258,14 +1270,14 @@ function HUD.Layout()
 	end
 	-- quest tracker sits under the player card
 	if HUD.questFrame then
-		HUD.questFrame.Position = UDim2.fromOffset(16, topY + 196)
+		HUD.questFrame.Position = UDim2.fromOffset(16, topY + 222)
 		HUD.questFrame.Size = UDim2.fromOffset(compact and 300 or 330, HUD.questFrame.Size.Y.Offset)
 	end
 	-- loot feed: bottom-left on PC; on touch screens the thumbstick lives there, so stack it under the tracker
 	local list = lootFeed:FindFirstChildOfClass("UIListLayout")
 	if UI.IsMobile then
 		lootFeed.AnchorPoint = Vector2.new(0, 0)
-		lootFeed.Position = UDim2.fromOffset(16, topY + 340)
+		lootFeed.Position = UDim2.fromOffset(16, topY + 366)
 		if list then
 			list.VerticalAlignment = Enum.VerticalAlignment.Top
 		end

@@ -856,22 +856,33 @@ function Menu.Spin()
 		return
 	end
 	spinning = true
-	local res = Net.Request("MenuSpin", { slot = editing.slot, look = editing.look })
-	if not res.ok then
-		spinning = false
-		UI.Toast(res.msg or "Spin failed", "bad")
-		return
-	end
-	local final, finalVariant = res.data.heritage, res.data.variant
-	-- a short, snappy roulette (v0.24.8: spins chain fast), landing on the server's roll with an aura burst
+	-- v0.24.12: the roulette starts at once and keeps ticking while the server rolls (no dead pause on the click)
+	local res
 	task.spawn(function()
-		for k = 1, 6 do
+		res = Net.Request("MenuSpin", { slot = editing.slot, look = editing.look })
+	end)
+	task.spawn(function()
+		local k = 0
+		local t0 = os.clock()
+		while (k < 5 or res == nil) and os.clock() - t0 < 15 do
+			k += 1
 			editing.heritage = Looks.Heritages[(k % (#Looks.Heritages - 1)) + 1].id
 			editing.variant = 1
 			refreshEdit()
-			Audio.Play("BlkTick", { pitch = 0.9 + k * 0.06 })
-			task.wait(0.035)
+			Audio.Play("BlkTick", { pitch = 0.9 + math.min(k, 8) * 0.05 })
+			task.wait(0.04)
 		end
+		if not res or not res.ok then
+			spinning = false
+			if slots[editing.slot] then
+				editing.heritage = slots[editing.slot].heritage
+				editing.variant = slots[editing.slot].variant or 1
+				refreshEdit()
+			end
+			UI.Toast(res and res.msg or "Spin failed", "bad")
+			return
+		end
+		local final, finalVariant = res.data.heritage, res.data.variant
 		editing.heritage = final
 		editing.variant = finalVariant or 1
 		editing.spins = res.data.summary.spins
@@ -921,6 +932,41 @@ function Menu.AuraBurst(color, chance)
 	end
 	Voxels.Blocks(center, { count = math.floor(14 * power), colors = { color, color:Lerp(Color3.new(1, 1, 1), 0.5) }, size = { 0.25, 0.55 }, speed = 9 * power, up = 8, neon = true, collide = false, life = 0.7, spread = 1.2 })
 	Voxels.Pixels(center, { count = math.floor(40 * power), colors = { color, Color3.new(1, 1, 1) }, size = 0.25, speed = 14 * power, gravity = -4, life = 0.8, glow = 1, spread = 2 })
+	-- v0.24.12 (owner): the aura pours off the character itself: square pixels in the heritage color rise from every
+	-- body block for a moment (longer and denser for rarer heritages)
+	local Tex = require(ReplicatedStorage.Shared.Config.Textures)
+	local light = color:Lerp(Color3.new(1, 1, 1), 0.55)
+	local dur = 0.9 + power * 0.35
+	local parts = {}
+	for _, d in ipairs(preview:GetDescendants()) do
+		if d:IsA("BasePart") and d.Transparency < 0.9 and d.Size.Magnitude > 0.6 then
+			table.insert(parts, d)
+		end
+	end
+	local every = math.max(1, math.floor(#parts / 22)) -- ~22 emitters is plenty
+	for i = 1, #parts, every do
+		local p = parts[i]
+		local e = Instance.new("ParticleEmitter")
+		e.Texture = Tex.px_square or ""
+		e.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, light), ColorSequenceKeypoint.new(0.4, color), ColorSequenceKeypoint.new(1, color) })
+		e.LightEmission = 0.8
+		e.LightInfluence = 0
+		e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.22), NumberSequenceKeypoint.new(0.6, 0.18), NumberSequenceKeypoint.new(1, 0) })
+		e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.75, 0.1), NumberSequenceKeypoint.new(1, 1) })
+		e.Lifetime = NumberRange.new(0.5, 1.0)
+		e.Speed = NumberRange.new(1.5, 3.5 * power)
+		e.SpreadAngle = Vector2.new(180, 180)
+		e.Acceleration = Vector3.new(0, 7, 0)
+		e.Drag = 2
+		e.Rotation = NumberRange.new(0, 0)
+		e.Rate = 10 * power
+		e.Parent = p
+		e:Emit(math.floor(4 * power))
+		task.delay(dur, function()
+			e.Enabled = false
+		end)
+		game:GetService("Debris"):AddItem(e, dur + 1.2)
+	end
 end
 
 -- BUY SPINS (Config/Spins developer products; the server grants them to the account spin bank)
@@ -1002,7 +1048,13 @@ function Menu.Play()
 	task.spawn(function()
 		local char = player.Character or player.CharacterAdded:Wait()
 		char:WaitForChild("HumanoidRootPart", 10)
-		task.wait(0.6) -- let the server teleport + dress the character
+		-- v0.24.12 (owner saw the plain default body for a moment): stay faded until the server has built the
+		-- voxel character (VoxelChar.Apply sets "Voxelized"), then a short beat for the blocks to stream in
+		local t0 = os.clock()
+		while not char:GetAttribute("Voxelized") and char.Parent and os.clock() - t0 < 8 do
+			task.wait(0.05)
+		end
+		task.wait(0.35)
 		Menu.Close()
 	end)
 end

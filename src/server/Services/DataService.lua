@@ -17,6 +17,13 @@ local slotOf = {} -- player -> the character slot being played (v0.24.0)
 local store
 local useMemory = false
 local memSlots = {} -- Studio without API access: userId -> { [slot] = data } (this session only)
+-- v0.24.12 menu cache: a DataStore key takes one write per ~6 s, so writing every Heritage spin made quick respins
+-- queue up for seconds. Menu edits (look, spins) now change a cached copy of the slot and are written in the
+-- background (FlushMenu: at most every WRITE_GAP s per key, before the slot is loaded to play, on leave/shutdown).
+local menuCache = {} -- player -> { [slot] = { data = table, dirty = bool, lastWrite = clock } }
+local WRITE_GAP = 6.5
+local bankKnown, bankTake = {}, {} -- userId -> spins on record / spins taken but not written yet
+local unlockedKnown = {} -- "userId:slot" -> true (a bought slot unlock is permanent)
 local loadedEvent = Instance.new("BindableEvent")
 -- fires (player, profile) once a character slot is loaded and the player enters the game
 DataService.Loaded = loadedEvent.Event
@@ -106,6 +113,13 @@ end
 
 function DataService.Load(player, slot)
 	slot = slot or 1
+	-- menu edits of THIS slot ride along with the load write (one write, no 6 s key gap); the rest is flushed now
+	local pend = menuCache[player] and menuCache[player][slot]
+	local pendDirty = pend ~= nil and pend.dirty
+	if pend then
+		pend.dirty = false
+	end
+	DataService.FlushMenu(player, true)
 	slotOf[player] = slot
 	local key = keyFor(player.UserId, slot)
 	local data
@@ -123,6 +137,9 @@ function DataService.Load(player, slot)
 					end
 					old.lock = game.JobId
 					old.lockTime = os.time()
+					if pendDirty then
+						old.data = pend.data
+					end
 					data = old.data
 					return old
 				end)
@@ -266,8 +283,15 @@ function DataService.SlotUnlocked(userId, slot)
 	if not locked then
 		return true
 	end
+	if unlockedKnown[userId .. ":" .. slot] then
+		return true
+	end
 	local acc = DataService.Account(userId)
-	return acc.slots ~= nil and acc.slots[tostring(slot)] == true
+	local open = acc.slots ~= nil and acc.slots[tostring(slot)] == true
+	if open then
+		unlockedKnown[userId .. ":" .. slot] = true
+	end
+	return open
 end
 -- unlock slots for a Robux receipt (idempotent on purchaseId)
 function DataService.GrantSlots(userId, purchaseId, slotList)
@@ -294,6 +318,9 @@ function DataService.GrantSlots(userId, purchaseId, slotList)
 			end
 			return old
 		end)
+		for _, sl in ipairs(slotList) do
+			unlockedKnown[userId .. ":" .. sl] = true
+		end
 	end)
 end
 
@@ -301,10 +328,16 @@ function DataService.BankSpins(userId)
 	if useMemory then
 		return (memBank[userId] or {}).spins or 0
 	end
-	local ok, res = pcall(function()
-		return store:GetAsync(bankKey(userId))
-	end)
-	return ok and res and res.spins or 0
+	if bankKnown[userId] == nil then
+		local ok, res = pcall(function()
+			return store:GetAsync(bankKey(userId))
+		end)
+		if not ok then
+			return 0
+		end
+		bankKnown[userId] = res and res.spins or 0
+	end
+	return math.max(0, bankKnown[userId] - (bankTake[userId] or 0))
 end
 -- add spins for a Robux receipt; idempotent on purchaseId. Returns true once the grant is stored.
 function DataService.GrantBankSpins(userId, purchaseId, amount)
@@ -317,18 +350,24 @@ function DataService.GrantBankSpins(userId, purchaseId, amount)
 		end
 		return true
 	end
+	local stored
 	local ok = pcall(function()
 		store:UpdateAsync(bankKey(userId), function(old)
 			old = old or { spins = 0, receipts = {} }
 			old.receipts = old.receipts or {}
 			if old.receipts[purchaseId] then
+				stored = old.spins or 0
 				return old
 			end
 			old.receipts[purchaseId] = os.time()
 			old.spins = (old.spins or 0) + amount
+			stored = old.spins
 			return old
 		end)
 	end)
+	if ok and stored then
+		bankKnown[userId] = stored -- the record now (spins taken here but not written are still in bankTake)
+	end
 	return ok
 end
 -- take one spin from the bank; returns true when one was taken
@@ -341,24 +380,21 @@ function DataService.TakeBankSpin(userId)
 		end
 		return false
 	end
-	local took = false
-	pcall(function()
-		store:UpdateAsync(bankKey(userId), function(old)
-			if not old or (old.spins or 0) <= 0 then
-				return nil
-			end
-			old.spins -= 1
-			took = true
-			return old
-		end)
-	end)
-	return took
+	if DataService.BankSpins(userId) <= 0 then
+		return false
+	end
+	bankTake[userId] = (bankTake[userId] or 0) + 1 -- written by FlushBank
+	return true
 end
 function DataService.RefundBankSpin(userId)
 	if useMemory then
 		local b = memBank[userId] or { spins = 0, receipts = {} }
 		memBank[userId] = b
 		b.spins += 1
+		return
+	end
+	if (bankTake[userId] or 0) > 0 then
+		bankTake[userId] -= 1
 		return
 	end
 	pcall(function()
@@ -368,6 +404,29 @@ function DataService.RefundBankSpin(userId)
 			return old
 		end)
 	end)
+end
+-- write the spins taken from the bank since the last write
+local bankWrite = {}
+function DataService.FlushBank(userId)
+	local take = bankTake[userId] or 0
+	if useMemory or take <= 0 then
+		return true
+	end
+	local stored
+	local ok = pcall(function()
+		store:UpdateAsync(bankKey(userId), function(old)
+			old = old or { spins = 0, receipts = {} }
+			old.spins = math.max(0, (old.spins or 0) - take)
+			stored = old.spins
+			return old
+		end)
+	end)
+	bankWrite[userId] = os.clock()
+	if ok then
+		bankTake[userId] = math.max(0, (bankTake[userId] or 0) - take)
+		bankKnown[userId] = stored
+	end
+	return ok
 end
 
 -- ===== character slots (menu, before a slot is loaded) =====
@@ -393,8 +452,11 @@ function DataService.ListSlots(player)
 	local out = {}
 	for slot = 1, Looks.Slots do
 		local data
+		local cached = menuCache[player] and menuCache[player][slot]
 		if useMemory then
 			data = memSlots[player.UserId] and memSlots[player.UserId][slot]
+		elseif cached then
+			data = cached.data
 		else
 			local ok, res = pcall(function()
 				return store:GetAsync(keyFor(player.UserId, slot))
@@ -426,36 +488,101 @@ function DataService.EditSlot(player, slot, fn)
 		memSlots[player.UserId][slot] = data
 		return summary(data)
 	end
-	local result, failure
-	local ok, err = pcall(function()
-		store:UpdateAsync(keyFor(player.UserId, slot), function(old)
-			old = old or {}
-			if old.lock and old.lock ~= game.JobId and os.time() - (old.lockTime or 0) < 600 then
-				failure = "This character is still in use on another server"
-				return nil
-			end
-			local data = reconcile(old.data or template(), template())
-			local okFn, e = pcall(fn, data)
-			if not okFn then
-				failure = tostring(e)
-				return nil
-			end
-			old.data = data
-			result = summary(data)
-			return old
+	menuCache[player] = menuCache[player] or {}
+	local c = menuCache[player][slot]
+	if not c then
+		-- first touch of this slot in the menu: read it once (and respect another server's session lock)
+		local ok, old = pcall(function()
+			return store:GetAsync(keyFor(player.UserId, slot))
 		end)
-	end)
-	if not ok then
-		warn("[DataService] slot edit failed", player.Name, err)
-		return nil, "Save failed, try again"
+		if not ok then
+			warn("[DataService] slot read failed", player.Name, old)
+			return nil, "Could not read your character, try again"
+		end
+		old = old or {}
+		if old.lock and old.lock ~= game.JobId and os.time() - (old.lockTime or 0) < 600 then
+			return nil, "This character is still in use on another server"
+		end
+		c = { data = reconcile(old.data or template(), template()), dirty = false, lastWrite = 0, fresh = old.data == nil }
+		menuCache[player][slot] = c
 	end
-	if failure then
-		return nil, failure
+	local okFn, e = pcall(fn, c.data)
+	if not okFn then
+		return nil, tostring(e)
 	end
-	return result
+	c.dirty = true
+	if c.fresh then
+		-- a brand-new slot is written right away so it exists even if the server stops
+		c.fresh = false
+		task.spawn(DataService.FlushMenu, player)
+	end
+	return summary(c.data)
+end
+
+-- write dirty cached menu slots (+ the bank). now = true ignores the per-key write gap (play / leave / shutdown)
+local flushing = {}
+function DataService.FlushMenu(player, now)
+	if flushing[player] then
+		if not now then
+			return true -- the background pass is already writing
+		end
+		local t = os.clock()
+		while flushing[player] and os.clock() - t < 12 do
+			task.wait(0.1)
+		end
+	end
+	flushing[player] = true
+	local cache = menuCache[player]
+	local ok = true
+	if cache and not useMemory then
+		for slot, c in pairs(cache) do
+			if c.dirty and (now or os.clock() - c.lastWrite >= WRITE_GAP) then
+				c.dirty = false
+				c.lastWrite = os.clock()
+				local data = c.data
+				local fine, err = pcall(function()
+					store:UpdateAsync(keyFor(player.UserId, slot), function(old)
+						old = old or {}
+						if old.lock and old.lock ~= game.JobId and os.time() - (old.lockTime or 0) < 600 then
+							return nil
+						end
+						old.data = data
+						return old
+					end)
+				end)
+				if not fine then
+					c.dirty = true
+					ok = false
+					warn("[DataService] menu slot write failed", player.Name, err)
+				end
+			end
+		end
+	end
+	if now or os.clock() - (bankWrite[player.UserId] or 0) >= WRITE_GAP then
+		ok = DataService.FlushBank(player.UserId) and ok
+	end
+	if now then
+		menuCache[player] = nil -- the next menu edit reads the slot again (it may be played meanwhile)
+	end
+	flushing[player] = nil
+	return ok
 end
 
 function DataService.Start()
+	task.spawn(function()
+		while true do
+			task.wait(2)
+			for _, pl in ipairs(Players:GetPlayers()) do
+				if menuCache[pl] or (bankTake[pl.UserId] or 0) > 0 then
+					task.spawn(DataService.FlushMenu, pl, false)
+				end
+			end
+		end
+	end)
+	Players.PlayerRemoving:Connect(function(pl)
+		DataService.FlushMenu(pl, true)
+		bankKnown[pl.UserId], bankTake[pl.UserId], bankWrite[pl.UserId] = nil, nil, nil
+	end)
 	task.spawn(function()
 		while true do
 			task.wait(GameConfig.AutoSaveInterval)
@@ -470,6 +597,7 @@ function DataService.Start()
 			threads += 1
 			task.spawn(function()
 				DataService.Save(p, true)
+				DataService.FlushMenu(p, true)
 				threads -= 1
 			end)
 		end

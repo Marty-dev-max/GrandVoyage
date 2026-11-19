@@ -132,6 +132,8 @@ function MS.Spawn(monsterId, position, opts)
 	end
 	mobs[mob.uid] = mob
 	byModel[model] = mob
+	-- v0.25.1: clients near by see it assemble out of blocks (MobSpawn FX)
+	Net.FX("MobSpawn", { model = model, pos = position }, position, 180)
 	return mob
 end
 
@@ -457,10 +459,89 @@ local function findAggroTarget(mob)
 	return best
 end
 
+local function playersInLine(from, to, width)
+	local out = {}
+	local d = Vector3.new(to.X - from.X, 0, to.Z - from.Z)
+	local len = d.Magnitude
+	if len < 0.1 then
+		return out
+	end
+	d = d.Unit
+	for _, pl in ipairs(Players:GetPlayers()) do
+		local root = R.PlayerService.Root(pl)
+		if root then
+			local rel = root.Position - from
+			local along = rel.X * d.X + rel.Z * d.Z
+			local side = math.abs(rel.X * d.Z - rel.Z * d.X)
+			if along >= -3 and along <= len + 2 and side <= width / 2 + 1.5 and math.abs(rel.Y) < 16 then
+				table.insert(out, pl)
+			end
+		end
+	end
+	return out
+end
+
+local function bossCharge(mob, troot)
+	-- v0.25.1: a telegraphed charge along a line at the target (alternates with the slam)
+	local center = mob.root.Position
+	local flat = Vector3.new(troot.Position.X - center.X, 0, troot.Position.Z - center.Z)
+	if flat.Magnitude < 1 then
+		return false
+	end
+	local dir = flat.Unit
+	local len = math.clamp(flat.Magnitude + 12, 24, 60)
+	local width = 8 + (mob.def.style.scale or 1) * 2
+	local to = center + dir * len
+	knockParams.FilterDescendantsInstances = { mob.model, workspace:FindFirstChild("Monsters") }
+	local wall = workspace:Raycast(center, dir * len, knockParams)
+	if wall then
+		len = math.max(8, wall.Distance - 4)
+		to = center + dir * len
+	end
+	Net.FX("Telegraph", { kind = "line", from = center - Vector3.new(0, 2.5, 0), to = to - Vector3.new(0, 2.5, 0), width = width, time = 1.1 }, center, 300)
+	Net.FX("MobAlert", { model = mob.model }, center, 250)
+	mob.knockUntil = os.clock() + 1.6 -- hold still while winding up and running
+	mob.root.CFrame = CFrame.lookAt(center, center + dir)
+	task.delay(1.1, function()
+		if mob.dead or not mob.root then
+			return
+		end
+		local from = mob.root.Position
+		local dur = 0.4
+		Net.FX("BossCharge", { from = from, to = from + dir * len, time = dur }, from, 300)
+		local att = Instance.new("Attachment")
+		att.Parent = mob.root
+		local lv = Instance.new("LinearVelocity")
+		lv.Attachment0 = att
+		lv.VelocityConstraintMode = Enum.VelocityConstraintMode.Plane
+		lv.PrimaryTangentAxis = Vector3.xAxis
+		lv.SecondaryTangentAxis = Vector3.zAxis
+		lv.RelativeTo = Enum.ActuatorRelativeTo.World
+		lv.MaxForce = math.huge
+		lv.PlaneVelocity = Vector2.new(dir.X, dir.Z) * (len / dur)
+		lv.Parent = mob.root
+		task.delay(dur, function()
+			lv:Destroy()
+			att:Destroy()
+		end)
+		for _, pl in ipairs(playersInLine(from, from + dir * len, width)) do
+			R.CombatService.MonsterHit(mob, pl, 1.6)
+		end
+	end)
+	return true
+end
+
 local function bossSpecial(mob)
 	local center = mob.root.Position
 	local radius = 20 + (mob.def.style.scale or 1) * 3
-	Net.FX("Telegraph", { pos = center, radius = radius, time = 1.2 }, center, 300)
+	mob.specialN = (mob.specialN or 0) + 1
+	local ok, troot = validTarget(mob, mob.target)
+	if mob.specialN % 2 == 0 and ok and troot and mob.hum and not mob.chain and not mob.sea then
+		if bossCharge(mob, troot) then
+			return
+		end
+	end
+	Net.FX("Telegraph", { pos = center, radius = radius, time = 1.2, model = mob.model }, center, 300)
 	task.delay(1.2, function()
 		if mob.dead then
 			return
@@ -510,27 +591,6 @@ local function serpentBody(mob)
 	mob.model:SetAttribute("BodyPts", SerpentChain.Pack(mob.pieces))
 end
 
-local function playersInLine(from, to, width)
-	local out = {}
-	local d = Vector3.new(to.X - from.X, 0, to.Z - from.Z)
-	local len = d.Magnitude
-	if len < 0.1 then
-		return out
-	end
-	d = d.Unit
-	for _, pl in ipairs(Players:GetPlayers()) do
-		local root = R.PlayerService.Root(pl)
-		if root then
-			local rel = root.Position - from
-			local along = rel.X * d.X + rel.Z * d.Z
-			local side = math.abs(rel.X * d.Z - rel.Z * d.X)
-			if along >= -3 and along <= len + 2 and side <= width / 2 + 1.5 and math.abs(rel.Y) < 16 then
-				table.insert(out, pl)
-			end
-		end
-	end
-	return out
-end
 
 local function serpentAttack(mob, troot, now)
 	local def, root, hum = mob.def, mob.root, mob.hum

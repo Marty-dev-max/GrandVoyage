@@ -965,6 +965,14 @@ local function fly(icon, size, from, to, delay, onArrive, image)
 end
 
 function HUD.FlyLoot(data)
+	-- 3D first: the drops hop out of the monster and fly into you (VFX.LootMagnet), then the HUD flight below
+	pcall(function()
+		local VFXc = require(script.Parent.Parent.Controllers.VFX)
+		local n = ((data.beli and data.beli > 0) and 5 or 0) + #(data.items or {}) * 2
+		if n > 0 and typeof(data.pos) == "Vector3" then
+			VFXc.LootMagnet(data.pos, n, { Color3.fromRGB(255, 205, 70), Color3.fromRGB(255, 240, 150), Color3.fromRGB(170, 230, 255) })
+		end
+	end)
 	local from = data.pos and canvasPoint(data.pos)
 	if not from then
 		return

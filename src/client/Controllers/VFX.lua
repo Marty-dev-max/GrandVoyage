@@ -971,6 +971,10 @@ handlers.Skill = function(d)
 	if not custom(d.fx or "", CFrame.new(d.to or d.from)) and f then
 		f(d)
 	end
+	-- Cursed Fruit skills get their own pixel / voxel layer on top (Controllers/FruitFX, v0.25.1)
+	if type(d.skill) == "string" and string.sub(d.skill, 1, 2) == "F_" then
+		require(script.Parent.FruitFX).Play(d)
+	end
 end
 handlers.LevelUp = function(d)
 	local gold, pale = Color3.fromRGB(255, 215, 80), Color3.fromRGB(255, 245, 200)
@@ -1088,6 +1092,82 @@ handlers.MobAttack = function(d)
 		end)
 	end
 end
+-- a monster appears (MonsterService.Spawn, v0.25.1): it fades in while cubes fly together into it and a pixel column
+-- rises from the ground
+handlers.MobSpawn = function(d)
+	local model = d.model
+	if typeof(model) ~= "Instance" or not model.Parent then
+		return
+	end
+	local cf, size = model:GetBoundingBox()
+	local cam = workspace.CurrentCamera
+	if cam and (cam.CFrame.Position - cf.Position).Magnitude > 160 then
+		return
+	end
+	local parts = {}
+	for _, p in ipairs(model:GetDescendants()) do
+		if p:IsA("BasePart") and p.Transparency < 1 then
+			table.insert(parts, p)
+			p.LocalTransparencyModifier = 1
+		end
+	end
+	local t0 = os.clock()
+	local conn
+	conn = game:GetService("RunService").RenderStepped:Connect(function()
+		local k = math.min(1, (os.clock() - t0) / 0.55)
+		for _, p in ipairs(parts) do
+			if p.Parent then
+				p.LocalTransparencyModifier = 1 - k
+			end
+		end
+		if k >= 1 then
+			conn:Disconnect()
+		end
+	end)
+	local feet = cf.Position - Vector3.new(0, size.Y / 2, 0)
+	local c = Color3.fromRGB(190, 225, 255)
+	Voxels.Pixels(feet + Vector3.new(0, 0.5, 0), { count = 26, colors = { c, Color3.new(1, 1, 1) }, size = 0.3, speed = 6, up = 0, gravity = -14, life = 0.7, glow = 1, spread = math.max(size.X, size.Z) * 0.6 })
+	VFX.Ring(feet + Vector3.new(0, 0.2, 0), math.max(size.X, size.Z) * 0.8, c, 0.4)
+end
+
+-- loot pulled into you (v0.25.1): little gold / item cubes pop out of the monster and home into your body before the
+-- HUD flies them to the money counter / Bag
+function VFX.LootMagnet(from, count, colors)
+	local root = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart")
+	if not root or typeof(from) ~= "Vector3" then
+		return
+	end
+	for i = 1, math.min(count, 10) do
+		local c = colors[((i - 1) % #colors) + 1]
+		local b = part(Vector3.one * 0.45, c, CFrame.new(from + Vector3.new(0, 1, 0)), nil, Enum.Material.Neon, 0)
+		local pop = Vector3.new(math.random() - 0.5, 0, math.random() - 0.5).Unit * (2 + math.random() * 2) + Vector3.new(0, 3 + math.random() * 2, 0)
+		local t0 = os.clock()
+		local delayT = i * 0.03
+		local conn
+		conn = game:GetService("RunService").RenderStepped:Connect(function()
+			local k = os.clock() - t0 - delayT
+			if k < 0 then
+				return
+			end
+			local start = from + Vector3.new(0, 1, 0)
+			local up = start + pop
+			local target = root.Parent and root.Position or up
+			if k < 0.22 then
+				b.CFrame = CFrame.new(start:Lerp(up, k / 0.22)) * CFrame.Angles(k * 10, k * 8, 0)
+			else
+				local m = math.min(1, (k - 0.22) / 0.3)
+				m = m * m
+				b.CFrame = CFrame.new(up:Lerp(target, m)) * CFrame.Angles(k * 10, k * 8, 0)
+				if m >= 1 then
+					conn:Disconnect()
+					b:Destroy()
+				end
+			end
+		end)
+		Debris:AddItem(b, 1.5)
+	end
+end
+
 -- knockback (MonsterService.Knockback, v0.24.12): the monster skids back; dust kicks up at its feet and two scuff
 -- lines are left on the ground along the slide (in the ground's own color), then fade
 local knockRay = RaycastParams.new()
@@ -1291,11 +1371,65 @@ handlers.Telegraph = function(d)
 	elseif d.kind == "circle" then
 		return telegraphCircle(d)
 	end
-	local p = part(Vector3.new(0.4, d.radius * 2, d.radius * 2), Color3.fromRGB(255, 60, 60), CFrame.new(d.pos - Vector3.new(0, 2.5, 0)) * CFrame.Angles(0, 0, math.pi / 2), Enum.PartType.Cylinder, Enum.Material.Neon, 0.6)
-	local inner = part(Vector3.new(0.5, 1, 1), Color3.fromRGB(255, 120, 60), p.CFrame, Enum.PartType.Cylinder, Enum.Material.Neon, 0.3)
-	tween(inner, d.time, { Size = Vector3.new(0.5, d.radius * 2, d.radius * 2) }, Enum.EasingStyle.Linear)
-	Debris:AddItem(p, d.time)
-	Debris:AddItem(inner, d.time)
+	-- boss slam warning (v0.25.1, pixel look): square red tiles light up from the center outward, blinking faster as
+	-- the slam gets close; a "!" pops over the boss (d.model)
+	local feet = d.pos - Vector3.new(0, 2.4, 0)
+	local hit = workspace:Raycast(d.pos, Vector3.new(0, -14, 0))
+	if hit then
+		feet = hit.Position
+	end
+	local step = math.max(3, d.radius / 8)
+	local tiles = {}
+	for x = -d.radius, d.radius, step do
+		for z = -d.radius, d.radius, step do
+			local r = math.sqrt(x * x + z * z)
+			if r <= d.radius then
+				local t = part(Vector3.new(step * 0.82, 0.12, step * 0.82), Color3.fromRGB(255, 60, 50), CFrame.new(feet + Vector3.new(x, 0.1, z)), nil, Enum.Material.Neon, 1)
+				table.insert(tiles, { p = t, k = r / d.radius })
+			end
+		end
+	end
+	local t0 = os.clock()
+	local conn
+	conn = game:GetService("RunService").RenderStepped:Connect(function()
+		local k = (os.clock() - t0) / d.time
+		local blink = (math.sin(os.clock() * (8 + k * 22)) + 1) * 0.5
+		for _, e in ipairs(tiles) do
+			if e.k <= k * 1.05 then
+				e.p.Transparency = 0.25 + blink * 0.35
+				e.p.Color = Color3.fromRGB(255, 60 + math.floor(110 * (1 - k)), 50)
+			else
+				e.p.Transparency = 0.85
+			end
+		end
+		if k >= 1 then
+			conn:Disconnect()
+			for _, e in ipairs(tiles) do
+				e.p:Destroy()
+			end
+		end
+	end)
+	if typeof(d.model) == "Instance" and handlers.MobAlert then
+		handlers.MobAlert({ model = d.model })
+	end
+end
+-- boss charge (MonsterService.bossSpecial): dust kicked up along the run, speed lines, a shockwave of blocks at the end
+handlers.BossCharge = function(d)
+	if typeof(d.from) ~= "Vector3" or typeof(d.to) ~= "Vector3" then
+		return
+	end
+	VFX.SpeedLines(d.from + Vector3.new(0, 3, 0), d.to + Vector3.new(0, 3, 0), Color3.fromRGB(255, 235, 220), 14)
+	local n = 8
+	for k = 1, n do
+		task.delay((d.time or 0.4) * k / n, function()
+			local p = d.from:Lerp(d.to, k / n)
+			Voxels.Pixels(p - Vector3.new(0, 2, 0), { count = 14, colors = { Color3.fromRGB(210, 190, 160), Color3.fromRGB(170, 150, 120) }, size = 0.6, speed = 5, up = 3, gravity = 4, life = 0.7, glow = 0, spread = 3 })
+		end)
+	end
+	task.delay(d.time or 0.4, function()
+		Voxels.Blocks(d.to, { count = 16, colors = { Color3.fromRGB(150, 130, 110), Color3.fromRGB(110, 95, 80) }, size = { 0.4, 0.9 }, speed = 14, up = 10, collide = false, life = 0.7, spread = 2 })
+		VFX.Ring(d.to - Vector3.new(0, 2, 0), 10, Color3.fromRGB(255, 200, 150), 0.35)
+	end)
 end
 -- Bay Serpent attacks
 handlers.SerpentBite = function(d)
@@ -1361,6 +1495,14 @@ handlers.SerpentTail = function(d)
 	SerpentBody.TailSlam(d.model, d.time)
 end
 handlers.Slam = function(d)
+	-- v0.25.1: a ring of rock cubes flung outward + dust pixels on top of the old shockwave
+	local n = math.floor(d.radius * 1.2)
+	for i = 1, n do
+		local a = i / n * math.pi * 2
+		local p = d.pos - Vector3.new(0, 2, 0) + Vector3.new(math.cos(a), 0, math.sin(a)) * d.radius * 0.35
+		Voxels.Blocks(p, { count = 1, colors = { Color3.fromRGB(150, 130, 110), Color3.fromRGB(120, 105, 90) }, size = { 0.5, 1.1 }, speed = 16, up = 12, collide = false, life = 0.8, spread = 0.2, dir = Vector3.new(math.cos(a), 0, math.sin(a)) * 12 })
+	end
+	Voxels.Pixels(d.pos - Vector3.new(0, 1.5, 0), { count = 50, colors = { Color3.fromRGB(215, 195, 165), Color3.fromRGB(175, 155, 130) }, size = 0.6, speed = 18, up = 2, gravity = 6, life = 0.9, glow = 0, spread = d.radius * 0.5 })
 	VFX.Ring(d.pos - Vector3.new(0, 2, 0), d.radius, Color3.fromRGB(255, 180, 100), 0.45)
 	VFX.Crack(d.pos - Vector3.new(0, 2.4, 0), d.radius * 0.7)
 	VFX.Smoke(d.pos - Vector3.new(0, 1.5, 0), Color3.fromRGB(200, 180, 150), 10, d.radius * 0.35)

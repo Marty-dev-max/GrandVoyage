@@ -11,5 +11,5 @@ return {
 		{ productId = 3733424798, spins = 15, robux = 429, name = "15 SPINS" },
 	},
 	-- v0.24.8 (owner): character slot 3 is locked until bought once (account-wide). Same Creator Hub steps as above.
-	SlotUnlock = { productId = 0, robux = 99, name = "Unlock Slot 3", slots = { 3 } },
+	SlotUnlock = { productId = 3733442306, robux = 99, name = "Unlock Slot 3", slots = { 3 } },
 }

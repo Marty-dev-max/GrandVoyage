@@ -18,6 +18,7 @@ local Looks = require(ReplicatedStorage.Shared.Config.Looks)
 local Classes = require(ReplicatedStorage.Shared.Config.Classes)
 local VoxelChar = require(ReplicatedStorage.Shared.Modules.VoxelChar)
 local UI = require(script.Parent.UIKit)
+local Prices = require(script.Parent.Prices)
 local Audio = require(script.Parent.Parent.Controllers.Audio)
 
 local Menu = {}
@@ -470,6 +471,11 @@ local function buildSlots()
 			end
 		end, { LayoutOrder = 3 })
 		unlockHolder.Visible = false
+		if SpinsCfg2.SlotUnlock then
+			Prices.Apply(SpinsCfg2.SlotUnlock.productId, SpinsCfg2.SlotUnlock.robux, function(r)
+				unlockBtn.Text = "UNLOCK  R$ " .. r
+			end)
+		end
 		cards[i] = { title = title, vp = vp, info = info, play = playBtn, edit = editBtn, unlock = unlockHolder, card = card }
 	end
 	pixelButton(f, "BACK", PIXEL.cream, UDim2.fromOffset(200, 46), function()
@@ -936,7 +942,8 @@ function Menu.BuySpins()
 	label(col, "Heritage spins for every character!", 9, PIXEL.gold, { LayoutOrder = 2, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 14), ZIndex = 42 })
 	rule(col, 300, PIXEL.line, 3)
 	for i, pack in ipairs(SpinsCfg.Products) do
-		local b = pixelButton(col, string.format("%s  -  R$ %d", pack.name, pack.robux), PIXEL.green, UDim2.fromOffset(320, 42), function()
+		local b
+		b = pixelButton(col, string.format("%s  -  R$ %d", pack.name, pack.robux), PIXEL.green, UDim2.fromOffset(320, 42), function()
 			if not pack.productId or pack.productId == 0 then
 				UI.Toast("Spin packs are coming soon!", "info")
 				return
@@ -946,6 +953,9 @@ function Menu.BuySpins()
 			end)
 		end, { LayoutOrder = 10 + i })
 		b.TextSize = 13
+		Prices.Apply(pack.productId, pack.robux, function(r)
+			b.Text = string.format("%s  -  R$ %d", pack.name, r)
+		end)
 	end
 	pixelButton(col, "BACK", PIXEL.cream, UDim2.fromOffset(180, 42), function()
 		buyFrame.Visible = false

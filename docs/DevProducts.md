@@ -6,7 +6,14 @@ the last column (replace the `0`). Push the change (or send the IDs to Claude) a
 Prices are suggestions: change them freely, but keep the `robux = ...` number in the config file the same as the price
 you set (the game shows that number on the button).
 
-The 3 Gem packs already exist (IDs are set in `src/shared/Config/Pearls.lua`), nothing to do for them.
+**Status (v0.24.10):** the 3 Gem packs, 4 spin packs, 3 benefits and 6 boosts exist and their IDs are in the config.
+**Still to create: only "Unlock Slot 3"** (below). "Reset Stats" (3733424822) is no longer sold in game: it can be
+archived/disabled in Creator Hub.
+
+**Managed pricing:** with "Managed pricing: Enabled", Roblox may charge some players a different price than the one set
+(price optimization / regional prices; the owner paid 25 R$ in Thailand). The game reads each product's price from
+Roblox for its buttons (`src/client/UI/Prices.lua`), falling back to the `robux` number in the config. Turn Managed
+pricing off on a product if it must always cost exactly the listed price.
 
 ## Heritage spins (character creator, "+" button) — `src/shared/Config/Spins.lua`
 

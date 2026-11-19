@@ -270,6 +270,9 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     Store fixes: cancelled Robux prompt clears the pending gift (PromptProductPurchaseFinished), Boss Respawn refused
     while `BossService.DownCount() == 0` (token if it changes mid-purchase), receipt mark kept on a failed save (no
     double grant), gift recipient saved too; MenuUnlockSlot refuses an already-unlocked slot.
+  * v0.24.10: every Developer Product ID is filled in (Store, Spins, Gem packs) except `Spins.SlotUnlock` (not created
+    yet). Creator Hub "Managed pricing" can change what a player pays, so Robux labels use `UI/Prices.Apply(productId,
+    fallback, fn)` (GetProductInfo PriceInRobux, cached) instead of trusting the config `robux` number.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

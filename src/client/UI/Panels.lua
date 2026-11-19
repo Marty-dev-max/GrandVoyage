@@ -14,6 +14,7 @@ local ShipStats = require(Shared.Modules.ShipStats)
 local Rarity = require(Shared.Modules.Rarity)
 local Net = require(Shared.Modules.Net)
 local UI = require(script.Parent.UIKit)
+local Prices = require(script.Parent.Prices)
 local State = require(script.Parent.Parent.State)
 local Audio = require(script.Parent.Parent.Controllers.Audio)
 local Settings = require(script.Parent.Parent.Controllers.Settings)
@@ -2959,7 +2960,12 @@ local function buyFor(it, currency, after)
 	local win = UI.Window("StoreGift", it.name, UDim2.fromOffset(420, math.min(560, 200 + #others * 46)), T.Purple, it.icon or "🎁")
 	local body = win.body
 	UI.List(body, nil, 8, Enum.HorizontalAlignment.Center)
-	UI.Text(body, (currency == "gems" and (PearlsCfg.Icon .. " " .. it.gems) or ("R$ " .. it.robux)) .. "  -  who is it for?", 15, T.Gold, "Display", { TextXAlignment = Enum.TextXAlignment.Center })
+	local priceText = UI.Text(body, (currency == "gems" and (PearlsCfg.Icon .. " " .. it.gems) or ("R$ " .. it.robux)) .. "  -  who is it for?", 15, T.Gold, "Display", { TextXAlignment = Enum.TextXAlignment.Center })
+	if currency ~= "gems" then
+		Prices.Apply(it.productId, it.robux, function(r)
+			priceText.Text = "R$ " .. r .. "  -  who is it for?"
+		end)
+	end
 	UI.Button(body, "FOR ME", T.Green, UDim2.fromOffset(300, 44), function()
 		UI.CloseWindow("StoreGift")
 		go(nil)
@@ -3014,12 +3020,15 @@ function Panels.PearlShop(args)
 					end
 				end)
 			end)
-			UI.Button(row, "R$ " .. it.robux, (it.productId and it.productId ~= 0) and T.Green or T.Grey, UDim2.new(0.5, -3, 0, 36), function()
+			local robuxBtn = UI.Button(row, "R$ " .. it.robux, (it.productId and it.productId ~= 0) and T.Green or T.Grey, UDim2.new(0.5, -3, 0, 36), function()
 				if not it.productId or it.productId == 0 then
 					UI.Toast("Robux purchase coming soon (use Gems)", "info")
 					return
 				end
 				buyFor(it, "robux")
+			end)
+			Prices.Apply(it.productId, it.robux, function(r)
+				robuxBtn.Text = "R$ " .. r
 			end)
 			if tokens > 0 then
 				UI.Button(card, "USE (" .. tokens .. ")", T.Gold, UDim2.new(1, 0, 0, 32), function()

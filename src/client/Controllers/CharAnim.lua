@@ -162,6 +162,27 @@ function CharAnim.Start()
 	end)
 
 	-- the combat stance softens while you run (arms swing a bit again) and comes back when you stop
+	-- swimming (v0.24.14): front crawl while moving, treading water when still (Controllers/Swim keeps us afloat)
+	local swimClip
+	RunService.Heartbeat:Connect(function()
+		local hum, char = humanoid()
+		local Swim = require(script.Parent.Swim)
+		local want
+		if hum and hum.Health > 0 and Swim.IsSwimming() then
+			local root = char:FindFirstChild("HumanoidRootPart")
+			local v = root and root.AssemblyLinearVelocity or Vector3.zero
+			want = Vector3.new(v.X, 0, v.Z).Magnitude > 2 and "Swim" or "SwimIdle"
+		end
+		if want ~= swimClip then
+			if swimClip and hum then
+				Anim.Stop(hum, swimClip, 0.3)
+			end
+			swimClip = want
+			if want then
+				play(want, { fade = 0.3 })
+			end
+		end
+	end)
 	RunService.Heartbeat:Connect(function()
 		local hum = humanoid()
 		if not hum or not stanceName then

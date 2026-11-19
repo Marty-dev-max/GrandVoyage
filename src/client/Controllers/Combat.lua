@@ -641,7 +641,44 @@ function Combat.UseQuickItem(i)
 	end)
 end
 
+-- dash skills (Fire Dash, Slick Slide...): the server says where, we slide there fast (CombatService CastSkill Dash)
+local function skillDash(d)
+	local r, h = root(), hum()
+	if not r or not h or h.Health <= 0 or typeof(d.dir) ~= "Vector3" then
+		return
+	end
+	local dir = Vector3.new(d.dir.X, 0, d.dir.Z)
+	if dir.Magnitude < 0.1 then
+		return
+	end
+	dir = dir.Unit
+	local speed = tonumber(d.speed) or 60
+	local dur = math.clamp((tonumber(d.dist) or 0) / speed, 0.05, 0.8)
+	r.CFrame = CFrame.lookAt(r.Position, r.Position + dir)
+	local att = Instance.new("Attachment")
+	att.Parent = r
+	local lv = Instance.new("LinearVelocity")
+	lv.Attachment0 = att
+	lv.MaxForce = math.huge
+	lv.VelocityConstraintMode = Enum.VelocityConstraintMode.Plane
+	lv.PrimaryTangentAxis = Vector3.xAxis
+	lv.SecondaryTangentAxis = Vector3.zAxis
+	lv.PlaneVelocity = Vector2.new(dir.X, dir.Z) * speed
+	lv.RelativeTo = Enum.ActuatorRelativeTo.World
+	lv.Parent = r
+	task.delay(dur, function()
+		-- ease out instead of a dead stop
+		if lv.Parent then
+			lv.PlaneVelocity = Vector2.new(dir.X, dir.Z) * speed * 0.25
+		end
+		task.wait(0.08)
+		lv:Destroy()
+		att:Destroy()
+	end)
+end
+
 function Combat.Start()
+	Net.OnPush("SkillDash", skillDash)
 	-- Left click: attack (manual) / pick a target (Auto). Holding the button keeps swinging in manual mode.
 	local holding, holdPos = false, nil
 	UserInputService.InputBegan:Connect(function(input, processed)

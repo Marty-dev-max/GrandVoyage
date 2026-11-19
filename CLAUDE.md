@@ -290,6 +290,12 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     a new skill needs a recipe there. Seastone gear: items with `faction = "Marine"` + `seastone = { chance, seconds }`
     (SeastoneBracer in the General Store, SeastoneShackle from big Marine ships); InventoryService refuses non-Marines
     and fruit users; FruitService.TrySeastone uses the best equipped piece (no gear = no seal), `SeastoneSeal` FX.
+  * v0.24.15: `Swim` / `SwimIdle` R15 clips (CharAnim plays them while Swim.IsSwimming). Pets: lazy follow (wait close,
+    trot after at 7 studs, face the walk). Dash skills: server pushes `SkillDash` and the caster's client slides
+    (LinearVelocity, 60 studs/s, matches the hit timing) instead of a server CFrame teleport. `Controllers/WorldCull`:
+    untagged anchored scenery of far islands is parented to nil locally (distance by quality preset, batched, nearest
+    first; instant restore when the camera/character is within 120 studs of a hidden island). Tagged things and
+    anything inside a tagged model or holding a ProximityPrompt are never culled: tag new gameplay props.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

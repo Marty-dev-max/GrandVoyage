@@ -208,28 +208,50 @@ function PetsCtl.Start()
 					end
 				end
 				if a then
-					-- follow behind-right of the owner, flyers hover higher
+					-- v0.24.14 (playtest): lazy follow like a real pet. It waits while you are close, trots after you when you
+					-- get ~7 studs away (faster the further it is), stops ~4 studs short on its own side, faces where it
+					-- walks and turns to look at you when it stops. (It used to stick to a spot that swung with your facing.)
 					local flyer = a.sp.shape == "bird" or a.sp.shape == "lantern" or a.sp.shape == "serpent"
-					-- Blender models know their height: walkers stand on the ground (root is ~3 studs above it)
 					local half = a.model:GetAttribute("HalfHeight")
-					local y = flyer and 2.5 or (half and (half - 2.9) or -1.6)
-					local goal = (root.CFrame * CFrame.new(3, y, 3.5)).Position
-					if not flyer then
-						-- stand ON the ground under the goal (stairs, hills, any avatar height): one ray per pet
+					local flat = Vector3.new(a.pos.X - root.Position.X, 0, a.pos.Z - root.Position.Z)
+					local dist = flat.Magnitude
+					if a.moving then
+						a.moving = dist > 4
+					else
+						a.moving = dist > 7
+					end
+					local side = dist > 0.05 and flat.Unit or -root.CFrame.LookVector
+					local target = a.moving and (root.Position + side * 3.8) or a.pos
+					local step = Vector3.new(target.X - a.pos.X, 0, target.Z - a.pos.Z)
+					local ownerV = root.AssemblyLinearVelocity
+					local speed = math.max(Vector3.new(ownerV.X, 0, ownerV.Z).Magnitude * 1.05, dist * 2.2, 6)
+					local move = step.Magnitude > 0.01 and step.Unit * math.min(step.Magnitude, speed * dt) or Vector3.zero
+					local nxt = a.pos + move
+					local y
+					if flyer then
+						y = root.Position.Y + 2.5
+					else
 						groundParams.FilterDescendantsInstances = { workspace:FindFirstChild("World"), workspace:FindFirstChild("Handmade") }
-						local hit = workspace:Raycast(goal + Vector3.new(0, 8, 0), Vector3.new(0, -24, 0), groundParams)
-						if hit then
-							goal = Vector3.new(goal.X, hit.Position.Y + (half or 1.2), goal.Z)
-						end
+						local hit = workspace:Raycast(Vector3.new(nxt.X, root.Position.Y + 8, nxt.Z), Vector3.new(0, -24, 0), groundParams)
+						y = hit and (hit.Position.Y + (half or 1.2)) or (root.Position.Y + (half and (half - 2.9) or -1.6))
 					end
-					a.pos = a.pos:Lerp(goal, math.clamp(dt * 6, 0, 1))
-					if (a.pos - goal).Magnitude > 60 then
-						a.pos = goal
+					a.pos = Vector3.new(nxt.X, a.pos.Y + (y - a.pos.Y) * math.clamp(dt * 12, 0, 1), nxt.Z)
+					if dist > 60 then
+						a.pos = root.Position + side * 3.8
 					end
-					local hop = flyer and math.sin(t * 3) * 0.4 or math.abs(math.sin(t * 8)) * 0.6 * math.clamp((goal - a.pos).Magnitude / 3, 0, 1)
-					local look = root.Position + root.CFrame.LookVector * 40
-					local cf = CFrame.lookAt(a.pos + Vector3.new(0, hop, 0), Vector3.new(look.X, a.pos.Y + hop, look.Z))
-					place(a.model, cf, t, math.clamp((goal - a.pos).Magnitude / 3, 0, 1))
+					local walking = move.Magnitude > 0.02
+					-- facing: along the walk, else toward the owner (smoothly)
+					local faceDir = walking and move or Vector3.new(root.Position.X - a.pos.X, 0, root.Position.Z - a.pos.Z)
+					if faceDir.Magnitude > 0.01 then
+						local want = math.atan2(-faceDir.X, -faceDir.Z)
+						a.yaw = a.yaw or want
+						local diff = (want - a.yaw + math.pi) % (2 * math.pi) - math.pi
+						a.yaw += diff * math.clamp(dt * 8, 0, 1)
+					end
+					local gait = walking and math.clamp(move.Magnitude / math.max(dt, 1e-3) / 8, 0.3, 1) or 0
+					local hop = flyer and math.sin(t * 3) * 0.4 or math.abs(math.sin(t * 10)) * 0.5 * gait
+					local cf = CFrame.new(a.pos + Vector3.new(0, hop, 0)) * CFrame.Angles(0, a.yaw or 0, 0)
+					place(a.model, cf, t, gait)
 				end
 			end
 		end

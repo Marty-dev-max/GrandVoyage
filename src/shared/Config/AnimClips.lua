@@ -267,6 +267,37 @@ C.Hurt = { rig = "R15", priority = "Action2", keys = {
 	{ t = 0.26 },
 } }
 
+-- ===== swimming (v0.24.14, owner): front crawl while moving, treading water when still (Controllers/CharAnim) =====
+-- the arms windmill half a cycle apart (up -> forward -> down -> back -> over the top), legs flutter twice per stroke
+local function crawl(r, l, kick, twist)
+	return {
+		RightUpperArm = { r, 0, 12 }, LeftUpperArm = { l, 0, -12 },
+		RightLowerArm = { 20, 0, 0 }, LeftLowerArm = { 20, 0, 0 },
+		UpperTorso = { -28, twist, 0 }, Head = { 18, -twist * 0.6, 0 },
+		RightUpperLeg = { kick, 0, 0 }, LeftUpperLeg = { -kick, 0, 0 },
+		RightLowerLeg = { -18, 0, 0 }, LeftLowerLeg = { -18, 0, 0 },
+	}
+end
+C.Swim = { rig = "R15", loop = true, priority = "Action", length = 1.1, keys = {
+	{ t = 0, pose = crawl(180, 0, 22, 14) },
+	{ t = 0.275, pose = crawl(90, -90, -22, 6) },
+	{ t = 0.55, pose = crawl(0, -180, 22, -14) },
+	{ t = 0.825, pose = crawl(-90, -270, -22, -6) },
+	{ t = 1.1, pose = crawl(-180, -360, 22, 14) },
+} }
+local function tread(k)
+	return {
+		RightUpperArm = { 25 + 10 * k, 0, 55 + 12 * k }, LeftUpperArm = { 25 - 10 * k, 0, -(55 - 12 * k) },
+		RightLowerArm = { 35, 0, 0 }, LeftLowerArm = { 35, 0, 0 },
+		RightUpperLeg = { 30 * k, 0, 6 }, LeftUpperLeg = { -30 * k, 0, -6 },
+		RightLowerLeg = { -50 - 15 * k, 0, 0 }, LeftLowerLeg = { -50 + 15 * k, 0, 0 },
+		UpperTorso = { -6, 0, 0 }, Head = { 6, 0, 0 }, LowerTorso = { 0, 0, 0, 0, 0.12 * k, 0 },
+	}
+end
+C.SwimIdle = { rig = "R15", loop = true, priority = "Action", length = 1.6, keys = {
+	{ t = 0, pose = tread(1) }, { t = 0.8, pose = tread(-1) }, { t = 1.6, pose = tread(1) },
+} }
+
 -- ===== monsters (one universal set: every voxel monster has some of these parts) =====
 C.Mon_Idle = { rig = "Mon", loop = true, priority = "Idle", length = 2.4, keys = {
 	{ t = 0, pose = { Body = { 0, 0, 0 }, Head = { 0, 8, 0 }, Tail = { 0, 14, 0 }, WingL = { 0, 0, 12 }, WingR = { 0, 0, -12 }, ArmL = { 4, 0, 0 }, ArmR = { 4, 0, 0 } } },

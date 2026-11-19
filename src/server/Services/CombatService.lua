@@ -522,7 +522,9 @@ local function setup()
 			local dist = hit and math.max(0, hit.Distance - 3) or skill.range
 			local from = root.Position
 			local to = from + dir * dist
-			root.CFrame = CFrame.lookAt(to, to + dir)
+			-- v0.24.14 (playtest: the dash felt like a teleport): the caster's client slides there at DASH_SPEED (it owns
+			-- its physics); the hits below land along the path at the same speed
+			Net.Push(player, "SkillDash", { dir = dir, dist = dist, speed = 60 })
 			fxData.to = to
 			local seen = {}
 			for step = 0, dist, 4 do

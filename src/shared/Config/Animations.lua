@@ -36,6 +36,8 @@ return {
 	Skill_Spin = 112998981774637,
 	Sling_Shoot = 85377220453027,
 	Sling_Stance = 120907564291271,
+	Swim = 91099400179029,
+	SwimIdle = 115305803147236,
 	Sword_Backhand = 131176702712229,
 	Sword_Slash = 97095455471401,
 	Sword_Stance = 112658631470294,

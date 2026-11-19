@@ -1,0 +1,41 @@
+{
+  "enabledPlugins": {
+    "code-review@claude-plugins-official": true,
+    "claude-mem@thedotmack": true,
+    "superpowers@superpowers-dev": true,
+    "obsidian@obsidian-skills": true,
+    "ponytail@ponytail": true
+  },
+  "extraKnownMarketplaces": {
+    "claude-plugins-official": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/claude-plugins-official"
+      }
+    },
+    "thedotmack": {
+      "source": {
+        "source": "github",
+        "repo": "thedotmack/claude-mem"
+      }
+    },
+    "superpowers-dev": {
+      "source": {
+        "source": "github",
+        "repo": "obra/superpowers"
+      }
+    },
+    "obsidian-skills": {
+      "source": {
+        "source": "github",
+        "repo": "obsidianmd/obsidian-skills"
+      }
+    },
+    "ponytail": {
+      "source": {
+        "source": "github",
+        "repo": "DietrichGebert/ponytail"
+      }
+    }
+  }
+}

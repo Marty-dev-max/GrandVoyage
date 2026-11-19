@@ -391,23 +391,6 @@ local function newBlock(size, color, name)
 	return p
 end
 
-local function faceImage(parent, key, pos, size, tint, z)
-	local id = FaceImages[key]
-	if not id then
-		return
-	end
-	local img = Instance.new("ImageLabel")
-	img.Name = key
-	img.BackgroundTransparency = 1
-	img.Image = id
-	img.ImageColor3 = tint or WHITE
-	img.Position = pos
-	img.Size = size
-	img.ZIndex = z or 1
-	img:SetAttribute("Img", key) -- (offline preview renders read this)
-	img.Parent = parent
-end
-
 -- build every block of a look. place(partName) -> CFrame, Size of that body part; emit(block, partName, cframe)
 local LITE = false -- set by VC.Preview(..., { lite = true }): fewer hair blocks (NPC crews)
 local function buildAll(look, heritage, variant, mode, place, emit)
@@ -707,21 +690,36 @@ local function buildAll(look, heritage, variant, mode, place, emit)
 	local u = H / G
 	local cube = newBlock(Vector3.new(H, H, H), skin, "VoxelHead")
 	emit(cube, "Head", headCF, hsize)
-	local sg = Instance.new("SurfaceGui")
-	sg.Name = "Face"
-	sg.Face = Enum.NormalId.Front
-	sg.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-	sg.PixelsPerStud = 96
-	sg.LightInfluence = 1
-	sg.ZOffset = 0.1
-	sg.Parent = cube
+	-- face: each image layer is a Decal on its own paper-thin invisible plate in front of the cube (v0.24.6: decals
+	-- also render inside ViewportFrames, SurfaceGuis do not: the Bag / Stats statue and slot cards showed no face).
+	-- (u, v) = top-left of the layer on the face in 0..1, (w, h) its size; layers stack outward by z.
+	local function faceLayer(key, u, v, w, h, tint, z)
+		local id = FaceImages[key]
+		if not id then
+			return
+		end
+		local plate = newBlock(Vector3.new(w * H, h * H, 0.02), WHITE, "FaceLayer")
+		plate.Transparency = 1
+		plate.CastShadow = false
+		local d = Instance.new("Decal")
+		d.Name = "FaceDecal"
+		d.Face = Enum.NormalId.Front
+		d.Texture = id
+		d.Color3 = tint or WHITE
+		d.ZIndex = z
+		d:SetAttribute("Img", key) -- (offline preview renders read this)
+		d.Parent = plate
+		-- the head's front is -Z and screen-left is +X
+		local lx = H / 2 - (u + w / 2) * H
+		local ly = H / 2 - (v + h / 2) * H
+		emit(plate, "Head", headCF * CFrame.new(lx, ly, -H / 2 - 0.012 - z * 0.004), hsize)
+	end
 	local e = "eye" .. look.eyes
-	local ePos, eSize = UDim2.fromScale(0.04, 0.24), UDim2.fromScale(0.92, 0.46)
-	faceImage(sg, e .. "_white", ePos, eSize, nil, 1)
-	faceImage(sg, e .. "_iris", ePos, eSize, C("eyes1"), 2)
-	faceImage(sg, e .. "_iris2", ePos, eSize, C("eyes2"), 3)
-	faceImage(sg, e .. "_over", ePos, eSize, nil, 4)
-	faceImage(sg, "mouth" .. look.mouth, UDim2.fromScale(0.27, 0.64), UDim2.fromScale(0.46, 0.23), nil, 5)
+	faceLayer(e .. "_white", 0.04, 0.24, 0.92, 0.46, nil, 1)
+	faceLayer(e .. "_iris", 0.04, 0.24, 0.92, 0.46, C("eyes1"), 2)
+	faceLayer(e .. "_iris2", 0.04, 0.24, 0.92, 0.46, C("eyes2"), 3)
+	faceLayer(e .. "_over", 0.04, 0.24, 0.92, 0.46, nil, 4)
+	faceLayer("mouth" .. look.mouth, 0.27, 0.64, 0.46, 0.23, nil, 5)
 
 	local style = HAIR[look.hair] or HAIR[1]
 	local lumpy = not NO_LUMP[look.hair] and not LITE

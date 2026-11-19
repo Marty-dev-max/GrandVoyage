@@ -1327,12 +1327,30 @@ local barScale = New("UIScale", { Parent = comboBar })
 -- rank letter + name ride beside the fill level; hits and total sit at the bottom
 local letter = UI.Text(comboFrame, "D", 78, Color3.new(1, 1, 1), "Display", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(70, 150), Size = UDim2.fromOffset(140, 90), TextXAlignment = Enum.TextXAlignment.Center, Rotation = -8, ZIndex = 3, TextWrapped = false })
 local letterScale = New("UIScale", { Parent = letter })
-local rankName = UI.Text(comboFrame, "DULL", 16, Color3.new(1, 1, 1), "Display", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromOffset(70, 192), Size = UDim2.fromOffset(150, 18), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 3 })
-local hitsText = UI.Text(comboFrame, "0", 34, Color3.new(1, 1, 1), "Number", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromOffset(136, 228), Size = UDim2.fromOffset(120, 34), TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 3, TextWrapped = false })
+-- v0.24.6 (owner): just the letter (no rank word); HITS sits right under its number; TOTAL DMG shares the color of its
+-- number, which heats up from gold to orange to red (and a hot crimson past 5,000) as the damage grows
+local rankName = UI.Text(comboFrame, "", 16, Color3.new(1, 1, 1), "Display", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromOffset(70, 192), Size = UDim2.fromOffset(150, 18), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 3, Visible = false })
+local hitsText = UI.Text(comboFrame, "0", 34, Color3.new(1, 1, 1), "Number", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromOffset(136, 222), Size = UDim2.fromOffset(120, 34), TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 3, TextWrapped = false })
 local hitsScale = New("UIScale", { Parent = hitsText })
-UI.Text(comboFrame, "HITS", 13, T.TextSoft, "Display", { Position = UDim2.fromOffset(16, 236), Size = UDim2.fromOffset(60, 16), ZIndex = 3 })
-local totalText = UI.Text(comboFrame, "0", 18, T.Gold, "Number", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromOffset(136, 262), Size = UDim2.fromOffset(120, 20), TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 3, TextWrapped = false })
-UI.Text(comboFrame, "TOTAL DMG", 11, T.TextSoft, "Display", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromOffset(136, 283), Size = UDim2.fromOffset(120, 14), TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 3 })
+UI.Text(comboFrame, "HITS", 12, T.TextSoft, "Display", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromOffset(136, 256), Size = UDim2.fromOffset(120, 14), TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 3 })
+local totalText = UI.Text(comboFrame, "0", 20, T.Gold, "Number", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromOffset(136, 276), Size = UDim2.fromOffset(120, 22), TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 3, TextWrapped = false })
+local totalLabel = UI.Text(comboFrame, "TOTAL DMG", 11, T.Gold, "Display", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromOffset(136, 299), Size = UDim2.fromOffset(120, 14), TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 3 })
+local function damageHeat(total)
+	local stops = {
+		{ 0, Color3.fromRGB(255, 226, 120) },
+		{ 1000, Color3.fromRGB(255, 150, 50) },
+		{ 2500, Color3.fromRGB(255, 60, 50) },
+		{ 5000, Color3.fromRGB(220, 20, 70) },
+		{ 10000, Color3.fromRGB(255, 40, 160) },
+	}
+	for i = 2, #stops do
+		if total <= stops[i][1] then
+			local a, b = stops[i - 1], stops[i]
+			return a[2]:Lerp(b[2], (total - a[1]) / (b[1] - a[1]))
+		end
+	end
+	return stops[#stops][2]
+end
 
 local fillShown, fillVel = 0, 0 -- spring state of the liquid (0..1 of the current rank)
 local letterY = 150
@@ -1415,6 +1433,9 @@ function UI.ComboHit(amount, crit)
 	end
 	hitsText.Text = tostring(combo.hits)
 	totalText.Text = UI.Format(math.floor(combo.total))
+	local heat = damageHeat(combo.total)
+	totalText.TextColor3 = heat
+	totalLabel.TextColor3 = heat
 	hitsScale.Scale = crit and 1.6 or 1.35
 	Tween(hitsScale, 0.22, { Scale = 1 }, Enum.EasingStyle.Back)
 	barScale.Scale = crit and 1.18 or 1.1

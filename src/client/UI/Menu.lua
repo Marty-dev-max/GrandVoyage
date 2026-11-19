@@ -487,7 +487,7 @@ local function buildSlots()
 				for _, p in ipairs(model:GetDescendants()) do
 					if p:IsA("BasePart") then
 						p.Color = Color3.fromRGB(30, 40, 70)
-					elseif p:IsA("SurfaceGui") then
+					elseif p:IsA("Decal") then
 						table.insert(faces, p)
 					end
 				end

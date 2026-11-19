@@ -56,27 +56,17 @@ local function cfArr(cf)
 end
 local function dump(model, offset)
 	for _, d in model:GetDescendants() do
-		if d:IsA("BasePart") and d.Transparency < 0.98 then
+		if d:IsA("BasePart") and (d.Transparency < 0.98 or d:FindFirstChild("FaceDecal")) then
 			local cf = roblox.CFrame.new(offset) * d.CFrame
 			local c = d.Color
-			table.insert(out.parts, { shape = "Block", cf = cfArr(cf), size = { d.Size.X, d.Size.Y, d.Size.Z }, color = { c.R, c.G, c.B }, mat = "SmoothPlastic", t = 0 })
-			-- face images: textured planes on the cube's front (tools/blender/render_parts.py draws "img" parts)
-			local sg = d:FindFirstChild("Face")
-			if sg then
-				local s = d.Size
-				for _, im in sg:GetChildren() do
-					local key = im:GetAttribute("Img")
-					if key then
-						local u, v = im.Position.X.Scale, im.Position.Y.Scale
-						local w, h = im.Size.X.Scale, im.Size.Y.Scale
-						-- front = -Z; screen-left = +X
-						local lx = s.X / 2 - (u + w / 2) * s.X
-						local ly = s.Y / 2 - (v + h / 2) * s.Y
-						local pcf = cf * roblox.CFrame.new(lx, ly, -s.Z / 2 - 0.005 - im.ZIndex * 0.003)
-						local tc = im.ImageColor3
-						table.insert(out.parts, { img = "assets/faces/" .. key .. ".png", cf = cfArr(pcf), size = { w * s.X, h * s.Y, 0 }, color = { tc.R, tc.G, tc.B } })
-					end
-				end
+			if d.Transparency < 0.98 then
+				table.insert(out.parts, { shape = "Block", cf = cfArr(cf), size = { d.Size.X, d.Size.Y, d.Size.Z }, color = { c.R, c.G, c.B }, mat = "SmoothPlastic", t = 0 })
+			end
+			-- face layers: decals on thin plates (tools/blender/render_parts.py draws "img" parts)
+			local dec = d:FindFirstChild("FaceDecal")
+			if dec then
+				local tc = dec.Color3
+				table.insert(out.parts, { img = "assets/faces/" .. dec:GetAttribute("Img") .. ".png", cf = cfArr(cf * roblox.CFrame.new(0, 0, -0.012)), size = { d.Size.X, d.Size.Y, 0 }, color = { tc.R, tc.G, tc.B } })
 			end
 		end
 	end

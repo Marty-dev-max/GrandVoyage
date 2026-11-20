@@ -30,10 +30,10 @@ mob("JungleTiger", { name = "Jungle Tiger", level = 4, hp = 150, atk = 17, def =
 	style = { shape = "cat", color = Color3.fromRGB(250, 160, 60), scale = 1.1 }, moveSpeed = 16,
 	drops = { { "TigerPelt", 0.5, 1, 2 }, { "MeatOnBone", 0.2, 1, 1 } } })
 mob("WildBoar", { name = "Wild Boar", level = 6, hp = 230, atk = 24, def = 8, exp = 50, jobExp = 34, beli = { 15, 35 },
-	style = { shape = "boar", color = Color3.fromRGB(140, 95, 75), scale = 1.2 }, aggro = true,
+	style = { shape = "boar", color = Color3.fromRGB(140, 95, 75), scale = 1.2 }, -- not aggressive (v0.25.4: new players got mobbed)
 	drops = { { "BoarTusk", 0.5, 1, 2 }, { "MeatOnBone", 0.3, 1, 2 } } })
 mob("MountainBandit", { name = "Mountain Bandit", level = 8, hp = 320, atk = 32, def = 10, exp = 75, jobExp = 50, beli = { 30, 60 },
-	style = { shape = "humanoid", color = Color3.fromRGB(120, 100, 80), scale = 1, hat = "bandana" }, aggro = true,
+	style = { shape = "humanoid", color = Color3.fromRGB(120, 100, 80), scale = 1, hat = "bandana" }, aggro = true, aggroRadius = 14,
 	drops = { { "Sword_Plain", 0.03, 1, 1 }, { "SteelOre", 0.08, 1, 1 } } })
 
 -- Conch Bay (10-20)

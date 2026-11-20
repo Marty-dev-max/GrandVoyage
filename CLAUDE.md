@@ -314,6 +314,9 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     Config/Icons + new: dash flame calm auto manual graphics audio interface autobattle developer merit + monster
     materials) -> assets/icons -> upload_images.py -> Config/Icons. UI.Button turns a leading emoji with an icon into
     an image at the left. Never draw a straw hat (One Piece): "hat" is a tricorn. AUTO button reads AUTO / MANUAL.
+  * v0.25.4 (owner): first class switch at Job Lv.5 (`GameConfig.JobChangeLevel`); Daybreak quests: T08 Job Lv.5 on
+    tigers -> T09 Job Master -> new T09B Boar Hunt -> T10 bandits (Quests.SaveVersion 3 shifts saves at step >= 10).
+    Boars passive, bandits `aggroRadius = 14` (Monsters def field read by findAggroTarget).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

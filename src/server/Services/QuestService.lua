@@ -31,12 +31,18 @@ local function questOf(p)
 		p.quest = { step = 1, progress = 0 }
 	end
 	local q = p.quest
-	if (q.v or 1) < Quests.SaveVersion then
-		-- v2 inserted the Bay Serpent step at 12: saves already at the old step 12+ move up one (nobody redoes a step)
-		if q.step >= 12 then
+	-- inserted steps: saves already past the insertion point move up one (nobody redoes a step)
+	if (q.v or 1) < 2 then
+		if q.step >= 12 then -- v2: Bay Serpent at 12
 			q.step += 1
 		end
-		q.v = Quests.SaveVersion
+		q.v = 2
+	end
+	if q.v < 3 then
+		if q.step >= 10 then -- v3: Boar Hunt at 10 (after the Job Master)
+			q.step += 1
+		end
+		q.v = 3
 	end
 	return q
 end

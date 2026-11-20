@@ -446,7 +446,7 @@ local function validTarget(mob, pl)
 end
 
 local function findAggroTarget(mob)
-	local best, bestD = nil, mob.def.isBoss and 45 or 26
+	local best, bestD = nil, mob.def.aggroRadius or (mob.def.isBoss and 45 or 26)
 	for _, pl in ipairs(Players:GetPlayers()) do
 		local ok, root = validTarget(mob, pl)
 		if ok then

@@ -86,18 +86,26 @@ Q.Main = {
 		at = { npc = "Guide" }, reward = { beli = 150, exp = 40, job = 30 },
 	},
 	{
-		id = "T08", island = "Daybreak", title = "Boar Hunt",
-		dialog = { "Wild Boars trample the farm meadow south of the village. Hunt them until you reach Job Lv.10, then the Job Master in the plaza will take you seriously.", "Your fists are a Brawler's best friend. Learn new skills with K whenever you have skill points." },
-		goal = { kind = "JobLevel", count = 10 }, text = "Reach Job Lv.10",
-		hint = "Fight Wild Boars in the south meadow. Your Job EXP is the right half of the level ring.",
-		at = { spawn = "WildBoar" }, reward = { beli = 300, exp = 150, items = { { "TangerineJuice", 5 } } },
+		id = "T08", island = "Daybreak", title = "Ready for a Calling",
+		dialog = { "Keep at those tigers until you reach Job Lv.5. Then the Job Master in the plaza will take you seriously.", "Your fists are a Brawler's best friend. Learn new skills with K whenever you have skill points." },
+		goal = { kind = "JobLevel", count = 5 }, text = "Reach Job Lv.5",
+		hint = "Fight Jungle Tigers in the den. Your Job EXP is the right half of the level ring.",
+		at = { spawn = "JungleTiger" }, reward = { beli = 300, exp = 150, items = { { "TangerineJuice", 5 } } },
 	},
 	{
 		id = "T09", island = "Daybreak", title = "Find Your Calling",
-		dialog = { "Job Lv.10! Go see the Job Master by the fountain. Swordsman, Sharpshooter, Sea Cook, Navigator, Doctor or Shipwright... or stay a Brawler. Every crew needs all of them.", "Don't worry about choosing wrong: each class keeps its own progress, and you can switch back later." },
+		dialog = { "Job Lv.5! Go see the Job Master by the fountain. Swordsman, Sharpshooter, Sea Cook, Navigator, Doctor or Shipwright... or stay a Brawler. Every crew needs all of them.", "Don't worry about choosing wrong: each class keeps its own progress, and you can switch back later." },
 		goal = { kind = "Talk", target = "JobMaster" }, text = "Visit the Job Master",
 		hint = "The Job Master stands in the village plaza. Pick a new class, or keep punching as a Brawler.",
 		at = { npc = "JobMaster" }, reward = { beli = 500, exp = 200, job = 100 },
+	},
+	{
+		-- v3 (owner, v0.25.4): class first at Job Lv.5, THEN the boars (they were the Job Lv.10 grind before)
+		id = "T09B", island = "Daybreak", title = "Boar Hunt",
+		dialog = { "Wild Boars trample the farm meadow south of the village. Try your new class on them!" },
+		goal = { kind = "Kill", target = "WildBoar", count = 6 }, text = "Defeat Wild Boars",
+		hint = "The boar meadow is south of the village. Use your new class skills (K opens the skill tree).",
+		at = { spawn = "WildBoar" }, reward = { beli = 350, exp = 220, job = 140, items = { { "MeatOnBone", 5 } } },
 	},
 	{
 		id = "T10", island = "Daybreak", title = "Bandit Hill",
@@ -344,7 +352,7 @@ Q.Main = {
 
 Q.TutorialEnd = 13 -- steps 1..13 are the Daybreak tutorial (skippable)
 -- quest save version: v2 inserted T12 (Bay Serpent) before "Next Port: Conch Bay" (QuestService migrates old saves)
-Q.SaveVersion = 2
+Q.SaveVersion = 3 -- v2: Bay Serpent step inserted at 12; v3: Boar Hunt inserted at 10
 
 Q.ById = {}
 for i, s in ipairs(Q.Main) do

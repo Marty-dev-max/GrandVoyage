@@ -976,7 +976,7 @@ function Panels.Skills(args)
 			for _, id in ipairs(ClassesCfg.SecondJobs[p.class] or {}) do
 				table.insert(names, id)
 			end
-			UI.Text(left, "🔒 Second jobs open with the Grand Current update.\n" .. (#names > 0 and ("Paths for your class: " .. table.concat(names, ", ")) or "Switch to a first job at the Job Master (Job Lv.10) to see its paths."), 18, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 120) })
+			UI.Text(left, "🔒 Second jobs open with the Grand Current update.\n" .. (#names > 0 and ("Paths for your class: " .. table.concat(names, ", ")) or "Switch to a first job at the Job Master (Job Lv." .. GameConfig.JobChangeLevel .. ") to see its paths."), 18, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 120) })
 			UI.Pad(right, 14)
 			UI.Text(right, "Coming soon", 22, T.Text, "Display")
 			return

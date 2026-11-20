@@ -302,6 +302,14 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     Bosses: pixel tile Telegraph (default kind) + `bossCharge` (line telegraph, LinearVelocity run, playersInLine hits,
     `BossCharge` FX) alternating with the slam. `MobSpawn` FX (fade-in via LocalTransparencyModifier), fruit spawn
     glow column + px emitter, `VFX.LootMagnet` (called by HUD.FlyLoot), `Controllers/Footsteps` (run dust, swim splash).
+  * v0.25.2: PixelUI `untint`: a colored UIGradient on a text object with a background is moved into BackgroundColor3
+    (gradient keeps only the shade ratio), otherwise the gradient tinted the text = "hollow" letters. `UI.Colored`
+    (rich text) + `UI.StatColor`; class names in class color, guild in faction color. `UI.Announce` posts to the chat
+    (RBXGeneral DisplaySystemMessage), banner only as fallback. Windows hide PlayerGui.TouchGui while open. Compass is
+    fitted between the MENU button and `CurrencyRow` (Readability fitCompass). Quest.Dialog: NPC found by model name
+    (tag NPC) -> camera close-up within 34 studs (restored on close / walking 8 studs), ViewportFrame portrait,
+    cyan hologram when far, `Talk` blips (BlkTalk) pitched per speaker. Owner decisions: boss charge stays; Seastone
+    gear required to seal; guild war answers in docs/GuildWar.md section 6.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

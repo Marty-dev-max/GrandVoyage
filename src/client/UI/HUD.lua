@@ -380,6 +380,7 @@ local function buildStatus()
 
 	-- one compact row of currencies (was three tall pills)
 	local row = softPanel(UI.Root, UDim2.fromOffset(470, 42), UDim2.new(1, -16, 0, 14), Vector2.new(1, 0), "left")
+	row.Name = "CurrencyRow" -- Readability fits the compass between the MENU button and this row
 	New("UIPadding", { PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 10), Parent = row })
 	UI.List(row, Enum.FillDirection.Horizontal, 4).VerticalAlignment = Enum.VerticalAlignment.Center
 	local function segment(order, icon, color, width, tip)
@@ -1077,7 +1078,11 @@ local function refresh()
 	local cls = Classes[clsId]
 	local fruitId = player:GetAttribute("Fruit")
 	local fruitDef = fruitId and FruitsCfg.ById[fruitId]
-	bars.cls.Text = (fruitDef and (fruitDef.icon .. " ") or "") .. (cls and cls.icon or "") .. " " .. (player:GetAttribute("ClassName") or "") .. "  •  Job Lv." .. (player:GetAttribute("JobLevel") or 1) .. (player:GetAttribute("GuildName") and ("  •  " .. player:GetAttribute("GuildName")) or "")
+	local guild = player:GetAttribute("GuildName")
+	local guildColor = faction == "Marine" and T.Marine or (faction == "Pirate" and T.Pirate or T.Gold)
+	bars.cls.RichText = true
+	bars.cls.Text = (fruitDef and (fruitDef.icon .. " ") or "") .. (cls and cls.icon or "") .. " " .. UI.Colored(player:GetAttribute("ClassName") or "", cls and cls.color or T.Text)
+		.. "  •  Job Lv." .. (player:GetAttribute("JobLevel") or 1) .. (guild and ("  •  " .. UI.Colored(guild, guildColor)) or "")
 	ring.jobColor = cls and (cls.ringColor or cls.color) or T.Purple
 	ring.face.BackgroundColor3 = cls and cls.color or T.Ocean
 	bars.expText.Text = string.format("EXP %.1f%%", ring.target.base * 100)
@@ -1301,7 +1306,7 @@ function HUD.Layout()
 	UI.ToastHolder.Position = UDim2.new(1, -(menuW + 32), 0, 222)
 	-- the style meter (vertical tube) stands middle-right: left of the menu column, or under the small phone menu
 	if compact then
-		UI.PlaceStyleMeter(UDim2.new(1, -96, 0.6, 0), 0.6)
+		UI.PlaceStyleMeter(UDim2.new(1, -96, 0.46, 0), 0.6) -- v0.25.2: above the touch attack button (it sat behind it)
 	else
 		UI.PlaceStyleMeter(UDim2.new(1, -(menuW + 30), 0.5, 0), 1)
 	end

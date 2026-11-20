@@ -209,6 +209,32 @@ local function nextIsland(fromX)
 	return best
 end
 
+-- v0.25.2 (owner, phone): keep the compass between the MENU button (left) and the currency row (right); on narrow
+-- screens it covered both. Measured in screen pixels, converted to the root's UIScale units.
+local function fitCompass()
+	if not compass then
+		return
+	end
+	local pg = game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui")
+	local menuGui = pg and pg:FindFirstChild("MenuButton")
+	local menuBtn = menuGui and menuGui.Enabled and menuGui:FindFirstChildWhichIsA("GuiObject")
+	local cur = UI.Root:FindFirstChild("CurrencyRow")
+	local scaleObj = UI.Root:FindFirstChildOfClass("UIScale")
+	local sc = scaleObj and scaleObj.Scale or 1
+	local left = menuBtn and (menuBtn.AbsolutePosition.X + menuBtn.AbsoluteSize.X + 10) or 0
+	local right = cur and (cur.AbsolutePosition.X - 10) or workspace.CurrentCamera.ViewportSize.X
+	local want = 440 * sc
+	local room = right - left
+	if room >= want and left < workspace.CurrentCamera.ViewportSize.X / 2 - want / 2 then
+		compass.Position = UDim2.new(0.5, 0, 0, 14)
+		compass.Size = UDim2.fromOffset(440, 28)
+	else
+		local w = math.max(160 * sc, math.min(want, room))
+		compass.Size = UDim2.fromOffset(w / sc, 28)
+		compass.Position = UDim2.fromOffset((left + room / 2) / sc, 14)
+	end
+end
+
 local function buildCompass()
 	-- slim, see-through compass (it used to be a heavy dark bar with little on it)
 	compass = New("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 14), Size = UDim2.fromOffset(440, 28), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.35, ClipsDescendants = true, Parent = UI.Root })
@@ -281,7 +307,12 @@ local function myShip()
 	return ships and ships:FindFirstChild("Ship_" .. player.UserId)
 end
 
+local lastFit = 0
 local function updateNav()
+	if os.clock() - lastFit > 0.5 then
+		lastFit = os.clock()
+		pcall(fitCompass)
+	end
 	local cam = workspace.CurrentCamera
 	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 	for _, m in pairs(markerPool) do

@@ -125,6 +125,15 @@ function UI.List(parent, dir, padding, align)
 	return l
 end
 
+-- rich-text color helpers (v0.25.2, owner: names of classes, stats, guilds in their own colors)
+function UI.Colored(text, c)
+	return string.format('<font color="#%02X%02X%02X">%s</font>', math.floor(c.R * 255 + 0.5), math.floor(c.G * 255 + 0.5), math.floor(c.B * 255 + 0.5), text)
+end
+UI.StatColor = {
+	STR = Color3.fromRGB(255, 110, 80), AGI = Color3.fromRGB(110, 230, 120), VIT = Color3.fromRGB(255, 170, 70),
+	INT = Color3.fromRGB(150, 130, 255), DEX = Color3.fromRGB(90, 210, 255), LUK = Color3.fromRGB(255, 220, 80),
+}
+
 function UI.Gradient(parent, a, b, rot)
 	return New("UIGradient", { Color = ColorSequence.new(a, b), Rotation = rot or 90, Parent = parent })
 end
@@ -766,6 +775,12 @@ local function refreshDim()
 		openCount += 1
 	end
 	dim.Visible = openCount > 0
+	-- v0.25.2 (owner, phone): Roblox's jump button / thumbstick drew on top of open windows; windows are modal, so
+	-- the touch controls hide while one is open
+	local touch = gui.Parent and gui.Parent:FindFirstChild("TouchGui")
+	if touch and touch:IsA("ScreenGui") then
+		touch.Enabled = openCount == 0
+	end
 	Tween(dim, 0.2, { BackgroundTransparency = openCount > 0 and 0.55 or 1 })
 	Tween(blur, 0.25, { Size = openCount > 0 and 10 or 0 })
 end
@@ -1141,7 +1156,21 @@ local annStroke = UI.Stroke(announceBar, T.Gold, 2.5)
 local announceText = UI.Text(announceBar, "", 19, T.Gold, "Bold", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center })
 local announceQueue = {}
 local announcing = false
+-- v0.25.2 (owner): server-wide news (boss up, fruit spawned, rare rolls...) goes into the chat as a colored
+-- system line instead of the banner at the top (it covered the compass and the target's HP bar). The banner is
+-- only the fallback when the new chat is not available.
 function UI.Announce(text, rarityId)
+	local ok = pcall(function()
+		local channels = game:GetService("TextChatService"):FindFirstChild("TextChannels")
+		local general = channels and channels:FindFirstChild("RBXGeneral")
+		assert(general, "no chat channel")
+		local tier = rarityId and Rarity.Get(rarityId)
+		local clean = tostring(text):gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
+		general:DisplaySystemMessage(UI.Colored("📢 " .. clean, tier and tier.color or T.Gold))
+	end)
+	if ok then
+		return
+	end
 	table.insert(announceQueue, { text = text, rarity = rarityId })
 	if announcing then
 		return

@@ -650,7 +650,8 @@ function Panels.Stats()
 		end
 		local cls = Classes[p.class]
 		nameLabel.Text = player.DisplayName
-		subLabel.Text = (cls and (cls.icon .. " " .. cls.name) or p.class) .. "   •   Base Lv." .. p.baseLevel .. "   Job Lv." .. p.jobLevel
+		subLabel.RichText = true
+		subLabel.Text = (cls and (cls.icon .. " " .. UI.Colored(cls.name, cls.color)) or p.class) .. "   •   Base Lv." .. p.baseLevel .. "   Job Lv." .. p.jobLevel
 		if not drawn then
 			drawn = true
 			local wEntry = p.equipment.weapon and Formulas.FindItem(p, p.equipment.weapon)
@@ -681,7 +682,7 @@ function Panels.Stats()
 			UI.Corner(row, 10)
 			local base, n = p.stats[s], pend[s] or 0
 			local bonus = (d[s] or base) - base
-			UI.Text(row, s, 22, T.Text, "Display", { Position = UDim2.fromOffset(12, 2), Size = UDim2.new(0.3, -12, 0, 26) })
+			UI.Text(row, s, 22, UI.StatColor[s] or T.Text, "Display", { Position = UDim2.fromOffset(12, 2), Size = UDim2.new(0.3, -12, 0, 26) })
 			UI.Text(row, desc[s], 11, T.TextSoft, "Semi", { Position = UDim2.fromOffset(12, 28), Size = UDim2.new(0.3, -12, 0, 14) })
 			UI.Text(row, tostring(base) .. (n > 0 and ('<font color="#7CFF9B"> +' .. n .. "</font>") or ""), 20, T.Text, "Number", { Position = UDim2.fromScale(0.3, 0), Size = UDim2.new(0.12, 0, 1, 0), TextXAlignment = Enum.TextXAlignment.Center })
 			UI.Text(row, bonus ~= 0 and ((bonus > 0 and "+" or "") .. bonus) or "0", 20, bonus > 0 and T.Green or T.TextSoft, "Number", { Position = UDim2.fromScale(0.42, 0), Size = UDim2.new(0.12, 0, 1, 0), TextXAlignment = Enum.TextXAlignment.Center })

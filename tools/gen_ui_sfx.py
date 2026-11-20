@@ -127,6 +127,8 @@ def main():
         return x * env(len(tt), 0.001, 30)
     coin = mix((0, clink(880) * 0.6), (0.045, clink(740) * 0.5), (0, np.sin(2 * np.pi * 180 * t(0.08)) * env(int(SR * 0.08), 0.002, 18) * 0.5))
     save('BlkCoin', soften(coin, 5), 0.5)
+    # v0.25.2 (owner): NPC "voice" while dialog text types out: a tiny soft square blip (pitched per speaker in game)
+    save('BlkTalk', soften(square(440, 0.045, 0.5, 34) * 0.8 + square(880, 0.045, 0.25, 40) * 0.2, 4), 0.45)
     print('wrote Blk* ui sounds')
 
 

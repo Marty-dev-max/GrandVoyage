@@ -3,6 +3,7 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local CollectionService = game:GetService("CollectionService")
+local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local Quests = require(Shared.Config.Quests)
@@ -175,9 +176,15 @@ end
 -- ===== dialog =====
 local lines, lineIdx = {}, 0
 local typing
+local talkPitch = 1
+local endTalk -- function: puts the camera back, removes the portrait (set by Quest.Dialog)
 local function showLine()
 	local text = lines[lineIdx]
 	if not text then
+		if endTalk then
+			endTalk()
+			endTalk = nil
+		end
 		UI.Tween(dialog, 0.15, { Position = UDim2.new(0.5, 0, 1, 40) })
 		task.delay(0.16, function()
 			dialog.Visible = false
@@ -197,6 +204,10 @@ local function showLine()
 				return
 			end
 			dText.MaxVisibleGraphemes = i
+			-- v0.25.2 (owner): pixel-game "voice": a soft blip every few letters, pitched per speaker
+			if i % 6 == 1 then
+				Audio.Play("Talk", { pitch = talkPitch * (0.94 + math.random() * 0.12), volume = 0.5 })
+			end
 			task.wait(0.012)
 		end
 		dText.MaxVisibleGraphemes = -1
@@ -247,12 +258,138 @@ local function buildDialog()
 	end)
 end
 
+-- ===== talking to an NPC (v0.25.2, owner) =====
+-- Near the NPC (within TALK_NEAR studs): the camera eases onto them (over the shoulder, a little to the side) and
+-- eases back when the talk ends or you walk away. Far away (quest guide calling): their portrait in the dialog box
+-- is a flickering cyan HOLOGRAM of the NPC model. Either way the portrait shows the real NPC, not an emoji.
+local TALK_NEAR = 34
+local function findNpc(name)
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	local best, bestD
+	for _, m in ipairs(CollectionService:GetTagged("NPC")) do
+		if m.Name == name and m.Parent and m:IsA("Model") then
+			local d = root and (m:GetPivot().Position - root.Position).Magnitude or 0
+			if not best or d < bestD then
+				best, bestD = m, d
+			end
+		end
+	end
+	return best, bestD
+end
+
+local function portrait(npc, holo)
+	local vp = New("ViewportFrame", { Name = "NpcPortrait", BackgroundColor3 = holo and Color3.fromRGB(10, 40, 60) or T.PanelDeep, BackgroundTransparency = holo and 0.3 or 0,
+		Position = UDim2.fromOffset(14, 26), Size = UDim2.fromOffset(70, 78), ZIndex = 31, Ambient = holo and Color3.fromRGB(90, 220, 255) or Color3.fromRGB(190, 190, 200),
+		LightColor = holo and Color3.fromRGB(120, 240, 255) or Color3.new(1, 1, 1), LightDirection = Vector3.new(-0.4, -0.6, -1), Parent = dialog })
+	UI.Stroke(vp, holo and Color3.fromRGB(90, 230, 255) or T.Gold, 3)
+	local m = npc:Clone()
+	for _, d in ipairs(m:GetDescendants()) do
+		if d:IsA("BillboardGui") or d:IsA("ProximityPrompt") or d:IsA("Script") or d:IsA("LocalScript") then
+			d:Destroy()
+		elseif holo and d:IsA("BasePart") then
+			d.Color = d.Color:Lerp(Color3.fromRGB(80, 220, 255), 0.6)
+		end
+	end
+	m:PivotTo(CFrame.new())
+	m.Parent = vp
+	local cf, size = m:GetBoundingBox()
+	local cam = Instance.new("Camera")
+	cam.FieldOfView = 28
+	local headY = cf.Position.Y + size.Y * 0.32 -- frame the head and shoulders
+	local look = m:GetPivot().LookVector
+	cam.CFrame = CFrame.lookAt(Vector3.new(0, headY, 0) + look * 9 + Vector3.new(0, 0.4, 0), Vector3.new(0, headY - 0.2, 0))
+	cam.Parent = vp
+	vp.CurrentCamera = cam
+	if holo then
+		-- scanlines + flicker
+		for y = 0, 1, 0.1 do
+			New("Frame", { BackgroundColor3 = Color3.fromRGB(120, 240, 255), BackgroundTransparency = 0.82, BorderSizePixel = 0, Position = UDim2.fromScale(0, y), Size = UDim2.new(1, 0, 0, 1), ZIndex = 32, Parent = vp })
+		end
+		task.spawn(function()
+			while vp.Parent do
+				vp.ImageTransparency = math.random() < 0.08 and 0.5 or 0.12
+				task.wait(0.07)
+			end
+		end)
+	end
+	return vp
+end
+
+local function focusCamera(npc)
+	local cam = workspace.CurrentCamera
+	local char = player.Character
+	local root = char and char:FindFirstChild("HumanoidRootPart")
+	if not cam or not root then
+		return nil
+	end
+	local cf, size = npc:GetBoundingBox()
+	local head = cf.Position + Vector3.new(0, size.Y * 0.32, 0)
+	local toPlayer = Vector3.new(root.Position.X - head.X, 0, root.Position.Z - head.Z)
+	toPlayer = toPlayer.Magnitude > 0.1 and toPlayer.Unit or npc:GetPivot().LookVector
+	local side = Vector3.new(-toPlayer.Z, 0, toPlayer.X)
+	local goal = CFrame.lookAt(head + toPlayer * 9 + side * 3 + Vector3.new(0, 1.2, 0), head - Vector3.new(0, 0.3, 0))
+	local before = cam.CameraType
+	cam.CameraType = Enum.CameraType.Scriptable
+	TweenService:Create(cam, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), { CFrame = goal, FieldOfView = 55 }):Play()
+	local startPos = root.Position
+	local alive = true
+	local function restore()
+		if not alive then
+			return
+		end
+		alive = false
+		cam.CameraType = before == Enum.CameraType.Scriptable and Enum.CameraType.Custom or before
+		TweenService:Create(cam, TweenInfo.new(0.4), { FieldOfView = 70 }):Play()
+	end
+	-- walking away ends the close-up (the dialog stays)
+	task.spawn(function()
+		while alive do
+			task.wait(0.2)
+			if not root.Parent or (root.Position - startPos).Magnitude > 8 then
+				restore()
+			end
+		end
+	end)
+	return restore
+end
+
 function Quest.Dialog(speaker, newLines)
 	if not newLines or #newLines == 0 then
 		return
 	end
 	lines, lineIdx = newLines, 1
 	dName.Text = speaker or "Guide"
+	if endTalk then
+		endTalk()
+		endTalk = nil
+	end
+	local h = 0
+	for i = 1, #(speaker or "") do
+		h = (h * 31 + string.byte(speaker, i)) % 997
+	end
+	talkPitch = 0.8 + (h % 50) / 100
+	local old = dialog:FindFirstChild("NpcPortrait")
+	if old then
+		old:Destroy()
+	end
+	local npc, dist = findNpc(speaker or "")
+	if npc then
+		local near = dist <= TALK_NEAR
+		local ok, vp = pcall(portrait, npc, not near)
+		dChip.Visible = not ok
+		local restore = near and focusCamera(npc) or nil
+		endTalk = function()
+			if restore then
+				restore()
+			end
+			if ok and vp then
+				vp:Destroy()
+			end
+			dChip.Visible = true
+		end
+	else
+		dChip.Visible = true
+	end
 	dialog.Visible = true
 	dialog.Position = UDim2.new(0.5, 0, 1, 40)
 	UI.Tween(dialog, 0.3, { Position = UDim2.new(0.5, 0, 1, -124) }, Enum.EasingStyle.Back)

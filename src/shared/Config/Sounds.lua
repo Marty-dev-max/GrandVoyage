@@ -41,6 +41,8 @@ add("Error", "UI", 0.5, "rbxasset://sounds/uuhhh.mp3", { pitch = 1.4 })
 -- v0.24.6 (owner): EXP / coin / item pickups are background ticks now (quiet); the level up is the loud reward
 add("BlkCoin", "UI", 0.5, PING, { pitch = 0.72 })
 add("BlkPouch", "UI", 0.6, CLICK, { pitch = 0.7 })
+add("BlkTalk", "UI", 0.4, CLICK, { pitch = 1.6 })
+add("Talk", "UI", 0.4, CLICK, { pitch = 1.6, prefer = "BlkTalk" }) -- NPC dialog blips (UI/Quest)
 -- v0.24.12 (owner: pickups still sounded shrill): coins = low muted clinks, items = a soft drop into the bag
 add("Coin", "UI", 0.16, PING, { pitch = 0.72, prefer = "BlkCoin" })
 add("Pickup", "UI", 0.5, CLICK, { pitch = 0.7, prefer = "BlkPouch" })
@@ -124,6 +126,7 @@ add("MusicBoss", "Music", 0.45, "", { looped = true })
 
 
 
+
 -- ===== uploaded asset ids (written by tools/upload_sfx.py) =====
 S.AmbienceWind.id = "rbxassetid://121665322013245"
 S.AnvilClang.id = "rbxassetid://119416036242324"
@@ -140,6 +143,7 @@ S.BlkOpen.id = "rbxassetid://126008511330983"
 S.BlkPouch.id = "rbxassetid://101259430436269"
 S.BlkReward.id = "rbxassetid://85351416155642"
 S.BlkSwap.id = "rbxassetid://90095917810902"
+S.BlkTalk.id = "rbxassetid://82440426004284"
 S.BlkTick.id = "rbxassetid://125395146895714"
 S.BlkToggle.id = "rbxassetid://132452117615324"
 S.BossRoar.id = "rbxassetid://94312411489126"

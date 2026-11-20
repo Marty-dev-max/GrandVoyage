@@ -29,6 +29,8 @@ local function keep(obj)
 	return false
 end
 
+local watchGradient
+
 function PixelUI.Apply(obj)
 	if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
 		if obj:GetAttribute("PxDone") or keep(obj) then
@@ -56,6 +58,8 @@ function PixelUI.Apply(obj)
 		end
 	elseif obj:IsA("UIStroke") then
 		obj.LineJoinMode = Enum.LineJoinMode.Miter
+	elseif obj:IsA("UIGradient") then
+		task.defer(watchGradient, obj) -- after the creator has set its parent and colors
 	elseif obj:IsA("UITextSizeConstraint") then
 		if not obj:GetAttribute("PxDone") then
 			obj:SetAttribute("PxDone", true)
@@ -63,6 +67,52 @@ function PixelUI.Apply(obj)
 			obj.MinTextSize = math.max(7, math.floor(obj.MinTextSize * 0.7 + 0.5))
 		end
 	end
+end
+
+-- v0.25.2 (owner: text looked "hollow"): a UIGradient tints the WHOLE object, its text included, so a colored button
+-- fill turned white letters into the button's color and only the outline showed. For a text object with a visible
+-- background, the gradient's color moves into BackgroundColor3 and the gradient keeps only the light/shade ratio:
+-- the background renders exactly the same (bg x c = (bg x top) x (c / top)) and the text stays near white.
+-- Gradients on text with no background (colored titles, crit numbers) are meant for the text and are left alone.
+local function untint(g)
+	local obj = g.Parent
+	if not obj or not (obj:IsA("TextButton") or obj:IsA("TextLabel")) or obj.BackgroundTransparency >= 0.99 or keep(obj) then
+		return
+	end
+	local kps = g.Color.Keypoints
+	local top = kps[1].Value
+	for _, k in ipairs(kps) do
+		local v = k.Value
+		if v.R + v.G + v.B > top.R + top.G + top.B then
+			top = v
+		end
+	end
+	if top.R > 0.97 and top.G > 0.97 and top.B > 0.97 then
+		return -- already neutral
+	end
+	local base = obj:GetAttribute("PxBaseBG")
+	if base == nil then
+		base = obj.BackgroundColor3
+		obj:SetAttribute("PxBaseBG", base)
+	end
+	local out = {}
+	for i, k in ipairs(kps) do
+		local v = k.Value
+		out[i] = ColorSequenceKeypoint.new(k.Time, Color3.new(math.min(1, v.R / math.max(top.R, 0.01)), math.min(1, v.G / math.max(top.G, 0.01)), math.min(1, v.B / math.max(top.B, 0.01))))
+	end
+	obj.BackgroundColor3 = Color3.new(base.R * top.R, base.G * top.G, base.B * top.B)
+	g.Color = ColorSequence.new(out)
+end
+function watchGradient(g)
+	if g:GetAttribute("PxGrad") then
+		return
+	end
+	g:SetAttribute("PxGrad", true)
+	untint(g)
+	-- recolored later (UI.SetButtonColor, hovers): normalize again (the second pass sees a neutral one and stops)
+	g:GetPropertyChangedSignal("Color"):Connect(function()
+		untint(g)
+	end)
 end
 
 local watched = {}

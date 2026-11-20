@@ -28,7 +28,7 @@ local T = UI.Theme
 local New = UI.New
 local Classes = ClassesCfg.Classes
 
-local bars, money, bounty, pointsBtn, skillSlots, autoBtn, targetFrame, lootFeed, buffRow
+local bars, money, bounty, pointsBtn, skillSlots, autoBtn, autoIcon, targetFrame, lootFeed, buffRow
 local statusCard, menuFrame, menuScale, attackHolder
 
 local function glass(parent, size, pos, anchor)
@@ -701,7 +701,7 @@ local function buildSkillBar()
 	local dash = makeSlot(main, "Q", 0)
 	dash.name.Text = "DASH"
 	dash.name.TextSize = 13
-	UI.Text(dash.slot, "💨", 26, T.Text, "Display", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.4), Size = UDim2.fromOffset(40, 30), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 3 })
+	UI.Icon(dash.slot, "dash", 34, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.4), ZIndex = 3 })
 	dash.name.Position = UDim2.new(0, 3, 1, -20)
 	dash.name.Size = UDim2.new(1, -6, 0, 16)
 	dash.grad.Color = ColorSequence.new(T.Ocean:Lerp(Color3.new(1, 1, 1), 0.2), T.Ocean:Lerp(Color3.new(0, 0, 0), 0.45))
@@ -720,7 +720,7 @@ local function buildSkillBar()
 	her.name.TextSize = 12
 	her.name.Position = UDim2.new(0, 3, 1, -20)
 	her.name.Size = UDim2.new(1, -6, 0, 16)
-	local herIcon = UI.Text(her.slot, "🔥", 26, T.Text, "Display", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.4), Size = UDim2.fromOffset(40, 30), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 3 })
+	local herIcon = UI.Icon(her.slot, "flame", 34, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.4), ZIndex = 3 })
 	local herSpacer = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(SLOT, SLOT), LayoutOrder = -1, Parent = second })
 	local LooksCfg = require(Shared.Config.Looks)
 	local function refreshHeritage()
@@ -730,8 +730,14 @@ local function buildSkillBar()
 		herSpacer.Visible = show
 		local lit = player:GetAttribute("HeritageMode") ~= "calm"
 		her.name.Text = lit and "FLAME" or "CALM"
-		herIcon.TextTransparency = lit and 0 or 0.55
-		herIcon.Text = lit and "🔥" or "💨"
+		if herIcon:IsA("ImageLabel") then
+			herIcon.ImageTransparency = lit and 0 or 0.35
+		else
+			herIcon.TextTransparency = lit and 0 or 0.55
+		end
+		if herIcon:IsA("ImageLabel") then
+			herIcon.Image = UI.IconId(lit and "flame" or "calm") or ""
+		end
 		her.grad.Color = lit and ColorSequence.new(Color3.fromRGB(255, 150, 60), Color3.fromRGB(150, 40, 20)) or ColorSequence.new(T.PanelTop, T.PanelDeep)
 	end
 	her.slot.Activated:Connect(function()
@@ -817,12 +823,19 @@ local function buildSkillBar()
 	end)
 	New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(34, SLOT), LayoutOrder = 200, Parent = second })
 
-	autoBtn = UI.Button(main, "AUTO", T.Grey, UDim2.fromOffset(92, SLOT), function()
+	-- v0.25.3 (owner): reads AUTO or MANUAL (not "AUTO ON"), with a pixel icon above the word
+	autoBtn = UI.Button(main, "MANUAL", T.Grey, UDim2.fromOffset(92, SLOT), function()
 		Combat.ToggleAuto()
 	end)
 	autoBtn.Parent.LayoutOrder = 220
+	autoIcon = UI.Icon(autoBtn, "manual", 30, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, -4), ZIndex = autoBtn.ZIndex + 2 })
+	local pad = autoBtn:FindFirstChildOfClass("UIPadding")
+	if pad then
+		pad.PaddingTop = UDim.new(0, 26)
+	end
 	UI.Tooltip(autoBtn, function()
-		return "<b>Auto Battle</b>  [T]\nFights monsters within your search range (Skills -> Loadout), uses ticked skills and drinks potions.", T.Green
+		return State.auto and "<b>AUTO</b>  [T]\nFights monsters within your search range (Skills -> Loadout), uses ticked skills and drinks potions. Tap for MANUAL."
+			or "<b>MANUAL</b>  [T]\nYou aim and attack yourself. Tap for AUTO.", T.Green
 	end)
 	New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(92, SLOT), LayoutOrder = 220, Parent = second })
 
@@ -1212,7 +1225,10 @@ local function refresh()
 		end
 	end
 	UI.SetButtonColor(autoBtn, State.auto and T.Green or T.Grey)
-	autoBtn.Text = State.auto and "AUTO\nON" or "AUTO"
+	autoBtn.Text = State.auto and "AUTO" or "MANUAL"
+	if autoIcon and autoIcon:IsA("ImageLabel") then
+		autoIcon.Image = UI.IconId(State.auto and "auto" or "manual") or ""
+	end
 	-- target
 	local tgt = State.target
 	if tgt and tgt.Parent and tgt.PrimaryPart then

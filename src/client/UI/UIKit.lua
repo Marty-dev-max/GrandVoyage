@@ -379,6 +379,18 @@ function UI.Button(parent, text, color, size, onClick, props)
 	New("UITextSizeConstraint", { MaxTextSize = 24, MinTextSize = 9, Parent = btn })
 	New("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 6), Parent = btn })
 	UI.Tactile(btn)
+	-- v0.25.3 (owner: no emoji): "<emoji> Label" draws the emoji's pixel icon at the left instead
+	local first, rest = string.match(text or "", "^(%S+)%s+(.+)$")
+	if first and not string.match(first, "^[%w%p]+$") and UI.IconId(first) then -- emoji only, never a word
+		btn.Text = rest
+		local ic = UI.Icon(btn, first, 26, { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, -2, 0.5, 0), ZIndex = btn.ZIndex + 2 })
+		New("UIAspectRatioConstraint", { Parent = ic })
+		ic.Size = UDim2.new(0, 26, 0.9, 0)
+		local pad = btn:FindFirstChildOfClass("UIPadding")
+		if pad then
+			pad.PaddingLeft = UDim.new(0, 30)
+		end
+	end
 	if onClick then
 		btn.Activated:Connect(onClick)
 	end
@@ -479,6 +491,10 @@ local EMOJI_ICON = {
 	["🧿"] = "charm", ["🍖"] = "meat", ["🪵"] = "wood", ["⚔️"] = "sword", ["👊"] = "knuckles", ["🛍️"] = "chest",
 	["🏆"] = "crown", ["📅"] = "scroll", ["🎁"] = "chest", ["📖"] = "book", ["🧑‍✈️"] = "party", ["🎓"] = "book",
 	["🛡️"] = "armor", ["💉"] = "medkit", ["🧭"] = "map", ["🎯"] = "slingshot", ["🍳"] = "boots",
+	-- v0.25.3 pixel pack additions
+	["💨"] = "dash", ["🔥"] = "flame", ["🌙"] = "calm", ["🖥️"] = "graphics", ["🔊"] = "audio", ["🤖"] = "autobattle",
+	["🛠️"] = "developer", ["🪟"] = "interface", ["💰"] = "coin", ["🧪"] = "potion", ["🏅"] = "merit", ["🗡️"] = "sword", ["🧢"] = "hat",
+	["🎩"] = "hat", ["🪝"] = "bait", ["🧱"] = "ore", ["🔩"] = "rivet", ["📡"] = "compass", ["🐚"] = "crabshell",
 }
 function UI.IconId(icon)
 	if type(icon) ~= "string" or icon == "" then
@@ -494,9 +510,13 @@ end
 local ITEM_ICON = {
 	MeatOnBone = "meat", BigFeast = "meat", TangerineJuice = "juice", RepairKit = "repairkit", RefineGuard = "charm",
 	CaptainsLog = "book", SeaEgg = "egg", GoldenEgg = "golden_egg", SeaBait = "bait", Wood = "wood", TreasureWood = "wood",
-	SailCloth = "cloth", SteelOre = "ore", IronIngot = "ore", Gunpowder = "ore", TidecoreShard = "shard", PureTidecore = "shard",
-	LeviathanScale = "shard", TreasureMap = "map", WantedPoster = "scroll", MarineBadge = "charm", CompassCharm = "charm",
+	SailCloth = "cloth", SteelOre = "ore", TidecoreShard = "shard", PureTidecore = "shard",
+	TreasureMap = "map", WantedPoster = "poster", MarineBadge = "charm", CompassCharm = "charm",
 	TangerinePin = "charm", SharkToothNecklace = "charm",
+	-- v0.25.3: monster materials get their own pixel icons
+	CrabShell = "crabshell", MonkeyFur = "monkeyfur", TigerPelt = "tigerpelt", BoarTusk = "boartusk", ClownPaint = "clownpaint",
+	CatClaw = "catclaw", ArmorRivet = "rivet", SharkfolkFin = "sharkfin", IronIngot = "ingot", Gunpowder = "gunpowder",
+	LeviathanScale = "scale", SeaCompass = "compass", SeastoneBracer = "charm", SeastoneShackle = "charm",
 }
 local WEAPON_ICON = { Sword = "sword", Knuckles = "knuckles", Slingshot = "slingshot", Shoes = "boots", StormBaton = "staff", MedKit = "medkit", Hammer = "hammer" }
 local KIND_ICON = { Armor = "armor", Headgear = "hat", Accessory = "charm", Card = "card", Egg = "egg", Consumable = "potion", Material = "ore" }

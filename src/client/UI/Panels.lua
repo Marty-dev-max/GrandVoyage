@@ -2333,7 +2333,7 @@ function Panels.Settings()
 	UI.List(side, nil, 6)
 	local list = UI.Scroll(win.body, UDim2.new(1, -204, 1, 0))
 	list.Position = UDim2.fromOffset(204, 0)
-	local cats = { { "Graphics", "🖥️" }, { "Audio", "🔊" }, { "Interface", "🧭" }, { "Auto Battle", "🤖" } }
+	local cats = { { "Graphics", "🖥️" }, { "Audio", "🔊" }, { "Interface", "🪟" }, { "Auto Battle", "🤖" } }
 	if RunService:IsStudio() or game.CreatorId == player.UserId then
 		table.insert(cats, { "Developer", "🛠️" })
 	end

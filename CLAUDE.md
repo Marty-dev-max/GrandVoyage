@@ -310,6 +310,10 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     (tag NPC) -> camera close-up within 34 studs (restored on close / walking 8 studs), ViewportFrame portrait,
     cyan hologram when far, `Talk` blips (BlkTalk) pitched per speaker. Owner decisions: boss charge stays; Seastone
     gear required to seal; guild war answers in docs/GuildWar.md section 6.
+  * v0.25.3: icons are PIXEL ART now: `tools/gen_pixel_icons.py` (transparent 32x32 recipes, same names as
+    Config/Icons + new: dash flame calm auto manual graphics audio interface autobattle developer merit + monster
+    materials) -> assets/icons -> upload_images.py -> Config/Icons. UI.Button turns a leading emoji with an icon into
+    an image at the left. Never draw a straw hat (One Piece): "hat" is a tricorn. AUTO button reads AUTO / MANUAL.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

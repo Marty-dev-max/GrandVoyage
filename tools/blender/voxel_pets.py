@@ -296,6 +296,151 @@ def fruit(base, swirl, kind):
     return g
 
 
+# ---------------------------------------------------------------- fruits v2 (v0.25.5, owner: each fruit must SHOW its
+# power through its shape and pattern, not two-color stripes). Our own designs: Blaze = a ball of flame tongues,
+# Haze = a cluster of cloud puffs with grey creases, Ward = a crystal shell with a glowing hex barrier grid,
+# Bounce = a rubbery ball of bulging bubbles, Split = cut into floating slices, Slick = a dripping oil drop.
+def fib_points(n, radius, center, zscale=1.0):
+    pts = []
+    for i in range(n):
+        y = 1 - (i + 0.5) / n * 2
+        rr = math.sqrt(max(0.0, 1 - y * y))
+        a = i * math.pi * (3 - math.sqrt(5))
+        pts.append((center[0] + math.cos(a) * rr * radius, center[1] + math.sin(a) * rr * radius, center[2] + y * radius * zscale))
+    return pts
+
+
+def lobes(g, pts, radii):
+    """union of ellipsoid lobes; returns (d, nearest distance, second nearest) for crease shading"""
+    ds = np.stack([g.d_ellipsoid(c, radii) for c in pts], 0)
+    srt = np.sort(ds, 0)
+    return srt[0], srt[0], srt[1]
+
+
+def stem(P, cx, cy, top, color=rgb(70, 150, 120)):
+    # curly stem + a leaf (shared by every fruit)
+    P.tube([(cx, cy, top - 1), (cx + 0.5, cy, top + 3), (cx + 2.5, cy, top + 4.5), (cx + 4, cy, top + 3.5), (cx + 3.5, cy, top + 2.5)], [1.1, 1.0, 0.8, 0.7, 0.6], color)
+    P.box((cx - 3.5, cy, top + 2.5), (2.6, 0.7, 1.3), rgb(90, 200, 90), 0.03)
+
+
+def fruit_v2(kind):
+    g = Grid(46, 46, 52)
+    P = Painter(g)
+    cx, cy, cz = 23, 23, 19
+    top = cz + 13
+    if kind == "blaze":
+        # flame tongues: tall lobes pointing up, tips curl a little; red at the root -> orange -> yellow tips
+        pts = fib_points(26, 8.5, (cx, cy, cz), 0.9)
+        d, n1, n2 = lobes(g, [(x, y, z + 1.5) for x, y, z in pts], (4.2, 4.2, 6.2))
+        d = np.minimum(d, g.d_sphere((cx, cy, cz), 9.5))
+        z = g.P[..., 2]
+        t = np.clip((z - (cz - 12)) / 26.0, 0, 1)
+        crease = np.clip((n2 - n1) / 2.5, 0, 1)
+
+        def col(m):
+            c = np.array(rgb(235, 90, 30), np.float32)[None, None, None] * (1 - t[..., None]) + np.array(rgb(255, 170, 40), np.float32) * t[..., None]
+            # each tongue lights up toward its outer edge (yellow), deep red only in the cracks between tongues
+            c = np.where((crease > 0.55)[..., None], c * 0.4 + np.array(rgb(255, 215, 80), np.float32) * 0.6, c)
+            c = np.where((crease < 0.16)[..., None], np.array(rgb(170, 35, 20), np.float32), c)
+            return c * g.noise(0.03)[..., None]
+        g.add(d, col)
+        for k, (dx, hh) in enumerate(((0, 9), (-4, 6), (4, 6.5), (-2, 7.5), (2.5, 8))):
+            P.tube([(cx + dx, cy - 1, top - 3), (cx + dx * 1.2, cy - 1, top + hh * 0.6), (cx + dx * 0.6, cy - 1, top + hh)], [1.8, 1.2, 0.3], rgb(255, 160 + k * 16, 40))
+        stem(P, cx, cy + 2, top + 1)
+    elif kind == "haze":
+        # cloud puffs: round lumps, white tops, grey-lilac creases where puffs meet, wisps trailing at the bottom
+        pts = fib_points(14, 8, (cx, cy, cz))
+        d, n1, n2 = lobes(g, pts, (6, 6, 5.5))
+        d = np.minimum(d, g.d_sphere((cx, cy, cz), 9))
+        crease = np.clip((n2 - n1) / 2.0, 0, 1)
+        up = np.clip((g.P[..., 2] - cz) / 12 + 0.5, 0, 1)
+
+        def col(m):
+            c = np.array(rgb(236, 238, 246), np.float32)[None, None, None] * (0.86 + 0.14 * up[..., None])
+            c = np.where((crease < 0.25)[..., None], np.array(rgb(160, 156, 186), np.float32), c)
+            return c * g.noise(0.02)[..., None]
+        g.add(d, col)
+        for k in range(4):
+            a = k * 1.6
+            P.tube([(cx + math.cos(a) * 9, cy + math.sin(a) * 9, cz - 6), (cx + math.cos(a + 0.5) * 12, cy + math.sin(a + 0.5) * 12, cz - 10), (cx + math.cos(a + 1) * 10, cy + math.sin(a + 1) * 10, cz - 13)], [2.0, 1.4, 0.6], rgb(214, 214, 228))
+        stem(P, cx, cy, top)
+    elif kind == "ward":
+        # crystal shell: faceted body, glowing hex barrier lines over pale cyan, a bright core visible at the facets
+        d = np.maximum(g.d_sphere((cx, cy, cz), 12), g.d_box((cx, cy, cz), (11, 11, 11), 0.785) - 1.5)  # round, lightly faceted
+        rel = g.P - np.array((cx, cy, cz), np.float32)
+        phi = np.arctan2(rel[..., 1], rel[..., 0])
+        th = np.arccos(np.clip(rel[..., 2] / (np.linalg.norm(rel, axis=-1) + 1e-6), -1, 1))
+        u, v = phi * 6 / math.pi, th * 5 / math.pi
+        row = np.floor(v)
+        uu = u + (row % 2) * 0.5
+        hexline = (np.abs(uu - np.round(uu)) < 0.1) | (np.abs(v - np.round(v)) < 0.08)
+
+        def col(m):
+            c = np.where(hexline[..., None], np.array(rgb(240, 255, 255), np.float32), np.array(rgb(110, 205, 240), np.float32))
+            return c * g.noise(0.02)[..., None]
+        g.add(d, col)
+        stem(P, cx, cy, top + 1, rgb(80, 170, 200))
+    elif kind == "bounce":
+        # rubber bubbles: a squashed ball covered in round bulges, pink with purple creases and white shine dots
+        pts = fib_points(18, 9, (cx, cy, cz), 0.85)
+        d, n1, n2 = lobes(g, pts, (4.6, 4.6, 4.6))
+        d = np.minimum(d, g.d_ellipsoid((cx, cy, cz), (10.5, 10.5, 9)))
+        crease = np.clip((n2 - n1) / 2.0, 0, 1)
+
+        def col(m):
+            c = np.where((crease < 0.22)[..., None], np.array(rgb(170, 70, 200), np.float32), np.array(rgb(255, 130, 190), np.float32))
+            return c * g.noise(0.02)[..., None]
+        g.add(d, col)
+        for x, y, z in pts:
+            if z > cz - 2:
+                P.ball((x - 1.2, y - 1.2, z + 2.6), 0.9, WHITE, 0)
+        stem(P, cx, cy, top - 1)
+    elif kind == "split":
+        # three floating slices with gaps; green skin outside, lilac flesh with seeds on the cut faces
+        d0 = g.d_ellipsoid((cx, cy, cz), (11.5, 11.5, 12))
+        z = g.P[..., 2]
+        cuts = ((cz - 12.5, cz - 4.2, 0), (cz - 2.6, cz + 3.4, 2.5), (cz + 5.0, cz + 12.5, -1.5))
+        for z0, z1, dx in cuts:
+            slab = np.maximum(z0 - z, z - z1)
+            sh = g.P - np.array((dx, 0, 0), np.float32)
+            dd = np.maximum(np.linalg.norm((sh - np.array((cx, cy, cz), np.float32)) / np.array((11.5, 11.5, 12), np.float32), axis=-1) - 1, 0) * 11.5
+            dd = np.where(np.linalg.norm((sh - np.array((cx, cy, cz), np.float32)) / np.array((11.5, 11.5, 12), np.float32), axis=-1) < 1, -1.0, dd)
+            dslice = np.maximum(dd, slab)
+            face = (np.abs(z - z0) < 1.1) | (np.abs(z - z1) < 1.1)
+            rim = np.linalg.norm((sh - np.array((cx, cy, cz), np.float32))[..., :2], axis=-1)
+
+            def col(m, face=face, rim=rim):
+                c = np.array(rgb(80, 190, 100), np.float32) * np.ones(rim.shape + (1,), np.float32)
+                inner = face & (rim < 9.5)
+                c = np.where(inner[..., None], np.array(rgb(215, 170, 255), np.float32), c)
+                seeds = inner & ((np.floor(g.P[..., 0]) + np.floor(g.P[..., 1])) % 5 == 0) & (rim < 6)
+                c = np.where(seeds[..., None], np.array(rgb(90, 40, 120), np.float32), c)
+                return c * g.noise(0.02)[..., None]
+            g.add(dslice, col)
+        stem(P, cx - 1.5, cy, top)
+        _ = d0
+    else:  # slick
+        # an oil drop: round bottom, pointed top, dark amber with a bright yellow gloss streak and drips underneath
+        d = np.minimum(g.d_sphere((cx, cy, cz - 1), 11), g.d_ellipsoid((cx, cy, cz + 8), (5.5, 5.5, 10)))
+        rel = g.P - np.array((cx, cy, cz), np.float32)
+
+        def col(m):
+            c = np.array(rgb(120, 86, 34), np.float32) * np.ones(rel.shape[:-1] + (1,), np.float32)
+            gloss = ((rel[..., 0] < -3) & (rel[..., 1] < -2) & (rel[..., 2] > -2) & (rel[..., 2] < 8)) | ((rel[..., 0] > 5) & (rel[..., 2] > 2) & (rel[..., 2] < 5))
+            c = np.where(gloss[..., None], np.array(rgb(240, 220, 110), np.float32), c)
+            band = (np.abs(rel[..., 2] + 3) < 1.0)
+            c = np.where(band[..., None], np.array(rgb(150, 120, 40), np.float32), c)
+            return c * g.noise(0.02)[..., None]
+        g.add(d, col)
+        for k, a in enumerate((0.5, 2.4, 4.2)):
+            x, y = cx + math.cos(a) * 7, cy + math.sin(a) * 7
+            P.tube([(x, y, cz - 7), (x, y, cz - 11 - k)], [1.6, 1.0], rgb(60, 45, 20))
+            P.ball((x, y, cz - 12.5 - k), 1.5, rgb(80, 60, 25), 0)
+        stem(P, cx, cy, cz + 18, rgb(110, 90, 40))
+    g.bake_ao(0.15)
+    return g
+
+
 PETS = {"Hermit": hermit, "Boarlet": boarlet, "Gull": gull, "Puffer": puffer, "Lantern": lantern, "Leviathan": leviathan_pet}
 FRUITS = {
     "Bounce": (rgb(255, 120, 200), rgb(160, 60, 230), "round"),
@@ -314,7 +459,7 @@ def main():
         for st in (1, 2, 3):
             jobs.append((f"{sp}_{st}", (lambda f, s: (lambda: f(s)))(fn, st)))
     for fid, (a, b, kind) in FRUITS.items():
-        jobs.append(("Fruit_" + fid, (lambda a_, b_, k_: (lambda: fruit(a_, b_, k_)))(a, b, kind)))
+        jobs.append(("Fruit_" + fid, (lambda k_: (lambda: fruit_v2(k_)))(fid.lower())))
     for name, build in jobs:
         if ONLY and name not in ONLY:
             continue

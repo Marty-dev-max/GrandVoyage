@@ -317,6 +317,9 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   * v0.25.4 (owner): first class switch at Job Lv.5 (`GameConfig.JobChangeLevel`); Daybreak quests: T08 Job Lv.5 on
     tigers -> T09 Job Master -> new T09B Boar Hunt -> T10 bandits (Quests.SaveVersion 3 shifts saves at step >= 10).
     Boars passive, bandits `aggroRadius = 14` (Monsters def field read by findAggroTarget).
+  * v0.25.5 (owner): fruits v2 = `fruit_v2(kind)` in tools/blender/voxel_pets.py (shape tells the power: flame
+    tongues / cloud puffs / hex-grid crystal shell / rubber bubbles / floating slices / oil drop; crease shading from
+    nearest-vs-second-nearest lobe distance). Pixel icons fruit_* match. Do not copy the reference fruits' exact swirl.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

@@ -268,6 +268,59 @@ def fruit(s, c, swirl):
     s.px(10, 14, WHITE)
 
 
+# fruits v2 (match the voxel models of v0.25.5)
+def fruit_stem(s, x=16, y=7):
+    s.line([(x, y + 2), (x + 1, y - 2), (x + 4, y - 3)], (70, 150, 120), 2)
+    s.poly([(x - 1, y - 2), (x - 7, y - 3), (x - 3, y + 1)], GREEN)
+
+
+def fruit_blaze(s):
+    s.oval(16, 19, 10, 9, (235, 90, 30))
+    for x, y in ((9, 14), (14, 11), (20, 12), (24, 17), (11, 21), (18, 19), (22, 24), (13, 26)):
+        s.poly([(x - 3, y + 3), (x, y - 4), (x + 3, y + 3)], (255, 170, 40))
+        s.poly([(x - 1, y + 2), (x, y - 1), (x + 1, y + 2)], (255, 225, 90), True)
+    fruit_stem(s, 16, 8)
+
+
+def fruit_haze(s):
+    for x, y, r in ((10, 19, 6), (22, 19, 6), (16, 14, 7), (16, 23, 6), (11, 13, 4), (21, 13, 4)):
+        s.oval(x, y, r, r, (236, 238, 246))
+    for x, y in ((13, 17), (19, 20), (15, 21)):
+        s.line([(x, y), (x + 3, y)], (160, 156, 186), 1, True)
+    fruit_stem(s, 16, 6)
+
+
+def fruit_ward(s):
+    s.oval(16, 18, 11, 11, (110, 205, 240))
+    for x in (9, 16, 23):
+        s.line([(x, 9), (x, 28)], (240, 255, 255), 1, True)
+    for y in (13, 19, 25):
+        s.line([(6, y), (26, y)], (240, 255, 255), 1, True)
+    fruit_stem(s, 16, 6)
+
+
+def fruit_bounce(s):
+    s.oval(16, 19, 10, 9, (170, 70, 200))
+    for x, y in ((10, 15), (17, 13), (23, 17), (11, 22), (18, 21), (22, 25), (14, 27)):
+        s.oval(x, y, 4, 4, (255, 130, 190))
+        s.px(x - 1, y - 2, WHITE)
+    fruit_stem(s, 16, 8)
+
+
+def fruit_split(s):
+    for y0, y1, dx in ((8, 13, 0), (15, 21, 2), (23, 28, -1)):
+        s.rect(7 + dx, y0, 25 + dx, y1, (80, 190, 100))
+        s.rect(9 + dx, y1 - 1, 23 + dx, y1, (215, 170, 255))
+    fruit_stem(s, 16, 6)
+
+
+def fruit_slick(s):
+    drop(s, 16, 17, 1.0, (120, 86, 34), (240, 220, 110))
+    s.rect(9, 18, 12, 22, (240, 220, 110), True)
+    s.rect(14, 27, 15, 30, (80, 60, 25))
+    s.rect(20, 26, 21, 29, (80, 60, 25))
+
+
 def monitor(s):
     s.rect(4, 6, 28, 22, (60, 66, 84))
     s.rect(6, 8, 26, 20, (90, 180, 255))
@@ -472,9 +525,8 @@ ICONS = {
     'juice': cup, 'hat': tricorn, 'armor': vest, 'boots': lambda s: boot(s, 14, 16), 'meat': meat, 'bait': worm_hook,
     'repairkit': toolbox, 'medkit': pouch, 'staff': staff, 'slingshot': slingshot, 'knuckles': knuckles,
     'sword': lambda s: sword(s, 6, 26, 26, 6), 'hammer': hammer,
-    'fruit_blaze': lambda s: fruit(s, (240, 90, 40), (255, 210, 80)), 'fruit_bounce': lambda s: fruit(s, (240, 120, 170), (255, 220, 235)),
-    'fruit_haze': lambda s: fruit(s, (170, 165, 190), (240, 240, 245)), 'fruit_slick': lambda s: fruit(s, (150, 190, 50), (60, 50, 30)),
-    'fruit_split': lambda s: fruit(s, (150, 80, 200), (230, 200, 255)), 'fruit_ward': lambda s: fruit(s, (60, 190, 220), (220, 250, 255)),
+    'fruit_blaze': lambda s: fruit_blaze(s), 'fruit_bounce': lambda s: fruit_bounce(s), 'fruit_haze': lambda s: fruit_haze(s),
+    'fruit_slick': lambda s: fruit_slick(s), 'fruit_split': lambda s: fruit_split(s), 'fruit_ward': lambda s: fruit_ward(s),
     # monster materials
     'crabshell': shell, 'monkeyfur': lambda s: fur(s, (150, 100, 60)), 'tigerpelt': lambda s: fur(s, (240, 150, 40), DARK),
     'boartusk': tusk, 'clownpaint': paint_pot, 'catclaw': claw, 'rivet': rivet, 'sharkfin': fin,

@@ -11,8 +11,8 @@ local PixelUI = {}
 -- v0.24.6 (owner: text looked too small, and out of proportion when the UI scale changes): fixed-size text becomes
 -- "fit to its box" (TextScaled with a size cap at TEXT_SCALE x the old size), so it is as big as the box allows at
 -- every UI scale and never spills out of it. Auto-sized labels keep a plain scaled TextSize.
-PixelUI.TEXT_SCALE = 0.74
-PixelUI.MIN_TEXT = 10
+PixelUI.TEXT_SCALE = 0.82 -- v0.25.6 (owner: Bag/Skills text hard to read): 0.74 -> 0.82, min 10 -> 12
+PixelUI.MIN_TEXT = 12
 PixelUI.Font = Font.fromEnum(Enum.Font.Arcade) -- Press Start 2P
 
 local function keep(obj)
@@ -44,7 +44,7 @@ function PixelUI.Apply(obj)
 			if obj.AutomaticSize == Enum.AutomaticSize.None and not obj:IsA("TextBox") and not obj:FindFirstChildOfClass("UITextSizeConstraint") then
 				local c = Instance.new("UITextSizeConstraint")
 				c.MaxTextSize = target
-				c.MinTextSize = math.min(8, target)
+				c.MinTextSize = math.min(11, target)
 				c:SetAttribute("PxDone", true)
 				c.Parent = obj
 				obj.TextScaled = true
@@ -64,7 +64,7 @@ function PixelUI.Apply(obj)
 		if not obj:GetAttribute("PxDone") then
 			obj:SetAttribute("PxDone", true)
 			obj.MaxTextSize = math.max(PixelUI.MIN_TEXT + 1, math.floor(obj.MaxTextSize * 0.8 + 0.5))
-			obj.MinTextSize = math.max(7, math.floor(obj.MinTextSize * 0.7 + 0.5))
+			obj.MinTextSize = math.max(10, math.floor(obj.MinTextSize * 0.7 + 0.5))
 		end
 	end
 end

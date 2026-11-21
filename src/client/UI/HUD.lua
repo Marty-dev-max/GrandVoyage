@@ -411,21 +411,6 @@ local function buildStatus()
 	pointsBtn.Parent.Position = UDim2.new(1, -16, 0, 64)
 	-- build stamp (bottom-right): tells you which version of the code Studio is running
 	UI.Text(UI.Root, "v" .. GameConfig.Version, 12, Color3.fromRGB(220, 220, 235), "Bold", { Name = "Version", AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -8, 1, -2), Size = UDim2.fromOffset(120, 14), TextXAlignment = Enum.TextXAlignment.Right, TextTransparency = 0.35 })
-	-- Studio only: animation status under the version, so any screenshot the owner sends shows whether clips load and play
-	if game:GetService("RunService"):IsStudio() then
-		local animLine = UI.Text(UI.Root, "", 11, Color3.fromRGB(255, 230, 150), "Bold", { Name = "AnimStatus", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 50), Size = UDim2.fromOffset(620, 14), TextXAlignment = Enum.TextXAlignment.Center, TextTransparency = 0.2 })
-		task.spawn(function()
-			local Anim = require(game:GetService("ReplicatedStorage").Shared.Modules.Anim)
-			local CharAnim = require(script.Parent.Parent.Controllers.CharAnim)
-			while animLine.Parent do
-				local a, c = Anim.Stats, CharAnim.Stats
-				local char = game:GetService("Players").LocalPlayer.Character
-				animLine.Text = string.format("anim: %s | played %d (%s) | loaded %d local %d failed %d | weapon %s",
-					c.kind, a.played, a.last, a.loaded, a.fallback, a.failed, char and tostring(char:GetAttribute("Weapon")) .. (char:GetAttribute("WeaponOut") and " out" or "") or "-")
-				task.wait(0.5)
-			end
-		end)
-	end
 	orbLayer = New("Frame", { Name = "OrbLayer", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 50, Parent = UI.Root })
 end
 
@@ -824,20 +809,20 @@ local function buildSkillBar()
 	New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(34, SLOT), LayoutOrder = 200, Parent = second })
 
 	-- v0.25.3 (owner): reads AUTO or MANUAL (not "AUTO ON"), with a pixel icon above the word
-	autoBtn = UI.Button(main, "MANUAL", T.Grey, UDim2.fromOffset(92, SLOT), function()
+	autoBtn = UI.Button(main, "MANUAL", T.Grey, UDim2.fromOffset(118, SLOT), function()
 		Combat.ToggleAuto()
 	end)
 	autoBtn.Parent.LayoutOrder = 220
-	autoIcon = UI.Icon(autoBtn, "manual", 30, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, -4), ZIndex = autoBtn.ZIndex + 2 })
+	autoIcon = UI.Icon(autoBtn, "manual", 26, { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, -4, 0.5, 0), ZIndex = autoBtn.ZIndex + 2 })
 	local pad = autoBtn:FindFirstChildOfClass("UIPadding")
 	if pad then
-		pad.PaddingTop = UDim.new(0, 26)
+		pad.PaddingLeft = UDim.new(0, 24) -- icon left, word right (v0.25.6: the icon sat on the word)
 	end
 	UI.Tooltip(autoBtn, function()
 		return State.auto and "<b>AUTO</b>  [T]\nFights monsters within your search range (Skills -> Loadout), uses ticked skills and drinks potions. Tap for MANUAL."
 			or "<b>MANUAL</b>  [T]\nYou aim and attack yourself. Tap for AUTO.", T.Green
 	end)
-	New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(92, SLOT), LayoutOrder = 220, Parent = second })
+	New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(118, SLOT), LayoutOrder = 220, Parent = second })
 
 	-- ammo (slingshot classes): the loaded bullet, tap to pick another kind
 	local ammoHolder = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(SLOT, SLOT + 4), LayoutOrder = 210, Visible = false, Parent = main })
@@ -1230,8 +1215,20 @@ local function refresh()
 		autoIcon.Image = UI.IconId(State.auto and "auto" or "manual") or ""
 	end
 	-- target
+	-- v0.25.6 (owner): the target bar only while fighting it (its HP moved in the last 6 s) or for bosses, not
+	-- whenever something is merely selected
 	local tgt = State.target
-	if tgt and tgt.Parent and tgt.PrimaryPart then
+	if tgt and tgt.Parent then
+		local hpNow = tgt:GetAttribute("HP")
+		if tgt ~= HUD.tgtSeen or hpNow ~= HUD.tgtHp then
+			if tgt == HUD.tgtSeen then
+				HUD.tgtHitAt = os.clock()
+			end
+			HUD.tgtSeen, HUD.tgtHp = tgt, hpNow
+		end
+	end
+	local fighting = tgt and (tgt:GetAttribute("Boss") or os.clock() - (HUD.tgtHitAt or 0) < 6)
+	if tgt and tgt.Parent and tgt.PrimaryPart and fighting then
 		targetFrame.Visible = true
 		local mon = Monsters[tgt:GetAttribute("MonsterId") or ""]
 		local lvl = tgt:GetAttribute("Level") or 1
@@ -1252,7 +1249,7 @@ local function refresh()
 	else
 		targetFrame.Visible = false
 		HUD.captureBtn.Visible = false
-		setHighlight(nil)
+		setHighlight(tgt and tgt.Parent and tgt or nil) -- still outlined while selected
 	end
 end
 

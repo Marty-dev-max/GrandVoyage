@@ -501,7 +501,7 @@ function Panels.Inventory(args)
 				pet = x
 			end
 		end
-		gearSlot(slotCols[2], "Companion", "🐾", nil, nil, function()
+		gearSlot(slotCols[2], "Pets", "🐾", nil, nil, function()
 			Panels.Open("Pets")
 		end)
 		if pet and slotCols[2]:FindFirstChildWhichIsA("Frame", false) then

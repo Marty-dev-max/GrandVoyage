@@ -60,6 +60,21 @@ function Store.SetAttributes(player)
 	end
 end
 
+-- refund every spent stat point (Reset Stats)
+local function resetStats(player, p)
+	local Formulas = require(ReplicatedStorage.Shared.Modules.Formulas)
+	local refund = 0
+	for _, stat in ipairs(Formulas.StatNames) do
+		for v = 1, (p.stats[stat] or 1) - 1 do
+			refund += Formulas.StatCost(v)
+		end
+		p.stats[stat] = 1
+	end
+	p.statPoints += refund
+	R.PlayerService.Recompute(player)
+	return refund
+end
+
 -- apply an item to `to`. Returns ok, message for the recipient
 local function grant(to, it, fromName)
 	local p = R.DataService.Get(to)
@@ -71,6 +86,8 @@ local function grant(to, it, fromName)
 	if it.boost then
 		R.DataService.AddBoost(to.UserId, it.boost, it.minutes * 60)
 		msg = it.name .. " active on every character!"
+	elseif it.id == "ResetStats" then
+		msg = "Stats reset: " .. resetStats(to, p) .. " points refunded"
 	elseif it.id == "FruitRemover" then
 		if p.fruit and R.FruitService.RemoveFruit then
 			R.FruitService.RemoveFruit(to)

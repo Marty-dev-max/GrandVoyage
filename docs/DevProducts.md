@@ -7,8 +7,8 @@ Prices are suggestions: change them freely, but keep the `robux = ...` number in
 you set (the game shows that number on the button).
 
 **Status (v0.24.10):** the 3 Gem packs, 4 spin packs, 3 benefits and 6 boosts exist and their IDs are in the config.
-"Unlock Slot 3" = 3733442306 (v0.24.11): every product is in place. "Reset Stats" (3733424822) is no longer sold in game: it can be
-archived/disabled in Creator Hub.
+"Unlock Slot 3" = 3733442306 (v0.24.11): every product is in place. "Reset Stats" (3733424822) is sold again since v0.25.6: if it was
+archived or disabled in Creator Hub, turn it back on.
 
 **Managed pricing:** with "Managed pricing: Enabled", Roblox may charge some players a different price than the one set
 (price optimization / regional prices; the owner paid 25 R$ in Thailand). The game reads each product's price from

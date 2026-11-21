@@ -250,11 +250,9 @@ def slingshot(s):
 
 
 def knuckles(s):
-    s.rect(5, 11, 27, 18, GOLD)
-    for x in (6, 12, 18, 24):
-        s.oval(x + 1, 12, 3, 3, GOLD)
-        s.oval(x + 1, 12, 1, 1, GOLD_D)
-    s.rect(9, 17, 23, 24, GOLD_D)
+    # v0.25.6 (owner): the Brawler fights bare-fisted, so this is a fist, not knuckle dusters
+    fist(s, 16, 17, 1.25)
+    sparkle(s, 26, 6, YEL, 2)
 
 
 def fruit(s, c, swirl):

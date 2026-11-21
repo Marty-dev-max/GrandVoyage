@@ -29,7 +29,7 @@ local decor = Kit.decor
 
 -- ===== key places (local X, Z) =====
 local CAMP = Vector2.new(-165, 0) -- spawn clearing in the jungle
-local SPAWN = Vector2.new(-152, 10)
+local SPAWN = Vector2.new(-158, 6) -- v0.25.6 (owner): right by the campfire (was -152, 10)
 local PLAZA = Vector2.new(60, 0)
 local PLAZA_R = 40
 local BANDIT_HILL = Vector2.new(-35, -110)

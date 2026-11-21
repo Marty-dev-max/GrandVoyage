@@ -22,7 +22,7 @@ UI.Theme = {
 	Accent = Color3.fromRGB(156, 84, 255),
 	AccentHot = Color3.fromRGB(230, 90, 255),
 	Text = Color3.fromRGB(255, 255, 255),
-	TextSoft = Color3.fromRGB(184, 180, 214),
+	TextSoft = Color3.fromRGB(214, 212, 236), -- v0.25.6: brighter (owner: hard to read)
 	Ocean = Color3.fromRGB(56, 168, 255),
 	OceanDark = Color3.fromRGB(36, 104, 196),
 	Orange = Color3.fromRGB(255, 142, 50),
@@ -801,6 +801,12 @@ local function refreshDim()
 	if touch and touch:IsA("ScreenGui") then
 		touch.Enabled = openCount == 0
 	end
+	-- v0.25.6 (owner): the in-game MENU button sat on top of window titles: gameplay only
+	local menuGui = gui.Parent and gui.Parent:FindFirstChild("MenuButton")
+	local menuBtn = menuGui and menuGui:FindFirstChildWhichIsA("GuiObject")
+	if menuBtn then
+		menuBtn.Visible = openCount == 0
+	end
 	Tween(dim, 0.2, { BackgroundTransparency = openCount > 0 and 0.55 or 1 })
 	Tween(blur, 0.25, { Size = openCount > 0 and 10 or 0 })
 end
@@ -1043,6 +1049,10 @@ function UI.CloseWindow(id)
 	if openWindows[id] then
 		openWindows[id]:Destroy()
 	end
+end
+
+function UI.AnyOpen()
+	return next(openWindows) ~= nil
 end
 
 function UI.IsOpen(id)

@@ -320,6 +320,11 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   * v0.25.5 (owner): fruits v2 = `fruit_v2(kind)` in tools/blender/voxel_pets.py (shape tells the power: flame
     tongues / cloud puffs / hex-grid crystal shell / rubber bubbles / floating slices / oil drop; crease shading from
     nearest-vs-second-nearest lobe distance). Pixel icons fruit_* match. Do not copy the reference fruits' exact swirl.
+  * v0.25.6: `Controllers/ShiftLock` (Left Shift / mobile LOCK button; skipped when Roblox's own MouseLockSwitch is
+    on; released while `UI.AnyOpen()`). MENU button hidden while a window is open. Reset Stats back in the Store
+    (product 3733424822). PixelUI TEXT_SCALE 0.82, MIN_TEXT 12. "knuckles" icon = a fist. HUD target bar only while
+    its HP changed in the last 6 s or for bosses. Bag slot "Pets". Daybreak SPAWN by the campfire (WORLD_VERSION 14).
+    Studio anim status line removed.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

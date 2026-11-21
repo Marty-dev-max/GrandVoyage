@@ -42,7 +42,7 @@ return {
 	ingot = "rbxassetid://81449913186794",
 	interface = "rbxassetid://108327685845668",
 	juice = "rbxassetid://130492788780771",
-	knuckles = "rbxassetid://123097636693854",
+	knuckles = "rbxassetid://74336215480455",
 	manual = "rbxassetid://90180420076545",
 	map = "rbxassetid://93689079170259",
 	meat = "rbxassetid://102265973745198",

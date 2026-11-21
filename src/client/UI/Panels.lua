@@ -2986,7 +2986,7 @@ function Panels.PearlShop(args)
 	if args and args.tab then
 		storeTab = args.tab
 	end
-	local win = UI.Window("PearlShop", "Shop", UDim2.fromOffset(820, 580), T.Ocean, "🛍️", { fullscreen = true })
+	local win = UI.Window("PearlShop", "Store", UDim2.fromOffset(820, 580), T.Ocean, "🛍️", { fullscreen = true })
 	local body = win.body
 	local StoreCfg = require(ReplicatedStorage.Shared.Config.Store)
 	local render

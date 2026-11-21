@@ -422,7 +422,7 @@ local MENU = {
 	{ "📜", "Quests", T.Gold:Lerp(T.Orange, 0.4), "J", "Quests", main = true },
 	{ "🗺️", "Map", T.Ocean, "M", "Map", main = true },
 	{ "🐾", "Pets", T.Green:Lerp(T.Ocean, 0.3), "N", "Pets", main = true },
-	{ "🛍️", "PearlShop", Color3.fromRGB(80, 170, 220), "H", "Shop", main = true },
+	{ "🛍️", "PearlShop", Color3.fromRGB(80, 170, 220), "H", "Store", main = true },
 	{ "📊", "Stats", T.Purple, "C", "Stats", main = true },
 	{ "ship", "Shipwright", T.OceanDark, nil, "Ships" },
 	{ "🏴", "Guild", T.Pirate, "G", "Guild" },

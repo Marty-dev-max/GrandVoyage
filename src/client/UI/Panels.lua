@@ -1988,16 +1988,13 @@ function Panels.FastTravel()
 		local x, y = mapPos(isl.x, isl.z or 0)
 		local unlocked = p.unlocked[isl.id]
 		local charted = ChartsView.Known(isl.id)
-		local dot = New("TextButton", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(x, y), Size = UDim2.fromOffset(110, 110), BackgroundColor3 = Color3.new(1, 1, 1), Text = "", AutoButtonColor = false, Parent = strip })
-		UI.Corner(dot, 55)
-		UI.Gradient(dot, unlocked and isl.palette.grass:Lerp(Color3.new(1, 1, 1), 0.2) or Color3.fromRGB(150, 160, 170), unlocked and isl.palette.sand or Color3.fromRGB(100, 110, 120), 90)
-		UI.Stroke(dot, unlocked and T.Gold or T.Edge, 3.5)
+		-- v0.25.19 (owner): each island is its pixel-art emblem (tools/gen_island_icons.py) with our name on the ribbon;
+		-- uncharted islands are a dark silhouette with "???"
+		local dot = New("ImageButton", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(x, y), Size = UDim2.fromOffset(150, 131), BackgroundTransparency = 1,
+			Image = UI.IconId("isl_" .. isl.id) or "", ScaleType = Enum.ScaleType.Fit, ImageColor3 = charted and (unlocked and Color3.new(1, 1, 1) or Color3.fromRGB(170, 170, 185)) or Color3.fromRGB(40, 45, 60), AutoButtonColor = false, Parent = strip })
 		UI.Tactile(dot)
-		UI.Text(dot, charted and isl.name or "???", 16, T.Text, "Display", { Position = UDim2.fromOffset(4, 22), Size = UDim2.new(1, -8, 0, 40), TextXAlignment = Enum.TextXAlignment.Center })
-		UI.Text(dot, "Lv." .. isl.levels[1] .. "-" .. isl.levels[2], 14, Rarity.LevelColor(player:GetAttribute("Level") or 1, isl.levels[1]), "Number", { Position = UDim2.fromOffset(0, 66), Size = UDim2.new(1, 0, 0, 18), TextXAlignment = Enum.TextXAlignment.Center })
-		if not unlocked then
-			UI.Text(dot, "🔒", 22, T.Text, "Display", { Position = UDim2.fromOffset(0, 82), Size = UDim2.new(1, 0, 0, 24), TextXAlignment = Enum.TextXAlignment.Center })
-		end
+		UI.Text(dot, charted and isl.name or "???", 13, Color3.fromRGB(255, 244, 214), "Display", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.785, 0), Size = UDim2.new(0.74, 0, 0.15, 0), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false, TextScaled = true })
+		UI.Text(strip, "Lv." .. isl.levels[1] .. "-" .. isl.levels[2] .. (unlocked and "" or "  🔒"), 13, Rarity.LevelColor(player:GetAttribute("Level") or 1, isl.levels[1]), "Number", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(x, 0, y, 66), Size = UDim2.fromOffset(150, 16), TextXAlignment = Enum.TextXAlignment.Center })
 		local found, total = 0, 0
 		for _, m in ipairs(game:GetService("CollectionService"):GetTagged("Chest")) do
 			if m:GetAttribute("Island") == isl.id then
@@ -2008,7 +2005,7 @@ function Panels.FastTravel()
 			end
 		end
 		if total > 0 then
-			UI.Text(strip, "🧰 " .. found .. "/" .. total, 15, found == total and T.Gold or T.Text, "Display", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(x, 0, y, 60), Size = UDim2.fromOffset(100, 18), TextXAlignment = Enum.TextXAlignment.Center })
+			UI.Text(strip, "🧰 " .. found .. "/" .. total, 15, found == total and T.Gold or T.Text, "Display", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(x, 0, y, 84), Size = UDim2.fromOffset(100, 18), TextXAlignment = Enum.TextXAlignment.Center })
 		end
 		dot.Activated:Connect(function()
 			if not unlocked then

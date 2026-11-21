@@ -386,6 +386,8 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     Monster types: `Config/MonsterTypes` (kanji + color), Monsters.lua TYPE_OF / STARS / STYLE set def.mtype, stars,
     atk/attackSpeed/moveSpeed/attackRange, hitBonus, critChance, stunChance (CombatService.MonsterHit + push "Stun").
     Nameplate: TypeBadge + stars in the subtitle. Keep non-monster tables out of Monsters (tests walk every entry).
+  * v0.25.19 (owner): sea map tiles = island emblems `isl_<IslandId>` (tools/gen_island_icons.py, 64x56 pixel scenes
+    with a blank ribbon the UI writes the name on; uncharted = dark ImageColor3 + "???"). gen_icon_voxels skips isl_/st_.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

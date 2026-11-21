@@ -163,6 +163,34 @@
   "id": "108327685845668",
   "sha1": "0c2368572a7cc17a18da38f3cd283bb8efea34f5"
  },
+ "isl_Barracuda": {
+  "id": "125082764612377",
+  "sha1": "43ce34b5b280a6f03c028799935b97f0426a1065"
+ },
+ "isl_ConchBay": {
+  "id": "123523434987612",
+  "sha1": "f409c92967aecff2e7b5245805df974a0fa27db5"
+ },
+ "isl_Daybreak": {
+  "id": "102170956640475",
+  "sha1": "16100cfe26b5322e227e65ba3485038b0e57b053"
+ },
+ "isl_Epilogue": {
+  "id": "107836263400133",
+  "sha1": "beefc47e7d954963d6b7ec7c396aa619504028dd"
+ },
+ "isl_Honeyslope": {
+  "id": "134639927612597",
+  "sha1": "525c549a207119f42ab722fa7ec0fba97fae1c2a"
+ },
+ "isl_Marmalade": {
+  "id": "79222622732807",
+  "sha1": "d119842580e535fdaa8462fd276854363ccd3b67"
+ },
+ "isl_Mikan": {
+  "id": "116217229556642",
+  "sha1": "887b0a26cc32db5c173ec55b9ce298a5f280a08a"
+ },
  "juice": {
   "id": "130492788780771",
   "sha1": "fbad2b059545fffc089e87c24b786e9cf0aab5d9"

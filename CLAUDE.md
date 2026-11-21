@@ -355,6 +355,12 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     `UI.VoxelEgg(parent, eggId, size)` = block egg in a ViewportFrame (returns vp, setTilt). Pearls.Shop `bulk = {1,10,30}`
     -> PearlShopBuy `qty`. HatchEgg `count` (<= 10, stack, roster room) returns `{ species, egg, capped }`;
     `Panels.HatchReveal` wobbles + pops each egg. PetS.Add(..., quiet) skips the per-pet banner.
+  * v0.25.13 (owner): `UI.Sparkles(frame, color, n, {float, z, star})` = floating pixel squares + twinkle stars (one
+    throttled RenderStepped per layer); every UI.Window gets corner glows (BgGlow) + two sparkle layers at ZIndex 20
+    (body is 21), the title menu a full-screen layer. Store data is cached in Panels.PearlShop (`render(false)` redraws
+    only: re-requesting on each click hit the Net throttle and the Gem packs vanished). Eggs `stack = true`;
+    HatchEgg counts/removes across every entry (RemoveItem). PearlShopBuy checks bag room before Spend.
+    VoxelEgg: surface blocks only, 2x2 spot blobs, highlight patch, Golden band + neon jewels. Wings `lift` (upper back).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

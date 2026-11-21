@@ -784,6 +784,8 @@ local function buildAll(look, heritage, variant, mode, place, emit)
 		local pattern = WING_SHAPES[shape or ""] or (big and GREAT_WING or SMALL_WING)
 		local cell = big and 0.42 or 0.36
 		local topY = (big and 1.9 or 0.95)
+		-- v0.25.13 (owner): wings sat low and drooped; root them on the upper back (shoulder blades)
+		local lift = big and 0.25 or 0.45
 		for _, sx in ipairs({ -1, 1 }) do
 			for r, rowStr in ipairs(pattern) do
 				local i = 1
@@ -797,9 +799,9 @@ local function buildAll(look, heritage, variant, mode, place, emit)
 						local tip = j == #rowStr or string.sub(rowStr, j + 1, j + 1) ~= "X"
 						local xMid = 0.25 + (i - 1 + len / 2) * cell
 						local y = topY - (r - 1) * cell
-						block("UpperTorso", Vector3.new(len * cell, cell, 0.2), CFrame.new(sx * xMid, y - 0.4, ut.Z / 2 + 0.22) * CFrame.Angles(0, sx * math.rad(-16), 0), c1, name)
+						block("UpperTorso", Vector3.new(len * cell, cell, 0.2), CFrame.new(sx * xMid, y + lift, ut.Z / 2 + 0.22) * CFrame.Angles(0, sx * math.rad(-16), 0), c1, name)
 						if tip then
-							block("UpperTorso", Vector3.new(cell, cell, 0.24), CFrame.new(sx * (0.25 + (j - 0.5) * cell), y - 0.4, ut.Z / 2 + 0.22) * CFrame.Angles(0, sx * math.rad(-16), 0), c2, name .. "Tip")
+							block("UpperTorso", Vector3.new(cell, cell, 0.24), CFrame.new(sx * (0.25 + (j - 0.5) * cell), y + lift, ut.Z / 2 + 0.22) * CFrame.Angles(0, sx * math.rad(-16), 0), c2, name .. "Tip")
 						end
 						i = j + 1
 					else

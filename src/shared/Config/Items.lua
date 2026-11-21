@@ -121,8 +121,8 @@ for _, f in ipairs(Fruits.List) do
 end
 
 -- ===== Pets: eggs and bait =====
-add("SeaEgg", { name = "Sea Egg", desc = "Hatch it from your Bag. Hermit 40% / Boarlet 35% / Gull 20% / Puffer 5%.", kind = "Egg", rarity = "Uncommon", price = 2000, icon = "🥚" })
-add("GoldenEgg", { name = "Golden Egg", desc = "Hatch it from your Bag. Gull 40% / Puffer 35% / Lantern 22% / Leviathan 3%.", kind = "Egg", rarity = "Epic", price = 20000, icon = "🪺" })
+add("SeaEgg", { name = "Sea Egg", desc = "Hatch it from your Bag. Hermit 40% / Boarlet 35% / Gull 20% / Puffer 5%.", kind = "Egg", rarity = "Uncommon", price = 2000, icon = "🥚", stack = true })
+add("GoldenEgg", { name = "Golden Egg", desc = "Hatch it from your Bag. Gull 40% / Puffer 35% / Lantern 22% / Leviathan 3%.", kind = "Egg", rarity = "Epic", price = 20000, icon = "🪺", stack = true })
 add("SeaBait", { name = "Sea Bait", desc = "Throw it at a weakened Wild Boar or Leviathan (below 35% HP) to tame it.", kind = "Consumable", special = true, price = 300, stack = true, rarity = "Common", icon = "🪤" })
 
 -- ===== Ammo (slingshot classes, Config/Ammo) =====

@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local Pearls = require(Shared.Config.Pearls)
 local ItemDB = require(Shared.Modules.ItemDB)
+local GameConfig = require(Shared.Config.GameConfig)
 local Net = require(Shared.Modules.Net)
 
 local PS = {}
@@ -310,6 +311,17 @@ function PS.Start()
 		if item.bulk then
 			local q = math.floor(tonumber(data.qty) or 1)
 			n = table.find(item.bulk, q) and q or 1
+		end
+		-- check bag room BEFORE taking the Gems (AddItem fails on a full bag and nothing would be refunded)
+		if item.kind == "item" then
+			local def = ItemDB.Get(item.item)
+			local need = item.qty * n
+			if ItemDB.IsStackable(def) then
+				need = R.InventoryService.Count(player, item.item) > 0 and 0 or 1
+			end
+			if #p.inventory + need > GameConfig.InventorySlots then
+				return false, "Inventory full"
+			end
 		end
 		if not PS.Spend(player, item.price * n, "shop:" .. item.id .. (n > 1 and ("x" .. n) or ""), true) then
 			return false, "Not enough Gems"

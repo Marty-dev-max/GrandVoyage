@@ -315,6 +315,7 @@ function Panels.Inventory(args)
 		local rays = New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.focuslines, ImageColor3 = tier.color:Lerp(Color3.new(1, 1, 1), 0.5), ImageTransparency = 0.45, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.45), Size = UDim2.fromScale(1.6, 1.6), ZIndex = 3, Parent = head })
 		New("UIAspectRatioConstraint", { Parent = rays })
 		local glow = New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.glow, ImageColor3 = tier.color:Lerp(Color3.new(1, 1, 1), 0.3), ImageTransparency = 0.15, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.45), Size = UDim2.fromScale(0.85, 0.85), ZIndex = 3, Parent = head })
+		UI.Sparkles(head, Color3.new(1, 1, 1), 14, { float = true, z = 4, star = 0.6 })
 		New("UIAspectRatioConstraint", { Parent = glow })
 		local iconId = UI.ItemIconId(def)
 		local big = (def.kind == "Fruit" and UI.ModelView(head, "Fruits", def.fruit, 200, 0.9, { ZIndex = 5 }))
@@ -384,8 +385,14 @@ function Panels.Inventory(args)
 			act("🐣 Hatch", T.Gold, function()
 				hatch(1)
 			end)
-			if (entry.qty or 1) > 1 then
-				act("🐣 x" .. math.min(10, entry.qty), T.Orange, function()
+			local have = 0
+			for _, e in ipairs(State.profile.inventory or {}) do
+				if e.id == entry.id then
+					have += e.qty or 1
+				end
+			end
+			if have > 1 then
+				act("🐣 x" .. math.min(10, have), T.Orange, function()
 					hatch(10)
 				end)
 			end
@@ -3084,6 +3091,7 @@ function Panels.PearlShop(args)
 
 	local function bigButton(parent, text, color, onClick)
 		local btn = UI.Button(parent, text, color, UDim2.new(1, 0, 0, 52), onClick)
+		UI.Shine(btn, math.random())
 		return btn
 	end
 
@@ -3091,9 +3099,13 @@ function Panels.PearlShop(args)
 		clear(panel)
 		UI.Pad(panel, 14)
 		UI.List(panel, nil, 10, Enum.HorizontalAlignment.Center)
-		local stage = New("Frame", { BackgroundColor3 = e.color:Lerp(T.Panel, 0.55), Size = UDim2.new(1, 0, 0.42, 0), Parent = panel })
-		UI.Stroke(stage, T.Edge, 2.5)
-		UI.Gradient(stage, Color3.new(1, 1, 1), Color3.fromRGB(150, 150, 170), 90)
+		-- frameless stage (owner reference): the item floats in a soft color glow with rays and twinkles
+		local stage = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0.42, 0), Parent = panel })
+		New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.glow, ImageColor3 = e.color:Lerp(Color3.new(1, 1, 1), 0.35), ImageTransparency = 0.25, AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(1.15, 1.15), SizeConstraint = Enum.SizeConstraint.RelativeYY, Parent = stage })
+		New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.focuslines, ImageColor3 = e.color:Lerp(Color3.new(1, 1, 1), 0.6), ImageTransparency = 0.7, AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(1.3, 1.3), SizeConstraint = Enum.SizeConstraint.RelativeYY, Parent = stage })
+		UI.Sparkles(stage, Color3.new(1, 1, 1), 12, { star = 0.8 })
 		if e.egg then
 			UI.VoxelEgg(stage, e.egg, 150, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.9, 0.9), SizeConstraint = Enum.SizeConstraint.RelativeYY })
 		else
@@ -3165,18 +3177,29 @@ function Panels.PearlShop(args)
 		end
 	end
 
-	render = function()
-		clear(body)
+	-- server data is cached: clicking cards only redraws. Re-asking on every click hit the request throttle
+	-- ("Too fast") and the Gem packs vanished (owner, v0.25.12).
+	local info, d = { boosts = {}, tokens = {}, gems = 0 }, nil
+	local function fetch()
 		local res = Net.Request("StoreInfo")
-		local info = res.ok and res.data or { boosts = {}, tokens = {}, gems = 0 }
-		local d
+		if res.ok then
+			info = res.data
+		end
 		if storeTab == "Gems" then
 			local pr = Net.Request("PearlInfo")
-			d = pr.ok and pr.data or nil
+			if pr.ok then
+				d = pr.data
+			end
+		end
+	end
+	render = function(refetch)
+		if refetch ~= false then
+			fetch()
 		end
 		if not win.frame.Parent then
 			return
 		end
+		clear(body)
 		-- top: tabs + currency pill
 		local top = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 46), Parent = body })
 		local tabs = UI.TabBar(top, { { "Gems", "💎", "GEMS", T.Ocean }, { "Benefits", "🎟️", "BENEFITS", T.Purple }, { "Boosts", "⚡", "BOOSTS", T.Orange } }, storeTab, function(tab)
@@ -3212,11 +3235,19 @@ function Panels.PearlShop(args)
 		end
 		for i, e in ipairs(list) do
 			local on = e == pickedEntry
-			local card = UI.Card(grid, nil, e.color:Lerp(T.Panel, on and 0.2 or 0.55))
+			-- reference-style card: bright diagonal gradient, glow behind the item, twinkles, a moving shine
+			local card = UI.Card(grid, nil, e.color)
 			card.LayoutOrder = i
+			local cg = card:FindFirstChild("CardGradient")
+			cg.Color = ColorSequence.new(e.color:Lerp(Color3.new(1, 1, 1), on and 0.45 or 0.3), e.color:Lerp(Color3.new(0, 0, 0), on and 0.2 or 0.45))
+			cg.Rotation = 55
 			if on then
 				UI.Stroke(card, T.Gold, 4)
 			end
+			New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.glow, ImageColor3 = Color3.new(1, 1, 1), ImageTransparency = on and 0.45 or 0.65, AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.5, 0.36), Size = UDim2.fromScale(0.95, 0.95), SizeConstraint = Enum.SizeConstraint.RelativeXX, Parent = card })
+			UI.Sparkles(card, Color3.new(1, 1, 1), on and 7 or 4, { star = 0.8 })
+			UI.Shine(card, i * 0.13)
 			if e.egg then
 				UI.VoxelEgg(card, e.egg, 90, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 6), Size = UDim2.fromScale(0.66, 0.66), SizeConstraint = Enum.SizeConstraint.RelativeXX })
 			else
@@ -3235,7 +3266,7 @@ function Panels.PearlShop(args)
 			local hit = New("TextButton", { Text = "", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = card.ZIndex + 3, Parent = card })
 			hit.Activated:Connect(function()
 				storePick[storeTab] = e.id
-				render()
+				render(false)
 			end)
 		end
 		if pickedEntry then
@@ -3247,7 +3278,9 @@ function Panels.PearlShop(args)
 		end
 	end
 	render()
-	win.resized.Event:Connect(render)
+	win.resized.Event:Connect(function()
+		render(false)
+	end)
 end
 
 function Panels.Open(name, args)

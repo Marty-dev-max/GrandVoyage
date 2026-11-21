@@ -617,20 +617,79 @@ function UI.ModelView(parent, folder, key, size, spin, props)
 	return vp
 end
 
+-- v0.25.13 (owner: windows looked flat): a layer of pixel particles inside `frame`: little squares that drift up
+-- and fade, plus 4-point twinkle stars. opts: float (rise + wrap), z (ZIndex, default frame.ZIndex), star (0..1 share
+-- of stars). One throttled RenderStepped per layer, disconnected when the frame goes away.
+function UI.Sparkles(frame, color, n, opts)
+	opts = opts or {}
+	color = color or Color3.new(1, 1, 1)
+	local z = opts.z or frame.ZIndex
+	local holder = New("Frame", { Name = "Sparkles", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ClipsDescendants = true, ZIndex = z, Parent = frame })
+	local parts = {}
+	local rnd = Random.new()
+	for i = 1, n do
+		local star = rnd:NextNumber() < (opts.star or 0.35)
+		local sz = star and rnd:NextInteger(9, 16) or rnd:NextInteger(4, 7)
+		local p = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(rnd:NextNumber(), rnd:NextNumber()), Size = UDim2.fromOffset(sz, sz), ZIndex = z, Parent = holder })
+		local bits = {}
+		if star then
+			table.insert(bits, New("Frame", { BorderSizePixel = 0, BackgroundColor3 = color, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.new(0, 2, 1, 0), ZIndex = z, Parent = p }))
+			table.insert(bits, New("Frame", { BorderSizePixel = 0, BackgroundColor3 = color, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.new(1, 0, 0, 2), ZIndex = z, Parent = p }))
+		else
+			table.insert(bits, New("Frame", { BorderSizePixel = 0, BackgroundColor3 = color, Size = UDim2.fromScale(1, 1), ZIndex = z, Parent = p }))
+		end
+		parts[i] = { f = p, bits = bits, ph = rnd:NextNumber(0, 6.28), sp = rnd:NextNumber(1.2, 3), vy = opts.float and rnd:NextNumber(0.015, 0.05) or 0, max = rnd:NextNumber(0.5, 0.95) }
+	end
+	local acc, t = 0, 0
+	local conn
+	conn = RunService.RenderStepped:Connect(function(dt)
+		if not holder.Parent then
+			conn:Disconnect()
+			return
+		end
+		acc += dt
+		if acc < 1 / 30 then
+			return
+		end
+		t += acc
+		local step = acc
+		acc = 0
+		for _, q in ipairs(parts) do
+			local tw = (math.sin(t * q.sp + q.ph) + 1) / 2
+			for _, b in ipairs(q.bits) do
+				b.BackgroundTransparency = 1 - tw * q.max
+			end
+			if q.vy > 0 then
+				local pos = q.f.Position
+				local y = pos.Y.Scale - q.vy * step
+				if y < -0.05 then
+					q.f.Position = UDim2.fromScale(rnd:NextNumber(), 1.05)
+				else
+					q.f.Position = UDim2.fromScale(pos.X.Scale, y)
+				end
+			end
+		end
+	end)
+	return holder
+end
+
 -- v0.25.12 (owner): voxel eggs (Sea Egg / Golden Egg) built from blocks in a ViewportFrame, slowly turning.
 -- Returns the frame and setTilt(radians) for hatch wobbles.
 local EGG_LOOK = {
-	SeaEgg = { Color3.fromRGB(245, 236, 212), Color3.fromRGB(96, 190, 232) },
-	GoldenEgg = { Color3.fromRGB(255, 196, 60), Color3.fromRGB(255, 244, 170) },
+	SeaEgg = { base = Color3.fromRGB(245, 236, 212), spot = Color3.fromRGB(70, 170, 230), shine = Color3.fromRGB(255, 255, 255) },
+	GoldenEgg = { base = Color3.fromRGB(255, 188, 50), spot = Color3.fromRGB(255, 240, 160), shine = Color3.fromRGB(255, 255, 220), sparkle = true,
+		band = Color3.fromRGB(196, 112, 30), jewels = { Color3.fromRGB(255, 70, 90), Color3.fromRGB(80, 200, 255), Color3.fromRGB(120, 255, 140) } },
 }
 function UI.VoxelEgg(parent, eggId, size, props)
 	local look = EGG_LOOK[eggId] or EGG_LOOK.SeaEgg
+	-- v0.25.13 (owner: "flat, only colors"): low ambient + strong key light so faces shade, per-block tone jitter,
+	-- a bright highlight patch top-left, darker belly, neon glints on the golden egg; only surface blocks are built
 	local vp = New("ViewportFrame", {
 		BackgroundTransparency = 1,
 		Size = UDim2.fromOffset(size, size),
-		Ambient = Color3.fromRGB(170, 170, 190),
-		LightColor = Color3.fromRGB(255, 250, 240),
-		LightDirection = Vector3.new(-0.6, -1, -0.8),
+		Ambient = Color3.fromRGB(95, 90, 120),
+		LightColor = Color3.fromRGB(255, 245, 225),
+		LightDirection = Vector3.new(0.7, -0.9, 0.6),
 		Parent = parent,
 	})
 	for k, v in pairs(props or {}) do
@@ -639,34 +698,52 @@ function UI.VoxelEgg(parent, eggId, size, props)
 	local m = Instance.new("Model")
 	local R, H = 5, 13 -- grid: 10 wide, 13 tall
 	local function inside(x, y, z)
+		if x < 0 or z < 0 or y < 0 or x >= 2 * R or z >= 2 * R or y >= H then
+			return false
+		end
 		local t = (y + 0.5) / H * 2 - 1 -- -1 bottom .. 1 top
 		local r = R * math.sqrt(math.max(0, 1 - t * t)) * (1 - 0.16 * t) + 0.35
 		local dx, dz = x + 0.5 - R, z + 0.5 - R
 		return dx * dx + dz * dz <= r * r
 	end
-	local function spot(x, y, z)
-		local h = math.sin(x * 12.9898 + y * 78.233 + z * 37.719) * 43758.5453
-		return (h - math.floor(h)) > 0.86
+	local function hash(x, y, z, k)
+		local h = math.sin(x * 12.9898 + y * 78.233 + z * 37.719 + k) * 43758.5453
+		return h - math.floor(h)
+	end
+	local function colorAt(x, y, z)
+		-- spots are 2x2x2 blobs; the golden egg gets a darker band set with neon jewels
+		if look.band and (y == 5 or y == 6) then
+			if y == 5 and (x + z) % 4 == 0 then
+				return look.jewels[(x + z) % 3 + 1], true
+			end
+			return look.band, false
+		end
+		local c = hash(math.floor(x / 2), math.floor(y / 2), math.floor(z / 2), 0) > 0.72 and look.spot or look.base
+		local shade = 0.78 + 0.3 * (y / H) + (hash(x, y, z, 7) - 0.5) * 0.12
+		-- highlight patch on the upper front-left
+		if y >= H * 0.62 and y <= H * 0.85 and x >= R + 1 and z <= 2 then
+			return c:Lerp(look.shine, 0.55), false
+		end
+		if look.sparkle and hash(x, y, z, 3) > 0.93 then
+			return look.shine, true
+		end
+		return Color3.new(math.min(1, c.R * shade), math.min(1, c.G * shade), math.min(1, c.B * shade)), false
 	end
 	for y = 0, H - 1 do
 		for z = 0, 2 * R - 1 do
-			local x = 0
-			while x < 2 * R do
-				if inside(x, y, z) then
-					local c = spot(x, y, z) and look[2] or look[1]
-					local x0 = x
-					while x < 2 * R and inside(x, y, z) and ((spot(x, y, z) and look[2] or look[1]) == c) do
-						x += 1
-					end
-					local shade = 0.86 + 0.14 * (y / H)
-					New("Part", { Anchored = true, Size = Vector3.new(x - x0, 1, 1), Color = Color3.new(c.R * shade, c.G * shade, c.B * shade),
-						Material = Enum.Material.SmoothPlastic, CFrame = CFrame.new((x0 + x) / 2 - R, y - H / 2 + 0.5, z + 0.5 - R), Parent = m })
-				else
-					x += 1
+			for x = 0, 2 * R - 1 do
+				local surface = inside(x, y, z) and not (inside(x + 1, y, z) and inside(x - 1, y, z) and inside(x, y + 1, z)
+					and inside(x, y - 1, z) and inside(x, y, z + 1) and inside(x, y, z - 1))
+				if surface then
+					local c, glint = colorAt(x, y, z)
+					New("Part", { Anchored = true, Size = Vector3.new(1.01, 1.01, 1.01), Color = c,
+						Material = glint and Enum.Material.Neon or Enum.Material.SmoothPlastic, CFrame = CFrame.new(x + 0.5 - R, y - H / 2 + 0.5, z + 0.5 - R), Parent = m })
 				end
 			end
 		end
 	end
+	-- twinkling pixel sparkles over the egg
+	UI.Sparkles(vp, look.shine, 7, { star = 0.7 })
 	m.Parent = vp
 	local cam = Instance.new("Camera")
 	cam.FieldOfView = 30
@@ -991,6 +1068,15 @@ function UI.Window(id, title, size, color, icon, opts)
 	UI.Corner(close, 8)
 	UI.Stroke(close, T.Edge, 3)
 	UI.Tactile(close)
+	-- v0.25.13 (owner: flat backgrounds): soft colored glows in two corners + floating pixel sparkles
+	local texCfg = require(ReplicatedStorage.Shared.Config.Textures)
+	local glowClip = New("Frame", { Name = "BgGlow", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ClipsDescendants = true, ZIndex = 20, Parent = frame })
+	for _, g in ipairs({ { Vector2.new(1, 0), UDim2.new(1, 60, 0, -60), color }, { Vector2.new(0, 1), UDim2.new(0, -80, 1, 80), T.Gold } }) do
+		New("ImageLabel", { BackgroundTransparency = 1, Image = texCfg.glow, ImageColor3 = g[3], ImageTransparency = 0.82, AnchorPoint = g[1], Position = g[2],
+			Size = UDim2.fromScale(0.75, 0.75), SizeConstraint = Enum.SizeConstraint.RelativeYY, ZIndex = 20, Parent = glowClip })
+	end
+	UI.Sparkles(frame, color:Lerp(Color3.new(1, 1, 1), 0.6), 30, { float = true, z = 20, star = 0.4 })
+	UI.Sparkles(frame, T.Gold:Lerp(Color3.new(1, 1, 1), 0.4), 14, { float = true, z = 20, star = 0.6 })
 	local body = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(16, 58), Size = UDim2.new(1, -32, 1, -72), Parent = frame, ZIndex = 21 })
 	local win = { frame = frame, body = body, id = id, header = header, resized = Instance.new("BindableEvent") }
 	local windowSize = size or UDim2.fromOffset(560, 520)

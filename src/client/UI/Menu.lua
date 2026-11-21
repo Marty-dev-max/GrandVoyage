@@ -1223,6 +1223,8 @@ function Menu.Open()
 	end
 	gui = New("ScreenGui", { Name = "TitleMenu", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 60, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, Parent = player:WaitForChild("PlayerGui") })
 	scaleObj = New("UIScale", { Parent = gui })
+	-- v0.25.13 (owner): floating pixel sparkles over the whole menu background
+	UI.Sparkles(New("Frame", { Name = "MenuSparkles", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 1, Parent = gui }), PIXEL.gold, 46, { float = true, z = 1, star = 0.35 })
 	local function rescale()
 		local cam = workspace.CurrentCamera
 		local v = cam and cam.ViewportSize or Vector2.new(1280, 720)

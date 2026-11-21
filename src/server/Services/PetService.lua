@@ -234,8 +234,9 @@ function PetS.Start()
 			return false, "Your pet roster is full"
 		end
 		local want = math.clamp(math.floor(tonumber(data.count) or 1), 1, 10)
-		local n = math.min(want, entry.qty or 1, room)
-		if not R.InventoryService.RemoveUid(player, entry.uid, n) then
+		-- count every egg of this kind: eggs bought before v0.25.13 sit in separate bag slots (they did not stack)
+		local n = math.min(want, R.InventoryService.Count(player, entry.id), room)
+		if not R.InventoryService.RemoveItem(player, entry.id, n) then
 			return false, "Not enough eggs"
 		end
 		local got = {}

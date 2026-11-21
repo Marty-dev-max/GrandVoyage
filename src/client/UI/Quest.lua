@@ -497,10 +497,48 @@ function Quest.Start()
 	if HUD.Layout then
 		HUD.Layout()
 	end
+	-- v0.25.18: the active Hunt under the quest tracker (owner reference: HUNT tag, name, progress, GO)
+	local HuntsCfg = require(ReplicatedStorage.Shared.Config.Hunts)
+	local MonstersCfg = require(ReplicatedStorage.Shared.Config.Monsters)
+	local hunt = New("Frame", { Name = "HuntCard", Size = UDim2.fromOffset(330, 64), BackgroundColor3 = Color3.new(1, 1, 1), Visible = false, Parent = tracker.Parent })
+	UI.Corner(hunt, 12)
+	UI.Gradient(hunt, T.PanelTop, T.PanelDeep, 90)
+	UI.Stroke(hunt, T.Edge, 3)
+	local tag = New("Frame", { BackgroundColor3 = T.Green, Position = UDim2.fromOffset(10, 8), Size = UDim2.fromOffset(54, 20), Parent = hunt })
+	UI.Text(tag, "HUNT", 12, Color3.new(1, 1, 1), "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false })
+	local hName = UI.Text(hunt, "", 14, T.Text, "Display", { Position = UDim2.fromOffset(70, 8), Size = UDim2.new(1, -150, 0, 20), TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd })
+	local hBar = UI.Bar(hunt, T.Gold, UDim2.new(1, -96, 0, 14), "", 0)
+	hBar.back.Position = UDim2.fromOffset(10, 38)
+	local _, goHolder = UI.Button(hunt, "GO", T.Green, UDim2.fromOffset(62, 44), function()
+		require(script.Parent.Panels).Open("Quests", { tab = "Hunts" })
+	end)
+	goHolder.AnchorPoint = Vector2.new(1, 0.5)
+	goHolder.Position = UDim2.new(1, -10, 0.5, 0)
+	local function refreshHunt()
+		local h = State.profile and State.profile.hunt
+		local def = type(h) == "table" and MonstersCfg[h.id]
+		hunt.Visible = def ~= nil
+		if def then
+			local n = h.progress or 0
+			hName.Text = "Defeat " .. def.name
+			hBar:Set(n / HuntsCfg.Count, n .. " / " .. HuntsCfg.Count)
+			hBar.text.Text = n .. " / " .. HuntsCfg.Count
+		end
+	end
+	RunService.Heartbeat:Connect(function()
+		if hunt.Visible then
+			-- sit right under the tracker (or in its place when the story is done)
+			local tp = tracker.Position
+			hunt.Position = tracker.Visible and (tp + UDim2.fromOffset(0, tracker.Size.Y.Offset + 6)) or tp
+			hunt.Size = UDim2.fromOffset(tracker.Size.X.Offset, 64)
+		end
+	end)
+	refreshHunt()
 	State.Changed:Connect(function(kind)
 		if kind == "profile" then
 			paintChests()
 			refreshTracker()
+			refreshHunt()
 		end
 	end)
 	-- distance readout

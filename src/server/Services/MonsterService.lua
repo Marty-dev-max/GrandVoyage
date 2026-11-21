@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local Reach = require(Shared.Modules.Reach)
 local Monsters = require(Shared.Config.Monsters)
+local MonsterTypes = require(Shared.Config.MonsterTypes)
 local GameConfig = require(Shared.Config.GameConfig)
 local Islands = require(Shared.Config.Islands)
 local ItemDB = require(Shared.Modules.ItemDB)
@@ -37,7 +38,33 @@ MS.GroundAt = groundAt
 
 local function makeBar(mob)
 	local root = mob.root
-	local bb = ModelFactory.Billboard(root, mob.def.name, "Lv." .. mob.def.level, mob.def.isBoss and Color3.fromRGB(255, 90, 90) or Color3.new(1, 1, 1), 3 + (mob.def.style.scale or 1) * 2.5)
+	local bb = ModelFactory.Billboard(root, mob.def.name, "Lv." .. mob.def.level .. "  " .. string.rep("★", mob.def.stars or 1), mob.def.isBoss and Color3.fromRGB(255, 90, 90) or Color3.new(1, 1, 1), 3 + (mob.def.style.scale or 1) * 2.5)
+	-- type badge (v0.25.18): colored square with the type's kanji left of the name
+	local ty = mob.def.mtype and MonsterTypes[mob.def.mtype]
+	if ty then
+		local badge = Instance.new("TextLabel")
+		badge.Name = "TypeBadge"
+		badge.Position = UDim2.fromOffset(0, 0)
+		badge.Size = UDim2.new(0, 30, 0.55, 0)
+		badge.BackgroundColor3 = ty.color
+		badge.BorderSizePixel = 0
+		badge.Font = Enum.Font.GothamBlack
+		badge.TextScaled = true
+		badge.Text = ty.kanji
+		badge.TextColor3 = Color3.new(1, 1, 1)
+		badge.TextStrokeTransparency = 0.4
+		badge.Parent = bb
+		local st = Instance.new("UIStroke")
+		st.Thickness = 2
+		st.Color = Color3.fromRGB(20, 20, 30)
+		st.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		st.Parent = badge
+		local title = bb:FindFirstChild("Title")
+		if title then
+			title.Position = UDim2.fromOffset(34, 0)
+			title.Size = UDim2.new(1, -34, 0.55, 0)
+		end
+	end
 	bb.Size = UDim2.fromOffset(mob.def.isBoss and 260 or 170, 62)
 	bb.MaxDistance = mob.def.isBoss and 260 or 110
 	local back = Instance.new("Frame")

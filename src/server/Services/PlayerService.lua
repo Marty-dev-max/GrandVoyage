@@ -281,6 +281,7 @@ local function sync(player)
 			activePet = p.activePet,
 			perks = p.perks,
 			daily = p.daily,
+			hunt = p.hunt,
 			ach = p.ach,
 			title = p.title,
 			pearls = p.pearls,

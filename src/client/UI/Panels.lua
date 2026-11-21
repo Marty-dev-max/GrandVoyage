@@ -2617,9 +2617,150 @@ local function achValue(p, a)
 	return 0
 end
 
+-- ===================== HUNTS (v0.25.18) =====================
+-- repeatable "Defeat <monster> x40" for every island monster (Config/Hunts, ProgressService). Owner reference layout:
+-- list on the left, the picked hunt on the right (monster, progress, reward cards, buttons).
+local HuntsCfg = require(Shared.Config.Hunts)
+local MonstersCfg = require(Shared.Config.Monsters)
+local huntList -- { { id, def, pos } } sorted by level
+local function hunts()
+	if not huntList then
+		huntList = {}
+		local seen = {}
+		for _, isl in ipairs(Islands.List) do
+			for _, sp in ipairs(isl.spawns) do
+				local def = MonstersCfg[sp.monster]
+				if def and not seen[def.id] then
+					seen[def.id] = true
+					table.insert(huntList, { id = def.id, def = def, pos = Vector3.new(isl.x + sp.offset.X, 8, (isl.z or 0) + sp.offset.Y) })
+				end
+			end
+		end
+		table.sort(huntList, function(a, b2)
+			return a.def.level < b2.def.level
+		end)
+	end
+	return huntList
+end
+local huntPick
+local function rewardCard(parent, icon, amount, label, color)
+	local c = UI.Card(parent, UDim2.new(1 / 3, -6, 1, 0), color:Lerp(T.Panel, 0.55))
+	local chip = UI.IconChip(c, icon, color, 44)
+	chip.Position = UDim2.fromOffset(8, 8)
+	UI.Text(c, amount, 17, T.Text, "Display", { Position = UDim2.fromOffset(60, 6), Size = UDim2.new(1, -64, 0, 24), TextWrapped = false })
+	UI.Text(c, label, 12, T.TextSoft, "Semi", { Position = UDim2.fromOffset(60, 32), Size = UDim2.new(1, -64, 0, 18), TextWrapped = false })
+	return c
+end
+local function renderHunts(body, p, rerender, close)
+	local okH, absH = pcall(function()
+		return body.AbsoluteSize.Y / math.max(0.01, UI.GetScale())
+	end)
+	local H = math.max(380, ((okH and absH and absH > 0) and absH or 520) - 8)
+	local split = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, -12, 0, H), Parent = body })
+	local left = UI.Scroll(split, UDim2.new(0.42, -6, 1, 0))
+	UI.List(left, nil, 6)
+	UI.Pad(left, 4)
+	local right = UI.Card(split, UDim2.new(0.58, -6, 1, 0), T.Panel)
+	right.AnchorPoint = Vector2.new(1, 0)
+	right.Position = UDim2.fromScale(1, 0)
+	local active = type(p.hunt) == "table" and p.hunt or nil
+	local list = hunts()
+	huntPick = huntPick or (active and active.id) or (list[1] and list[1].id)
+	local picked
+	for i, h in ipairs(list) do
+		local need = math.max(1, h.def.level - HuntsCfg.LevelLead)
+		local isActive = active and active.id == h.id
+		local on = h.id == huntPick
+		if on then
+			picked = h
+		end
+		local row = UI.Card(left, UDim2.new(1, -8, 0, 64), on and T.Gold:Lerp(T.Panel, 0.55) or T.Panel)
+		row.LayoutOrder = i
+		if on then
+			UI.Stroke(row, T.Gold, 3)
+		end
+		UI.Text(row, "[Repeat] Hunt " .. h.def.name, 15, T.Text, "Display", { Position = UDim2.fromOffset(12, 8), Size = UDim2.new(0.68, -12, 0, 22), TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd })
+		local status = isActive and ((active.progress or 0) .. " / " .. HuntsCfg.Count) or (p.baseLevel >= need and "Available" or ("Lv." .. need))
+		UI.Text(row, status, 13, isActive and T.Gold or (p.baseLevel >= need and T.Orange or T.TextSoft), "Display", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 10), Size = UDim2.new(0.32, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Right, TextWrapped = false })
+		local bar = UI.Bar(row, T.Gold, UDim2.new(1, -24, 0, 12), "", 0)
+		bar.back.Position = UDim2.fromOffset(12, 40)
+		bar:Set(isActive and (active.progress or 0) / HuntsCfg.Count or 0)
+		local hit = New("TextButton", { Text = "", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = row.ZIndex + 5, Parent = row })
+		hit.Activated:Connect(function()
+			huntPick = h.id
+			rerender()
+		end)
+	end
+	if not picked then
+		return
+	end
+	-- right: the picked hunt
+	local def = picked.def
+	local need = math.max(1, def.level - HuntsCfg.LevelLead)
+	local isActive = active and active.id == picked.id
+	local prog = isActive and (active.progress or 0) or 0
+	UI.Pad(right, 14)
+	UI.Text(right, "[Repeat] Hunt " .. def.name, 22, T.Text, "Display", { Size = UDim2.new(1, -170, 0, 30), TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd })
+	local req2 = New("Frame", { BackgroundColor3 = T.PanelDeep, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.fromOffset(160, 30), Parent = right })
+	UI.Text(req2, "Requires Lv." .. need, 13, p.baseLevel >= need and T.Text or T.Red, "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false })
+	local info = UI.Card(right, UDim2.new(1, 0, 0, 110), T.Ocean:Lerp(T.Panel, 0.7))
+	info.Position = UDim2.fromOffset(0, 40)
+	local portrait = UI.Card(info, UDim2.fromOffset(94, 94), T.Green:Lerp(T.Panel, 0.4))
+	portrait.Position = UDim2.fromOffset(8, 8)
+	if not (UI.ModelAsset("Monsters", def.id) and UI.ModelView(portrait, "Monsters", def.id, 90, 0.5, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5) })) then
+		UI.Icon(portrait, "skull", 70, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5) })
+	end
+	UI.Text(portrait, "Lv." .. def.level, 12, T.Text, "Display", { AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -4, 1, -2), Size = UDim2.fromOffset(60, 16), TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 8 })
+	UI.Text(info, "Defeat " .. UI.Colored(def.name, T.Orange) .. " x" .. HuntsCfg.Count, 17, T.Text, "Display", { RichText = true, Position = UDim2.fromOffset(114, 18), Size = UDim2.new(1, -124, 0, 26), TextWrapped = false })
+	local ty = def.mtype and require(Shared.Config.MonsterTypes)[def.mtype]
+	UI.Text(info, (ty and (UI.Colored("[" .. ty.kanji .. "] " .. ty.name, ty.color) .. "   ") or "") .. UI.Colored(string.rep("★", def.stars or 1), T.Gold), 14, T.Text, "Display", { RichText = true, Position = UDim2.fromOffset(114, 46), Size = UDim2.new(1, -124, 0, 20), TextWrapped = false })
+	UI.Text(info, "Defeat " .. HuntsCfg.Count .. " " .. def.name .. " • repeatable, no limit", 13, T.TextSoft, "Semi", { Position = UDim2.fromOffset(114, 70), Size = UDim2.new(1, -124, 0, 36) })
+	UI.Text(right, "Progress", 17, T.Text, "Display", { Position = UDim2.fromOffset(0, 166), Size = UDim2.fromOffset(140, 26) })
+	local bar = UI.Bar(right, T.Gold, UDim2.new(1, -150, 0, 24), prog .. " / " .. HuntsCfg.Count, 0)
+	bar.back.Position = UDim2.fromOffset(150, 167)
+	bar:Set(prog / HuntsCfg.Count)
+	UI.Text(right, "Rewards", 17, T.Text, "Display", { Position = UDim2.fromOffset(0, 208), Size = UDim2.fromOffset(200, 26) })
+	local rewards = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 238), Size = UDim2.new(1, 0, 0, 64), Parent = right })
+	UI.List(rewards, Enum.FillDirection.Horizontal, 8)
+	local b = def.beli or { 0, 0 }
+	rewardCard(rewards, "⭐", UI.Format(math.floor(def.exp * HuntsCfg.Count * HuntsCfg.ExpMult)), "EXP", T.Purple)
+	rewardCard(rewards, "🪙", UI.Format(math.floor((b[1] + b[2]) / 2 * HuntsCfg.Count * HuntsCfg.BeliMult)), "Doubloons", T.Gold)
+	local it = HuntsCfg.Items[1]
+	local itDef = it and ItemDB.Get(it[1])
+	if itDef then
+		rewardCard(rewards, UI.ItemIconName(itDef) or "potion", "x" .. it[2], itDef.name, T.Green)
+	end
+	local btns = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 0, 1, 0), Size = UDim2.new(1, 0, 0, 58), Parent = right })
+	if isActive and prog >= HuntsCfg.Count then
+		UI.Button(btns, "CLAIM REWARD", T.Green, UDim2.new(1, 0, 1, 0), function()
+			if req("HuntClaim", nil, "RarityEpic").ok then
+				rerender()
+			end
+		end)
+	elseif isActive then
+		New("UIGridLayout", { CellSize = UDim2.new(0.5, -5, 1, 0), CellPadding = UDim2.fromOffset(10, 0), Parent = btns })
+		UI.Button(btns, "Abandon Quest", T.Red, UDim2.new(1, 0, 1, 0), function()
+			if req("HuntAbandon").ok then
+				rerender()
+			end
+		end)
+		UI.Button(btns, "Guide Me", T.Green, UDim2.new(1, 0, 1, 0), function()
+			State.questTarget = picked.pos
+			UI.Toast("Follow the yellow trail to the " .. def.name .. "s", "info")
+			close()
+		end)
+	else
+		UI.Button(btns, active and "Switch to this quest" or "Start this hunt", p.baseLevel >= need and T.Orange or T.Grey, UDim2.new(1, 0, 1, 0), function()
+			if req("HuntStart", { id = picked.id }).ok then
+				rerender()
+			end
+		end)
+	end
+end
+
 function Panels.Quests(args)
 	local win = UI.Window("Quests", "Quests", UDim2.fromOffset(880, 600), T.Gold, "📜", { fullscreen = true })
-	local tab = args and args.tab or "Daily"
+	local tab = args and args.tab or "Hunts"
 	local tabs = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 46), Parent = win.body })
 	local body = UI.Scroll(win.body, UDim2.new(1, 0, 1, -52))
 	body.Position = UDim2.fromOffset(0, 52)
@@ -2631,12 +2772,16 @@ function Panels.Quests(args)
 		if not p then
 			return
 		end
-		UI.TabBar(tabs, { { "Story", "📖", "Story", T.Gold }, { "Daily", "📅", "Daily", T.Green }, { "Ach", "🏆", "Achievements", T.Purple } }, tab, function(id)
+		UI.TabBar(tabs, { { "Hunts", "⚔️", "Hunts", T.Orange }, { "Story", "📖", "Story", T.Gold }, { "Daily", "📅", "Daily", T.Green }, { "Ach", "🏆", "Achievements", T.Purple } }, tab, function(id)
 			tab = id
 			render()
 		end, 40)
 		UI.List(body, nil, 8)
-		if tab == "Daily" then
+		if tab == "Hunts" then
+			renderHunts(body, p, render, function()
+				UI.CloseWindow("Quests")
+			end)
+		elseif tab == "Daily" then
 			local left = secondsToReset()
 			UI.Section(body, "📅", "Today's Dailies", T.Green, string.format("resets in %dh %02dm", left // 3600, (left % 3600) // 60))
 			local d = p.daily
@@ -2660,7 +2805,7 @@ function Panels.Quests(args)
 				chip.Position = UDim2.fromOffset(12, 16)
 				local text = tpl and string.format(tpl.text, e.count, e.targetName or "") or e.id
 				UI.Text(card, text, 19, T.Text, "Display", { Position = UDim2.fromOffset(76, 10), Size = UDim2.new(1, -250, 0, 24), TextWrapped = false })
-				local bar = UI.Bar(card, T.Green, UDim2.new(1, -250, 0, 16), e.progress .. " / " .. e.count)
+				local bar = UI.Bar(card, T.Green, UDim2.new(1, -250, 0, 16), e.progress .. " / " .. e.count, 0)
 				bar.back.Position = UDim2.fromOffset(76, 38)
 				bar:Set(e.progress / e.count)
 				UI.Text(card, COIN .. " " .. UI.Format(beli) .. "   •   " .. PearlsCfg.Icon .. " " .. DailiesCfg.Reward.pearls .. "   •   EXP", 13, T.Gold, "Bold", { Position = UDim2.fromOffset(76, 58), Size = UDim2.new(1, -250, 0, 18) })

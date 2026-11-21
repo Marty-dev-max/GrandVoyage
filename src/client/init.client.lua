@@ -110,6 +110,23 @@ end
 
 local handlers = {
 	Downed = showDowned,
+	-- INT monsters (v0.25.18): a short stun freezes movement and jumping
+	Stun = function(d)
+		local char = game:GetService("Players").LocalPlayer.Character
+		local hum = char and char:FindFirstChildOfClass("Humanoid")
+		if not hum or hum:GetAttribute("Stunned") then
+			return
+		end
+		hum:SetAttribute("Stunned", true)
+		local ws, jp = hum.WalkSpeed, hum.JumpPower
+		hum.WalkSpeed, hum.JumpPower = 0, 0
+		task.delay(math.clamp(tonumber(d.seconds) or 1, 0.2, 3), function()
+			if hum.Parent then
+				hum.WalkSpeed, hum.JumpPower = ws, jp
+				hum:SetAttribute("Stunned", nil)
+			end
+		end)
+	end,
 	Profile = function(d)
 		State.profile = d.profile
 		State.derived = d.derived

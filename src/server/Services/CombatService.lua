@@ -113,7 +113,7 @@ function Combat.MonsterHit(mob, player, mult)
 	if not d then
 		return
 	end
-	local hit = mob.def.level * 1.8 + 25
+	local hit = (mob.def.level * 1.8 + 25) * (1 + (mob.def.hitBonus or 0)) -- AGI monsters aim better (Config/Monsters types)
 	if math.random() > Formulas.HitChance(hit, d.flee) then
 		local root = R.PlayerService.Root(player)
 		if root then
@@ -121,8 +121,17 @@ function Combat.MonsterHit(mob, player, mult)
 		end
 		return
 	end
-	local dmg = Formulas.Damage(mob.def.atk, d.def, mult or 1, mob.def.isBoss and 5 or 1)
-	Combat.DamagePlayer(player, dmg)
+	local crit = mob.def.critChance and math.random() < mob.def.critChance
+	local dmg = Formulas.Damage(mob.def.atk, d.def, (mult or 1) * (crit and 1.5 or 1), mob.def.isBoss and 5 or 1)
+	Combat.DamagePlayer(player, dmg, crit and { crit = true } or nil)
+	-- INT monsters can stun (the client freezes movement for a moment)
+	if mob.def.stunChance and math.random() < mob.def.stunChance and not R.KnockdownService.IsDowned(player) then
+		local root = R.PlayerService.Root(player)
+		if root then
+			Net.FX("Miss", { pos = root.Position + Vector3.new(0, 3, 0), text = "STUNNED!" }, root.Position, 200)
+		end
+		Net.Push(player, "Stun", { seconds = 1 })
+	end
 	-- v0.25.17 (owner): boss blows and special attacks shove you away from the attacker (on the ground or in the air)
 	local proot = R.PlayerService.Root(player)
 	if proot and mob.root and (mob.def.isBoss or (mult or 1) >= 1.3) and not R.KnockdownService.IsDowned(player) then

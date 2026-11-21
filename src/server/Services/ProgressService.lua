@@ -5,6 +5,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local Dailies = require(Shared.Config.Dailies)
+local Hunts = require(Shared.Config.Hunts)
 local Achievements = require(Shared.Config.Achievements)
 local Monsters = require(Shared.Config.Monsters)
 local Islands = require(Shared.Config.Islands)
@@ -128,6 +129,15 @@ function PG.Event(player, kind, target, amount)
 			R.PlayerService.MarkDirty(player)
 		end
 	end
+	-- repeatable hunt (v0.25.18)
+	local h = p.hunt
+	if kind == "Kill" and type(h) == "table" and h.id == target and (h.progress or 0) < Hunts.Count then
+		h.progress = math.min(Hunts.Count, (h.progress or 0) + amount)
+		if h.progress >= Hunts.Count then
+			Net.Push(player, "Notice", { text = "HUNT COMPLETE  •  claim it in Quests (J)", color = "Green" })
+		end
+		R.PlayerService.MarkDirty(player)
+	end
 	-- achievement counters
 	bump(player, p, kind, amount)
 	if target then
@@ -220,6 +230,65 @@ function PG.Start()
 		Net.Push(player, "Loot", { beli = beli })
 		R.PlayerService.MarkDirty(player)
 		return true, "Daily reward claimed"
+	end, 0.5)
+
+	-- hunts (Config/Hunts): pick one, abandon it, claim it (it starts again)
+	local function huntDef(id)
+		local def = type(id) == "string" and Monsters[id]
+		if not def then
+			return nil
+		end
+		for _, m in ipairs(islandMonsters) do
+			if m.id == id then
+				return def
+			end
+		end
+		return nil
+	end
+	Net.Handle("HuntStart", function(player, data)
+		local p = R.PlayerService.Profile(player)
+		local def = huntDef(data.id)
+		if not def then
+			return false, "Unknown hunt"
+		end
+		if p.baseLevel < math.max(1, def.level - Hunts.LevelLead) then
+			return false, "Requires Lv." .. math.max(1, def.level - Hunts.LevelLead)
+		end
+		p.hunt = { id = def.id, progress = 0 }
+		R.PlayerService.MarkDirty(player)
+		return true, "Hunt started: " .. def.name
+	end, 0.5)
+	Net.Handle("HuntAbandon", function(player)
+		local p = R.PlayerService.Profile(player)
+		p.hunt = nil
+		R.PlayerService.MarkDirty(player)
+		return true, "Hunt abandoned"
+	end, 0.5)
+	Net.Handle("HuntClaim", function(player)
+		local p = R.PlayerService.Profile(player)
+		local h = p.hunt
+		local def = type(h) == "table" and huntDef(h.id)
+		if not def then
+			return false, "No hunt"
+		end
+		if (h.progress or 0) < Hunts.Count then
+			return false, "Not finished yet"
+		end
+		h.progress = 0 -- repeatable: the same hunt starts again
+		local exp = math.floor(def.exp * Hunts.Count * Hunts.ExpMult)
+		local job = math.floor((def.jobExp or 0) * Hunts.Count * Hunts.ExpMult)
+		local b = def.beli or { 0, 0 }
+		local beli = math.floor((b[1] + b[2]) / 2 * Hunts.Count * Hunts.BeliMult)
+		R.PlayerService.GiveExp(player, exp, job)
+		R.PlayerService.AddBeli(player, beli)
+		local got = {}
+		for _, it in ipairs(Hunts.Items) do
+			R.InventoryService.AddItem(player, it[1], it[2])
+			table.insert(got, { id = it[1], qty = it[2] })
+		end
+		Net.Push(player, "Loot", { beli = beli, items = got })
+		R.PlayerService.MarkDirty(player)
+		return true, "Hunt reward claimed! It starts again."
 	end, 0.5)
 
 	Net.Handle("DailyBonus", function(player)

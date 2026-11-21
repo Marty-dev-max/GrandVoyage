@@ -380,6 +380,12 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     "Knock" (client LinearVelocity burst, or Flight.Shove in the air); flight landing ray ignores workspace.Monsters.
     Fly / FlyIdle clips (CharAnim prefers them over swimming). Combo swings crossfade (fade 0.1/speed). ShiftLock turns
     the body at Camera-1 (before the camera). Vanity: settings.hideGear (Bag GEAR ON/OFF) skips WeaponService OUTFIT.
+  * v0.25.18 (owner): Hunts = `Config/Hunts` + ProgressService (HuntStart / HuntAbandon / HuntClaim, p.hunt
+    { id, progress } fed by the Kill event, sent in the Profile push); Quests window tab "Hunts" (renderHunts two-pane
+    layout), HUD HuntCard under the tracker (Quest.lua). `UI.Bar(..., start)` = initial ratio (progress bars pass 0).
+    Monster types: `Config/MonsterTypes` (kanji + color), Monsters.lua TYPE_OF / STARS / STYLE set def.mtype, stars,
+    atk/attackSpeed/moveSpeed/attackRange, hitBonus, critChance, stunChance (CombatService.MonsterHit + push "Stun").
+    Nameplate: TypeBadge + stars in the subtitle. Keep non-monster tables out of Monsters (tests walk every entry).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

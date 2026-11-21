@@ -156,4 +156,53 @@ mob("Leviathan", { name = "Leviathan", level = 99, hp = 60000, atk = 900, def = 
 mob("FortCore", { name = "Giant Signal Conch", level = 80, hp = 60000, atk = 0, def = 60, exp = 0, jobExp = 0,
 	style = { shape = "snail", color = Color3.fromRGB(120, 200, 120), scale = 3 }, static = true, isCore = true, cardChance = 0, card = false, drops = {} })
 
+-- ===== monster types + difficulty stars (v0.25.18, owner) =====
+-- Each type has its own fighting style, applied to the definitions below so every system sees the same numbers:
+--   STR = raw power, heavy hitter (hits harder, swings slower)  -- like a Brawler
+--   AGI = blades and martial precision (more accurate, can crit) -- like a Swordsman
+--   DEX = raw speed and reflexes (moves and attacks faster)
+--   INT = tactics: stuns / crowd control on hit
+--   PHY = physical attacks from range                            -- like a Sharpshooter
+local TYPE_OF = {
+	STR = { "WildBoar", "MountainBandit", "CircusLion", "ClawCat", "ArmadaRaider", "SharkfolkBrawler", "OctofolkBrute", "AxeCaptain", "ArmadaAdmiral", "Leviathan" },
+	AGI = { "MarineRecruit", "NightCatPirate", "SawfolkRaider", "MarineElite", "BountyHunter", "SilentClaw", "SawtoothOverlord" },
+	DEX = { "ForestMonkey", "JungleTiger", "GuardWolf", "CircusAcrobat", "StarvedPirate", "BaySerpent" },
+	INT = { "ClownGrunt", "HypnoThug", "MistSoldier", "CaptainConfetti", "RingMaster", "DepthsWarden", "MistCommodore" },
+	PHY = { "MarineRifleman", "ArmoredGunner" },
+}
+-- stars: 1 = plain animals, 2 = regular fighters, 3 = elites, 4 = bosses, 5 = the strongest bosses
+local STARS = {
+	ForestMonkey = 1, JungleTiger = 1, WildBoar = 1, GuardWolf = 1, CircusLion = 1,
+	ClawCat = 3, ArmoredGunner = 3, OctofolkBrute = 3, MarineElite = 3, MistSoldier = 3, BountyHunter = 3,
+	MistCommodore = 5, DepthsWarden = 5, Leviathan = 5,
+}
+local STYLE = {
+	STR = { atk = 1.25, attackSpeed = 1.2 },
+	AGI = { hitBonus = 0.25, crit = 0.1 },
+	DEX = { moveSpeed = 1.25, attackSpeed = 0.8 },
+	INT = { stun = 0.15 },
+	PHY = { attackRange = 2.5 },
+}
+for t, ids in pairs(TYPE_OF) do
+	for _, id in ipairs(ids) do
+		local def = M[id]
+		if def then
+			def.mtype = t
+			local st = STYLE[t]
+			def.atk = math.floor(def.atk * (st.atk or 1))
+			def.attackSpeed = def.attackSpeed * (st.attackSpeed or 1)
+			def.moveSpeed = def.moveSpeed * (st.moveSpeed or 1)
+			def.attackRange = def.attackRange * (st.attackRange or 1)
+			def.hitBonus = st.hitBonus
+			def.critChance = st.crit
+			def.stunChance = st.stun
+		end
+	end
+end
+for id, def in pairs(M) do
+	if type(def) == "table" and def.level then
+		def.stars = STARS[id] or (def.isBoss and 4 or 2)
+	end
+end
+
 return M

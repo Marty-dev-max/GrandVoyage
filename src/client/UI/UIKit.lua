@@ -402,13 +402,14 @@ function UI.Button(parent, text, color, size, onClick, props)
 	return btn, holder
 end
 
-function UI.Bar(parent, color, size, label)
+-- start (optional): the ratio it starts at (progress bars pass 0 so they fill up instead of draining in red)
+function UI.Bar(parent, color, size, label, start)
 	local back = New("Frame", { BackgroundColor3 = T.PanelDeep, Size = size or UDim2.new(1, 0, 0, 16), Parent = parent })
 	UI.Corner(back, 8)
 	UI.Stroke(back, T.Edge, 2)
-	local ghost = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.35, Size = UDim2.new(1, 0, 1, 0), Parent = back })
+	local ghost = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.35, Size = UDim2.new(start or 1, 0, 1, 0), Parent = back })
 	UI.Corner(ghost, 8)
-	local fill = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), Size = UDim2.new(1, 0, 1, 0), Parent = back })
+	local fill = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), Size = UDim2.new(start or 1, 0, 1, 0), Parent = back })
 	UI.Corner(fill, 8)
 	local g = UI.Gradient(fill, color:Lerp(Color3.new(1, 1, 1), 0.35), color:Lerp(Color3.new(0, 0, 0), 0.15), 90)
 	local hi = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.75, Size = UDim2.new(1, -4, 0.35, 0), Position = UDim2.fromOffset(2, 1), Parent = fill })
@@ -426,7 +427,7 @@ function UI.Bar(parent, color, size, label)
 	})
 	UI.Stroke(txt, T.Edge, 1.6, Enum.ApplyStrokeMode.Contextual)
 	local pop = New("UIScale", { Parent = back })
-	local bar = { back = back, fill = fill, text = txt, ratio = 1, token = 0 }
+	local bar = { back = back, fill = fill, text = txt, ratio = start or 1, token = 0 }
 	function bar:Set(ratio, text)
 		ratio = math.clamp(ratio, 0, 1)
 		if math.abs(ratio - self.ratio) > 0.0005 then

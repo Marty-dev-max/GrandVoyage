@@ -91,11 +91,10 @@ local function standardNPCs(ctx)
 	npc(ctx, "FastTravel", "Courier Gull Post", Color3.fromRGB(240, 240, 240), "marine", -r * 0.65, r * 0.35, { SubTitle = "Fast Travel" })
 	npc(ctx, "Shipwright", "Shipwright", Color3.fromRGB(90, 140, 200), "bandana", island.radius - 30, -45, { SubTitle = "Shipyard & Launch" })
 	npc(ctx, "Guide", Quests.Guide[island.id] or "Guide", Color3.fromRGB(255, 200, 90), "captain", r * 0.32, r * 0.05, { SubTitle = "📜 Quests" })
-	npc(ctx, "BossBoard", "Bounty Board", Color3.fromRGB(255, 220, 120), nil, r * 0.15, r * 0.7, { SubTitle = "Bosses & Bounties" })
+	-- v0.25.21 (owner): Bounty Board and Guild Registrar only on the first and the last island
 	if island.id == "Daybreak" or island.id == "Epilogue" then
+		npc(ctx, "BossBoard", "Bounty Board", Color3.fromRGB(255, 220, 120), nil, r * 0.15, r * 0.7, { SubTitle = "Bosses & Bounties" })
 		npc(ctx, "JobMaster", "Job Master", Color3.fromRGB(120, 200, 140), "marine", r * 0.6, r * 0.45, { SubTitle = "Choose a Class" })
-	end
-	if island.id == "ConchBay" or island.id == "Marmalade" or island.id == "Epilogue" then
 		npc(ctx, "Guild", "Guild Registrar", Color3.fromRGB(90, 90, 200), "marine", -r * 0.15, r * 0.8, { SubTitle = "Marine / Pirate Guilds" })
 	end
 	if island.dungeon then
@@ -506,6 +505,22 @@ local function buildIsland(island)
 	-- build there and move the finished island, including position attributes (dock LaunchCf / LandCf ...).
 	local dz = island.z or 0
 	island.z = nil
+	-- build unturned: swap the turned config offsets for the local ones while the island is laid out
+	local lo = island.localOffsets
+	local turned
+	if lo then
+		turned = { spawns = {}, boss = island.boss and island.boss.offset, arena = island.arena and island.arena.offset }
+		for k, sp in ipairs(island.spawns) do
+			turned.spawns[k] = sp.offset
+			sp.offset = lo.spawns[k]
+		end
+		if island.boss then
+			island.boss.offset = lo.boss
+		end
+		if island.arena then
+			island.arena.offset = lo.arena
+		end
+	end
 	local f
 	local layout = island.layout and LAYOUTS[island.layout]
 	if layout then
@@ -524,12 +539,27 @@ local function buildIsland(island)
 		f = buildIslandGeneric(island)
 	end
 	island.z = dz
-	if dz ~= 0 then
-		local off = Vector3.new(0, 0, dz)
+	if lo then
+		for k, sp in ipairs(island.spawns) do
+			sp.offset = turned.spawns[k]
+		end
+		if island.boss then
+			island.boss.offset = turned.boss
+		end
+		if island.arena then
+			island.arena.offset = turned.arena
+		end
+	end
+	local yaw = island.yaw or 0
+	if dz ~= 0 or yaw ~= 0 then
+		-- turn around the island center, then move to its z (positions in attributes too: docks, plots, props)
+		local T = CFrame.new(island.x, 0, dz) * CFrame.Angles(0, yaw, 0) * CFrame.new(-island.x, 0, 0)
 		local function moveAttrs(o)
 			for k, v in pairs(o:GetAttributes()) do
-				if typeof(v) == "CFrame" or typeof(v) == "Vector3" then
-					o:SetAttribute(k, v + off)
+				if typeof(v) == "CFrame" then
+					o:SetAttribute(k, T * v)
+				elseif typeof(v) == "Vector3" then
+					o:SetAttribute(k, T * v)
 				end
 			end
 		end
@@ -539,7 +569,7 @@ local function buildIsland(island)
 		for _, o in ipairs(f:GetDescendants()) do
 			if o:IsA("BasePart") then
 				table.insert(parts, o)
-				table.insert(targets, o.CFrame + off)
+				table.insert(targets, T * o.CFrame)
 			end
 			moveAttrs(o)
 		end
@@ -880,7 +910,7 @@ end
 -- away and rebuilt from code at server start (so the owner's published place updates through Rojo too).
 -- Hand-built content made in Studio goes in workspace.Handmade (never touched by rebuilds). Kit props placed there
 -- (tagged EnvProp/EnvPart) are dressed with the stylized meshes like the generated ones.
-WB.WORLD_VERSION = 16 -- v16 (v0.25.20): Daybreak spawn by Rowan, Conch Bay hand-laid (World/ConchBay); v15 (v0.25.11): islands spread north/south, wider sea, islets; v14 (v0.25.6): Daybreak spawn by the campfire; v13: voxel NPCs; v12: Voxelize pass
+WB.WORLD_VERSION = 17 -- v17 (v0.25.21): islands turned to face the previous one, Conch Bay stairs; v16 (v0.25.20): Daybreak spawn by Rowan, Conch Bay hand-laid (World/ConchBay); v15 (v0.25.11): islands spread north/south, wider sea, islets; v14 (v0.25.6): Daybreak spawn by the campfire; v13: voxel NPCs; v12: Voxelize pass
 
 -- Old copies of the map can hide anywhere in Workspace: a renamed or regrouped World, an island dragged into
 -- Handmade, single NPCs / chests / docks pasted from an old bake. They draw on top of the new islands and register

@@ -134,6 +134,74 @@ local function townGrid(ctx, r)
 	end
 end
 
+-- NPCs around the plaza (the generic spots fell inside the new plateau), the quest guide by the long pier, the
+-- shipwright by the east dock. No Bounty Board / Guild Registrar here (first and last island only).
+local function npcs(ctx, api, r)
+	local Quests = require(game:GetService("ReplicatedStorage").Shared.Config.Quests)
+	local island = ctx.island
+	local center = Vector2.zero
+	local function put(role, title, color, hat, x, z, extra, face)
+		api.npc(ctx, role, title, color, hat, x, z, extra, face or center)
+	end
+	put("Shop", "General Store", Color3.fromRGB(240, 170, 80), nil, -26, 10, { SubTitle = "Shop" })
+	put("Blacksmith", "Blacksmith", Color3.fromRGB(110, 90, 80), "bandana", 26, 10, { SubTitle = "Refine & Cards" })
+	put("Tavern", "Tavern Keeper", Color3.fromRGB(200, 90, 90), nil, -26, -12, { SubTitle = "Hire Crew" })
+	put("FastTravel", "Courier Gull Post", Color3.fromRGB(240, 240, 240), "marine", 26, -12, { SubTitle = "Fast Travel" })
+	put("Guide", Quests.Guide[island.id] or "Guide", Color3.fromRGB(255, 200, 90), "captain", 22, r - 52, { SubTitle = "📜 Quests" }, Vector2.new(0, r - 40))
+	put("Shipwright", "Shipwright", Color3.fromRGB(90, 140, 200), "bandana", r - 30, -45, { SubTitle = "Shipyard & Launch" })
+end
+
+-- more life around the island (owner): trees on the lower garrison terrace, flower beds and benches in town,
+-- palms and rocks on the beach, crates and barrels by the pier
+local function scenery(ctx, r)
+	local rng = Kit.rng
+	local low = ctx.height(FORT.X, FORT.Y + 83)
+	for i = 0, 13 do
+		local a = i / 14 * math.pi * 2 + 0.2
+		if math.sin(a) < 0.75 then -- keep the south face (stairs) open
+			local x, z = FORT.X + math.cos(a) * 84, FORT.Y + math.sin(a) * 84
+			if ctx.free(x, z, 4) then
+				Kit.RoundTree(ctx.c + Vector3.new(x, low, z), rng:NextNumber(0.8, 1.15))
+			end
+		end
+	end
+	for _, sx in ipairs({ -1, 1 }) do
+		Kit.Flowers(ctx.at(sx * 16, -28), 4, 10)
+		Kit.Bench(CFrame.new(ctx.at(sx * 14, 24)) * CFrame.Angles(0, sx * math.pi / 2, 0))
+		Kit.Lamp(ctx.at(sx * 8, -34))
+	end
+	for i = 1, 16 do
+		local a = rng:NextNumber(0, math.pi * 2)
+		local d = r - rng:NextNumber(14, 26)
+		local x, z = math.cos(a) * d, math.sin(a) * d
+		if ctx.free(x, z, 4) then
+			if i % 3 == 0 then
+				Kit.Rock(ctx.at(x, z), rng:NextNumber(4, 8))
+			else
+				Kit.Palm(ctx.at(x, z) - Vector3.new(0, 3.2, 0))
+			end
+		end
+	end
+	Kit.Barrel(ctx.at(-18, r - 34))
+	Kit.CrateStack(ctx.at(18, r - 32))
+end
+
+-- one straight stairway up the south face (v0.25.21, owner: the two auto flights did not line up and poked out):
+-- flight 1 from the town to the lower rim, a paved landing, flight 2 flush to the top rim
+local function grandStairs(ctx, ground)
+	local low = ctx.height(FORT.X, FORT.Y + 83) -- on the lower tier, outside the cap
+	local top = ctx.height(FORT.X, FORT.Y)
+	local dir = Vector3.new(0, 0, -1)
+	local run1 = math.ceil((low - ground) / 1.25) * 2.3
+	local run2 = math.ceil((top - low) / 1.25) * 2.3
+	local base = ctx.c + Vector3.new(FORT.X, 0, FORT.Y)
+	Kit.Stairs(base + Vector3.new(0, ground, 100 + run1), dir, low - ground, 12)
+	Kit.Stairs(base + Vector3.new(0, low, 66 + run2), dir, top - low, 12)
+	local z0, z1 = 66 + run2, 100
+	P(Vector3.new(12, 0.3, z1 - z0), Color3.fromRGB(196, 182, 160), CFrame.new(base + Vector3.new(0, low + 0.15, (z0 + z1) / 2)), { material = M.Cobblestone })
+	ctx.reserve(FORT.X, FORT.Y + 100 + run1 / 2, run1 / 2 + 6)
+end
+
 function CB.Build(island, api)
 	local f = api.folderOf(island.id, Kit.parent)
 	local prev = Kit.parent
@@ -144,11 +212,12 @@ function CB.Build(island, api)
 	local ctx = api.makeCtx(island, c, r, 7.5)
 	ctx.foam = api.foam
 	-- 1. the garrison plateau: two rock tiers, stairs down to the town on the south face
-	L.Tiers(ctx, { { x = FORT.X, z = FORT.Y, r = 100, h = 10, stairs = { math.pi / 2 }, force = true, cap = { r = 66, h = 12, stairs = { math.pi / 2 } } } })
+	L.Tiers(ctx, { { x = FORT.X, z = FORT.Y, r = 100, h = 10, force = true, cap = { r = 66, h = 12 } } })
+	grandStairs(ctx, 7.5)
 	garrison(ctx)
 	-- 2. town: plaza + NPCs first (they reserve their spots), market street, then two rings of houses
 	L.Plaza(ctx, true)
-	api.standardNPCs(ctx)
+	npcs(ctx, api, r)
 	market(ctx, r)
 	townGrid(ctx, r)
 	L.Paths(ctx)
@@ -158,6 +227,7 @@ function CB.Build(island, api)
 	api.dock(island, -1)
 	api.shipyard(island)
 	-- 4. greenery on the slopes and the coast, chests last (they look for mesa tops)
+	scenery(ctx, r)
 	L.Coast(ctx, 22)
 	L.Greenery(ctx, 22)
 	api.placeChests(ctx)

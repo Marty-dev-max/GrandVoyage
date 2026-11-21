@@ -482,6 +482,22 @@ local function buildMenu()
 		end
 	end
 	menuTile(menu, { "anchor", "MenuHub", Color3.fromRGB(70, 60, 110), "L", "Menu" })
+	-- v0.25.21 (owner): a tab on the left of the tiles folds the whole menu column away (and back)
+	local tab, tabHolder = UI.Button(UI.Root, "▶", T.PanelDeep, UDim2.fromOffset(24, 56), function() end)
+	tab.TextScaled = false
+	tab.TextSize = 14
+	tab.Activated:Connect(function()
+		menu.Visible = not menu.Visible
+		tab.Text = menu.Visible and "▶" or "◀"
+	end)
+	RunService.RenderStepped:Connect(function()
+		local rootPos = UI.Root.AbsolutePosition
+		local p = menu.AbsolutePosition - rootPos
+		local w = menu.AbsoluteSize.X
+		-- when folded, the tab sits at the screen edge where the column was
+		tabHolder.Position = UDim2.fromOffset(menu.Visible and (p.X - 30) or (p.X + w - 24), p.Y)
+		tabHolder.Visible = not UI.AnyOpen()
+	end)
 	local keymap = {}
 	for _, it in ipairs(MENU) do
 		if it[4] then

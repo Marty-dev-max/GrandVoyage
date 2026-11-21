@@ -41,12 +41,14 @@ local Islands = {
 		palette = { sand = Color3.fromRGB(250, 232, 184), grass = Color3.fromRGB(148, 206, 108), dirt = Color3.fromRGB(150, 112, 80), accent = Color3.fromRGB(62, 124, 224), wall = Color3.fromRGB(236, 230, 214) },
 		theme = "MarineOutpost",
 		townRadius = 95,
+		-- v0.25.21 (World/ConchBay layout): recruits and wolves in the meadows either side of the town, riflemen on
+		-- the garrison's lower terrace, the Axe-Arm Captain in the garrison yard on top (offsets before the island turns)
 		spawns = {
-			{ offset = Vector2.new(-125, 120), radius = 42, monster = "MarineRecruit", count = 6 },
-			{ offset = Vector2.new(125, 120), radius = 38, monster = "GuardWolf", count = 5 },
-			{ offset = Vector2.new(-70, -155), radius = 42, monster = "MarineRifleman", count = 5 },
+			{ offset = Vector2.new(-172, 40), radius = 30, monster = "MarineRecruit", count = 6 },
+			{ offset = Vector2.new(172, 40), radius = 30, monster = "GuardWolf", count = 5 },
+			{ offset = Vector2.new(-84, -165), radius = 11, monster = "MarineRifleman", count = 5 },
 		},
-		boss = { id = "AxeCaptain", offset = Vector2.new(125, -115), respawn = 25 * 60 },
+		boss = { id = "AxeCaptain", offset = Vector2.new(0, -140), respawn = 25 * 60 },
 	},
 	{
 		id = "Marmalade",
@@ -162,6 +164,30 @@ local byId = {}
 for i, island in ipairs(Islands) do
 	island.index = i
 	byId[island.id] = island
+end
+
+-- v0.25.21 (owner): every island after the first turns so its front (local +Z, where Conch Bay's long pier is)
+-- faces the island before it: arriving ships see a harbor welcoming them. WorldBuilder builds an island unturned
+-- with `island.localOffsets`, then rotates the finished island by `island.yaw`; every offset below is stored
+-- already turned, so runtime code (monster areas, bosses, arenas, compass) keeps using island.x/z + offset.
+local function turn(v, yaw)
+	local c, s = math.cos(yaw), math.sin(yaw)
+	return Vector2.new(c * v.X + s * v.Y, -s * v.X + c * v.Y)
+end
+for i = 2, #Islands do
+	local isl, prev = Islands[i], Islands[i - 1]
+	isl.yaw = math.atan2(prev.x - isl.x, (prev.z or 0) - (isl.z or 0))
+	isl.localOffsets = { spawns = {}, boss = isl.boss and isl.boss.offset, arena = isl.arena and isl.arena.offset }
+	for k, sp in ipairs(isl.spawns) do
+		isl.localOffsets.spawns[k] = sp.offset
+		sp.offset = turn(sp.offset, isl.yaw)
+	end
+	if isl.boss and isl.boss.offset then
+		isl.boss.offset = turn(isl.boss.offset, isl.yaw)
+	end
+	if isl.arena and isl.arena.offset then
+		isl.arena.offset = turn(isl.arena.offset, isl.yaw)
+	end
 end
 
 return {

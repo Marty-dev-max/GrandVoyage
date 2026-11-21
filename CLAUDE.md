@@ -394,6 +394,13 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     (garrison plateau via L.Tiers, conch towers, market street, town grid, long pier). Renders: export_island +
     recenter x/z to 0 before render_island.py (its shots assume the origin). Daybreak SPAWN by Rowan (WORLD_VERSION 16).
     Client CharacterAdded resets CameraType/CameraSubject (camera stuck in the air after Reset).
+  * v0.25.21 (owner): islands after the first get `island.yaw` (Islands.lua: local +Z faces the previous island) and
+    their offsets are stored turned; `island.localOffsets` keeps the unturned ones, which WorldBuilder swaps in while
+    building, then turns + moves the island with one CFrame T (parts + CFrame/Vector3 attributes). Render scripts must
+    un-turn by -yaw. Bounty Board / Guild Registrar / Job Master only on Daybreak + Epilogue. ConchBay: own NPC spots,
+    grandStairs (one straight flight + landing), scenery(), boss in the garrison yard. NPC plates: icon only beyond
+    Interact NEAR (22 studs from your character). HUD: menu fold tab (▶/◀), quest tracker fold (◀ -> scroll button,
+    Quest.collapsed hides the hunt card too), tracker texts truncate.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

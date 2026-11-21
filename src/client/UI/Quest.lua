@@ -76,6 +76,7 @@ local function goalText(step, progress)
 end
 
 -- ===== tracker =====
+local refreshTracker -- defined below (the fold button calls it)
 local function buildTracker()
 	tracker = New("TextButton", { Name = "QuestTracker", Text = "", AutoButtonColor = false, Size = UDim2.fromOffset(330, COLLAPSED_H), Position = UDim2.fromOffset(16, 190), BackgroundColor3 = Color3.new(1, 1, 1), Visible = false, Parent = UI.Root })
 	UI.Corner(tracker, 14)
@@ -85,9 +86,9 @@ local function buildTracker()
 	UI.Corner(accent, 3)
 	local chip = UI.IconChip(tracker, "📜", T.Gold, 30)
 	chip.Position = UDim2.fromOffset(20, 8)
-	tChapter = UI.Text(tracker, "MAIN QUEST", 12, T.Gold, "Display", { Position = UDim2.fromOffset(58, 6), Size = UDim2.new(1, -66, 0, 14), TextWrapped = false })
-	tTitle = UI.Text(tracker, "", 18, T.Text, "Display", { Position = UDim2.fromOffset(58, 20), Size = UDim2.new(1, -66, 0, 22), TextWrapped = false })
-	tGoal = UI.Text(tracker, "", 15, T.Text, "Bold", { Position = UDim2.fromOffset(22, 46), Size = UDim2.new(1, -90, 0, 20), TextWrapped = false })
+	tChapter = UI.Text(tracker, "MAIN QUEST", 12, T.Gold, "Display", { Position = UDim2.fromOffset(58, 6), Size = UDim2.new(1, -90, 0, 14), TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd })
+	tTitle = UI.Text(tracker, "", 18, T.Text, "Display", { Position = UDim2.fromOffset(58, 20), Size = UDim2.new(1, -150, 0, 22), TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd })
+	tGoal = UI.Text(tracker, "", 15, T.Text, "Bold", { Position = UDim2.fromOffset(22, 46), Size = UDim2.new(1, -90, 0, 20), TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd })
 	tCount = UI.Text(tracker, "", 16, T.Gold, "Display", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 46), Size = UDim2.fromOffset(70, 20), TextXAlignment = Enum.TextXAlignment.Right })
 	local barBack = New("Frame", { BackgroundColor3 = T.PanelDeep, Position = UDim2.fromOffset(22, 70), Size = UDim2.new(1, -34, 0, 8), Parent = tracker })
 	UI.Corner(barBack, 4)
@@ -124,12 +125,33 @@ local function buildTracker()
 	replay.Position = UDim2.new(0, 8, 1, 4)
 	Quest.replayBtn = replay
 	HUD.questFrame = tracker
+	-- v0.25.21 (owner): fold the tracker (and the hunt card) away into a small quest-scroll button, like the reference
+	local fold, foldHolder = UI.Button(tracker, "◀", T.PanelDeep, UDim2.fromOffset(26, 34), function()
+		Quest.collapsed = true
+		tracker.Visible = false
+	end)
+	foldHolder.AnchorPoint = Vector2.new(0, 0)
+	foldHolder.Position = UDim2.new(1, 4, 0, 0)
+	fold.TextScaled = false
+	fold.TextSize = 14
+	local open = New("ImageButton", { Name = "QuestOpen", BackgroundTransparency = 1, Image = UI.IconId("scroll") or "", Size = UDim2.fromOffset(52, 52), Visible = false, Parent = UI.Root })
+	UI.Tactile(open)
+	open.Activated:Connect(function()
+		Quest.collapsed = false
+		refreshTracker()
+	end)
+	RunService.Heartbeat:Connect(function()
+		open.Visible = Quest.collapsed == true and data ~= nil
+		if open.Visible then
+			open.Position = tracker.Position
+		end
+	end)
 end
 
-local function refreshTracker()
+function refreshTracker()
 	local step = data and Quests.ById[data.id or ""]
 	if not step then
-		tracker.Visible = data ~= nil and data.done == true
+		tracker.Visible = data ~= nil and data.done == true and not Quest.collapsed
 		if tracker.Visible then
 			tChapter.Text = "MAIN QUEST"
 			tTitle.Text = "Azure East complete!"
@@ -142,7 +164,7 @@ local function refreshTracker()
 		State.questTarget = nil
 		return
 	end
-	tracker.Visible = true
+	tracker.Visible = not Quest.collapsed
 	local isl = Islands.ById[step.island]
 	tChapter.Text = (data.tutorial and "TUTORIAL" or "MAIN QUEST") .. "  •  " .. string.upper(isl and isl.name or step.island) .. "  •  " .. data.step .. "/" .. data.total
 	tTitle.Text = step.title
@@ -517,7 +539,7 @@ function Quest.Start()
 	local function refreshHunt()
 		local h = State.profile and State.profile.hunt
 		local def = type(h) == "table" and MonstersCfg[h.id]
-		hunt.Visible = def ~= nil
+		hunt.Visible = def ~= nil and not Quest.collapsed
 		if def then
 			local n = h.progress or 0
 			hName.Text = "Defeat " .. def.name
@@ -526,6 +548,8 @@ function Quest.Start()
 		end
 	end
 	RunService.Heartbeat:Connect(function()
+		local h = State.profile and State.profile.hunt
+		hunt.Visible = not Quest.collapsed and type(h) == "table" and MonstersCfg[h.id] ~= nil
 		if hunt.Visible then
 			-- sit right under the tracker (or in its place when the story is done)
 			local tp = tracker.Position

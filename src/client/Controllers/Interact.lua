@@ -107,9 +107,10 @@ end
 -- ===== NPC nameplates =====
 local styled = setmetatable({}, { __mode = "k" })
 -- pixel icon names (v0.25.8: no emoji)
+local NEAR = 22 -- studs: closer than this an NPC plate shows its name and role
 local ROLE_ICON = { Blacksmith = "hammer", Shop = "bag", Tavern = "juice", FastTravel = "map", Shipwright = "anchor", BossBoard = "crown", JobMaster = "book", Guild = "flag", Dungeon = "skull", Stall = "chest", Quest = "scroll" }
 -- v0.25.8 (owner): nameplates are big up close and shrink with distance, gone when far (the plaza was a wall of names)
-local plates = setmetatable({}, { __mode = "k" }) -- billboard -> UIScale
+local plates = setmetatable({}, { __mode = "k" }) -- billboard -> { sc = UIScale, text, ribbon }
 local function styleNameplate(model)
 	local bb = model:FindFirstChild("Nameplate", true)
 	if not bb or not bb:IsA("BillboardGui") or styled[bb] then
@@ -129,7 +130,8 @@ local function styleNameplate(model)
 	bb.LightInfluence = 0
 	local holder = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Parent = bb })
 	bb.MaxDistance = 160
-	plates[bb] = New("UIScale", { Parent = holder })
+	local entry = { sc = New("UIScale", { Parent = holder }) }
+	plates[bb] = entry
 	local row = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 48), Parent = holder })
 	New("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 6), Parent = row })
 	local icon = ROLE_ICON[model:GetAttribute("Role") or ""] or "scroll"
@@ -140,12 +142,14 @@ local function styleNameplate(model)
 	UI.Icon(chip, icon, 40, { Size = UDim2.fromScale(1, 1) })
 	local t = New("TextLabel", { BackgroundTransparency = 1, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 44), Text = title, FontFace = FONT, TextSize = 22, TextColor3 = color, Parent = row })
 	New("UIStroke", { Color = T.Edge, Thickness = 3, Parent = t })
+	entry.text = t
 	if sub and sub ~= "" then
 		local ribbon = New("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 52), Size = UDim2.fromOffset(0, 28), AutomaticSize = Enum.AutomaticSize.X, BackgroundColor3 = T.PanelDeep, BackgroundTransparency = 0.15, Parent = holder })
 		UI.Corner(ribbon, 8)
 		New("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12), Parent = ribbon })
 		local s = New("TextLabel", { BackgroundTransparency = 1, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 28), Text = "◆ " .. sub, FontFace = FONT, TextSize = 12, TextColor3 = Color3.fromRGB(255, 240, 200), Parent = ribbon })
 		local _ = s
+		entry.ribbon = ribbon
 	end
 end
 
@@ -176,11 +180,22 @@ function Interact.Start()
 		while true do
 			local cam = workspace.CurrentCamera
 			if cam then
-				for bb, sc in pairs(plates) do
+				-- v0.25.21 (owner: too much text on screen): from afar an NPC is just its icon; walk up (within
+				-- NEAR studs of your character) and the name + role appear
+				local char = game:GetService("Players").LocalPlayer.Character
+				local root = char and char:FindFirstChild("HumanoidRootPart")
+				for bb, e in pairs(plates) do
 					local a = bb.Adornee or bb.Parent
 					if a and a:IsA("BasePart") then
 						local dist = (a.Position - cam.CFrame.Position).Magnitude
-						sc.Scale = math.clamp(28 / math.max(dist, 1), 0.3, 1.1)
+						e.sc.Scale = math.clamp(28 / math.max(dist, 1), 0.3, 1.1)
+						local near = root ~= nil and (a.Position - root.Position).Magnitude < NEAR
+						if e.text then
+							e.text.Visible = near
+						end
+						if e.ribbon then
+							e.ribbon.Visible = near
+						end
 					end
 				end
 			end

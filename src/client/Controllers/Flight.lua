@@ -44,6 +44,12 @@ function Flight.IsFlying()
 	return flying
 end
 
+-- a hit in the air pushes you instead of dropping you: added to the flight velocity and fading out
+local shove, shoveT = Vector3.zero, 0
+function Flight.Shove(v)
+	shove, shoveT = v, os.clock()
+end
+
 local function stop()
 	if not flying then
 		return
@@ -165,7 +171,8 @@ function Flight.Start()
 				boost = 1.9 - k * 0.9
 			end
 		end
-		lv.VectorVelocity = vel * boost
+		local sk = math.max(0, 1 - (os.clock() - shoveT) / 0.45)
+		lv.VectorVelocity = vel * boost + shove * sk
 		-- body: faces the camera with Shift Lock, else the way it flies; leans forward with speed
 		local horiz = Vector3.new(vel.X, 0, vel.Z)
 		local face = shiftLocked() and flatLook or (horiz.Magnitude > 2 and horiz.Unit or Vector3.new(r.CFrame.LookVector.X, 0, r.CFrame.LookVector.Z).Unit)
@@ -178,7 +185,8 @@ function Flight.Start()
 		-- land: close to the ground and not climbing; end over water
 		local params = RaycastParams.new()
 		params.FilterType = Enum.RaycastFilterType.Exclude
-		params.FilterDescendantsInstances = { player.Character }
+		-- only real ground lands you: flying over a monster's (or boss's) body used to count as landing
+		params.FilterDescendantsInstances = { player.Character, workspace:FindFirstChild("Monsters") }
 		local hit = workspace:Raycast(r.Position, Vector3.new(0, -4, 0), params)
 		if (hit and up <= 0 and vel.Y <= 1) or r.Position.Y < GameConfig.SeaLevel + 1.5 then
 			stop()

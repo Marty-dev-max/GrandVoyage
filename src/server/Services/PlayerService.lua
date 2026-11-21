@@ -878,6 +878,9 @@ local function setupHandlers()
 		if tonumber(data.autoPotionPct) then
 			p.settings.autoPotionPct = math.clamp(math.floor(data.autoPotionPct), 0, 90)
 		end
+		if type(data.hideGear) == "boolean" then
+			p.settings.hideGear = data.hideGear -- vanity off: worn gear is not drawn (WeaponService)
+		end
 		if type(data.autoStats) == "boolean" then
 			p.settings.autoStats = data.autoStats
 			if data.autoStats then

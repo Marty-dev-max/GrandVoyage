@@ -185,6 +185,23 @@ function Panels.Inventory(args)
 	end
 	local lastWeaponType
 	-- title: shown above the statue; tap to choose one (Config/Titles)
+	-- vanity on/off (v0.25.17, owner): show or hide the worn headgear / armor / accessory blocks on the character
+	local vanityOn = not (State.profile.settings and State.profile.settings.hideGear)
+	local vanityBtn = UI.Button(charPanel, vanityOn and "👕 GEAR ON" or "👕 GEAR OFF", vanityOn and T.Green or T.Grey, UDim2.fromOffset(150, 34), function() end)
+	vanityBtn.Parent.AnchorPoint = Vector2.new(1, 0)
+	vanityBtn.Parent.Position = UDim2.new(1, -10, 0, 10)
+	vanityBtn.Parent.ZIndex = 6
+	vanityBtn.Activated:Connect(function()
+		vanityOn = not vanityOn
+		State.profile.settings = State.profile.settings or {}
+		State.profile.settings.hideGear = not vanityOn
+		vanityBtn.Text = vanityOn and "👕 GEAR ON" or "👕 GEAR OFF"
+		UI.SetButtonColor(vanityBtn, vanityOn and T.Green or T.Grey)
+		task.spawn(req, "SetAutoSettings", { hideGear = not vanityOn })
+	end)
+	UI.Tooltip(vanityBtn, function()
+		return "Vanity: show or hide your headgear, armor and accessory on your character. Stats stay the same.", T.Green
+	end)
 	local titleBtn = New("TextButton", { Text = "", AutoButtonColor = false, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -26), Size = UDim2.new(1, -24, 0, 44), BackgroundColor3 = Color3.new(1, 1, 1), ZIndex = 5, Parent = charPanel })
 	UI.Corner(titleBtn, 12)
 	New("UIGradient", { Color = ColorSequence.new(T.PanelTop, T.PanelDeep), Rotation = 90, Parent = titleBtn })

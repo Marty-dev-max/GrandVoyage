@@ -445,6 +445,9 @@ local function menuTile(parent, it)
 	local stripes = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.88, Size = UDim2.new(0.5, 0, 1, 0), Position = UDim2.fromScale(0.5, 0), Parent = tile })
 	UI.Corner(stripes, 14)
 	New("UIGradient", { Rotation = 60, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.45, 1), NumberSequenceKeypoint.new(0.46, 0), NumberSequenceKeypoint.new(1, 0) }), Parent = stripes })
+	-- v0.25.17 (owner): the tile background twinkles: floating pixel sparkles + a shine sweeping across
+	UI.Sparkles(tile, Color3.new(1, 1, 1), 7, { float = true, star = 0.55 })
+	UI.Shine(tile, math.random())
 	UI.Icon(tile, it[1], 54, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 0) })
 	UI.Text(tile, string.upper(it[5]), 14, Color3.new(1, 1, 1), "Display", { AnchorPoint = Vector2.new(0, 1), Size = UDim2.new(1, 0, 0, 18), Position = UDim2.new(0, 0, 1, -4), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false })
 	if it[4] then

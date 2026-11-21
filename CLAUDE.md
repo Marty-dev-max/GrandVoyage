@@ -373,6 +373,13 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   * v0.25.16 (owner: sounds felt the same): ElevenLabs StepGrass/Wood/Sand/Stone (Footsteps plays by hit.Material,
     mutes Roblox's root "Running" sound), ImpactThump under every Damage FX + Crit layered on crits, Knockback FX ->
     FinisherBoom.
+  * v0.25.17 (owner): HUD menu tiles get UI.Sparkles + UI.Shine. On a ship, Combat.CastSkill always aims (no target
+    needed) and CombatService's aimed branch calls `ShipService.SkillHit` (hostile ships in the line). NPC crew =
+    static monsters (MS.Spawn opts.def + opts.model, `ShipService.crewDef`: area island level + 5/tier, stats from the
+    closest monster), unwelded before die() anchors them, `MS.Forget` when the ship goes. Boss/special monster hits push
+    "Knock" (client LinearVelocity burst, or Flight.Shove in the air); flight landing ray ignores workspace.Monsters.
+    Fly / FlyIdle clips (CharAnim prefers them over swimming). Combo swings crossfade (fade 0.1/speed). ShiftLock turns
+    the body at Camera-1 (before the camera). Vanity: settings.hideGear (Bag GEAR ON/OFF) skips WeaponService OUTFIT.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

@@ -298,6 +298,33 @@ C.SwimIdle = { rig = "R15", loop = true, priority = "Action", length = 1.6, keys
 	{ t = 0, pose = tread(1) }, { t = 0.8, pose = tread(-1) }, { t = 1.6, pose = tread(1) },
 } }
 
+-- flight (v0.25.17, owner: flying looked stiff or borrowed the swim stroke). Flight.lua tilts the whole body forward
+-- with speed, so these only pose limbs: Fly = glide (arms swept back, chin up, legs fluttering), FlyIdle = hover.
+local function glide(k)
+	return {
+		RightUpperArm = { -25 + 6 * k, 0, 16 }, LeftUpperArm = { -25 - 6 * k, 0, -16 },
+		RightLowerArm = { 12, 0, 0 }, LeftLowerArm = { 12, 0, 0 },
+		UpperTorso = { -10, 0, 0 }, Head = { -30, 0, 0 },
+		RightUpperLeg = { 10 * k, 0, 4 }, LeftUpperLeg = { -10 * k, 0, -4 },
+		RightLowerLeg = { -14 - 8 * k, 0, 0 }, LeftLowerLeg = { -14 + 8 * k, 0, 0 },
+	}
+end
+C.Fly = { rig = "R15", loop = true, priority = "Action", length = 0.9, keys = {
+	{ t = 0, pose = glide(1) }, { t = 0.45, pose = glide(-1) }, { t = 0.9, pose = glide(1) },
+} }
+local function hover(k)
+	return {
+		RightUpperArm = { 10, 0, 42 + 8 * k }, LeftUpperArm = { 10, 0, -(42 + 8 * k) },
+		RightLowerArm = { 25, 0, 0 }, LeftLowerArm = { 25, 0, 0 },
+		RightUpperLeg = { 22 + 4 * k, 0, 4 }, LeftUpperLeg = { 6 - 4 * k, 0, -4 },
+		RightLowerLeg = { -45, 0, 0 }, LeftLowerLeg = { -22, 0, 0 },
+		UpperTorso = { -4, 0, 0 }, Head = { 4, 0, 0 }, LowerTorso = { 0, 0, 0, 0, 0.15 * k, 0 },
+	}
+end
+C.FlyIdle = { rig = "R15", loop = true, priority = "Action", length = 1.8, keys = {
+	{ t = 0, pose = hover(1) }, { t = 0.9, pose = hover(-1) }, { t = 1.8, pose = hover(1) },
+} }
+
 -- ===== monsters (one universal set: every voxel monster has some of these parts) =====
 C.Mon_Idle = { rig = "Mon", loop = true, priority = "Idle", length = 2.4, keys = {
 	{ t = 0, pose = { Body = { 0, 0, 0 }, Head = { 0, 8, 0 }, Tail = { 0, 14, 0 }, WingL = { 0, 0, 12 }, WingR = { 0, 0, -12 }, ArmL = { 4, 0, 0 }, ArmR = { 4, 0, 0 } } },

@@ -160,7 +160,8 @@ local OUTFIT = {
 
 local function wearOutfit(char, p)
 	local ids = {}
-	for _, slot in ipairs({ "headgear", "armor", "accessory" }) do
+	local hide = p.settings and p.settings.hideGear == true
+	for _, slot in ipairs(hide and {} or { "headgear", "armor", "accessory" }) do
 		local uid = p.equipment and p.equipment[slot]
 		local e = uid and Formulas.FindItem(p, uid)
 		if e and OUTFIT[e.id] then

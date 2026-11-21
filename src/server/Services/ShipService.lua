@@ -303,6 +303,19 @@ function Ship.InLine(from, to, width)
 	return out
 end
 
+-- v0.25.17 (owner): skills fired from a deck hit hostile ships along their path (cannons are no longer the only option)
+function Ship.SkillHit(player, from, to, width, damage)
+	local src = shipUnder(player)
+	local hit = false
+	for _, s in ipairs(Ship.InLine(from, to, width)) do
+		if s ~= src and (not src or hostile(src, s)) and (src or s.npc) then
+			Ship.DamageShip(s, damage, src, player)
+			hit = true
+		end
+	end
+	return hit
+end
+
 function Ship.InCircle(center, radius)
 	local out = {}
 	for _, ship in pairs(ships) do
@@ -712,6 +725,39 @@ local function crewLook(faction)
 	end
 	return look
 end
+-- v0.25.17 (owner): NPC crew can be fought. Each figure is a static monster riding the ship (MonsterService),
+-- level = the area's island level (SeaZones segment) + 5 per ship tier; stats copied from the closest normal
+-- monster of that level so balance follows the rest of the game.
+local Monsters = require(Shared.Config.Monsters)
+local function crewDef(shipDef, pos)
+	local isl = Islands.List[SeaZones.Segment(pos.X)] or Islands.List[1]
+	local level = isl.levels[2] + ((shipDef.tier or 1) - 1) * 5
+	local best
+	for _, m in pairs(Monsters) do
+		if type(m) == "table" and m.level and not m.isBoss and not m.static and m.hp and m.atk and m.atk > 0 then
+			if not best or math.abs(m.level - level) < math.abs(best.level - level) then
+				best = m
+			end
+		end
+	end
+	local k = level / math.max(1, best.level)
+	local d = table.clone(best)
+	d.id = "ShipCrew"
+	d.name = (shipDef.faction == "Marine" and "Marine Sailor" or "Pirate Deckhand") .. " Lv." .. level
+	d.level = level
+	d.hp = math.floor(best.hp * k)
+	d.atk = math.floor(best.atk * k)
+	d.exp = math.floor((best.exp or 0) * k)
+	d.jobExp = math.floor((best.jobExp or 0) * k)
+	d.static = true
+	d.aggro = false
+	d.drops = {}
+	d.card = false
+	d.cardChance = 0
+	d.style = { shape = "humanoid", color = shipDef.faction == "Marine" and Color3.fromRGB(240, 240, 250) or Color3.fromRGB(150, 60, 50), scale = 1 }
+	return d
+end
+
 local function addCrew(ship, def)
 	local root = ship.root
 	local spots = {}
@@ -745,7 +791,7 @@ local function addCrew(ship, def)
 			if d:IsA("BasePart") then
 				d.Anchored = false
 				d.CanCollide = false
-				d.CanQuery = false
+				d.CanQuery = true -- clicks and aim rays find the crew (v0.25.17)
 				d.CanTouch = false
 				d.Massless = true
 				local w = Instance.new("WeldConstraint")
@@ -757,6 +803,19 @@ local function addCrew(ship, def)
 		fig.Parent = crewFolder
 	end
 	crewFolder.Parent = ship.model
+	if ship.npc then
+		local cdef = crewDef(def, root.Position)
+		for _, fig in ipairs(crewFolder:GetChildren()) do
+			local mob = R.MonsterService.Spawn("ShipCrew", fig.PrimaryPart.Position, { def = cdef, model = fig, noRespawn = true })
+			if mob then
+				fig.AncestryChanged:Connect(function()
+					if not fig:IsDescendantOf(game) and not mob.dead then
+						R.MonsterService.Forget(mob)
+					end
+				end)
+			end
+		end
+	end
 end
 
 local function spawnNPC(defId, pos, segment)

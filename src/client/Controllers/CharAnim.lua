@@ -140,8 +140,16 @@ function CharAnim.Start()
 			combo.n = math.clamp(combo.n, 1, #list)
 			combo.last = os.clock()
 			-- played at the server's speed so the fist lands exactly when the damage does
-			action, actionAt = play(list[combo.n], { speed = tonumber(d.speed) or 1, fade = 0.05 }), os.clock()
-			CharAnim.Stats.speed = tonumber(d.speed) or 1
+			-- v0.25.17 (owner: faster strings should flow): crossfade out of the previous swing instead of letting it
+			-- run on under the new one, with a fade that shortens as the swings speed up
+			local spd = tonumber(d.speed) or 1
+			local fade = math.clamp(0.1 / spd, 0.05, 0.12)
+			local prev = action
+			action, actionAt = play(list[combo.n], { speed = spd, fade = fade }), os.clock()
+			if prev and prev ~= action and prev.IsPlaying then
+				prev:Stop(fade)
+			end
+			CharAnim.Stats.speed = spd
 			hitstop(0.05)
 		elseif kind == "Skill" and mine then
 			local sk = ClassesCfg.SkillById[d.skill or ""]
@@ -168,9 +176,13 @@ function CharAnim.Start()
 		local hum, char = humanoid()
 		local Swim = require(script.Parent.Swim)
 		local want
-		if hum and hum.Health > 0 and Swim.IsSwimming() then
-			local root = char:FindFirstChild("HumanoidRootPart")
-			local v = root and root.AssemblyLinearVelocity or Vector3.zero
+		local Flight = require(script.Parent.Flight)
+		local root = char and char:FindFirstChild("HumanoidRootPart")
+		local v = root and root.AssemblyLinearVelocity or Vector3.zero
+		-- flight wins over swimming (skimming the sea used to leave the swim stroke playing in the air)
+		if hum and hum.Health > 0 and Flight.IsFlying() then
+			want = v.Magnitude > 6 and "Fly" or "FlyIdle"
+		elseif hum and hum.Health > 0 and Swim.IsSwimming() then
 			want = Vector3.new(v.X, 0, v.Z).Magnitude > 2 and "Swim" or "SwimIdle"
 		end
 		if want ~= swimClip then

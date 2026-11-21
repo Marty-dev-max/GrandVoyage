@@ -69,7 +69,9 @@ function SL.Start()
 		task.wait()
 		apply(on)
 	end)
-	RunService:BindToRenderStep("GVShiftLock", Enum.RenderPriority.Camera.Value + 1, function()
+	-- turn the body BEFORE the camera updates (v0.25.17, owner: the view jerked). Humanoid.CameraOffset follows the
+	-- body's facing, so turning it after the camera had moved made the shoulder offset snap every frame.
+	RunService:BindToRenderStep("GVShiftLock", Enum.RenderPriority.Camera.Value - 1, function()
 		if not on then
 			return
 		end
@@ -86,7 +88,8 @@ function SL.Start()
 			local look = cam.CFrame.LookVector
 			local flat = Vector3.new(look.X, 0, look.Z)
 			if flat.Magnitude > 0.01 then
-				root.CFrame = CFrame.lookAt(root.Position, root.Position + flat)
+				root.CFrame = CFrame.lookAt(root.Position, root.Position + flat.Unit)
+				root.AssemblyAngularVelocity = Vector3.zero
 			end
 		end
 	end)

@@ -123,6 +123,12 @@ function Combat.MonsterHit(mob, player, mult)
 	end
 	local dmg = Formulas.Damage(mob.def.atk, d.def, mult or 1, mob.def.isBoss and 5 or 1)
 	Combat.DamagePlayer(player, dmg)
+	-- v0.25.17 (owner): boss blows and special attacks shove you away from the attacker (on the ground or in the air)
+	local proot = R.PlayerService.Root(player)
+	if proot and mob.root and (mob.def.isBoss or (mult or 1) >= 1.3) and not R.KnockdownService.IsDowned(player) then
+		local away = (proot.Position - mob.root.Position) * Vector3.new(1, 0, 1)
+		Net.Push(player, "Knock", { dir = away.Magnitude > 0.1 and away.Unit or proot.CFrame.LookVector * -1, power = mob.def.isBoss and 55 or 32 })
+	end
 end
 
 -- ===== target helpers =====
@@ -496,6 +502,16 @@ local function setup()
 			local range = skill.range or 10
 			root.CFrame = CFrame.lookAt(root.Position, root.Position + aimDir)
 			fxData.to = root.Position + aimDir * range
+			-- ships in the path take the hit too (at sea there are rarely monsters to aim at)
+			if R.ShipService.IsOnShip(player) then
+				local shipRange = math.max(range, 40)
+				fxData.to = root.Position + aimDir * shipRange
+				local dmg = math.floor((magic and d.matk or d.atk) * mult * (skill.hits or 1) * 0.8)
+				local from = root.Position
+				task.delay(strike, function()
+					R.ShipService.SkillHit(player, from, from + aimDir * shipRange, 8, dmg)
+				end)
+			end
 			local land = strike + (kind == "Ranged" and 0.2 or 0)
 			local seen = {}
 			for step = 2, range, 3 do

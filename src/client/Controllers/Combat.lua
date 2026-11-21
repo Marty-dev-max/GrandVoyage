@@ -167,7 +167,8 @@ function Combat.CastSkill(skillId, targetModel)
 	local target = targetModel or State.target
 	local payload = { skillId = skillId }
 	local kind = skill.kind
-	if not State.auto and not targetModel and (kind == "Melee" or kind == "Ranged" or kind == "GroundAoE" or kind == "Dash") then
+	-- on a ship skills always fire along the aim (v0.25.17: Auto mode needed a monster target, and at sea there are ships)
+	if (not State.auto or onShip()) and not targetModel and (kind == "Melee" or kind == "Ranged" or kind == "GroundAoE" or kind == "Dash") then
 		-- manual mode: aim with the pointer / crosshair, turn that way, fire even with nothing there
 		local dir, pos, mob = aimInfo()
 		local r = root()
@@ -691,8 +692,35 @@ local function skillDash(d)
 	end)
 end
 
+-- v0.25.17 (owner): a boss blow knocks you away from it; in the air it pushes the flight instead of dropping you
+local function knocked(d)
+	local r, h = root(), hum()
+	if not r or not h or h.Health <= 0 or typeof(d.dir) ~= "Vector3" then
+		return
+	end
+	local power = tonumber(d.power) or 40
+	local Flight = require(script.Parent.Flight)
+	if Flight.IsFlying() then
+		Flight.Shove(d.dir * power + Vector3.new(0, power * 0.25, 0))
+		return
+	end
+	local att = Instance.new("Attachment")
+	att.Parent = r
+	local lv = Instance.new("LinearVelocity")
+	lv.Attachment0 = att
+	lv.MaxForce = math.huge
+	lv.RelativeTo = Enum.ActuatorRelativeTo.World
+	lv.VectorVelocity = d.dir * power + Vector3.new(0, power * 0.35, 0)
+	lv.Parent = r
+	task.delay(0.18, function()
+		lv:Destroy()
+		att:Destroy()
+	end)
+end
+
 function Combat.Start()
 	Net.OnPush("SkillDash", skillDash)
+	Net.OnPush("Knock", knocked)
 	-- Left click: attack (manual) / pick a target (Auto). Holding the button keeps swinging in manual mode.
 	local holding, holdPos = false, nil
 	UserInputService.InputBegan:Connect(function(input, processed)

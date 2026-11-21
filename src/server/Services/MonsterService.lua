@@ -67,16 +67,17 @@ local function updateBar(mob)
 	mob.model:SetAttribute("HP", mob.hp)
 end
 
--- opts: { zone = {center=Vector3, radius}, onDeath = fn(mob, killer), noRespawn = bool, parent = Instance, hpMult = n }
+-- opts: { zone = {center=Vector3, radius}, onDeath = fn(mob, killer), noRespawn = bool, parent = Instance, hpMult = n,
+--   def = a ready definition (ship crew scale theirs), model = a ready model already placed (ship crew figures) }
 function MS.Spawn(monsterId, position, opts)
-	local def = Monsters[monsterId]
+	opts = opts or {}
+	local def = opts.def or Monsters[monsterId]
 	if not def then
 		warn("unknown monster", monsterId)
 		return nil
 	end
-	opts = opts or {}
 	nextUid += 1
-	local model = ModelFactory.Monster(def)
+	local model = opts.model or ModelFactory.Monster(def)
 	local root = model:FindFirstChild("HumanoidRootPart") or model.PrimaryPart
 	local hum = model:FindFirstChildOfClass("Humanoid")
 	local mob = {
@@ -101,7 +102,9 @@ function MS.Spawn(monsterId, position, opts)
 	model:SetAttribute("Level", def.level)
 	model:SetAttribute("MaxHP", mob.maxHp)
 	model:SetAttribute("Boss", def.isBoss == true)
-	model:PivotTo(CFrame.new(position + Vector3.new(0, 4 + (def.style.scale or 1) * 2, 0)) * CFrame.Angles(0, math.random() * 6.28, 0))
+	if not opts.model then
+		model:PivotTo(CFrame.new(position + Vector3.new(0, 4 + (def.style.scale or 1) * 2, 0)) * CFrame.Angles(0, math.random() * 6.28, 0))
+	end
 	if hum then
 		hum.WalkSpeed = def.moveSpeed
 		hum.MaxHealth = 1e9 -- real HP lives in mob.hp (Humanoid is only used for walking)
@@ -110,8 +113,10 @@ function MS.Spawn(monsterId, position, opts)
 		hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
 		hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
 	end
-	model.Parent = opts.parent or folder
-	if root and root:IsDescendantOf(workspace) then
+	if not opts.model then
+		model.Parent = opts.parent or folder
+	end
+	if root and root:IsDescendantOf(workspace) and not opts.model then
 		pcall(function()
 			root:SetNetworkOwner(nil)
 		end)
@@ -240,6 +245,14 @@ local function die(mob, killer)
 	mobs[mob.uid] = nil
 	byModel[mob.model] = nil
 	local model = mob.model
+	if mob.opts.model then
+		-- ship crew are welded to their ship: cut them loose first, anchoring them would freeze the whole ship
+		for _, w in ipairs(model:GetDescendants()) do
+			if w:IsA("WeldConstraint") then
+				w:Destroy()
+			end
+		end
+	end
 	for _, p in ipairs(model:GetDescendants()) do
 		if p:IsA("BasePart") then
 			p.Anchored = true
@@ -397,6 +410,13 @@ function MS.Knockback(mob, fromPos, dist, power)
 		att:Destroy()
 	end)
 	Net.FX("Knockback", { model = mob.model, dir = dir, dist = dist, dur = dur, big = big == true }, root.Position, 220)
+end
+
+-- drop a monster whose model is already gone (ship crew when their ship sinks): no rewards, no death FX
+function MS.Forget(mob)
+	mob.dead = true
+	mobs[mob.uid] = nil
+	byModel[mob.model] = nil
 end
 
 -- Remove a monster without rewards but keep its spawn point alive (used by pet capture)

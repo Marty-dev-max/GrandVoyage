@@ -332,6 +332,13 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     proxy as xi-api-key, never send the header yourself; min 0.5 s) -> assets/sfx/*.wav -> `upload_sfx.py --only ...
     --force`; replaced entries in Sounds.lua have no prefer/pitch. ElevenLabs MCP in `.mcp.json` (loads next session),
     jsfxr presets via `node tools/sfx/gen_jsfxr.js <preset> <Name>` (npm install in tools/sfx first).
+  * v0.25.8: QuestService pushes the quest on DataService.Loaded (the client's QuestState ran behind the menu gate).
+    Sailing zone change needs 1.5 s (Calm Belt edge flashing). Scene music = Roblox licensed tracks (APMOfficial /
+    DistrokidOfficial, find with toolbox-service marketplace/3 + items/details; ElevenLabs Music needs a paid plan):
+    Sailing.updateAudio picks MusicBoss > MusicBattle (State.lastBoss / lastCombat set in VFX Damage) > MusicSea >
+    MusicNight/MusicIsland. NPC ship segments start past a sea boss. M1 Quick 0.55 / End 2.0. Crosshair PX 2. Stats:
+    colored derived stats, name in title tier color. Strap bands same angle. Loot flies into the character only
+    (HUD.FlyLoot = LootMagnet + sounds). NPC nameplates: UIScale by distance (28/dist), MaxDistance 160, pixel icons.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

@@ -650,8 +650,12 @@ function Panels.Stats()
 		end
 		local cls = Classes[p.class]
 		nameLabel.Text = player.DisplayName
+		-- the name wears the equipped title's tier color; levels in the EXP / JOB ring colors
+		local tdef = TitlesCfg.ById[p.title or ""]
+		nameLabel.TextColor3 = tdef and Rarity.Get(tdef.tier).color or T.Text
 		subLabel.RichText = true
-		subLabel.Text = (cls and (cls.icon .. " " .. UI.Colored(cls.name, cls.color)) or p.class) .. "   •   Base Lv." .. p.baseLevel .. "   Job Lv." .. p.jobLevel
+		subLabel.Text = (cls and (cls.icon .. " " .. UI.Colored(cls.name, cls.color)) or p.class) .. "   •   " .. UI.Colored("Base Lv." .. p.baseLevel, T.Green)
+			.. "   " .. UI.Colored("Job Lv." .. p.jobLevel, cls and (cls.ringColor or cls.color) or T.Purple)
 		if not drawn then
 			drawn = true
 			local wEntry = p.equipment.weapon and Formulas.FindItem(p, p.equipment.weapon)
@@ -743,12 +747,15 @@ function Panels.Stats()
 		local grid = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, Parent = cs })
 		New("UIGridLayout", { CellSize = UDim2.fromOffset(250, 26), CellPadding = UDim2.fromOffset(18, 4), Parent = grid })
 		for _, l in ipairs({
-			{ "HP", d.maxHp }, { "SP", d.maxSp }, { "ATK", d.atk }, { "MATK", d.matk }, { "DEF", d.def }, { "MDEF", d.mdef },
-			{ "HIT", d.hit }, { "FLEE", d.flee }, { "CRIT", string.format("%.1f%%", d.crit) },
-			{ "Attack every", string.format("%.2fs", d.attackInterval) }, { "Cannon dmg", "+" .. math.floor(d.cannonDamage * 100) .. "%" }, { "Ship speed", "+" .. math.floor(d.shipSpeed * 100) .. "%" },
+			-- v0.25.8 (owner: too plain): each derived stat in its own color (same family as the attribute it comes from)
+			{ "HP", d.maxHp, T.Green }, { "SP", d.maxSp, T.Blue }, { "ATK", d.atk, UI.StatColor.STR }, { "MATK", d.matk, UI.StatColor.INT },
+			{ "DEF", d.def, UI.StatColor.VIT }, { "MDEF", d.mdef, Color3.fromRGB(190, 160, 255) },
+			{ "HIT", d.hit, UI.StatColor.DEX }, { "FLEE", d.flee, UI.StatColor.AGI }, { "CRIT", string.format("%.1f%%", d.crit), UI.StatColor.LUK },
+			{ "Attack every", string.format("%.2fs", d.attackInterval), Color3.fromRGB(255, 150, 120) }, { "Cannon dmg", "+" .. math.floor(d.cannonDamage * 100) .. "%", Color3.fromRGB(255, 120, 90) },
+			{ "Ship speed", "+" .. math.floor(d.shipSpeed * 100) .. "%", Color3.fromRGB(110, 210, 255) },
 		}) do
 			local r = New("Frame", { BackgroundTransparency = 1, Parent = grid })
-			UI.Text(r, l[1], 15, T.TextSoft, "Semi", { Size = UDim2.new(0.6, 0, 1, 0) })
+			UI.Text(r, l[1], 15, l[3], "Semi", { Size = UDim2.new(0.6, 0, 1, 0) })
 			UI.Text(r, tostring(l[2]), 16, T.Text, "Number", { Size = UDim2.new(1, -4, 1, 0), TextXAlignment = Enum.TextXAlignment.Right })
 		end
 	end

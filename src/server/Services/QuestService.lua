@@ -232,6 +232,16 @@ function QS.Start()
 		end
 		return true
 	end, 1)
+	-- v0.25.8 (owner: no quest after rejoining): the client asks with QuestState while still on the title menu, where
+	-- Net's gate refuses it, so push the quest as soon as a character slot is loaded (also after MENU -> PLAY)
+	R.DataService.Loaded:Connect(function(player)
+		task.delay(1.5, function()
+			if player.Parent and R.PlayerService.Profile(player) then
+				push(player, false)
+				QS.Check(player)
+			end
+		end)
+	end)
 	Net.Handle("QuestState", function(player)
 		push(player, false)
 		QS.Check(player)

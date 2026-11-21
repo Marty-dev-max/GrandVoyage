@@ -18,6 +18,7 @@ local UI = require(script.Parent.Parent.UI.UIKit)
 local Audio = require(script.Parent.Audio)
 local Settings = require(script.Parent.Settings)
 local Atmos = require(script.Parent.Atmos)
+local State = require(script.Parent.Parent.State)
 
 local Sailing = {}
 local player = Players.LocalPlayer
@@ -298,14 +299,28 @@ end
 -- v0.24.0 (owner): the jazz track belongs to the title menu / character creator only. In the world you hear the
 -- place you are in: birds on an island by day, crickets at night, the sea's water lap (and the harbor at night) at sea.
 local function updateAudio(zone, onIsland)
-	Audio.Loop("music", nil, 2.5)
 	local night = Atmos.IsNight()
+	-- scene music (v0.25.8): boss fight > any fight (VFX marks State.lastCombat / lastBoss) > sea > island
+	local now = os.clock()
+	local track
+	if now - (State.lastBoss or -99) < 12 then
+		track = "MusicBoss"
+	elseif now - (State.lastCombat or -99) < 8 then
+		track = "MusicBattle"
+	elseif not onIsland then
+		track = "MusicSea"
+	else
+		track = night and "MusicNight" or "MusicIsland"
+	end
+	Audio.Loop("music", track, 2.5)
 	if onIsland and zone ~= "CalmBelt" then
 		Audio.Loop("ambience", night and "AmbienceNight" or "AmbienceIsland", 3)
 	else
 		Audio.Loop("ambience", "AmbienceSea", 3)
 	end
 end
+
+local pendingZone, pendingSince = nil, 0
 
 function Sailing.Start()
 	buildHud()
@@ -388,7 +403,12 @@ function Sailing.Start()
 		local cam = workspace.CurrentCamera
 		local focus = cam.Focus.Position
 		local zone, wind = SeaZones.Get(Vector3.new(focus.X, 0, focus.Z))
-		if zone ~= lastZone then
+		-- v0.25.8 (owner: the Calm Belt edge flashed): a new zone must hold for 1.5 s before the look/banner switch,
+		-- the camera wobbling over a boundary used to flip it every frame
+		if zone ~= pendingZone then
+			pendingZone, pendingSince = zone, os.clock()
+		end
+		if zone ~= lastZone and (lastZone == nil or os.clock() - pendingSince >= 1.5) then
 			if lastZone ~= nil and onBoard and (zone == "CalmBelt" or zone == "Edge" or lastZone == "CalmBelt") then
 				local z = zoneInfo[zone]
 				UI.Banner(zone == "CalmBelt" and "The Doldrums!" or (zone == "Edge" and "The wind is fading..." or "Wind is back!"), z and z.text, z and z.color)

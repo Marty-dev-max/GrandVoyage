@@ -906,26 +906,6 @@ local function buildLoot()
 end
 
 -- ===== loot that flies =====
--- where a world point is on our UI canvas (the root ignores the top-bar inset, so viewport = screen)
-local function canvasPoint(pos)
-	local cam = workspace.CurrentCamera
-	if not cam then
-		return nil
-	end
-	local v, onScreen = cam:WorldToViewportPoint(pos)
-	if not onScreen then
-		return nil
-	end
-	local sc = UI.GetScale()
-	return Vector2.new(v.X / sc, v.Y / sc)
-end
-local function centerOf(gui)
-	local ok, p = pcall(function()
-		local sc = UI.GetScale()
-		return (gui.AbsolutePosition + gui.AbsoluteSize / 2) / sc
-	end)
-	return ok and p or nil
-end
 local function bump(gui)
 	if not gui then
 		return
@@ -933,34 +913,6 @@ local function bump(gui)
 	local sc = gui:FindFirstChild("LootPop") or New("UIScale", { Name = "LootPop", Parent = gui })
 	sc.Scale = 1.25
 	UI.Tween(sc, 0.25, { Scale = 1 }, Enum.EasingStyle.Back)
-end
--- an icon bursts out of `from`, hangs a moment, then swoops into `to`
-local function fly(icon, size, from, to, delay, onArrive, image)
-	local holder = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(from.X, from.Y), Size = UDim2.fromOffset(size, size), ZIndex = 70, Parent = UI.Root })
-	if image then
-		New("ImageLabel", { BackgroundTransparency = 1, Image = image, Size = UDim2.fromScale(1, 1), ScaleType = Enum.ScaleType.Fit, ZIndex = 71, Parent = holder })
-	else
-		local img = UI.Icon(holder, icon, size, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5) })
-		if img then
-			img.ZIndex = 71
-		end
-	end
-	local a = math.random() * math.pi * 2
-	local r = 40 + math.random() * 60
-	local burst = from + Vector2.new(math.cos(a) * r, math.sin(a) * r * 0.7 - 30)
-	UI.Tween(holder, 0.25, { Position = UDim2.fromOffset(burst.X, burst.Y) }, Enum.EasingStyle.Quad)
-	task.delay(0.3 + delay, function()
-		if not holder.Parent then
-			return
-		end
-		local t = UI.Tween(holder, 0.5, { Position = UDim2.fromOffset(to.X, to.Y), Size = UDim2.fromOffset(size * 0.6, size * 0.6) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-		t.Completed:Connect(function()
-			holder:Destroy()
-			if onArrive then
-				onArrive()
-			end
-		end)
-	end)
 end
 
 function HUD.FlyLoot(data)
@@ -972,34 +924,19 @@ function HUD.FlyLoot(data)
 			VFXc.LootMagnet(data.pos, n, { Color3.fromRGB(255, 205, 70), Color3.fromRGB(255, 240, 150), Color3.fromRGB(170, 230, 255) })
 		end
 	end)
-	local from = data.pos and canvasPoint(data.pos)
-	if not from then
-		return
-	end
-	if data.beli and data.beli > 0 and money then
-		local to = centerOf(money.Parent) or Vector2.new(0, 0)
-		local n = math.clamp(math.floor(math.log10(data.beli + 1) * 3), 3, 12)
-		for i = 1, n do
-			fly(UI.CurrencyIcon, 30, from, to, i * 0.035, function()
-				if i == 1 or i == n then
-					bump(money)
-				end
-				Audio.Play("Coin", { volume = 0.25, pitch = 0.9 + i * 0.03 })
-			end)
+	-- v0.25.8 (owner): drops fly into the character only (no more flight to the money counter / Bag tile);
+	-- the sounds play as they reach you
+	task.delay(0.55, function()
+		if data.beli and data.beli > 0 then
+			Audio.Play("Coin", { volume = 0.7, pitch = 0.95 + math.random() * 0.1 })
+			if money then
+				bump(money)
+			end
 		end
-	end
-	local bagTile = HUD.badges and HUD.badges.Inventory and HUD.badges.Inventory.Parent
-	local bagAt = bagTile and centerOf(bagTile)
-	for k, it in ipairs(data.items or {}) do
-		local def = ItemDB.Get(it.id)
-		local img = def and UI.ItemIconId(def)
-		if bagAt then
-			fly(def and def.icon or "📦", 50, from, bagAt, 0.25 + k * 0.12, function()
-				bump(bagTile)
-				Audio.Play("Pickup", { volume = 0.5, pitch = 0.95 + math.random() * 0.1 })
-			end, img)
+		if data.items and #data.items > 0 then
+			Audio.Play("Pickup", { volume = 0.6 })
 		end
-	end
+	end)
 end
 
 function HUD.Loot(data)

@@ -103,11 +103,15 @@ add("AmbienceUnderwater", "Ambience", 0.6, "", { looped = true, id = "rbxassetid
 add("WaterPlunge", "SFX", 0.6, SPLASH, { id = "rbxassetid://9120585252" }) -- Water Splash Big Water Splash Dive In 1
 add("WaterSurface", "SFX", 0.4, SPLASH, { id = "rbxassetid://9120618797" }) -- Wave Spraying 3
 add("AmbienceNight", "Ambience", 0.4, "", { looped = true, id = "rbxassetid://9112764573" }) -- Crickets Night 3 (ProSoundEffects)
-add("MusicIsland", "Music", 0.35, "", { looped = true })
+-- v0.25.8 (owner: music for each situation): Roblox's licensed partner tracks (APMOfficial / DistrokidOfficial,
+-- free for every experience). Picked by Sailing.updateAudio: boss > combat > sea > island night > island day.
+add("MusicIsland", "Music", 0.3, "", { looped = true, id = "rbxassetid://106935542174276" }) -- Modern Pirate Vibe
+add("MusicNight", "Music", 0.3, "", { looped = true, id = "rbxassetid://138384771239589" }) -- Cozy Tavern Ambience VII
+add("MusicBattle", "Music", 0.32, "", { looped = true, id = "rbxassetid://98662458200229" }) -- Cinematic Orchestral JRPG Battle
 -- owner's pick (v0.22.5): jazz piano track (assets/music/MusicJazz.mp3). v0.24.0: title menu + character creator only
 add("MusicJazz", "Music", 0.4, "", { looped = true, id = "rbxassetid://78909647577056" })
-add("MusicSea", "Music", 0.35, "", { looped = true })
-add("MusicBoss", "Music", 0.45, "", { looped = true })
+add("MusicSea", "Music", 0.3, "", { looped = true, id = "rbxassetid://1836603880" }) -- Deep Blue Sea Shanty 2 (APM)
+add("MusicBoss", "Music", 0.4, "", { looped = true, id = "rbxassetid://139997523791273" }) -- Boss Battle Burnout
 
 
 

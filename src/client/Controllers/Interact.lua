@@ -106,7 +106,10 @@ end
 
 -- ===== NPC nameplates =====
 local styled = setmetatable({}, { __mode = "k" })
-local ROLE_ICON = { Blacksmith = "🔨", Shop = "🛒", Tavern = "🍺", FastTravel = "🗺️", Shipwright = "⚓", BossBoard = "👑", JobMaster = "🎓", Guild = "🏴", Dungeon = "🏰", Stall = "🏪", Quest = "📜" }
+-- pixel icon names (v0.25.8: no emoji)
+local ROLE_ICON = { Blacksmith = "hammer", Shop = "bag", Tavern = "juice", FastTravel = "map", Shipwright = "anchor", BossBoard = "crown", JobMaster = "book", Guild = "flag", Dungeon = "skull", Stall = "chest", Quest = "scroll" }
+-- v0.25.8 (owner): nameplates are big up close and shrink with distance, gone when far (the plaza was a wall of names)
+local plates = setmetatable({}, { __mode = "k" }) -- billboard -> UIScale
 local function styleNameplate(model)
 	local bb = model:FindFirstChild("Nameplate", true)
 	if not bb or not bb:IsA("BillboardGui") or styled[bb] then
@@ -125,14 +128,16 @@ local function styleNameplate(model)
 	bb.Size = UDim2.fromOffset(320, 92)
 	bb.LightInfluence = 0
 	local holder = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Parent = bb })
+	bb.MaxDistance = 160
+	plates[bb] = New("UIScale", { Parent = holder })
 	local row = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 48), Parent = holder })
 	New("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 6), Parent = row })
-	local icon = ROLE_ICON[model:GetAttribute("Role") or ""] or "💬"
+	local icon = ROLE_ICON[model:GetAttribute("Role") or ""] or "scroll"
 	local chip = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), Size = UDim2.fromOffset(40, 40), Parent = row })
 	UI.Corner(chip, 10)
 	New("UIGradient", { Color = ColorSequence.new(color:Lerp(Color3.new(1, 1, 1), 0.3), color:Lerp(Color3.new(0, 0, 0), 0.3)), Rotation = 90, Parent = chip })
 	UI.Stroke(chip, T.Edge, 3)
-	New("TextLabel", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Text = icon, TextScaled = true, FontFace = FONT, Parent = chip })
+	UI.Icon(chip, icon, 40, { Size = UDim2.fromScale(1, 1) })
 	local t = New("TextLabel", { BackgroundTransparency = 1, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 44), Text = title, FontFace = FONT, TextSize = 22, TextColor3 = color, Parent = row })
 	New("UIStroke", { Color = T.Edge, Thickness = 3, Parent = t })
 	if sub and sub ~= "" then
@@ -166,6 +171,21 @@ function Interact.Start()
 	end
 	CollectionService:GetInstanceAddedSignal("NPC"):Connect(function(m)
 		task.defer(styleNameplate, m)
+	end)
+	task.spawn(function()
+		while true do
+			local cam = workspace.CurrentCamera
+			if cam then
+				for bb, sc in pairs(plates) do
+					local a = bb.Adornee or bb.Parent
+					if a and a:IsA("BasePart") then
+						local dist = (a.Position - cam.CFrame.Position).Magnitude
+						sc.Scale = math.clamp(28 / math.max(dist, 1), 0.3, 1.1)
+					end
+				end
+			end
+			task.wait(0.1)
+		end
 	end)
 	local _ = UserInputService
 end

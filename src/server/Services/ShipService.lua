@@ -811,7 +811,11 @@ local function segmentBounds(seg)
 	local b = Islands.List[seg + 1]
 	local x1 = a.x + a.radius + 160
 	local x2 = b and (b.x - b.radius - 160) or (Islands.RedLine.x - 500)
-	return x1, x2
+	-- v0.25.8 (owner): keep NPC ships clear of a sea boss's waters (Bay Serpent off Daybreak got crowded)
+	if a.boss and a.boss.sea and a.boss.offset then
+		x1 = math.max(x1, a.x + a.boss.offset.X + 380)
+	end
+	return x1, math.max(x1 + 80, x2)
 end
 
 local function npcSpawner()

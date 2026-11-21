@@ -108,7 +108,9 @@ local function strap(char)
 		band.Size = Vector3.new(0.32, 2.5, 0.08)
 		band.Color = Color3.fromRGB(110, 70, 42)
 		band.Material = Enum.Material.Fabric
-		band.CFrame = torso.CFrame * CFrame.new(-0.05, -0.05, z) * A(0, 0, rad(z < 0 and 38 or -38))
+		-- one strap seen from front and back runs the same way (right shoulder -> left hip): same angle on both
+		-- bands (v0.25.8, owner: the front one was mirrored and pointed away from the satchel)
+		band.CFrame = torso.CFrame * CFrame.new(-0.05, -0.05, z) * A(0, 0, rad(-38))
 		band.Parent = folder
 	end
 	weld(folder, torso)

@@ -920,6 +920,14 @@ end
 local strikeAt = {} -- attacker UserId -> os.clock() when their current swing connects
 VFX.lastWeapon = {} -- attacker UserId -> the weapon of their last swing (picks the hit sound)
 handlers.Damage = function(d)
+	-- scene music: I hit something / something hit me -> combat (a boss -> boss music)
+	if d.src == localPlayer.UserId or (d.toPlayer and d.char == localPlayer.Character) then
+		local State = require(script.Parent.Parent.State)
+		State.lastCombat = os.clock()
+		if typeof(d.model) == "Instance" and d.model:GetAttribute("Boss") then
+			State.lastBoss = os.clock()
+		end
+	end
 	-- a player's hit arrives with the swing: show it when the fist/blade actually connects
 	if d.src and not d.toPlayer then
 		local at = strikeAt[d.src]

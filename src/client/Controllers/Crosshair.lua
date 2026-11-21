@@ -7,7 +7,7 @@ local Players = game:GetService("Players")
 local State = require(script.Parent.Parent.State)
 
 local Crosshair = {}
-local PX = 4 -- one pixel of the sprite, in screen pixels
+local PX = 2 -- v0.25.8 (owner): smaller (was 4) -- one pixel of the sprite, in screen pixels
 local SHAPE = {
 	"...X...",
 	"..X.X..",

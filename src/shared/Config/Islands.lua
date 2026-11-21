@@ -1,4 +1,6 @@
--- Islands of the Azure East, laid out in a straight line along +X toward the Crimson Wall.
+-- Islands of the Azure East (v0.25.11, owner): spread north and south of the route east to the Crimson Wall, so
+-- sailing means picking a heading, not a straight line. x still grows with the level (SeaZones.Segment relies on it);
+-- z = north/south offset. The world code builds each island at z 0 and moves it (WorldBuilder.buildIsland).
 -- Names are original (inspired by classic pirate-adventure islands, not copied).
 -- spawns: offset from island center (X,Z), radius, monster, count
 local Islands = {
@@ -32,7 +34,7 @@ local Islands = {
 		id = "ConchBay",
 		name = "Conch Bay",
 		subtitle = "Marine Outpost 135",
-		x = 1800,
+		x = 2100, z = 800,
 		radius = 255,
 		levels = { 10, 20 },
 		palette = { sand = Color3.fromRGB(250, 232, 184), grass = Color3.fromRGB(148, 206, 108), dirt = Color3.fromRGB(150, 112, 80), accent = Color3.fromRGB(62, 124, 224), wall = Color3.fromRGB(236, 230, 214) },
@@ -49,7 +51,7 @@ local Islands = {
 		id = "Marmalade",
 		name = "Marmalade Town",
 		subtitle = "Town of Empty Streets",
-		x = 3600,
+		x = 3900, z = -750,
 		radius = 250,
 		levels = { 20, 30 },
 		palette = { sand = Color3.fromRGB(255, 222, 162), grass = Color3.fromRGB(176, 212, 98), dirt = Color3.fromRGB(170, 112, 70), accent = Color3.fromRGB(255, 140, 36), wall = Color3.fromRGB(255, 238, 210) },
@@ -67,7 +69,7 @@ local Islands = {
 		id = "Honeyslope",
 		name = "Honeyslope Village",
 		subtitle = "Village of the Long Slope",
-		x = 5400,
+		x = 5300, z = 1350,
 		radius = 260,
 		levels = { 30, 40 },
 		palette = { sand = Color3.fromRGB(245, 226, 176), grass = Color3.fromRGB(108, 200, 118), dirt = Color3.fromRGB(150, 110, 78), accent = Color3.fromRGB(150, 92, 200), wall = Color3.fromRGB(250, 244, 230) },
@@ -84,7 +86,7 @@ local Islands = {
 		id = "Barracuda",
 		name = "Barracuda Bistro",
 		subtitle = "The Floating Restaurant",
-		x = 7200,
+		x = 6800, z = -1250,
 		radius = 195,
 		levels = { 40, 50 },
 		palette = { sand = Color3.fromRGB(200, 150, 100), grass = Color3.fromRGB(226, 196, 148), dirt = Color3.fromRGB(150, 100, 64), accent = Color3.fromRGB(236, 78, 66), wall = Color3.fromRGB(255, 246, 232) },
@@ -102,7 +104,7 @@ local Islands = {
 		id = "Mikan",
 		name = "Mikan Isles",
 		subtitle = "Tangerine Groves & Sawtooth Park",
-		x = 9000,
+		x = 8500, z = 1150,
 		radius = 270,
 		levels = { 50, 60 },
 		palette = { sand = Color3.fromRGB(250, 226, 170), grass = Color3.fromRGB(118, 200, 88), dirt = Color3.fromRGB(150, 104, 68), accent = Color3.fromRGB(255, 166, 28), wall = Color3.fromRGB(250, 240, 220) },
@@ -120,7 +122,7 @@ local Islands = {
 		id = "Epilogue",
 		name = "Epilogue Town",
 		subtitle = "Town of Beginnings and Endings",
-		x = 10800,
+		x = 10300, z = -300,
 		radius = 310,
 		levels = { 60, 70 },
 		palette = { sand = Color3.fromRGB(235, 222, 192), grass = Color3.fromRGB(138, 190, 118), dirt = Color3.fromRGB(140, 110, 84), accent = Color3.fromRGB(196, 62, 58), wall = Color3.fromRGB(240, 230, 210) },
@@ -141,7 +143,7 @@ local RedLine = {
 	name = "Crimson Wall",
 	peakName = "Backflow Peak",
 	nextSea = "Grand Current",
-	x = 12800,
+	x = 12600,
 	thickness = 400,
 	height = 1400,
 	canalWidth = 220,
@@ -150,9 +152,9 @@ local RedLine = {
 
 -- Guild War sea forts (between islands)
 local Forts = {
-	{ id = "FortWest", name = "Fort Driftwood", x = 4500, z = -330 },
-	{ id = "FortMid", name = "Fort Tidebreak", x = 6300, z = 330 },
-	{ id = "FortEast", name = "Fort Gullwatch", x = 9900, z = -330 },
+	{ id = "FortWest", name = "Fort Driftwood", x = 3000, z = 120 },
+	{ id = "FortMid", name = "Fort Tidebreak", x = 6100, z = 60 },
+	{ id = "FortEast", name = "Fort Gullwatch", x = 9300, z = 500 },
 }
 
 local byId = {}

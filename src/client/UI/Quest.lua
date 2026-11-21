@@ -52,7 +52,7 @@ local function targetOf(step)
 	elseif at.boss then
 		local bi = Islands.ById[at.boss]
 		if bi and bi.boss then
-			return Vector3.new(bi.x + bi.boss.offset.X, 8, bi.boss.offset.Y)
+			return Vector3.new(bi.x + bi.boss.offset.X, 8, (bi.z or 0) + bi.boss.offset.Y)
 		end
 	elseif at.island then
 		local dest = Islands.ById[at.island]

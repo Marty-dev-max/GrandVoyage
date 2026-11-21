@@ -36,7 +36,7 @@ end
 function Z.NearestIsland(pos)
 	local best, bestD = nil, math.huge
 	for _, island in ipairs(Islands.List) do
-		local d = (Vector2.new(pos.X, pos.Z) - Vector2.new(island.x, 0)).Magnitude
+		local d = (Vector2.new(pos.X, pos.Z) - Vector2.new(island.x, island.z or 0)).Magnitude
 		if d < bestD then
 			best, bestD = island, d
 		end

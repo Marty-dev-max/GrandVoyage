@@ -17,7 +17,7 @@ local arena
 function PvP.Init(registry)
 	R = registry
 	local logue = Islands.ById.Epilogue
-	arena = { center = Vector3.new(logue.x + logue.arena.offset.X, 0, logue.arena.offset.Y), radius = logue.arena.radius }
+	arena = { center = Vector3.new(logue.x + logue.arena.offset.X, 0, (logue.z or 0) + logue.arena.offset.Y), radius = logue.arena.radius }
 end
 
 local function flatDist(a, b)

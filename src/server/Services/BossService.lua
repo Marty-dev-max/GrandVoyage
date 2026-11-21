@@ -16,7 +16,7 @@ end
 local function spawnBoss(island)
 	local b = island.boss
 	local def = Monsters[b.id]
-	local x, z = island.x + b.offset.X, b.offset.Y
+	local x, z = island.x + b.offset.X, (island.z or 0) + b.offset.Y
 	-- sea bosses lie under the water at their spot until a ship comes near (MonsterService seaStep)
 	local pos = b.sea and Vector3.new(x, -30, z) or R.MonsterService.GroundAt(x, z)
 	local st = state[island.id]

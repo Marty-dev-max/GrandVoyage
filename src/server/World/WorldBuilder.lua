@@ -493,7 +493,36 @@ local function buildIsland(island)
 		end)
 		return f
 	end
-	return buildIslandGeneric(island)
+	-- v0.25.11: islands spread north/south. The generic builder (and its many absolute coordinates) works at z 0, so
+	-- build there and move the finished island, including position attributes (dock LaunchCf / LandCf ...).
+	local dz = island.z or 0
+	island.z = nil
+	local f = buildIslandGeneric(island)
+	island.z = dz
+	if dz ~= 0 then
+		local off = Vector3.new(0, 0, dz)
+		local function moveAttrs(o)
+			for k, v in pairs(o:GetAttributes()) do
+				if typeof(v) == "CFrame" or typeof(v) == "Vector3" then
+					o:SetAttribute(k, v + off)
+				end
+			end
+		end
+		moveAttrs(f)
+		-- targets first, then assign: welded (unanchored) assemblies would otherwise move twice
+		local parts, targets = {}, {}
+		for _, o in ipairs(f:GetDescendants()) do
+			if o:IsA("BasePart") then
+				table.insert(parts, o)
+				table.insert(targets, o.CFrame + off)
+			end
+			moveAttrs(o)
+		end
+		for i, part in ipairs(parts) do
+			part.CFrame = targets[i]
+		end
+	end
+	return f
 end
 
 local function buildForts()
@@ -526,6 +555,91 @@ local function buildForts()
 	Kit.parent = prev
 end
 
+-- v0.25.11 (owner plan, docs/Plan-FirstSea.md): stops between the islands: sea stacks to steer around, sandbars
+-- with palms, and old wrecks. Own Random + Kit.WithRng so every island layout stays identical.
+local function buildIslets(world)
+	local f = folderOf("Islets", world)
+	local prev = Kit.parent
+	Kit.parent = f
+	local rand = Random.new(25011)
+	local lane = GameConfig.Lane
+	local function clear(x, z)
+		for _, isl in ipairs(IslandsCfg.List) do
+			local bx, bz = isl.x, isl.z or 0
+			if (Vector2.new(x - bx, z - bz)).Magnitude < isl.radius + 280 then
+				return false
+			end
+			if isl.boss and isl.boss.atSea then
+				local sx, sz = bx + isl.boss.offset.X, bz + isl.boss.offset.Y
+				if (Vector2.new(x - sx, z - sz)).Magnitude < 260 then
+					return false
+				end
+			end
+		end
+		for _, fort in ipairs(IslandsCfg.Forts) do
+			if (Vector2.new(x - fort.x, z - fort.z)).Magnitude < 260 then
+				return false
+			end
+		end
+		return true
+	end
+	local function spot()
+		for _ = 1, 40 do
+			local x = rand:NextNumber(500, IslandsCfg.RedLine.x - 700)
+			local z = rand:NextNumber(-(lane.HalfWidth - 200), lane.HalfWidth - 200)
+			if clear(x, z) then
+				return Vector3.new(x, 0, z)
+			end
+		end
+		return nil
+	end
+	Kit.WithRng(Random.new(25012), function()
+		-- sea stacks: tall rock pillars in small groups
+		for _ = 1, 14 do
+			local c = spot()
+			if c then
+				for k = 1, rand:NextInteger(2, 4) do
+					local p = c + Vector3.new(rand:NextNumber(-40, 40), 0, rand:NextNumber(-40, 40))
+					local w, h = rand:NextNumber(14, 26), rand:NextNumber(24, 60)
+					P(Vector3.new(w, h + 20, w * rand:NextNumber(0.8, 1.2)), Color3.fromRGB(110, 112, 120):Lerp(Color3.fromRGB(150, 140, 125), rand:NextNumber()),
+						CFrame.new(p + Vector3.new(0, h / 2 - 10, 0)) * CFrame.Angles(0, rand:NextNumber(0, 6.28), 0), { material = M.Slate, name = "SeaStack" .. k })
+					foam(p + Vector3.new(0, 0.1, 0), w * 1.8)
+				end
+			end
+		end
+		-- sandbars with a palm or two
+		for _ = 1, 7 do
+			local c = spot()
+			if c then
+				local r = rand:NextNumber(26, 44)
+				Cyl(6, r * 2, Color3.fromRGB(245, 222, 160), c + Vector3.new(0, -1.5, 0), { material = M.Sand })
+				foam(c + Vector3.new(0, 0.1, 0), r * 2 + 10)
+				for _ = 1, rand:NextInteger(1, 2) do
+					Kit.Palm(c + Vector3.new(rand:NextNumber(-r * 0.4, r * 0.4), 1.5, rand:NextNumber(-r * 0.4, r * 0.4)))
+				end
+				Kit.Rock(c + Vector3.new(r * 0.5, 1.5, -r * 0.3), rand:NextNumber(5, 9))
+			end
+		end
+		-- wrecks: a listing broken hull and a snapped mast
+		for _ = 1, 5 do
+			local c = spot()
+			if c then
+				local base = CFrame.new(c) * CFrame.Angles(0, rand:NextNumber(0, 6.28), 0) * CFrame.Angles(0, 0, math.rad(rand:NextNumber(14, 26)))
+				local wood = Color3.fromRGB(92, 66, 46)
+				P(Vector3.new(14, 3, 40), wood, base * CFrame.new(0, -1, 0), { material = M.WoodPlanks })
+				for _, sx in ipairs({ -1, 1 }) do
+					P(Vector3.new(2, 7, 36), wood:Lerp(Color3.new(0, 0, 0), 0.15), base * CFrame.new(sx * 7, 2, -1), { material = M.WoodPlanks })
+				end
+				P(Vector3.new(10, 6, 6), wood, base * CFrame.new(0, 2, 18) * CFrame.Angles(math.rad(-20), 0, 0), { material = M.WoodPlanks })
+				P(Vector3.new(1.6, 22, 1.6), Color3.fromRGB(120, 84, 56), base * CFrame.new(0, 12, -4) * CFrame.Angles(math.rad(25), 0, math.rad(12)), { material = M.Wood })
+				P(Vector3.new(10, 8, 0.3), Color3.fromRGB(200, 190, 165), base * CFrame.new(1, 16, -6) * CFrame.Angles(math.rad(25), 0, math.rad(40)), { material = M.Fabric, collide = false })
+				Kit.Barrel(c + Vector3.new(rand:NextNumber(-20, 20), 0.5, rand:NextNumber(-20, 20)))
+			end
+		end
+	end)
+	Kit.parent = prev
+end
+
 local function buildOcean(world)
 	local f = folderOf("Ocean", world)
 	local W = GameConfig.World
@@ -535,19 +649,30 @@ local function buildOcean(world)
 	local x = W.MinX
 	while x < W.MaxX + 600 do
 		local cx = x + tile / 2
-		-- Sailing lane: clear turquoise
-		P(Vector3.new(tile, 2, calmStart * 2), Color3.fromRGB(40, 175, 230), CFrame.new(cx, -1, 0), { parent = f, material = Enum.Material.Glass, transparency = 0.25, collide = false, shadow = false, name = "Water" })
-		-- Doldrums: dark, glassy, reflective water
+		-- Sailing lane: clear turquoise; Doldrums beyond: dark, glassy water. Tiled in z too (parts max 2048).
+		local function strip(z0, z1, color, name, y, refl, transp)
+			local z = z0
+			while z < z1 - 1 do
+				local d = math.min(tile, z1 - z)
+				local p = P(Vector3.new(tile, 2, d), color, CFrame.new(cx, y, z + d / 2), { parent = f, material = Enum.Material.Glass, transparency = transp, collide = false, shadow = false, name = name })
+				p.Reflectance = refl
+				z += d
+			end
+		end
+		strip(-calmStart, calmStart, Color3.fromRGB(40, 175, 230), "Water", -1, 0, 0.25)
 		for _, sz in ipairs({ -1, 1 }) do
-			local depth = W.HalfZ - calmStart + 400
-			local p = P(Vector3.new(tile, 2, depth), Color3.fromRGB(20, 110, 140), CFrame.new(cx, -1.05, sz * (calmStart + depth / 2)), { parent = f, material = Enum.Material.Glass, transparency = 0.15, collide = false, shadow = false, name = "CalmWater" })
-			p.Reflectance = 0.25
+			local far = W.HalfZ + 400
+			if sz < 0 then
+				strip(-far, -calmStart, Color3.fromRGB(20, 110, 140), "CalmWater", -1.05, 0.25, 0.15)
+			else
+				strip(calmStart, far, Color3.fromRGB(20, 110, 140), "CalmWater", -1.05, 0.25, 0.15)
+			end
 			-- Foam line marking the Doldrums edge
 			P(Vector3.new(tile, 0.3, 6), Color3.fromRGB(240, 250, 255), CFrame.new(cx, 0.1, sz * calmStart), { parent = f, material = Enum.Material.Neon, transparency = 0.35, collide = false, shadow = false, name = "CalmEdge" })
 			P(Vector3.new(tile, 0.3, 3), Color3.fromRGB(255, 255, 255), CFrame.new(cx, 0.1, sz * lane.HalfWidth), { parent = f, material = Enum.Material.SmoothPlastic, transparency = 0.6, collide = false, shadow = false })
 		end
 		-- Sea floor
-		P(Vector3.new(tile, 4, (W.HalfZ + 400) * 2), Color3.fromRGB(230, 210, 150), CFrame.new(cx, -46, 0), { parent = f, material = Enum.Material.Sand, shadow = false, name = "SeaFloor" })
+		strip(-(W.HalfZ + 400), W.HalfZ + 400, Color3.fromRGB(230, 210, 150), "SeaFloor", -46, 0, 0)
 		x += tile
 	end
 	-- Warning buoys along the Doldrums edge
@@ -730,7 +855,7 @@ end
 -- away and rebuilt from code at server start (so the owner's published place updates through Rojo too).
 -- Hand-built content made in Studio goes in workspace.Handmade (never touched by rebuilds). Kit props placed there
 -- (tagged EnvProp/EnvPart) are dressed with the stylized meshes like the generated ones.
-WB.WORLD_VERSION = 14 -- v14 (v0.25.6): Daybreak spawn by the campfire; v13: voxel NPCs; v12: Voxelize pass
+WB.WORLD_VERSION = 15 -- v15 (v0.25.11): islands spread north/south, wider sea, islets; v14 (v0.25.6): Daybreak spawn by the campfire; v13: voxel NPCs; v12: Voxelize pass
 
 -- Old copies of the map can hide anywhere in Workspace: a renamed or regrouped World, an island dragged into
 -- Handmade, single NPCs / chests / docks pasted from an old bake. They draw on top of the new islands and register
@@ -845,6 +970,7 @@ function WB.Build()
 		buildIsland(island)
 	end
 	buildForts()
+	buildIslets(world)
 	buildRedLine(world)
 	-- v0.24.0 (owner): everything round or sloped becomes blocks (World/Voxelize)
 	local okVox, voxErr = pcall(require(script.Parent.Voxelize).Run, world)

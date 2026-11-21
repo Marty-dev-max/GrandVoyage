@@ -349,7 +349,7 @@ local function updateNav()
 			if b.alive then
 				for _, isl in ipairs(Islands.List) do
 					if isl.name == b.island and isl.boss then
-						table.insert(targets, { pos = Vector3.new(isl.x + isl.boss.offset.X, 0, isl.boss.offset.Y), text = "☠", color = T.Red, label = b.name })
+						table.insert(targets, { pos = Vector3.new(isl.x + isl.boss.offset.X, 0, (isl.z or 0) + isl.boss.offset.Y), text = "☠", color = T.Red, label = b.name })
 					end
 				end
 			end

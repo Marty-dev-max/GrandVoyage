@@ -1930,7 +1930,13 @@ end
 function Panels.FastTravel()
 	local win = UI.Window("Map", Islands.SeaName, UDim2.fromOffset(1000, 480), T.Ocean, "🗺️", { fullscreen = true })
 	-- the sea strip sits in the middle of the window (full screen used to leave it stuck to the top)
-	local strip = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 0, 0.5, -36), Size = UDim2.new(1, 0, 0, 280), Parent = win.body })
+	-- v0.25.11: islands drawn where they are (x east, -z north), Doldrums bands top and bottom
+	local strip = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), AnchorPoint = Vector2.new(0, 0), Position = UDim2.new(0, 0, 0, 0), Size = UDim2.new(1, 0, 1, -70), Parent = win.body })
+	local lane = GameConfig.Lane
+	local minX, maxX = -500, Islands.RedLine.x
+	local function mapPos(x, z)
+		return math.clamp(0.05 + (x - minX) / (maxX - minX) * 0.83, 0.05, 0.88), 0.5 + math.clamp(z / lane.HalfWidth, -1, 1) * 0.3
+	end
 	UI.Corner(strip, 16)
 	UI.Gradient(strip, Color3.fromRGB(110, 210, 245), Color3.fromRGB(50, 150, 210), 90)
 	UI.Stroke(strip, T.Edge, 3)
@@ -1942,10 +1948,10 @@ function Panels.FastTravel()
 	local p = State.profile
 	local n = #Islands.List
 	for i, isl in ipairs(Islands.List) do
-		local x = (i - 0.5) / (n + 1)
+		local x, y = mapPos(isl.x, isl.z or 0)
 		local unlocked = p.unlocked[isl.id]
 		local charted = ChartsView.Known(isl.id)
-		local dot = New("TextButton", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(x, 0.5), Size = UDim2.fromOffset(110, 110), BackgroundColor3 = Color3.new(1, 1, 1), Text = "", AutoButtonColor = false, Parent = strip })
+		local dot = New("TextButton", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(x, y), Size = UDim2.fromOffset(110, 110), BackgroundColor3 = Color3.new(1, 1, 1), Text = "", AutoButtonColor = false, Parent = strip })
 		UI.Corner(dot, 55)
 		UI.Gradient(dot, unlocked and isl.palette.grass:Lerp(Color3.new(1, 1, 1), 0.2) or Color3.fromRGB(150, 160, 170), unlocked and isl.palette.sand or Color3.fromRGB(100, 110, 120), 90)
 		UI.Stroke(dot, unlocked and T.Gold or T.Edge, 3.5)
@@ -1965,7 +1971,7 @@ function Panels.FastTravel()
 			end
 		end
 		if total > 0 then
-			UI.Text(strip, "🧰 " .. found .. "/" .. total, 15, found == total and T.Gold or T.Text, "Display", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(x, 0, 0.5, 60), Size = UDim2.fromOffset(100, 18), TextXAlignment = Enum.TextXAlignment.Center })
+			UI.Text(strip, "🧰 " .. found .. "/" .. total, 15, found == total and T.Gold or T.Text, "Display", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(x, 0, y, 60), Size = UDim2.fromOffset(100, 18), TextXAlignment = Enum.TextXAlignment.Center })
 		end
 		dot.Activated:Connect(function()
 			if not unlocked then
@@ -1982,7 +1988,7 @@ function Panels.FastTravel()
 	UI.Corner(rl, 16)
 	UI.Stroke(rl, T.Edge, 3)
 	UI.Text(rl, string.upper(Islands.RedLine.name) .. "\n⛰\nLv." .. GameConfig.GrandLineLevel, 18, T.Text, "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center })
-	UI.Text(win.body, "Islands lie in a straight line: sail east to reach the next one. Stay in the windy lane: the Doldrums at the edges have no wind and Leviathans. Past the last island, " .. Islands.RedLine.peakName .. " leads to the " .. Islands.RedLine.nextSea .. " (next update).", 16, T.TextSoft, "Semi", { Position = UDim2.new(0, 0, 0.5, 112), Size = UDim2.new(1, 0, 0, 60), TextXAlignment = Enum.TextXAlignment.Center })
+	UI.Text(win.body, "Islands lie north and south of the route east: pick a heading, steer around sea stacks and stop at sandbars and wrecks. Stay in the windy sea: the Doldrums at the edges have no wind and Leviathans. Past the last island, " .. Islands.RedLine.peakName .. " leads to the " .. Islands.RedLine.nextSea .. " (next update).", 16, T.TextSoft, "Semi", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 0, 1, 0), Size = UDim2.new(1, 0, 0, 64), TextXAlignment = Enum.TextXAlignment.Center })
 end
 Panels.Map = Panels.FastTravel
 

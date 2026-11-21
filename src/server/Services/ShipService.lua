@@ -905,7 +905,7 @@ local function npcThink(ship, now)
 	end
 	local island, idist = SeaZones.NearestIsland(pos)
 	if island and idist < island.radius + 90 then
-		local away = Vector3.new(pos.X - island.x, 0, pos.Z).Unit
+		local away = Vector3.new(pos.X - island.x, 0, pos.Z - (island.z or 0)).Unit
 		desired = (desired + away * 2).Unit
 	end
 	local desiredYaw = math.atan2(-desired.X, -desired.Z)

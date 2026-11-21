@@ -345,6 +345,11 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   * v0.25.10 (owner reference): Store window = tabs + Gems pill on top, big item cards left (UIGridLayout in a
     Scroll), detail card right (big icon stage, name, desc, big BUY buttons). Entries share one shape in
     Panels.PearlShop `entries()` (kind store / gemshop / pack); the picked card per tab is kept in `storePick`.
+  * v0.25.11 (owner): islands spread north/south (`Islands` x + z; x still grows with level for SeaZones.Segment),
+    Lane.HalfWidth 2000 (wide windy sea), World.HalfZ 3800, WORLD_VERSION 15. WorldBuilder builds a generic island at
+    z 0 and then moves its parts + CFrame/Vector3 attributes by z (Daybreak stays at 0,0). Runtime code must add
+    `(island.z or 0)` to every island offset (spawns, bosses, arenas, compass). `buildIslets`: sea stacks, sandbars,
+    wrecks between islands (own Random + Kit.WithRng). Ocean water is tiled in z (parts max 2048). Map window = 2D.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

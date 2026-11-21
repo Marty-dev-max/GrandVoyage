@@ -3,7 +3,7 @@ return {
 	GameName = "LarpTales: Voxel Seas", -- player-facing name (v0.24.9, owner); code/files/DataStores keep the GrandVoyage names
 	LogoLines = { "LARPTALES", "VOXEL SEAS" },
 	-- bump on every change: shown bottom-right in game and printed in Output, so you can tell which code is running
-	Version = "0.25.10",
+	Version = "0.25.11",
 	SagaName = "Azure East Saga",
 	DataStoreName = "GV_Player_v1",
 	GuildStoreName = "GV_Guild_v1",
@@ -27,14 +27,14 @@ return {
 	-- ===== Sea / sailing lane =====
 	SeaLevel = 0,
 	Lane = {
-		HalfWidth = 520, -- |Z| <= this = full wind
-		EdgeWidth = 110, -- edge zone, wind fades (warning)
+		HalfWidth = 2000, -- |Z| <= this = full wind (v0.25.11: wide sea, islands spread north/south)
+		EdgeWidth = 160, -- edge zone, wind fades (warning)
 		-- |Z| > HalfWidth + EdgeWidth = Doldrums (no wind + Leviathans)
 	},
 	World = {
 		MinX = -1400,
-		MaxX = 13600,
-		HalfZ = 3000,
+		MaxX = 13400,
+		HalfZ = 3800,
 	},
 	CalmBelt = {
 		SeaKingSpawnInterval = 4, -- seconds

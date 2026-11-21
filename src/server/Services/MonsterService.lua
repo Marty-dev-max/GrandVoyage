@@ -1074,7 +1074,7 @@ end
 function MS.SpawnIslandMobs()
 	for _, island in ipairs(Islands.List) do
 		for _, sp in ipairs(island.spawns) do
-			local cx, cz = island.x + sp.offset.X, sp.offset.Y
+			local cx, cz = island.x + sp.offset.X, (island.z or 0) + sp.offset.Y
 			local center = groundAt(cx, cz)
 			local zone = { center = center, radius = sp.radius }
 			for _ = 1, sp.count do

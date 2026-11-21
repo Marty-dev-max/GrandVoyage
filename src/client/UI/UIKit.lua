@@ -617,6 +617,77 @@ function UI.ModelView(parent, folder, key, size, spin, props)
 	return vp
 end
 
+-- v0.25.12 (owner): voxel eggs (Sea Egg / Golden Egg) built from blocks in a ViewportFrame, slowly turning.
+-- Returns the frame and setTilt(radians) for hatch wobbles.
+local EGG_LOOK = {
+	SeaEgg = { Color3.fromRGB(245, 236, 212), Color3.fromRGB(96, 190, 232) },
+	GoldenEgg = { Color3.fromRGB(255, 196, 60), Color3.fromRGB(255, 244, 170) },
+}
+function UI.VoxelEgg(parent, eggId, size, props)
+	local look = EGG_LOOK[eggId] or EGG_LOOK.SeaEgg
+	local vp = New("ViewportFrame", {
+		BackgroundTransparency = 1,
+		Size = UDim2.fromOffset(size, size),
+		Ambient = Color3.fromRGB(170, 170, 190),
+		LightColor = Color3.fromRGB(255, 250, 240),
+		LightDirection = Vector3.new(-0.6, -1, -0.8),
+		Parent = parent,
+	})
+	for k, v in pairs(props or {}) do
+		vp[k] = v
+	end
+	local m = Instance.new("Model")
+	local R, H = 5, 13 -- grid: 10 wide, 13 tall
+	local function inside(x, y, z)
+		local t = (y + 0.5) / H * 2 - 1 -- -1 bottom .. 1 top
+		local r = R * math.sqrt(math.max(0, 1 - t * t)) * (1 - 0.16 * t) + 0.35
+		local dx, dz = x + 0.5 - R, z + 0.5 - R
+		return dx * dx + dz * dz <= r * r
+	end
+	local function spot(x, y, z)
+		local h = math.sin(x * 12.9898 + y * 78.233 + z * 37.719) * 43758.5453
+		return (h - math.floor(h)) > 0.86
+	end
+	for y = 0, H - 1 do
+		for z = 0, 2 * R - 1 do
+			local x = 0
+			while x < 2 * R do
+				if inside(x, y, z) then
+					local c = spot(x, y, z) and look[2] or look[1]
+					local x0 = x
+					while x < 2 * R and inside(x, y, z) and ((spot(x, y, z) and look[2] or look[1]) == c) do
+						x += 1
+					end
+					local shade = 0.86 + 0.14 * (y / H)
+					New("Part", { Anchored = true, Size = Vector3.new(x - x0, 1, 1), Color = Color3.new(c.R * shade, c.G * shade, c.B * shade),
+						Material = Enum.Material.SmoothPlastic, CFrame = CFrame.new((x0 + x) / 2 - R, y - H / 2 + 0.5, z + 0.5 - R), Parent = m })
+				else
+					x += 1
+				end
+			end
+		end
+	end
+	m.Parent = vp
+	local cam = Instance.new("Camera")
+	cam.FieldOfView = 30
+	cam.CFrame = CFrame.lookAt(Vector3.new(0, 2, -H * 0.62 / math.tan(math.rad(15))), Vector3.zero)
+	cam.Parent = vp
+	vp.CurrentCamera = cam
+	local yaw, tilt = 0, 0
+	local conn
+	conn = RunService.RenderStepped:Connect(function(dt)
+		if not vp.Parent then
+			conn:Disconnect()
+			return
+		end
+		yaw += dt * 0.7
+		m:PivotTo(CFrame.new(0, -H / 2, 0) * CFrame.Angles(0, 0, tilt) * CFrame.new(0, H / 2, 0) * CFrame.Angles(0, yaw, 0))
+	end)
+	return vp, function(a)
+		tilt = a
+	end
+end
+
 -- Your own character in a ViewportFrame (Bag / Stats): a still copy of the avatar holding the weapon you have equipped
 -- (weaponType -> Assets.Weapons model in the right hand). Drag left/right to turn it. Returns the frame and refresh(weaponType).
 function UI.CharacterView(parent, props)

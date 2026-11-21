@@ -44,7 +44,7 @@ local function refresh(player, p)
 	R.PlayerService.MarkDirty(player)
 end
 
-function PetS.Add(player, speciesId, how)
+function PetS.Add(player, speciesId, how, quiet)
 	local p = prof(player)
 	local sp = Pets.ById[speciesId]
 	if not p or not sp then
@@ -60,7 +60,9 @@ function PetS.Add(player, speciesId, how)
 		p.activePet = pet.uid
 	end
 	refresh(player, p)
-	Net.Push(player, "Banner", { title = "New Companion!", subtitle = sp.icon .. " " .. sp.stages[1] .. "  (" .. how .. ")" })
+	if not quiet then
+		Net.Push(player, "Banner", { title = "New Companion!", subtitle = sp.icon .. " " .. sp.stages[1] .. "  (" .. how .. ")" })
+	end
 	if Rarity.Get(sp.rarity).rank >= 5 then
 		Net.PushAll("Announce", { text = sp.icon .. " " .. player.DisplayName .. " got a " .. sp.stages[1] .. "!", rarity = sp.rarity })
 	end
@@ -225,13 +227,25 @@ function PetS.Start()
 		if not egg then
 			return false, "That is not an egg"
 		end
-		if #p.pets >= Pets.MaxPets then
+		-- v0.25.12 (owner): hatch up to 10 at once (limited by the stack and free roster slots); the client shows
+		-- the results in one reveal instead of a banner per pet
+		local room = Pets.MaxPets - #p.pets
+		if room <= 0 then
 			return false, "Your pet roster is full"
 		end
-		R.InventoryService.RemoveUid(player, entry.uid, 1)
-		local species = pickWeighted(egg.weights)
-		PetS.Add(player, species, "hatched")
-		return true
+		local want = math.clamp(math.floor(tonumber(data.count) or 1), 1, 10)
+		local n = math.min(want, entry.qty or 1, room)
+		if not R.InventoryService.RemoveUid(player, entry.uid, n) then
+			return false, "Not enough eggs"
+		end
+		local got = {}
+		for _ = 1, n do
+			local species = pickWeighted(egg.weights)
+			if PetS.Add(player, species, "hatched", n > 1) then
+				table.insert(got, species)
+			end
+		end
+		return { ok = true, data = { species = got, egg = entry.id, capped = n < want } }
 	end, 1)
 
 	Net.Handle("CapturePet", function(player, data)

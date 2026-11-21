@@ -31,17 +31,17 @@ P.Trade = {
 P.Shop = {
 	{ id = "RefineGuard", kind = "item", item = "RefineGuard", qty = 1, price = 60, name = "Willpower Charm", icon = "🧿", desc = "Protects a refine from downgrade and breaking." },
 	{ id = "ExpScroll", kind = "item", item = "CaptainsLog", qty = 1, price = 80, name = "Captain's Log", icon = "📘", desc = "+50% EXP for 30 minutes." },
-	{ id = "SwitchVoucher", kind = "perk", perk = "freeSwitch", price = 150, name = "Class Switch Voucher", icon = "🎟️", desc = "Your next class switch is free." },
-	{ id = "SeaEgg", kind = "item", item = "SeaEgg", qty = 1, price = 120, name = "Sea Egg", icon = "🥚", desc = "Hermit 40% • Boarlet 35% • Gull 20% • Puffer 5%" },
-	{ id = "StallSlots", kind = "perk", perk = "stallSlots", price = 400, name = "Bigger Stall", icon = "🏪", desc = "+2 stall slots, forever.", once = true },
+	{ id = "SwitchVoucher", kind = "perk", perk = "freeSwitch", price = 150, name = "Class Switch Voucher", icon = "st_ticket", desc = "Your next class switch is free." },
+	{ id = "SeaEgg", kind = "item", item = "SeaEgg", qty = 1, price = 120, bulk = { 1, 10, 30 }, name = "Sea Egg", icon = "🥚", desc = "Hermit 40% • Boarlet 35% • Gull 20% • Puffer 5%" },
+	{ id = "StallSlots", kind = "perk", perk = "stallSlots", price = 400, name = "Bigger Stall", icon = "st_stall", desc = "+2 stall slots, forever.", once = true },
 }
 
 -- Robux developer products (create them in the Creator Hub, then paste the ids). 0 = not on sale yet.
 -- Robux Pearls are BOUND: usable in the Pearl Shop, never tradable.
 P.Products = {
-	{ productId = 3732181648, pearls = 100, name = "Pouch of Gems" },
-	{ productId = 3732181740, pearls = 550, name = "Chest of Gems" },
-	{ productId = 3732181832, pearls = 1200, name = "Treasure of Gems" },
+	{ productId = 3732181648, pearls = 100, name = "Pouch of Gems", icon = "st_gems_s" },
+	{ productId = 3732181740, pearls = 550, name = "Chest of Gems", icon = "st_gems_m" },
+	{ productId = 3732181832, pearls = 1200, name = "Treasure of Gems", icon = "st_gems_l" },
 }
 
 P.LedgerStore = "GV_PearlLedger_v1"

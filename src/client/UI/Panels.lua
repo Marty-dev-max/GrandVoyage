@@ -319,6 +319,7 @@ function Panels.Inventory(args)
 		local iconId = UI.ItemIconId(def)
 		local big = (def.kind == "Fruit" and UI.ModelView(head, "Fruits", def.fruit, 200, 0.9, { ZIndex = 5 }))
 			or (def.weaponType and UI.ModelView(head, "Weapons", def.weaponType, 200, 0.7, { ZIndex = 5 }))
+			or (def.kind == "Egg" and (UI.VoxelEgg(head, def.id, 200, { ZIndex = 5 })))
 		if not big and iconId then
 			big = New("ImageLabel", { BackgroundTransparency = 1, Image = iconId, ScaleType = Enum.ScaleType.Fit, ZIndex = 5, Parent = head })
 		elseif not big then
@@ -371,12 +372,23 @@ function Panels.Inventory(args)
 			end)
 		end
 		if def.kind == "Egg" then
-			act("🐣 Hatch", T.Gold, function()
-				local res = req("HatchEgg", { uid = entry.uid }, "RarityEpic")
-				if res.ok then
-					Panels.Open("Pets")
+			local function hatch(count)
+				local res = req("HatchEgg", { uid = entry.uid, count = count })
+				if res.ok and res.data then
+					Panels.HatchReveal(res.data.egg, res.data.species)
+					if res.data.capped then
+						UI.Toast("Hatched " .. #res.data.species .. " (roster or eggs ran out)", "info")
+					end
 				end
+			end
+			act("🐣 Hatch", T.Gold, function()
+				hatch(1)
 			end)
+			if (entry.qty or 1) > 1 then
+				act("🐣 x" .. math.min(10, entry.qty), T.Orange, function()
+					hatch(10)
+				end)
+			end
 		end
 		if def.kind == "Fruit" then
 			act("🍎 Eat", T.Pink, function()
@@ -2946,6 +2958,47 @@ function Panels.Pets()
 	onProfile(win, render)
 end
 
+-- ===================== HATCH REVEAL (v0.25.12) =====================
+-- One window for 1..10 eggs: each voxel egg wobbles, then pops into its companion (model or icon) in rarity color.
+function Panels.HatchReveal(eggId, species)
+	local n = #species
+	if n == 0 then
+		return
+	end
+	local cols = math.min(n, 5)
+	local cell = 150
+	local win = UI.Window("HatchReveal", n > 1 and ("Hatched x" .. n) or "Hatched!", UDim2.fromOffset(cols * (cell + 10) + 40, math.ceil(n / cols) * (cell + 40) + 120), T.Gold, "🥚")
+	local grid = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Parent = win.body })
+	New("UIGridLayout", { CellSize = UDim2.fromOffset(cell, cell + 30), CellPadding = UDim2.fromOffset(10, 10), HorizontalAlignment = Enum.HorizontalAlignment.Center, Parent = grid })
+	for i, id in ipairs(species) do
+		local sp = PetsCfg.ById[id]
+		local tier = Rarity.Get(sp and sp.rarity or "Common")
+		local card = UI.Card(grid, nil, T.Panel)
+		card.LayoutOrder = i
+		local egg, tilt = UI.VoxelEgg(card, eggId, cell - 20, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 6) })
+		local delay0 = 0.35 + (i - 1) * 0.22
+		task.delay(delay0, function()
+			local t0 = os.clock()
+			while os.clock() - t0 < 0.7 and egg.Parent do
+				local k = (os.clock() - t0) / 0.7
+				tilt(math.sin(k * 30) * 0.25 * k)
+				task.wait()
+			end
+			if not card.Parent then
+				return
+			end
+			egg:Destroy()
+			card:FindFirstChild("CardGradient").Color = ColorSequence.new(tier.color:Lerp(Color3.new(1, 1, 1), 0.15), tier.color:Lerp(T.Panel, 0.5))
+			local key = id .. "_1"
+			if not (UI.ModelAsset("Pets", key) and UI.ModelView(card, "Pets", key, cell - 30, 0.8, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8) })) then
+				UI.Icon(card, sp and sp.icon or "🥚", cell - 50, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 18) })
+			end
+			UI.Text(card, sp and sp.stages[1] or id, 14, T.Text, "Display", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 4, 1, -6), Size = UDim2.new(1, -8, 0, 34), TextXAlignment = Enum.TextXAlignment.Center })
+			Audio.Play(tier.rank >= 3 and ("Rarity" .. tier.id) or "BlkPouch")
+		end)
+	end
+end
+
 -- ===================== PEARL SHOP =====================
 -- Store (v0.24.0): GEMS (the Gem shop + Robux Gem packs) | BENEFITS | BOOSTS (Config/Store). Every benefit and boost
 -- costs Gems or Robux and can be bought FOR ME or as a GIFT for a player in this server.
@@ -3011,11 +3064,13 @@ function Panels.PearlShop(args)
 	local function entries(info, d)
 		local list = {}
 		if storeTab == "Gems" then
-			for _, prod in ipairs(d and d.products or {}) do
-				table.insert(list, { kind = "pack", id = "pack" .. prod.productId, icon = "💎", name = prod.name, desc = PearlsCfg.Icon .. " " .. prod.pearls .. " Gems. Robux Gems are shop-only (not tradable).", prod = prod, color = T.Purple })
+			for i, prod in ipairs(d and d.products or {}) do
+				local cfg = PearlsCfg.Products[i] or {}
+				table.insert(list, { kind = "pack", id = "pack" .. prod.productId, icon = cfg.icon or "💎", name = cfg.name or prod.name, desc = PearlsCfg.Icon .. " " .. prod.pearls .. " Gems. Robux Gems are shop-only (not tradable).", prod = prod, color = T.Purple })
 			end
 			for _, it in ipairs(PearlsCfg.Shop) do
-				table.insert(list, { kind = "gemshop", id = it.id, icon = it.icon, name = it.name, desc = it.desc, it = it, owned = it.once and d and d.perks and d.perks[it.perk], color = T.Ocean })
+				table.insert(list, { kind = "gemshop", id = it.id, icon = it.icon, name = it.name, desc = it.desc, it = it, owned = it.once and d and d.perks and d.perks[it.perk], color = T.Ocean,
+					egg = it.item and PetsCfg.Eggs[it.item] and it.item })
 			end
 		else
 			for _, it in ipairs(storeTab == "Boosts" and StoreCfg.Boosts or StoreCfg.Benefits) do
@@ -3039,7 +3094,11 @@ function Panels.PearlShop(args)
 		local stage = New("Frame", { BackgroundColor3 = e.color:Lerp(T.Panel, 0.55), Size = UDim2.new(1, 0, 0.42, 0), Parent = panel })
 		UI.Stroke(stage, T.Edge, 2.5)
 		UI.Gradient(stage, Color3.new(1, 1, 1), Color3.fromRGB(150, 150, 170), 90)
-		UI.Icon(stage, e.icon, 150, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.75, 0.75), SizeConstraint = Enum.SizeConstraint.RelativeYY })
+		if e.egg then
+			UI.VoxelEgg(stage, e.egg, 150, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.9, 0.9), SizeConstraint = Enum.SizeConstraint.RelativeYY })
+		else
+			UI.Icon(stage, e.icon, 150, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.75, 0.75), SizeConstraint = Enum.SizeConstraint.RelativeYY })
+		end
 		UI.Text(panel, e.name, 24, T.Text, "Display", { TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 34) })
 		local status = e.active and ("ACTIVE: " .. e.active .. " min left (buying adds time)") or (e.owned and "Owned") or nil
 		UI.Text(panel, e.desc .. (status and ("\n\n" .. status) or ""), 15, status and T.Green or T.TextSoft, "Semi", { TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 84) })
@@ -3066,6 +3125,17 @@ function Panels.PearlShop(args)
 			if e.tokens > 0 then
 				bigButton(panel, "USE (" .. e.tokens .. ")", T.Gold, function()
 					if req("StoreUseToken", { id = it.id }).ok then
+						render()
+					end
+				end)
+			end
+		elseif e.kind == "gemshop" and e.it.bulk then
+			-- v0.25.12 (owner): buy 1 / 10 / 30 at a time
+			local row = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 104), Parent = panel })
+			New("UIGridLayout", { CellSize = UDim2.new(1 / #e.it.bulk, -6, 0, 104), CellPadding = UDim2.fromOffset(8, 0), Parent = row })
+			for _, q in ipairs(e.it.bulk) do
+				UI.Button(row, "x" .. q .. "\n" .. PearlsCfg.Icon .. " " .. (e.it.price * q), q == 1 and T.Green or q == 10 and T.Orange or T.Purple, UDim2.new(1, 0, 1, 0), function()
+					if req("PearlShopBuy", { id = e.it.id, qty = q }, "Purchase").ok then
 						render()
 					end
 				end)
@@ -3147,7 +3217,11 @@ function Panels.PearlShop(args)
 			if on then
 				UI.Stroke(card, T.Gold, 4)
 			end
-			UI.Icon(card, e.icon, 90, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), Size = UDim2.fromScale(0.62, 0.62), SizeConstraint = Enum.SizeConstraint.RelativeXX })
+			if e.egg then
+				UI.VoxelEgg(card, e.egg, 90, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 6), Size = UDim2.fromScale(0.66, 0.66), SizeConstraint = Enum.SizeConstraint.RelativeXX })
+			else
+				UI.Icon(card, e.icon, 90, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), Size = UDim2.fromScale(0.62, 0.62), SizeConstraint = Enum.SizeConstraint.RelativeXX })
+			end
 			UI.Text(card, e.name, 15, T.Text, "Display", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 6, 1, -30), Size = UDim2.new(1, -12, 0, 34), TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Bottom })
 			local price = e.kind == "pack" and "R$" or e.kind == "gemshop" and (e.owned and "Owned" or (PearlsCfg.Icon .. " " .. e.it.price)) or (PearlsCfg.Icon .. " " .. e.it.gems)
 			local priceLbl = UI.Text(card, e.active and "ACTIVE" or price, 14, e.active and T.Green or T.Gold, "Display", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 6, 1, -6), Size = UDim2.new(1, -12, 0, 22), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false })

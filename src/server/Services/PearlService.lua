@@ -305,18 +305,24 @@ function PS.Start()
 		if item.once and p.perks[item.perk] then
 			return false, "You already own this"
 		end
-		if not PS.Spend(player, item.price, "shop:" .. item.id, true) then
+		-- v0.25.12: bulk items (Sea Egg) can be bought 1 / 10 / 30 at a time
+		local n = 1
+		if item.bulk then
+			local q = math.floor(tonumber(data.qty) or 1)
+			n = table.find(item.bulk, q) and q or 1
+		end
+		if not PS.Spend(player, item.price * n, "shop:" .. item.id .. (n > 1 and ("x" .. n) or ""), true) then
 			return false, "Not enough Gems"
 		end
 		if item.kind == "item" then
-			R.InventoryService.AddItem(player, item.item, item.qty)
+			R.InventoryService.AddItem(player, item.item, item.qty * n)
 		elseif item.perk == "freeSwitch" then
 			p.perks.freeSwitch = (p.perks.freeSwitch or 0) + 1
 		else
 			p.perks[item.perk] = true
 		end
 		R.PlayerService.MarkDirty(player)
-		return true, "Bought " .. item.name
+		return true, "Bought " .. (n > 1 and (n .. "x ") or "") .. item.name
 	end, 0.5)
 
 	Net.Handle("PearlBuyProduct", function(player, data)

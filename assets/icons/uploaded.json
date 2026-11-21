@@ -263,6 +263,50 @@
   "id": "106270750474342",
   "sha1": "b161e93475464a84ae2571118891298aa3039370"
  },
+ "st_boss_respawn": {
+  "id": "78010059040726",
+  "sha1": "cf66360ce72e982700f3e3ea3d872477c1c0cabf"
+ },
+ "st_drop": {
+  "id": "110278415221340",
+  "sha1": "bdda7bec1ad66d7895f0596ccd786eb9c4e1efdb"
+ },
+ "st_exp": {
+  "id": "116254746929861",
+  "sha1": "6c0b5973e88249b3ae974667c3a724a5f0016d68"
+ },
+ "st_fruit_remover": {
+  "id": "129625899520236",
+  "sha1": "34da7e27c14a3aeb49834535fe62e3abbbc4863a"
+ },
+ "st_gems_l": {
+  "id": "123968282806258",
+  "sha1": "dc635ca00086cdaf8569d1af71b7be427e18a40d"
+ },
+ "st_gems_m": {
+  "id": "103504174040617",
+  "sha1": "f92b5a939425db96f7810daa3d4241798cf1aa26"
+ },
+ "st_gems_s": {
+  "id": "76282006458988",
+  "sha1": "1bdf497b66f040cc62b34a68415abcc6b2582c0e"
+ },
+ "st_notifier": {
+  "id": "77216316446954",
+  "sha1": "90ed6d198edc0eb7e74e529c6feb83d9eb13e40a"
+ },
+ "st_reset_stats": {
+  "id": "82458490772208",
+  "sha1": "e5eb5dea5eaf6ecb5c77c687b2dde8bf4553dd47"
+ },
+ "st_stall": {
+  "id": "138363001997660",
+  "sha1": "70635a405f57aac751cf2693c0a6d99846c36e66"
+ },
+ "st_ticket": {
+  "id": "117029892961160",
+  "sha1": "9cfcff5042268db104af1ea01418d54f02a09712"
+ },
  "staff": {
   "id": "81685615868382",
   "sha1": "5325161d26c6d2effbfd692398b0bafde17a9531"

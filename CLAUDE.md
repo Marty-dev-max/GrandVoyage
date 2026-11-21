@@ -350,6 +350,11 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     z 0 and then moves its parts + CFrame/Vector3 attributes by z (Daybreak stays at 0,0). Runtime code must add
     `(island.z or 0)` to every island offset (spawns, bosses, arenas, compass). `buildIslets`: sea stacks, sandbars,
     wrecks between islands (own Random + Kit.WithRng). Ocean water is tiled in z (parts max 2048). Map window = 2D.
+  * v0.25.12 (owner): Store icons are pixel art `st_*` (gen_pixel_icons.py, tiny 3x5 font `text`/`badge`), entries name
+    them in Config/Store / Pearls (`icon = "st_exp"`; packs read icon/name from client PearlsCfg.Products by index).
+    `UI.VoxelEgg(parent, eggId, size)` = block egg in a ViewportFrame (returns vp, setTilt). Pearls.Shop `bulk = {1,10,30}`
+    -> PearlShopBuy `qty`. HatchEgg `count` (<= 10, stack, roster room) returns `{ species, egg, capped }`;
+    `Panels.HatchReveal` wobbles + pops each egg. PetS.Add(..., quiet) skips the per-pet banner.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

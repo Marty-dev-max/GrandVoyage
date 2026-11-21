@@ -509,6 +509,123 @@ def merit(s):
     star(s, 16, 19, 6, 2.5, 5, (255, 240, 160), fx=True)
 
 
+# ---------- Store icons (v0.25.12, owner: pretty pixel art for every Store entry) ----------
+GLYPH = {  # 3x5 pixel font
+    '2': ['###', '..#', '###', '#..', '###'], 'x': ['...', '#.#', '.#.', '#.#', '...'],
+    '1': ['.#.', '##.', '.#.', '.#.', '###'], '0': ['###', '#.#', '#.#', '#.#', '###'], '3': ['###', '..#', '.##', '..#', '###'],
+}
+
+
+def text(s, x, y, t, c=WHITE):
+    for ch in t:
+        for j, row in enumerate(GLYPH[ch]):
+            for i, v in enumerate(row):
+                if v == '#':
+                    s.px(x + i, y + j, c)
+        x += 4
+
+
+def badge(s, t, c=(220, 50, 60)):
+    w = len(t) * 4 + 3
+    s.rect(31 - w, 22, 31, 30, c)
+    text(s, 33 - w, 24, t)
+
+
+def round_arrow(s, cx, cy, r, c):
+    s.arc(cx, cy, r, 200, 520, c, 2, True)
+    s.poly([(cx + r - 3, cy - 1), (cx + r + 3, cy - 1), (cx + r, cy + 3)], c, True)
+
+
+def st_fruit_remover(s):
+    fruit(s, (130, 210, 90), (70, 150, 60))
+    s.line([(19, 19), (29, 29)], (230, 40, 50), 3, True)
+    s.line([(29, 19), (19, 29)], (230, 40, 50), 3, True)
+
+
+def st_reset_stats(s):
+    chart(s)
+    s.oval(23, 9, 7, 7, (40, 44, 70))
+    round_arrow(s, 23, 9, 5, (120, 255, 160))
+
+
+def st_boss_respawn(s):
+    skull(s)
+    s.poly([(8, 9), (8, 3), (12, 6), (16, 1), (20, 6), (24, 3), (24, 9)], GOLD, True)
+    s.px(16, 4, RED)
+    round_arrow(s, 25, 24, 5, (120, 255, 160))
+
+
+def st_notifier(s):
+    s.oval(16, 16, 13, 13, (30, 70, 50))
+    s.oval(16, 16, 10, 10, (40, 110, 70))
+    s.arc(16, 16, 6, 0, 360, (90, 200, 120), 1, False)
+    s.poly([(16, 16), (27, 10), (27, 16)], (120, 255, 160), True)
+    s.oval(21, 21, 3, 3, (255, 120, 60), True)
+    s.px(21, 18, GREEN)
+    sparkle(s, 21, 21, WHITE, 1)
+
+
+def st_exp(s):
+    star(s, 14, 14, 13, 5.5, 5, YEL)
+    star(s, 14, 14, 7, 3, 5, (255, 250, 200), fx=True)
+    sparkle(s, 27, 5, WHITE, 2)
+    badge(s, 'x2', (60, 170, 255))
+
+
+def st_drop(s):
+    sack(s, (230, 180, 60))
+    coin(s, 7, 24, 5)
+    sparkle(s, 26, 5, WHITE, 2)
+    badge(s, 'x2', (220, 60, 160))
+
+
+def mini_gem(s, x, y, c=(90, 210, 255), k=1.0):
+    s.poly([(x - 4 * k, y - 1 * k), (x - 2 * k, y - 4 * k), (x + 2 * k, y - 4 * k), (x + 4 * k, y - 1 * k), (x, y + 5 * k)], c)
+    s.poly([(x - 2 * k, y - 4 * k), (x, y - 1 * k), (x + 2 * k, y - 4 * k)], lerp(c, WHITE, 0.5), True)
+
+
+def st_gems_s(s):
+    sack(s, (170, 120, 200))
+    mini_gem(s, 16, 7, (90, 210, 255), 1.0)
+    sparkle(s, 25, 5, WHITE, 1)
+
+
+def st_gems_m(s):
+    chest(s)
+    for x, c in ((10, (90, 210, 255)), (16, (200, 110, 255)), (22, (90, 230, 160))):
+        mini_gem(s, x, 9, c, 1.0)
+    sparkle(s, 27, 4, WHITE, 2)
+
+
+def st_gems_l(s):
+    s.poly([(2, 30), (8, 18), (16, 14), (24, 18), (30, 30)], (70, 170, 230))
+    for x, y, c, k in ((8, 22, (90, 210, 255), 1.1), (16, 17, (200, 110, 255), 1.4), (24, 22, (90, 230, 160), 1.1), (12, 27, (255, 120, 160), 1.0), (21, 27, (90, 210, 255), 1.0)):
+        mini_gem(s, x, y, c, k)
+    s.poly([(10, 9), (10, 3), (13, 6), (16, 1), (19, 6), (22, 3), (22, 9)], GOLD, True)
+    sparkle(s, 4, 6, WHITE, 2)
+    sparkle(s, 28, 8, WHITE, 2)
+
+
+def st_ticket(s):
+    s.rect(3, 9, 29, 23, (230, 70, 80))
+    for y in (12, 16, 20):
+        s.px(3, y, (0, 0, 0))
+        s.px(29, y, (0, 0, 0))
+    s.rect(9, 9, 10, 23, (255, 220, 120), True)
+    star(s, 19, 16, 5, 2.2, 5, (255, 230, 120), fx=True)
+
+
+def st_stall(s):
+    s.rect(5, 15, 27, 28, (190, 130, 80))
+    s.rect(7, 18, 25, 22, (120, 80, 50))
+    for i, x in enumerate(range(3, 29, 4)):
+        s.rect(x, 7, x + 3, 14, (230, 70, 80) if i % 2 == 0 else (250, 245, 235))
+    s.rect(3, 5, 29, 7, (150, 90, 60))
+    coin(s, 11, 19, 3)
+    mini_gem(s, 21, 19, (90, 210, 255), 0.7)
+    badge(s, '2', (60, 170, 90))
+
+
 ICONS = {
     # HUD / menus
     'bag': sack, 'skills': lambda s: (star(s, 16, 16, 13, 5, 4, YEL), sparkle(s, 26, 6, WHITE, 2), sparkle(s, 6, 26, WHITE, 1)),
@@ -528,6 +645,10 @@ ICONS = {
     # monster materials
     'crabshell': shell, 'monkeyfur': lambda s: fur(s, (150, 100, 60)), 'tigerpelt': lambda s: fur(s, (240, 150, 40), DARK),
     'boartusk': tusk, 'clownpaint': paint_pot, 'catclaw': claw, 'rivet': rivet, 'sharkfin': fin,
+    # store
+    'st_fruit_remover': st_fruit_remover, 'st_reset_stats': st_reset_stats, 'st_boss_respawn': st_boss_respawn,
+    'st_notifier': st_notifier, 'st_exp': st_exp, 'st_drop': st_drop, 'st_gems_s': st_gems_s, 'st_gems_m': st_gems_m,
+    'st_gems_l': st_gems_l, 'st_ticket': st_ticket, 'st_stall': st_stall,
     'ingot': ingot, 'gunpowder': powder_keg, 'scale': scale_icon, 'compass': compass, 'poster': poster,
 }
 

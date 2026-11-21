@@ -10,6 +10,13 @@ OUT = os.path.join(os.path.dirname(__file__), '..', 'assets', 'sfx')
 API = 'https://api.elevenlabs.io/v1/sound-generation'
 
 SFX = {
+    # v0.25.16 (owner: sounds still felt the same): footsteps by ground + weightier impacts
+    'StepGrass': ('a single footstep on soft grass, short soft rustle, game foley, no voice', 0.5),
+    'StepWood': ('a single footstep on wooden planks of a pier, short hollow knock, game foley', 0.5),
+    'StepSand': ('a single footstep on dry beach sand, short soft crunch, game foley', 0.5),
+    'StepStone': ('a single footstep on a stone path, short crisp tap, game foley', 0.5),
+    'ImpactThump': ('a deep low body impact thump, short bassy hit, fighting game, no voice', 0.5),
+    'FinisherBoom': ('a huge finishing blow impact, bass boom with a shockwave whoosh, anime fighting game, no voice', 0.9),
     # combat (owner: satisfying, chunky, not shrill)
     'PunchHit': ('a solid punch hitting a body, short punchy impact, anime fighting game, no voice', 0.5),
     'PunchHeavy': ('a heavy finishing punch impact with a deep thud and a whoosh of air, anime fighting game, no voice', 0.8),

@@ -67,6 +67,13 @@ add("PunchHeavy", "SFX", 0.65, HIT) -- ElevenLabs (v0.25.6)
 add("SliceHit", "SFX", 0.5, SWORD) -- ElevenLabs (v0.25.6)
 add("ShotHit", "SFX", 0.5, HIT) -- ElevenLabs (v0.25.6)
 add("ZapHit", "SFX", 0.45, PING)
+-- v0.25.16 (owner): weightier hits + footsteps by ground (ElevenLabs)
+add("ImpactThump", "SFX", 0.5, HIT, { pitch = 0.8 })
+add("FinisherBoom", "SFX", 0.75, BOOM, { rolloff = 320 })
+add("StepGrass", "SFX", 0.28, CLICK, { rolloff = 70 })
+add("StepWood", "SFX", 0.3, CLICK, { rolloff = 70 })
+add("StepSand", "SFX", 0.28, CLICK, { rolloff = 70 })
+add("StepStone", "SFX", 0.3, CLICK, { rolloff = 70 })
 add("ThunderCrack", "SFX", 0.7, BOOM, { rolloff = 500 })
 add("WindGust", "SFX", 0.5, "rbxasset://sounds/swordlunge.wav")
 add("PowderPoof", "SFX", 0.5, "rbxasset://sounds/swordlunge.wav")
@@ -132,6 +139,7 @@ add("MusicBoss", "Music", 0.4, "", { looped = true, id = "rbxassetid://139997523
 
 
 
+
 -- ===== uploaded asset ids (written by tools/upload_sfx.py) =====
 S.AmbienceWind.id = "rbxassetid://121665322013245"
 S.AnvilClang.id = "rbxassetid://119416036242324"
@@ -166,8 +174,10 @@ S.Crit.id = "rbxassetid://80056015080030"
 S.Equip.id = "rbxassetid://74370616073413"
 S.Error.id = "rbxassetid://135368525587273"
 S.Explosion.id = "rbxassetid://74847389790358"
+S.FinisherBoom.id = "rbxassetid://75185161807707"
 S.Heal.id = "rbxassetid://78912431765664"
 S.Hit.id = "rbxassetid://109631882003396"
+S.ImpactThump.id = "rbxassetid://123636179879049"
 S.LevelUp.id = "rbxassetid://95921888832743"
 S.MagicCast.id = "rbxassetid://111922509561668"
 S.MobAlert.id = "rbxassetid://72821339475034"
@@ -194,6 +204,10 @@ S.ShotHit.id = "rbxassetid://119900124209046"
 S.Slash.id = "rbxassetid://125418891873956"
 S.SliceHit.id = "rbxassetid://85922952956251"
 S.Splash.id = "rbxassetid://80428746770906"
+S.StepGrass.id = "rbxassetid://79462883759542"
+S.StepSand.id = "rbxassetid://118110511448483"
+S.StepStone.id = "rbxassetid://73527534211975"
+S.StepWood.id = "rbxassetid://111377792487983"
 S.ThunderCrack.id = "rbxassetid://92004300987583"
 S.UIClick.id = "rbxassetid://85047146917342"
 S.UIClose.id = "rbxassetid://107881653592113"

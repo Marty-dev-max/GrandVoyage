@@ -1571,6 +1571,11 @@ local fxSounds = {
 		if d.crit and (snd == "PunchHit" or snd == nil) then
 			snd = "PunchHeavy"
 		end
+		-- v0.25.16 (owner: hits felt thin): a low thump under every hit, a bright crack on top of crits
+		Audio.Play("ImpactThump", { pos = d.pos, pitch = 0.9 + math.random() * 0.2, volume = d.crit and 1 or 0.7 })
+		if d.crit then
+			Audio.Play("Crit", { pos = d.pos })
+		end
 		return snd or (d.crit and "Crit" or "Hit"), d.pos, d.crit and 1.1 or (0.92 + math.random() * 0.16)
 	end,
 	BasicAttack = function(d)
@@ -1657,7 +1662,7 @@ local fxSounds = {
 	Knockback = function(d)
 		local m = d.model
 		local p = typeof(m) == "Instance" and m.PrimaryPart
-		return "Whoosh", p and p.Position or nil, d.big and 0.55 or 0.75
+		return "FinisherBoom", p and p.Position or nil, d.big and 0.8 or 1
 	end,
 	MobAlert = function(d)
 		local m = d.model

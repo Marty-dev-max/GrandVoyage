@@ -6,6 +6,14 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
 local Voxels = require(script.Parent.Voxels)
+local Audio = require(script.Parent.Audio)
+
+-- v0.25.16 (owner): footstep sounds by ground (our step replaces Roblox's default running tap)
+local STEP = {
+	[Enum.Material.Grass] = "StepGrass", [Enum.Material.LeafyGrass] = "StepGrass", [Enum.Material.Ground] = "StepGrass",
+	[Enum.Material.Mud] = "StepGrass", [Enum.Material.Wood] = "StepWood", [Enum.Material.WoodPlanks] = "StepWood",
+	[Enum.Material.Sand] = "StepSand", [Enum.Material.Sandstone] = "StepSand",
+}
 
 local FS = {}
 local RANGE = 110
@@ -41,6 +49,11 @@ function FS.Start()
 						params.FilterDescendantsInstances = { char }
 						local hit = workspace:Raycast(root.Position, Vector3.new(0, -6, 0), params)
 						if hit and hit.Instance then
+							local running = root:FindFirstChild("Running")
+							if running and running:IsA("Sound") then
+								running.Volume = 0
+							end
+							Audio.Play(STEP[hit.Material] or "StepStone", { pos = hit.Position, volume = pl == Players.LocalPlayer and 1 or 0.6 })
 							local c = hit.Instance.Color:Lerp(Color3.fromRGB(235, 225, 200), 0.4)
 							local back = Vector3.new(-v.X, 0, -v.Z).Unit * 0.8
 							Voxels.Pixels(hit.Position + back + Vector3.new(0, 0.25, 0), { count = speed > 22 and 6 or 3, colors = { c, c:Lerp(Color3.new(1, 1, 1), 0.25) }, size = 0.32, speed = 2.5, up = 1.5, gravity = 3, life = 0.45, glow = 0, spread = 0.9 })

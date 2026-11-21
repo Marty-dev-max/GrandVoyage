@@ -224,6 +224,18 @@ local handlers = {
 	end,
 }
 
+-- v0.25.20 (owner: after Reset the view stayed stuck in the air): every new character takes the camera back. A camera
+-- left Scriptable (dialog close-up, menu) or still pointing at the old body would otherwise stay frozen.
+game:GetService("Players").LocalPlayer.CharacterAdded:Connect(function(char)
+	local hum = char:WaitForChild("Humanoid", 10)
+	local cam = workspace.CurrentCamera
+	if hum and cam and not Menu.IsOpen then
+		cam.CameraType = Enum.CameraType.Custom
+		cam.CameraSubject = hum
+		cam.FieldOfView = 70
+	end
+end)
+
 Net.OnPush(function(kind, data)
 	local h = handlers[kind]
 	if h then

@@ -388,6 +388,12 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     Nameplate: TypeBadge + stars in the subtitle. Keep non-monster tables out of Monsters (tests walk every entry).
   * v0.25.19 (owner): sea map tiles = island emblems `isl_<IslandId>` (tools/gen_island_icons.py, 64x56 pixel scenes
     with a blank ribbon the UI writes the name on; uncharted = dark ImageColor3 + "???"). gen_icon_voxels skips isl_/st_.
+  * v0.25.20 (owner): hand-laid islands go through `WorldBuilder.LAYOUTS` (island.layout -> module + seed): burn the
+    generic build (keeps Kit.rng), build the module on its own stream with `layoutApi` (base, makeCtx, npc,
+    standardNPCs, dock, shipyard, placeChests, banner...), then the usual z shift. `World/ConchBay.lua` = first one
+    (garrison plateau via L.Tiers, conch towers, market street, town grid, long pier). Renders: export_island +
+    recenter x/z to 0 before render_island.py (its shots assume the origin). Daybreak SPAWN by Rowan (WORLD_VERSION 16).
+    Client CharacterAdded resets CameraType/CameraSubject (camera stuck in the air after Reset).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

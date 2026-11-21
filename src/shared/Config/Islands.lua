@@ -33,7 +33,8 @@ local Islands = {
 	{
 		id = "ConchBay",
 		name = "Conch Bay",
-		subtitle = "Marine Outpost 135",
+		subtitle = "Garrison Harbor",
+		layout = "ConchBay", -- v0.25.20: hand-laid in World/ConchBay.lua (owner concept art)
 		x = 2100, z = 800,
 		radius = 255,
 		levels = { 10, 20 },

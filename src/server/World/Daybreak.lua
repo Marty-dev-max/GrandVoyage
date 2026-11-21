@@ -29,7 +29,7 @@ local decor = Kit.decor
 
 -- ===== key places (local X, Z) =====
 local CAMP = Vector2.new(-165, 0) -- spawn clearing in the jungle
-local SPAWN = Vector2.new(-158, 6) -- v0.25.6 (owner): right by the campfire (was -152, 10)
+local SPAWN = Vector2.new(-161, -8) -- v0.25.20 (owner): a few steps in front of Old Salt Rowan (was -158, 6)
 local PLAZA = Vector2.new(60, 0)
 local PLAZA_R = 40
 local BANDIT_HILL = Vector2.new(-35, -110)
@@ -1122,7 +1122,7 @@ function D.Build(island, api)
 	-- spawn point in the camp clearing (players start and respawn here)
 	-- facing down the main trail toward the village roofs (players spawn looking that way)
 	local sp = ctx.at(SPAWN.X, SPAWN.Y) + Vector3.new(0, 0.2, 0)
-	local toward = ctx.at(-108, 34)
+	local toward = ctx.at(CAMP.X - 2, CAMP.Y - 14) -- face Rowan
 	local spawnPart = P(Vector3.new(8, 1, 8), Color3.fromRGB(255, 240, 160), CFrame.lookAt(sp, Vector3.new(toward.X, sp.Y, toward.Z)), { name = "SpawnPoint", material = M.Neon, transparency = 1, collide = false, shadow = false })
 	spawnPart:SetAttribute("Island", island.id)
 	CollectionService:AddTag(spawnPart, "IslandSpawn")

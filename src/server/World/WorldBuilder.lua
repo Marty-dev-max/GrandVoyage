@@ -474,6 +474,15 @@ function addBannerAndArena(island, c)
 	end
 end
 
+-- helpers a hand-laid island module may use (World/ConchBay.lua ...)
+local layoutApi = {
+	folderOf = folderOf, npc = npc, makeCtx = makeCtx, foam = foam, chest = chestModel, shipyard = buildShipyard,
+	banner = addBannerAndArena, base = buildBase, standardNPCs = standardNPCs, dock = buildDock, placeChests = placeChests,
+}
+local LAYOUTS = {
+	ConchBay = { module = require(script.Parent.ConchBay), seed = 20261122 },
+}
+
 local function buildIsland(island)
 	if island.layout == "Daybreak" then
 		-- Advance the shared Kit random stream exactly as the previous Daybreak did (built into a detached model
@@ -497,7 +506,23 @@ local function buildIsland(island)
 	-- build there and move the finished island, including position attributes (dock LaunchCf / LandCf ...).
 	local dz = island.z or 0
 	island.z = nil
-	local f = buildIslandGeneric(island)
+	local f
+	local layout = island.layout and LAYOUTS[island.layout]
+	if layout then
+		-- hand-laid island (v0.25.20): burn the old generic build to keep the shared Kit.rng stream where every later
+		-- island expects it, then build the new layout on its own stream (same trick as Daybreak)
+		local scratch = Instance.new("Model")
+		local prev = Kit.parent
+		Kit.parent = scratch
+		buildIslandGeneric(island)
+		Kit.parent = prev
+		scratch:Destroy()
+		Kit.WithRng(Random.new(layout.seed), function()
+			f = layout.module.Build(island, layoutApi)
+		end)
+	else
+		f = buildIslandGeneric(island)
+	end
 	island.z = dz
 	if dz ~= 0 then
 		local off = Vector3.new(0, 0, dz)
@@ -855,7 +880,7 @@ end
 -- away and rebuilt from code at server start (so the owner's published place updates through Rojo too).
 -- Hand-built content made in Studio goes in workspace.Handmade (never touched by rebuilds). Kit props placed there
 -- (tagged EnvProp/EnvPart) are dressed with the stylized meshes like the generated ones.
-WB.WORLD_VERSION = 15 -- v15 (v0.25.11): islands spread north/south, wider sea, islets; v14 (v0.25.6): Daybreak spawn by the campfire; v13: voxel NPCs; v12: Voxelize pass
+WB.WORLD_VERSION = 16 -- v16 (v0.25.20): Daybreak spawn by Rowan, Conch Bay hand-laid (World/ConchBay); v15 (v0.25.11): islands spread north/south, wider sea, islets; v14 (v0.25.6): Daybreak spawn by the campfire; v13: voxel NPCs; v12: Voxelize pass
 
 -- Old copies of the map can hide anywhere in Workspace: a renamed or regrouped World, an island dragged into
 -- Handmade, single NPCs / chests / docks pasted from an old bake. They draw on top of the new islands and register

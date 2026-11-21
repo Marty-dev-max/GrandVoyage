@@ -54,6 +54,17 @@ if route:
             dx, dz = x - p[0], z - p[2]
             # local x/z of the point (R columns are the part's axes); vertical extent from the box's corners
             ext = sum(abs(R[1][k]) * h[k] for k in range(3))
+            n = (R[0][1], R[1][1], R[2][1])  # the part's local up axis
+            if abs(n[1]) > 0.7 and (abs(R[1][0]) > 0.01 or abs(R[1][2]) > 0.01):  # ramp (gangplank, sloped deck): walk on its tilted top face
+                sgn = 1 if n[1] > 0 else -1
+                p0 = [p[i] + sgn * n[i] * h[1] for i in range(3)]
+                y = p0[1] - (n[0] * (x - p0[0]) + n[2] * (z - p0[2])) / n[1]
+                d = (x - p[0], y - p[1], z - p[2])
+                lx = sum(R[i][0] * d[i] for i in range(3))
+                lz = sum(R[i][2] * d[i] for i in range(3))
+                if abs(lx) <= h[0] + 0.6 and abs(lz) <= h[2] + 0.6:
+                    out.append((y - 2 * h[1] / abs(n[1]), y))
+                continue
             ok = True
             for k in range(3):
                 v = abs(R[1][k])

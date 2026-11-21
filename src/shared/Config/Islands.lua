@@ -61,13 +61,16 @@ local Islands = {
 		levels = { 20, 30 },
 		palette = { sand = Color3.fromRGB(255, 222, 162), grass = Color3.fromRGB(176, 212, 98), dirt = Color3.fromRGB(170, 112, 70), accent = Color3.fromRGB(255, 140, 36), wall = Color3.fromRGB(255, 238, 210) },
 		theme = "CircusTown",
+		layout = "Marmalade", -- v0.25.24: hand-laid in World/Marmalade.lua (owner concept art)
 		townRadius = 95,
+		-- v0.25.24 (World/Marmalade layout, offsets before the island turns): clowns on the west coast path,
+		-- acrobats on the east one, lions in the orange groves on the hill, Captain Confetti in the town hall square
 		spawns = {
-			{ offset = Vector2.new(-125, 120), radius = 42, monster = "ClownGrunt", count = 6 },
-			{ offset = Vector2.new(125, 120), radius = 38, monster = "CircusAcrobat", count = 5 },
-			{ offset = Vector2.new(10, -165), radius = 40, monster = "CircusLion", count = 4 },
+			{ offset = Vector2.new(-150, 70), radius = 16, monster = "ClownGrunt", count = 6 },
+			{ offset = Vector2.new(150, 70), radius = 16, monster = "CircusAcrobat", count = 5 },
+			{ offset = Vector2.new(0, -192), radius = 20, monster = "CircusLion", count = 4 },
 		},
-		boss = { id = "CaptainConfetti", offset = Vector2.new(-135, -105), respawn = 30 * 60 },
+		boss = { id = "CaptainConfetti", offset = Vector2.new(0, -58), respawn = 30 * 60 },
 		dungeon = "CircusTent",
 	},
 	{

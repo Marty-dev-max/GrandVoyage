@@ -304,6 +304,15 @@ if _os.environ.get("ONLY") == "conch":
     shot("stairs", (0, -140, 22), (0, 40, 40), lens=26)                 # on terrace 1, up the stairs to the gate
     shot("yard", (30, -20, 36), (0, 58, 50), lens=26)                   # inside the gate: courtyard + towers
     raise SystemExit
+if _os.environ.get("ONLY") == "marm":
+    # Marmalade Town after tools/island_local.py (harbor = +Z in Roblox = -Y here)
+    scene.render.resolution_x, scene.render.resolution_y = 1200, 1200
+    shot("top", (0, 0, 900), (0, 0.001, 0), ortho=540)
+    scene.render.resolution_x, scene.render.resolution_y = 1600, 1000
+    shot("aerial", (70, -440, 240), (0, 10, 10), lens=30)               # the concept's view from the harbor
+    shot("boulevard", (8, -186, 14), (0, 110, 20), lens=26)            # street level off the ship, toward the hall
+    shot("square", (40, 40, 16), (0, 108, 15), lens=26)                # the town hall square + clock tower
+    raise SystemExit
 if _os.environ.get("ONLY") == "close":
     scene.render.resolution_x, scene.render.resolution_y = 1200, 800
     shot("close", (150, -60, 40), (70, 0, 12), lens=35)

@@ -412,6 +412,11 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     `SummonShip` (call the active ship at a dock <= 400 or where you swim; again = store) + `SetActiveShip`; the
     Shipwright window only edits / picks the active ship. Downed players drop out of Flight (PlatformStand tumble).
     Conch Bay mobs on the terrace streets (houseRows ignores ctx.free so spawn reservations keep the houses).
+  * v0.25.24 (owner): `World/Marmalade.lua` (LAYOUTS seed 20261123): paved town + long boulevard (planters, lamps)
+    from the south quay to the raised town hall (blue roof + dome) and clock tower, 3 house columns a side, forest hill
+    with orange groves, winding coast paths, shore boulders, decor circus ship + gangplank (our own look). The base's
+    grass mounds under the town are removed (match by Size/Material/CFrame: Lune's bake has no default Part.Position
+    or Shape). island_local.py handles ramps (tilted top faces). Render: ONLY=marm.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

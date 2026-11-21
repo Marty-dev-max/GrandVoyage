@@ -520,15 +520,75 @@ local ITEM_ICON = {
 }
 local WEAPON_ICON = { Sword = "sword", Knuckles = "knuckles", Slingshot = "slingshot", Shoes = "boots", StormBaton = "staff", MedKit = "medkit", Hammer = "hammer" }
 local KIND_ICON = { Armor = "armor", Headgear = "hat", Accessory = "charm", Card = "card", Egg = "egg", Consumable = "potion", Material = "ore" }
-function UI.ItemIconId(def)
+function UI.ItemIconName(def)
 	if not def then
 		return nil
 	end
-	local name = ITEM_ICON[def.id]
+	return ITEM_ICON[def.id]
 		or (def.fruit and ("fruit_" .. string.lower(def.fruit)))
 		or (def.weaponType and WEAPON_ICON[def.weaponType])
 		or KIND_ICON[def.kind]
+end
+function UI.ItemIconId(def)
+	local name = UI.ItemIconName(def)
 	return name and Icons[name] or nil
+end
+
+-- v0.25.14 (owner: voxel item previews): the pixel icon extruded into blocks (Config/IconVoxels, made by
+-- tools/gen_icon_voxels.py) in a ViewportFrame, turning slowly. icon = icon name or emoji. nil when there is no data.
+local IconVoxels = require(ReplicatedStorage.Shared.Config.IconVoxels)
+function UI.VoxelIcon(parent, icon, size, props)
+	local data = IconVoxels[EMOJI_ICON[icon] or icon]
+	if not data then
+		return nil
+	end
+	local vp = New("ViewportFrame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(size, size), Ambient = Color3.fromRGB(110, 105, 135),
+		LightColor = Color3.fromRGB(255, 248, 230), LightDirection = Vector3.new(0.6, -0.8, 0.7), Parent = parent })
+	for k, v in pairs(props or {}) do
+		vp[k] = v
+	end
+	local m = Instance.new("Model")
+	local cols = {}
+	for i, hex in ipairs(data.pal) do
+		cols[i] = Color3.fromHex(hex)
+	end
+	local ALPHA = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!#$%&()*+,/:;<=>?@[]^_`{|}~"
+	for y, row in ipairs(data.rows) do
+		local x, i = 0, 1
+		while i <= #row do
+			local ch = string.sub(row, i, i)
+			i += 1
+			local j = i
+			while j <= #row and string.find(string.sub(row, j, j), "%d") do
+				j += 1
+			end
+			local n = j > i and tonumber(string.sub(row, i, j - 1)) or 1
+			i = j
+			if ch ~= "." then
+				local c = cols[string.find(ALPHA, ch, 1, true)]
+				New("Part", { Anchored = true, Size = Vector3.new(n, 1, 2), Color = c, Material = Enum.Material.SmoothPlastic,
+					CFrame = CFrame.new(-(x + n / 2 - 16), 16 - (y - 0.5), 0), Parent = m })
+			end
+			x += n
+		end
+	end
+	m.Parent = vp
+	local cam = Instance.new("Camera")
+	cam.FieldOfView = 30
+	cam.CFrame = CFrame.lookAt(Vector3.new(0, 0, -62), Vector3.zero)
+	cam.Parent = vp
+	vp.CurrentCamera = cam
+	local yaw = math.rad(-20)
+	local conn
+	conn = RunService.RenderStepped:Connect(function(dt)
+		if not vp.Parent then
+			conn:Disconnect()
+			return
+		end
+		yaw += dt * 0.8
+		m:PivotTo(CFrame.Angles(0, math.sin(yaw) * 0.6, 0))
+	end)
+	return vp
 end
 
 -- An icon that is a rendered image when one exists, emoji text otherwise. Returns the GuiObject.

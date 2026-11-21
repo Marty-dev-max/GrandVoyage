@@ -366,6 +366,10 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     bleed-out kill. Combat.MonsterHit on a downed player -> TryExecute (Telegraph circle, kill after the wind-up);
     MS.Damage -> OnMobHit: another player's hit interrupts (knockback + re-target). CombatService `alive()` excludes
     downed players (no attacks, not a PvP target), no regen while downed. Client push "Downed" overlay + GiveUp request.
+  * v0.25.15 (owner): worn gear = WeaponService `OUTFIT[itemId]` blocks ({ limb, size x limb, offset x limb, color };
+    "Head" means VoxelHead) rebuilt when `OutfitKey` changes (1 s sync loop). Voxel item previews: `tools/gen_icon_voxels.py`
+    (pixel icons -> Config/IconVoxels, run-length rows + palette, self-checked) -> `UI.VoxelIcon(parent, icon, size)`;
+    Bag detail + Store stage use it; `UI.ItemIconName(def)`. Re-run the generator after changing pixel icons.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

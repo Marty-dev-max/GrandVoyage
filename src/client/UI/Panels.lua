@@ -321,6 +321,7 @@ function Panels.Inventory(args)
 		local big = (def.kind == "Fruit" and UI.ModelView(head, "Fruits", def.fruit, 200, 0.9, { ZIndex = 5 }))
 			or (def.weaponType and UI.ModelView(head, "Weapons", def.weaponType, 200, 0.7, { ZIndex = 5 }))
 			or (def.kind == "Egg" and (UI.VoxelEgg(head, def.id, 200, { ZIndex = 5 })))
+			or (UI.VoxelIcon(head, UI.ItemIconName(def), 200, { ZIndex = 5 }))
 		if not big and iconId then
 			big = New("ImageLabel", { BackgroundTransparency = 1, Image = iconId, ScaleType = Enum.ScaleType.Fit, ZIndex = 5, Parent = head })
 		elseif not big then
@@ -3108,7 +3109,7 @@ function Panels.PearlShop(args)
 		UI.Sparkles(stage, Color3.new(1, 1, 1), 12, { star = 0.8 })
 		if e.egg then
 			UI.VoxelEgg(stage, e.egg, 150, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.9, 0.9), SizeConstraint = Enum.SizeConstraint.RelativeYY })
-		else
+		elseif not UI.VoxelIcon(stage, e.icon, 150, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.85, 0.85), SizeConstraint = Enum.SizeConstraint.RelativeYY }) then
 			UI.Icon(stage, e.icon, 150, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.75, 0.75), SizeConstraint = Enum.SizeConstraint.RelativeYY })
 		end
 		UI.Text(panel, e.name, 24, T.Text, "Display", { TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 34) })

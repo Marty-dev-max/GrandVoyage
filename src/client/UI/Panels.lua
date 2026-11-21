@@ -2989,6 +2989,9 @@ local function buyFor(it, currency, after)
 	end
 end
 
+-- v0.25.9 (owner reference): big item cards on the left, a large preview + description + big BUY buttons on the
+-- right, currency pill next to the tabs. One shape for every entry: { icon, name, desc, color, kind, ... }.
+local storePick = {}
 function Panels.PearlShop(args)
 	if args and args.tab then
 		storeTab = args.tab
@@ -2996,121 +2999,172 @@ function Panels.PearlShop(args)
 	local win = UI.Window("PearlShop", "Store", UDim2.fromOffset(820, 580), T.Ocean, "🛍️", { fullscreen = true })
 	local body = win.body
 	local StoreCfg = require(ReplicatedStorage.Shared.Config.Store)
+	local TABS = { Gems = T.Ocean, Benefits = T.Purple, Boosts = T.Orange }
 	local render
-	local function renderStore(list, title, color)
-		local res = Net.Request("StoreInfo")
-		local info = res.ok and res.data or { boosts = {}, tokens = {}, gems = 0 }
-		UI.Section(body, list == StoreCfg.Boosts and "⚡" or "🎟️", title, color, PearlsCfg.Icon .. " " .. UI.Format(info.gems or 0))
-		local okW, absW = pcall(function()
-			return body.AbsoluteSize.X / math.max(0.01, UI.GetScale())
-		end)
-		local W = (okW and absW and absW > 0) and absW or 800
-		local perRow = math.max(1, math.min(#list, math.floor((W + 8) / 236)))
-		local cellW = math.floor((W - (perRow - 1) * 8) / perRow)
-		local rows = math.ceil(#list / perRow)
-		local grid = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, rows * 258 - 8), Parent = body })
-		New("UIGridLayout", { CellSize = UDim2.fromOffset(cellW, 250), CellPadding = UDim2.fromOffset(8, 8), Parent = grid })
-		for _, it in ipairs(list) do
-			local card = UI.Card(grid, nil, color:Lerp(T.Panel, 0.7))
-			UI.Pad(card, 10)
-			UI.List(card, nil, 4, Enum.HorizontalAlignment.Center)
-			UI.IconChip(card, it.icon, color, 48)
-			UI.Text(card, it.name, 15, T.Text, "Display", { TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 36), TextYAlignment = Enum.TextYAlignment.Center })
-			local active = it.boost and info.boosts and (info.boosts[it.boost] or 0) > os.time()
-			local tokens = info.tokens and info.tokens[it.id] or 0
-			UI.Text(card, active and ("ACTIVE: " .. math.ceil(((info.boosts[it.boost] or 0) - os.time()) / 60) .. " min left (buying adds time)") or it.desc, 11, active and T.Green or T.TextSoft, "Semi", { TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 44) })
-			local row = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 38), Parent = card })
-			UI.List(row, Enum.FillDirection.Horizontal, 6, Enum.HorizontalAlignment.Center)
-			UI.Button(row, PearlsCfg.Icon .. " " .. it.gems, T.Ocean, UDim2.new(0.5, -3, 0, 36), function()
+
+	local function entries(info, d)
+		local list = {}
+		if storeTab == "Gems" then
+			for _, prod in ipairs(d and d.products or {}) do
+				table.insert(list, { kind = "pack", id = "pack" .. prod.productId, icon = "💎", name = prod.name, desc = PearlsCfg.Icon .. " " .. prod.pearls .. " Gems. Robux Gems are shop-only (not tradable).", prod = prod, color = T.Purple })
+			end
+			for _, it in ipairs(PearlsCfg.Shop) do
+				table.insert(list, { kind = "gemshop", id = it.id, icon = it.icon, name = it.name, desc = it.desc, it = it, owned = it.once and d and d.perks and d.perks[it.perk], color = T.Ocean })
+			end
+		else
+			for _, it in ipairs(storeTab == "Boosts" and StoreCfg.Boosts or StoreCfg.Benefits) do
+				local active = it.boost and info.boosts and (info.boosts[it.boost] or 0) > os.time()
+				table.insert(list, { kind = "store", id = it.id, icon = it.icon, name = it.name, desc = it.desc, it = it, color = TABS[storeTab],
+					active = active and math.ceil(((info.boosts[it.boost] or 0) - os.time()) / 60), tokens = info.tokens and info.tokens[it.id] or 0 })
+			end
+		end
+		return list
+	end
+
+	local function bigButton(parent, text, color, onClick)
+		local btn = UI.Button(parent, text, color, UDim2.new(1, 0, 0, 52), onClick)
+		return btn
+	end
+
+	local function detail(panel, e)
+		clear(panel)
+		UI.Pad(panel, 14)
+		UI.List(panel, nil, 10, Enum.HorizontalAlignment.Center)
+		local stage = New("Frame", { BackgroundColor3 = e.color:Lerp(T.Panel, 0.55), Size = UDim2.new(1, 0, 0.42, 0), Parent = panel })
+		UI.Stroke(stage, T.Edge, 2.5)
+		UI.Gradient(stage, Color3.new(1, 1, 1), Color3.fromRGB(150, 150, 170), 90)
+		UI.Icon(stage, e.icon, 150, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.75, 0.75), SizeConstraint = Enum.SizeConstraint.RelativeYY })
+		UI.Text(panel, e.name, 24, T.Text, "Display", { TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 34) })
+		local status = e.active and ("ACTIVE: " .. e.active .. " min left (buying adds time)") or (e.owned and "Owned") or nil
+		UI.Text(panel, e.desc .. (status and ("\n\n" .. status) or ""), 15, status and T.Green or T.TextSoft, "Semi", { TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 84) })
+		if e.kind == "store" then
+			local it = e.it
+			bigButton(panel, "BUY  " .. PearlsCfg.Icon .. " " .. it.gems, T.Green, function()
 				buyFor(it, "gems", function(r)
 					if r and r.ok then
 						render()
 					end
 				end)
 			end)
-			local robuxBtn = UI.Button(row, "R$ " .. it.robux, (it.productId and it.productId ~= 0) and T.Green or T.Grey, UDim2.new(0.5, -3, 0, 36), function()
-				if not it.productId or it.productId == 0 then
+			local onSale = it.productId and it.productId ~= 0
+			local rb = bigButton(panel, "BUY  R$ " .. it.robux, onSale and T.Green or T.Grey, function()
+				if not onSale then
 					UI.Toast("Robux purchase coming soon (use Gems)", "info")
 					return
 				end
 				buyFor(it, "robux")
 			end)
 			Prices.Apply(it.productId, it.robux, function(r)
-				robuxBtn.Text = "R$ " .. r
+				rb.Text = "BUY  R$ " .. r
 			end)
-			if tokens > 0 then
-				UI.Button(card, "USE (" .. tokens .. ")", T.Gold, UDim2.new(1, 0, 0, 32), function()
-					local r = req("StoreUseToken", { id = it.id })
-					if r.ok then
+			if e.tokens > 0 then
+				bigButton(panel, "USE (" .. e.tokens .. ")", T.Gold, function()
+					if req("StoreUseToken", { id = it.id }).ok then
 						render()
+					end
+				end)
+			end
+		elseif e.kind == "gemshop" then
+			bigButton(panel, e.owned and "OWNED" or ("BUY  " .. PearlsCfg.Icon .. " " .. e.it.price), e.owned and T.Grey or T.Green, function()
+				if not e.owned and req("PearlShopBuy", { id = e.it.id }, "Purchase").ok then
+					render()
+				end
+			end)
+		else
+			local onSale = e.prod.productId ~= 0
+			local bb = bigButton(panel, onSale and "BUY" or "COMING SOON", onSale and T.Green or T.Grey, function()
+				if onSale then
+					req("PearlBuyProduct", { productId = e.prod.productId })
+				else
+					UI.Toast("Coming soon", "info")
+				end
+			end)
+			if onSale then
+				Prices.Apply(e.prod.productId, nil, function(r)
+					if r then
+						bb.Text = "BUY  R$ " .. r
 					end
 				end)
 			end
 		end
 	end
+
 	render = function()
 		clear(body)
-		UI.List(body, nil, 8)
-		UI.TabBar(body, { { "Gems", "💎", "GEMS", T.Ocean }, { "Benefits", "🎟️", "BENEFITS", T.Purple }, { "Boosts", "⚡", "BOOSTS", T.Orange } }, storeTab, function(tab)
+		local res = Net.Request("StoreInfo")
+		local info = res.ok and res.data or { boosts = {}, tokens = {}, gems = 0 }
+		local d
+		if storeTab == "Gems" then
+			local pr = Net.Request("PearlInfo")
+			d = pr.ok and pr.data or nil
+		end
+		if not win.frame.Parent then
+			return
+		end
+		-- top: tabs + currency pill
+		local top = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 46), Parent = body })
+		local tabs = UI.TabBar(top, { { "Gems", "💎", "GEMS", T.Ocean }, { "Benefits", "🎟️", "BENEFITS", T.Purple }, { "Boosts", "⚡", "BOOSTS", T.Orange } }, storeTab, function(tab)
 			storeTab = tab
 			render()
+		end, 42)
+		tabs.Size = UDim2.new(0.7, 0, 0, 48)
+		local pill = New("Frame", { BackgroundColor3 = T.OceanDark, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 2), Size = UDim2.fromOffset(190, 42), Parent = top })
+		UI.Stroke(pill, T.Edge, 2.5)
+		UI.Icon(pill, "💎", 34, { Position = UDim2.fromOffset(6, 4) })
+		UI.Text(pill, UI.Format(d and (d.pearls + d.bound) or info.gems or 0), 20, T.Text, "Display", { Position = UDim2.fromOffset(46, 0), Size = UDim2.new(1, -52, 1, 0), TextXAlignment = Enum.TextXAlignment.Right, TextYAlignment = Enum.TextYAlignment.Center, TextWrapped = false })
+		-- left: big cards; right: detail
+		local split = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 56), Size = UDim2.new(1, 0, 1, -56), Parent = body })
+		local grid = UI.Scroll(split, UDim2.new(0.62, -8, 1, 0))
+		local panel = UI.Card(split, UDim2.new(0.38, 0, 1, 0), TABS[storeTab]:Lerp(T.Panel, 0.75))
+		panel.AnchorPoint = Vector2.new(1, 0)
+		panel.Position = UDim2.fromScale(1, 0)
+		local list = entries(info, d)
+		local okW, absW = pcall(function()
+			return grid.AbsoluteSize.X / math.max(0.01, UI.GetScale())
 		end)
-		if storeTab == "Benefits" then
-			renderStore(StoreCfg.Benefits, "Benefits", T.Purple)
-			return
-		elseif storeTab == "Boosts" then
-			renderStore(StoreCfg.Boosts, "Boosts", T.Orange)
-			return
+		local W = ((okW and absW and absW > 0) and absW or 500) - 12
+		local perRow = math.max(1, math.floor((W + 10) / 190))
+		local cellW = math.floor((W - (perRow - 1) * 10) / perRow)
+		UI.Pad(grid, 4)
+		New("UIGridLayout", { CellSize = UDim2.fromOffset(cellW, math.floor(cellW * 1.15)), CellPadding = UDim2.fromOffset(10, 10), SortOrder = Enum.SortOrder.LayoutOrder, Parent = grid })
+		local picked = storePick[storeTab]
+		local pickedEntry = list[1]
+		for _, e in ipairs(list) do
+			if e.id == picked then
+				pickedEntry = e
+			end
 		end
-		local res = Net.Request("PearlInfo")
-		if not res.ok or not win.frame.Parent then
-			return
-		end
-		local d = res.data
-		local _, right = UI.Section(body, PearlsCfg.Icon, "Your Gems", T.Ocean, UI.Format(d.pearls + d.bound))
-		local _ = right
-		UI.Text(body, string.format("Tradable %s   •   Shop-only %s   •   Earned today %d / %d", UI.Format(d.pearls), UI.Format(d.bound), d.earnedToday, d.cap), 14, T.TextSoft, "Semi")
-		UI.Text(body, d.canTrade and "✅ You can buy and sell items for Gems in stalls." or ("🔒 " .. (d.tradeWhy or "")), 14, d.canTrade and T.Green or T.Gold, "Bold")
-		UI.Section(body, "🛍️", "Gem Shop", T.Gold)
-		-- one row of cards that always fits the window: card width follows the item count
-		local n = #PearlsCfg.Shop
-		local perRow = math.min(n, 5)
-		local cellW = math.floor((788 - (perRow - 1) * 8) / perRow)
-		local rows = math.ceil(n / perRow)
-		local grid = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, rows * 202 - 8), Parent = body })
-		New("UIGridLayout", { CellSize = UDim2.fromOffset(cellW, 194), CellPadding = UDim2.fromOffset(8, 8), Parent = grid })
-		for _, it in ipairs(PearlsCfg.Shop) do
-			local owned = it.once and d.perks and d.perks[it.perk]
-			local card = UI.Card(grid, nil, T.OceanDark:Lerp(T.Panel, 0.65))
-			UI.Pad(card, 10)
-			UI.List(card, nil, 4, Enum.HorizontalAlignment.Center)
-			UI.IconChip(card, it.icon, T.Ocean, 48)
-			UI.Text(card, it.name, 16, T.Text, "Display", { TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false })
-			UI.Text(card, it.desc, 11, T.TextSoft, "Semi", { TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 38) })
-			UI.Button(card, owned and "Owned" or (PearlsCfg.Icon .. " " .. it.price), owned and T.Grey or T.Ocean, UDim2.new(1, 0, 0, 38), function()
-				if owned then
-					return
-				end
-				local r = req("PearlShopBuy", { id = it.id }, "Purchase")
-				if r.ok then
-					render()
-				end
+		for i, e in ipairs(list) do
+			local on = e == pickedEntry
+			local card = UI.Card(grid, nil, e.color:Lerp(T.Panel, on and 0.2 or 0.55))
+			card.LayoutOrder = i
+			if on then
+				UI.Stroke(card, T.Gold, 4)
+			end
+			UI.Icon(card, e.icon, 90, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), Size = UDim2.fromScale(0.62, 0.62), SizeConstraint = Enum.SizeConstraint.RelativeXX })
+			UI.Text(card, e.name, 15, T.Text, "Display", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 6, 1, -30), Size = UDim2.new(1, -12, 0, 34), TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Bottom })
+			local price = e.kind == "pack" and "R$" or e.kind == "gemshop" and (e.owned and "Owned" or (PearlsCfg.Icon .. " " .. e.it.price)) or (PearlsCfg.Icon .. " " .. e.it.gems)
+			local priceLbl = UI.Text(card, e.active and "ACTIVE" or price, 14, e.active and T.Green or T.Gold, "Display", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 6, 1, -6), Size = UDim2.new(1, -12, 0, 22), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false })
+			if e.kind == "pack" and e.prod.productId ~= 0 then
+				Prices.Apply(e.prod.productId, nil, function(r)
+					if r then
+						priceLbl.Text = "R$ " .. r
+					end
+				end)
+			end
+			local hit = New("TextButton", { Text = "", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = card.ZIndex + 3, Parent = card })
+			hit.Activated:Connect(function()
+				storePick[storeTab] = e.id
+				render()
 			end)
 		end
-		UI.Section(body, "💎", "Get Gems", T.Purple, "Robux Gems are shop-only")
-		local row = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 44), Parent = body })
-		UI.List(row, Enum.FillDirection.Horizontal, 8)
-		for _, prod in ipairs(d.products) do
-			local onSale = prod.productId ~= 0
-			UI.Button(row, (onSale and "" or "🔒 ") .. prod.name .. "  " .. PearlsCfg.Icon .. prod.pearls, onSale and T.Purple or T.Grey, UDim2.fromOffset(250, 40), function()
-				if not onSale then
-					UI.Toast("Coming soon", "info")
-					return
-				end
-				req("PearlBuyProduct", { productId = prod.productId })
-			end)
+		if pickedEntry then
+			detail(panel, pickedEntry)
 		end
-		UI.Text(body, "Earn Gems from first-time chests, exploring whole islands, story quests and MVP bosses (max " .. d.cap .. " per day).", 13, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 34) })
+		if d then
+			UI.Text(panel, string.format("Tradable %s • Shop-only %s\nEarned today %d / %d", UI.Format(d.pearls), UI.Format(d.bound), d.earnedToday, d.cap)
+				.. (d.canTrade and "" or ("\n🔒 " .. (d.tradeWhy or ""))), 12, T.TextSoft, "Semi", { TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 54) })
+		end
 	end
 	render()
 	win.resized.Event:Connect(render)

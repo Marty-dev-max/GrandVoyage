@@ -342,6 +342,9 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   * v0.25.9 (owner): race parts per variant: Skyborn `shape` (sparrow/swallow/owl/angel, VoxelChar WING_SHAPES),
     Tidekin `fins` (reef crest / shark dorsal / lionfish back + arm spines / manta shoulder fins), Oni horns out of the
     forehead at z -2 (in front of the bangs) rising to y 10-12 (above the hair). Preview: export_char.luau `races` mode.
+  * v0.25.10 (owner reference): Store window = tabs + Gems pill on top, big item cards left (UIGridLayout in a
+    Scroll), detail card right (big icon stage, name, desc, big BUY buttons). Entries share one shape in
+    Panels.PearlShop `entries()` (kind store / gemshop / pack); the picked card per tab is kept in `storePick`.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

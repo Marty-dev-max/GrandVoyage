@@ -294,6 +294,16 @@ if _os.environ.get("ONLY") == "plaza":
     scene.render.resolution_x, scene.render.resolution_y = 1200, 800
     shot("quay", (300, -50, 60), (225, 0, 7), lens=35)
     raise SystemExit
+if _os.environ.get("ONLY") == "conch":
+    # Conch Bay after tools/island_local.py (pier = +Z in Roblox = -Y here)
+    scene.render.resolution_x, scene.render.resolution_y = 1200, 1200
+    shot("top", (0, 0, 900), (0, 0.001, 0), ortho=540)
+    scene.render.resolution_x, scene.render.resolution_y = 1600, 1000
+    shot("aerial", (240, -420, 190), (0, -20, 10), lens=30)              # the concept's aerial view
+    shot("market", (14, -214, 14), (0, 58, 84), lens=26)               # street level by the stalls: tall tower ahead
+    shot("stairs", (0, -140, 22), (0, 40, 40), lens=26)                 # on terrace 1, up the stairs to the gate
+    shot("yard", (30, -20, 36), (0, 58, 50), lens=26)                   # inside the gate: courtyard + towers
+    raise SystemExit
 if _os.environ.get("ONLY") == "close":
     scene.render.resolution_x, scene.render.resolution_y = 1200, 800
     shot("close", (150, -60, 40), (70, 0, 12), lens=35)

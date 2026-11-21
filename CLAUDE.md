@@ -401,6 +401,11 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     grandStairs (one straight flight + landing), scenery(), boss in the garrison yard. NPC plates: icon only beyond
     Interact NEAR (22 studs from your character). HUD: menu fold tab (▶/◀), quest tracker fold (◀ -> scroll button,
     Quest.collapsed hides the hunt card too), tracker texts truncate.
+  * v0.25.22 (owner, concept overhead/aerial/market shots): Conch Bay is terraced: quay 7.6 (stalls, T pier) -> T1 +7
+    -> T2 +14 -> garrison plateau +21 (open sand courtyard, two tapered blue towers with outside spiral stairs, the tall
+    one on the axis so it shows from the market). Boxes are taught to ctx.height (`withRects`). Walk check without
+    Studio: `python3 tools/island_local.py export.json local.json <x> <z> <yaw> "x,z x,z ..."` (also recenters + un-turns
+    the export for render_island.py, ONLY=conch shots). Menu fold tab is placed from menu.Position (root UIScale).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

@@ -41,14 +41,14 @@ local Islands = {
 		palette = { sand = Color3.fromRGB(250, 232, 184), grass = Color3.fromRGB(148, 206, 108), dirt = Color3.fromRGB(150, 112, 80), accent = Color3.fromRGB(62, 124, 224), wall = Color3.fromRGB(236, 230, 214) },
 		theme = "MarineOutpost",
 		townRadius = 95,
-		-- v0.25.21 (World/ConchBay layout): recruits and wolves in the meadows either side of the town, riflemen on
-		-- the garrison's lower terrace, the Axe-Arm Captain in the garrison yard on top (offsets before the island turns)
+		-- v0.25.22 (World/ConchBay terraces): recruits and wolves in the meadows either side of the terraces,
+		-- riflemen on the garrison training lawn, the Axe-Arm Captain in the open courtyard (offsets before the turn)
 		spawns = {
-			{ offset = Vector2.new(-172, 40), radius = 30, monster = "MarineRecruit", count = 6 },
-			{ offset = Vector2.new(172, 40), radius = 30, monster = "GuardWolf", count = 5 },
-			{ offset = Vector2.new(-84, -165), radius = 11, monster = "MarineRifleman", count = 5 },
+			{ offset = Vector2.new(-178, 40), radius = 28, monster = "MarineRecruit", count = 6 },
+			{ offset = Vector2.new(178, 40), radius = 28, monster = "GuardWolf", count = 5 },
+			{ offset = Vector2.new(-52, -2), radius = 10, monster = "MarineRifleman", count = 5 },
 		},
-		boss = { id = "AxeCaptain", offset = Vector2.new(0, -140), respawn = 25 * 60 },
+		boss = { id = "AxeCaptain", offset = Vector2.new(24, 0), respawn = 25 * 60 },
 	},
 	{
 		id = "Marmalade",

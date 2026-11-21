@@ -490,12 +490,12 @@ local function buildMenu()
 		menu.Visible = not menu.Visible
 		tab.Text = menu.Visible and "▶" or "◀"
 	end)
+	-- placed in the menu's own coordinates (the HUD root is scaled, pixel math put the tab in the wrong corner):
+	-- just left of the tiles, or at the screen edge where the column was when folded
+	tabHolder.AnchorPoint = Vector2.new(1, 0)
 	RunService.RenderStepped:Connect(function()
-		local rootPos = UI.Root.AbsolutePosition
-		local p = menu.AbsolutePosition - rootPos
-		local w = menu.AbsoluteSize.X
-		-- when folded, the tab sits at the screen edge where the column was
-		tabHolder.Position = UDim2.fromOffset(menu.Visible and (p.X - 30) or (p.X + w - 24), p.Y)
+		local w = menu.Size.X.Offset * menuScale.Scale
+		tabHolder.Position = menu.Position + UDim2.fromOffset(menu.Visible and (-w - 6) or 0, 0)
 		tabHolder.Visible = not UI.AnyOpen()
 	end)
 	local keymap = {}

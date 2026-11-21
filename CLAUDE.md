@@ -406,6 +406,12 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     one on the axis so it shows from the market). Boxes are taught to ctx.height (`withRects`). Walk check without
     Studio: `python3 tools/island_local.py export.json local.json <x> <z> <yaw> "x,z x,z ..."` (also recenters + un-turns
     the export for render_island.py, ONLY=conch shots). Menu fold tab is placed from menu.Position (root UIScale).
+  * v0.25.23 (owner): Anim.Stop stops even when IsPlaying is false (a loading track kept the fly pose after landing).
+    Prompt card = 1.35x, centered at the NPC nameplate's height (plate hidden while shown). ShiftLock = native feel:
+    UserGameSettings.RotationType CameraRelative + AutoRotate (never snap root.CFrame: it jittered). MENU -> Ships =
+    `SummonShip` (call the active ship at a dock <= 400 or where you swim; again = store) + `SetActiveShip`; the
+    Shipwright window only edits / picks the active ship. Downed players drop out of Flight (PlatformStand tumble).
+    Conch Bay mobs on the terrace streets (houseRows ignores ctx.free so spawn reservations keep the houses).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

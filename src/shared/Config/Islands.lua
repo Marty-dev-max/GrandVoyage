@@ -41,11 +41,13 @@ local Islands = {
 		palette = { sand = Color3.fromRGB(250, 232, 184), grass = Color3.fromRGB(148, 206, 108), dirt = Color3.fromRGB(150, 112, 80), accent = Color3.fromRGB(62, 124, 224), wall = Color3.fromRGB(236, 230, 214) },
 		theme = "MarineOutpost",
 		townRadius = 95,
-		-- v0.25.22 (World/ConchBay terraces): recruits and wolves in the meadows either side of the terraces,
-		-- riflemen on the garrison training lawn, the Axe-Arm Captain in the open courtyard (offsets before the turn)
+		-- v0.25.23 (owner): recruits on the terrace-1 street and wolves on the terrace-2 street, right on the way up the
+		-- stairs to the garrison; riflemen on the training lawn, the Axe-Arm Captain in the courtyard (before the turn)
 		spawns = {
-			{ offset = Vector2.new(-178, 40), radius = 28, monster = "MarineRecruit", count = 6 },
-			{ offset = Vector2.new(178, 40), radius = 28, monster = "GuardWolf", count = 5 },
+			{ offset = Vector2.new(-32, 143), radius = 6, monster = "MarineRecruit", count = 3 },
+			{ offset = Vector2.new(32, 143), radius = 6, monster = "MarineRecruit", count = 3 },
+			{ offset = Vector2.new(-30, 79), radius = 6, monster = "GuardWolf", count = 3 },
+			{ offset = Vector2.new(30, 79), radius = 6, monster = "GuardWolf", count = 2 },
 			{ offset = Vector2.new(-52, -2), radius = 10, monster = "MarineRifleman", count = 5 },
 		},
 		boss = { id = "AxeCaptain", offset = Vector2.new(24, 0), respawn = 25 * 60 },

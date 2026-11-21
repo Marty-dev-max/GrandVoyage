@@ -549,7 +549,8 @@ local function volley(ship, target, count, damageMult, player, spread, fixedDama
 end
 
 -- ===== Player ships =====
-function Ship.Launch(player, slot)
+-- `at` (CFrame, optional): where the ship appears (SummonShip in open water); else the nearest dock's launch spot
+function Ship.Launch(player, slot, at)
 	local p = R.DataService.Get(player)
 	local design = p.ships[slot]
 	if not design then
@@ -561,7 +562,7 @@ function Ship.Launch(player, slot)
 		return false, "A ship needs 1 helm and at least 1 sail or oar bench"
 	end
 	local dock = R.WorldBuilder.NearestDock(R.PlayerService.Root(player).Position)
-	if not dock or dock.distance > 160 then
+	if not at and (not dock or dock.distance > 160) then
 		return false, "Go to a dock or shipyard"
 	end
 	if p.shipSunk then
@@ -572,7 +573,7 @@ function Ship.Launch(player, slot)
 		p.shipSunk = false
 		R.PlayerService.Notify(player, "Ship repaired (🪙" .. cost .. ")", "info")
 	end
-	local ship = buildShip(design, dock.launchCf, { name = "Ship_" .. player.UserId, hullStyle = HULL_STYLES[p and p.faction or "None"] or HULL_STYLES.None })
+	local ship = buildShip(design, at or dock.launchCf, { name = "Ship_" .. player.UserId, hullStyle = HULL_STYLES[p and p.faction or "None"] or HULL_STYLES.None })
 	ship.owner = player
 	ship.stats = stats
 	ship.maxHp = stats.hp
@@ -1110,6 +1111,56 @@ function Ship.Start()
 		local p = R.DataService.Get(player)
 		return Ship.Launch(player, math.clamp(math.floor(tonumber(data.slot) or p.activeShip or 1), 1, 3))
 	end, 2)
+
+	-- v0.25.23 (owner): the menu's Ships button calls your active ship out or puts it away; editing is the
+	-- Shipwright's job. Out: at the nearest dock (within 400), or right where you swim in open water.
+	Net.Handle("SummonShip", function(player)
+		local ship = Ship.GetShipOf(player)
+		local root = R.PlayerService.Root(player)
+		if not root then
+			return false
+		end
+		if ship then
+			local dock = R.WorldBuilder.NearestDock(ship.root.Position)
+			if dock and dock.distance <= cfg.DockRange + ship.radius then
+				return Ship.Dock(player)
+			end
+			for _, pl in ipairs(playersOn(ship)) do
+				if pl == player then
+					return false, "Sail to a dock (or jump off) to put your ship away"
+				end
+			end
+			if #playersOn(ship) > 0 then
+				return false, "Your crew is still aboard"
+			end
+			despawn(ship)
+			return true, "Ship stored"
+		end
+		R.ShipyardService.ExitBuild(player)
+		local p = R.DataService.Get(player)
+		local slot = p.activeShip or 1
+		local dock = R.WorldBuilder.NearestDock(root.Position)
+		if dock and dock.distance <= 400 then
+			return Ship.Launch(player, slot)
+		end
+		if root.Position.Y > GameConfig.SeaLevel + 4 then
+			return false, "Go to a dock, or swim out to sea, to call your ship"
+		end
+		local look = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z)
+		local yaw = look.Magnitude > 0.01 and math.atan2(-look.X, -look.Z) or 0
+		return Ship.Launch(player, slot, CFrame.new(root.Position.X, GameConfig.SeaLevel - G * 0.5, root.Position.Z) * CFrame.Angles(0, yaw, 0))
+	end, 2)
+
+	Net.Handle("SetActiveShip", function(player, data)
+		local p = R.DataService.Get(player)
+		local slot = math.floor(tonumber(type(data) == "table" and data.slot) or 0)
+		if slot < 1 or slot > 3 or not p.ships[slot] then
+			return false, "No ship in that slot"
+		end
+		p.activeShip = slot
+		R.PlayerService.MarkDirty(player)
+		return true
+	end, 0.5)
 
 	Net.Handle("DockShip", function(player)
 		return Ship.Dock(player)

@@ -424,7 +424,7 @@ local MENU = {
 	{ "🐾", "Pets", T.Green:Lerp(T.Ocean, 0.3), "N", "Pets", main = true },
 	{ "🛍️", "PearlShop", Color3.fromRGB(80, 170, 220), "H", "Store", main = true },
 	{ "📊", "Stats", T.Purple, "C", "Stats", main = true },
-	{ "ship", "Shipwright", T.OceanDark, nil, "Ships" },
+	{ "ship", "SummonShip", T.OceanDark, nil, "Ships" }, -- calls / stores the ship (editing = Shipwright NPC)
 	{ "🏴", "Guild", T.Pirate, "G", "Guild" },
 	{ "👥", "Party", T.Green, "P", "Party" },
 	{ "👑", "BossBoard", T.Red, "B", "Bosses" },

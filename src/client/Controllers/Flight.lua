@@ -126,7 +126,17 @@ function Flight.Start()
 	end)
 
 	RunService.RenderStepped:Connect(function()
-		local _, h, r = char()
+		local c, h, r = char()
+		-- knocked down (KnockdownService): no flying; drop out of the sky limp, tumbling like a ragdoll
+		if c and h and r and c:GetAttribute("Downed") then
+			holdStart = nil
+			if flying then
+				stop()
+				h.PlatformStand = true
+				r.AssemblyAngularVelocity = Vector3.new(5, 0, 3)
+			end
+			return
+		end
 		if not h or not r or h.Health <= 0 then
 			if flying then
 				stop()

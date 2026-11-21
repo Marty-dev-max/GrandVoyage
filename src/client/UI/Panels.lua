@@ -1950,16 +1950,25 @@ function Panels.Shipwright()
 			end
 		end)
 		h1.Position = UDim2.new(1, -240, 0, 20)
-		if d then
-			local _, h2 = UI.Button(card, "⛵ Launch", T.Green, UDim2.fromOffset(116, 44), function()
-				local res = req("LaunchShip", { slot = slot }, "Bell")
-				if res.ok then
+		-- v0.25.23 (owner): the Shipwright only edits; MENU -> Ships calls the ACTIVE ship out or puts it away
+		if d and slot ~= p.activeShip then
+			local _, h2 = UI.Button(card, "⭐ Use", T.Green, UDim2.fromOffset(116, 44), function()
+				if req("SetActiveShip", { slot = slot }).ok then
+					p.activeShip = slot
 					win:Destroy()
-					UI.Banner("Set Sail!", "W/S sails  •  A/D steer  •  click water to fire cannons", T.Ocean)
+					Panels.Shipwright()
 				end
 			end)
 			h2.Position = UDim2.new(1, -118, 0, 20)
 		end
+	end
+end
+
+-- MENU -> Ships: call the active ship (at the nearest dock, or where you swim) or put it away
+function Panels.SummonShip()
+	local res = req("SummonShip", nil, "Bell")
+	if res.ok and not res.msg then
+		UI.Banner("Set Sail!", "W/S sails  •  A/D steer  •  click water to fire cannons", T.Ocean)
 	end
 end
 

@@ -134,7 +134,8 @@ function Anim.Stop(humanoid, name, fade)
 	local animator = humanoid and humanoid:FindFirstChildOfClass("Animator")
 	local list = animator and tracks[animator]
 	local tr = list and list[name]
-	if tr and tr.IsPlaying then
+	-- no IsPlaying check: a track still loading reads false and then played on forever (fly pose after landing)
+	if tr then
 		tr:Stop(fade or 0.2)
 	end
 end

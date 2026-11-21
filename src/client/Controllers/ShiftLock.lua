@@ -10,6 +10,7 @@ local UI = require(script.Parent.Parent.UI.UIKit)
 
 local SL = {}
 local player = Players.LocalPlayer
+local GameSettings = UserSettings():GetService("UserGameSettings")
 local on = false
 
 local function nativeLock()
@@ -28,11 +29,12 @@ local function apply(state)
 	local char = player.Character
 	local hum = char and char:FindFirstChildOfClass("Humanoid")
 	if hum then
-		hum.AutoRotate = not on
+		hum.AutoRotate = true
 		hum.CameraOffset = on and Vector3.new(1.75, 0, 0) or Vector3.zero
 	end
 	if not on then
 		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+		GameSettings.RotationType = Enum.RotationType.MovementRelative
 	end
 end
 
@@ -69,29 +71,20 @@ function SL.Start()
 		task.wait()
 		apply(on)
 	end)
-	-- turn the body BEFORE the camera updates (v0.25.17, owner: the view jerked). Humanoid.CameraOffset follows the
-	-- body's facing, so turning it after the camera had moved made the shoulder offset snap every frame.
-	RunService:BindToRenderStep("GVShiftLock", Enum.RenderPriority.Camera.Value - 1, function()
+	-- v0.25.23 (owner: still jerky): the same thing Roblox's own Shift Lock does. The humanoid turns itself to the
+	-- camera (RotationType CameraRelative) inside the physics step, instead of us snapping root.CFrame every frame
+	-- (that fought the physics and jittered). Set after the camera scripts so they cannot undo it.
+	RunService:BindToRenderStep("GVShiftLock", Enum.RenderPriority.Camera.Value + 1, function()
 		if not on then
 			return
 		end
 		if UI.AnyOpen() then
 			UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+			GameSettings.RotationType = Enum.RotationType.MovementRelative
 			return
 		end
 		UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
-		local char = player.Character
-		local root = char and char:FindFirstChild("HumanoidRootPart")
-		local hum = char and char:FindFirstChildOfClass("Humanoid")
-		local cam = workspace.CurrentCamera
-		if root and hum and cam and not hum.PlatformStand and hum.SeatPart == nil then
-			local look = cam.CFrame.LookVector
-			local flat = Vector3.new(look.X, 0, look.Z)
-			if flat.Magnitude > 0.01 then
-				root.CFrame = CFrame.lookAt(root.Position, root.Position + flat.Unit)
-				root.AssemblyAngularVelocity = Vector3.zero
-			end
-		end
+		GameSettings.RotationType = Enum.RotationType.CameraRelative
 	end)
 end
 

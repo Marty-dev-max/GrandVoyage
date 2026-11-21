@@ -23,14 +23,22 @@ end
 
 -- ===== prompts =====
 local shown = {} -- prompt -> billboard
+local BIG = 1.35
 
 local function buildPrompt(prompt, inputType)
 	local gui = player:FindFirstChildOfClass("PlayerGui")
 	if not gui then
 		return
 	end
-	local bb = New("BillboardGui", { Name = "GVPrompt", AlwaysOnTop = true, Active = true, LightInfluence = 0, Size = UDim2.fromOffset(300, 74), SizeOffset = Vector2.new(0.5, 0), StudsOffset = Vector3.new(1.2, 0.5, 0), ResetOnSpawn = false, Adornee = prompt.Parent, Parent = gui })
-	local card = New("TextButton", { Text = "", AutoButtonColor = false, BackgroundColor3 = Color3.new(1, 1, 1), Position = UDim2.fromOffset(-40, 0), Size = UDim2.fromOffset(280, 64), Parent = bb })
+	-- v0.25.23 (owner: too small, off to the side): centered over the head, where the NPC's nameplate sits (hidden
+	-- while the card shows), 1.35x bigger
+	local plate = prompt.Parent:FindFirstChild("Nameplate")
+	plate = plate and plate:IsA("BillboardGui") and plate or nil
+	local bb = New("BillboardGui", { Name = "GVPrompt", AlwaysOnTop = true, Active = true, LightInfluence = 0, Size = UDim2.fromOffset(280 * BIG + 10, 64 * BIG + 10), StudsOffsetWorldSpace = plate and plate.StudsOffsetWorldSpace or Vector3.new(0, 3, 0), ResetOnSpawn = false, Adornee = prompt.Parent, Parent = gui })
+	if plate then
+		plate.Enabled = false
+	end
+	local card = New("TextButton", { Text = "", AutoButtonColor = false, BackgroundColor3 = Color3.new(1, 1, 1), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 14), Size = UDim2.fromOffset(280, 64), Parent = bb })
 	UI.Corner(card, 14)
 	New("UIGradient", { Color = ColorSequence.new(T.PanelTop, T.PanelDeep), Rotation = 90, Parent = card })
 	UI.Stroke(card, T.Edge, 3)
@@ -56,16 +64,16 @@ local function buildPrompt(prompt, inputType)
 	-- slide in
 	local sc = New("UIScale", { Scale = 0.6, Parent = card })
 	card.BackgroundTransparency = 0
-	tween(card, 0.25, { Position = UDim2.fromOffset(0, 0) })
-	tween(sc, 0.25, { Scale = 1 })
+	tween(card, 0.25, { Position = UDim2.fromScale(0.5, 0.5) })
+	tween(sc, 0.25, { Scale = BIG })
 	-- tap / click the card to use it (touch screens have no E key)
 	card.MouseButton1Down:Connect(function()
 		prompt:InputHoldBegin()
-		tween(sc, 0.08, { Scale = 0.94 }, Enum.EasingStyle.Quad)
+		tween(sc, 0.08, { Scale = 0.94 * BIG }, Enum.EasingStyle.Quad)
 	end)
 	card.MouseButton1Up:Connect(function()
 		prompt:InputHoldEnd()
-		tween(sc, 0.15, { Scale = 1 })
+		tween(sc, 0.15, { Scale = BIG })
 	end)
 	local conns = {}
 	if fill then
@@ -83,7 +91,7 @@ local function buildPrompt(prompt, inputType)
 		key.Position = UDim2.fromOffset(25, 12)
 		tween(key, 0.2, { Size = UDim2.fromOffset(46, 46), Position = UDim2.fromOffset(22, 9) })
 	end))
-	shown[prompt] = { bb = bb, conns = conns }
+	shown[prompt] = { bb = bb, conns = conns, plate = plate }
 end
 
 local function hidePrompt(prompt)
@@ -96,6 +104,9 @@ local function hidePrompt(prompt)
 		c:Disconnect()
 	end
 	s.bb:Destroy()
+	if s.plate then
+		s.plate.Enabled = true
+	end
 end
 
 local function claim(prompt)

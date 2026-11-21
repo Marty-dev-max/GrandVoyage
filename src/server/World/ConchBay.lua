@@ -239,7 +239,7 @@ local function houseRows(ctx, rx, rows, sideXs)
 			for _, sxv in ipairs(sideXs) do
 				clear = clear and math.abs(math.abs(cx) - sxv) > 4 + w / 2 + 3
 			end
-			if clear and ctx.free(cx, z, 6) then
+			if clear then -- no ctx.free: the street spawns (v0.25.23) are reserved and would delete the houses
 				house(ctx, cx, z, w, rng:NextNumber(11, 12.5), ROOFS[rng:NextInteger(1, #ROOFS)], (rng:NextNumber() > 0.5 and maxFloors > 1) and 2 or 1)
 				if rng:NextNumber() > 0.6 then -- a planter tree beside the door, never in the stair corridor
 					local tx = cx + (w / 2 + 2) * (rng:NextNumber() > 0.5 and 1 or -1)

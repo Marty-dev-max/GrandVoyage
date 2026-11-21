@@ -186,8 +186,12 @@ function CharAnim.Start()
 			want = Vector3.new(v.X, 0, v.Z).Magnitude > 2 and "Swim" or "SwimIdle"
 		end
 		if want ~= swimClip then
-			if swimClip and hum then
-				Anim.Stop(hum, swimClip, 0.3)
+			if hum then -- all of them: a quick Fly <-> FlyIdle flip could leave one running
+				for _, n in ipairs({ "Fly", "FlyIdle", "Swim", "SwimIdle" }) do
+					if n ~= want then
+						Anim.Stop(hum, n, 0.3)
+					end
+				end
 			end
 			swimClip = want
 			if want then

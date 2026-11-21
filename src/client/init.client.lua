@@ -63,7 +63,53 @@ local panelForRole = {
 
 local settingsLoaded = false
 local lastLevel
+-- v0.25.14 knockdown overlay: red vignette, DOWNED + bleed-out countdown, GIVE UP button
+local downedGui
+local function showDowned(d)
+	if downedGui then
+		downedGui:Destroy()
+		downedGui = nil
+	end
+	if not d.downed then
+		return
+	end
+	local pg = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+	downedGui = Instance.new("ScreenGui")
+	downedGui.Name = "Downed"
+	downedGui.IgnoreGuiInset = true
+	downedGui.ResetOnSpawn = true
+	downedGui.DisplayOrder = 30
+	downedGui.Parent = pg
+	local vig = Instance.new("Frame")
+	vig.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
+	vig.BackgroundTransparency = 0.7
+	vig.Size = UDim2.fromScale(1, 1)
+	vig.Parent = downedGui
+	local box = Instance.new("Frame")
+	box.BackgroundTransparency = 1
+	box.AnchorPoint = Vector2.new(0.5, 0)
+	box.Position = UDim2.fromScale(0.5, 0.2)
+	box.Size = UDim2.fromOffset(520, 170)
+	box.Parent = downedGui
+	UI.List(box, nil, 8, Enum.HorizontalAlignment.Center)
+	UI.Text(box, "DOWNED", 46, Color3.fromRGB(255, 90, 90), "Display", { TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 54) })
+	local sub = UI.Text(box, "", 17, Color3.new(1, 1, 1), "Semi", { TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 44) })
+	UI.Button(box, "GIVE UP", UI.Theme.Red, UDim2.fromOffset(220, 44), function()
+		Net.Request("GiveUp")
+	end)
+	local gui, t0 = downedGui, os.clock()
+	task.spawn(function()
+		while gui.Parent do
+			local left = math.max(0, math.ceil((d.seconds or 25) - (os.clock() - t0)))
+			sub.Text = "An ally can hold REVIVE on you. Bleeding out in " .. left .. "s"
+			vig.BackgroundTransparency = 0.62 + 0.1 * math.sin(os.clock() * 4)
+			task.wait(0.1)
+		end
+	end)
+end
+
 local handlers = {
+	Downed = showDowned,
 	Profile = function(d)
 		State.profile = d.profile
 		State.derived = d.derived

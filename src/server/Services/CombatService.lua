@@ -76,7 +76,7 @@ end
 
 local function alive(player)
 	local hum = R.PlayerService.Humanoid(player)
-	return hum and hum.Health > 0
+	return hum and hum.Health > 0 and not R.KnockdownService.IsDowned(player)
 end
 
 -- ===== Damage to players =====
@@ -86,7 +86,13 @@ function Combat.DamagePlayer(player, amount, info)
 	if not hum or hum.Health <= 0 or not root then
 		return
 	end
-	if player:GetAttribute("Invulnerable") then
+	if player:GetAttribute("Invulnerable") or R.KnockdownService.IsDowned(player) then
+		return
+	end
+	-- v0.25.14: a lethal monster hit knocks you DOWN (KnockdownService); PvP (info.killer) still kills
+	if hum.Health - amount <= 0 and not (info and info.killer) and GameConfig.Knockdown.Enabled then
+		Net.FX("Damage", { pos = root.Position + Vector3.new(0, 3, 0), amount = amount, crit = info and info.crit, toPlayer = true, char = player.Character }, root.Position, 200)
+		R.KnockdownService.Down(player)
 		return
 	end
 	hum.Health = math.max(0, hum.Health - amount)
@@ -99,6 +105,10 @@ end
 
 -- Monster hits player
 function Combat.MonsterHit(mob, player, mult)
+	if R.KnockdownService.IsDowned(player) then
+		R.KnockdownService.TryExecute(mob, player)
+		return
+	end
 	local d = R.PlayerService.Derived(player)
 	if not d then
 		return
@@ -627,7 +637,7 @@ function Combat.Start()
 			for _, pl in ipairs(Players:GetPlayers()) do
 				local d = R.PlayerService.Derived(pl)
 				local hum = R.PlayerService.Humanoid(pl)
-				if d and hum and hum.Health > 0 then
+				if d and hum and hum.Health > 0 and not R.KnockdownService.IsDowned(pl) then
 					local sp = pl:GetAttribute("SP") or 0
 					pl:SetAttribute("SP", math.min(d.maxSp, sp + 1 + d.maxSp * 0.015 + d.INT * 0.1))
 					if now - (lastHurt[pl] or 0) > 6 then

@@ -319,6 +319,7 @@ function MS.Damage(mob, amount, player, crit, kind)
 	mob.hp -= amount
 	if player then
 		mob.damageBy[player] = (mob.damageBy[player] or 0) + amount
+		R.KnockdownService.OnMobHit(mob, player)
 		MS.Provoke(mob, player)
 	end
 	Net.FX("Damage", { pos = mob.root.Position + Vector3.new(0, 3, 0), amount = amount, crit = crit, kind = kind, src = player and player.UserId or 0, model = mob.model }, mob.root.Position, 250)

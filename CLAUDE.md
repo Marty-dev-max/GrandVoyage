@@ -361,6 +361,11 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     only: re-requesting on each click hit the Net throttle and the Gem packs vanished). Eggs `stack = true`;
     HatchEgg counts/removes across every entry (RemoveItem). PearlShopBuy checks bag room before Spend.
     VoxelEgg: surface blocks only, 2x2 spot blobs, highlight patch, Golden band + neon jewels. Wings `lift` (upper back).
+  * v0.25.14 (owner): `Services/KnockdownService` + GameConfig.Knockdown: lethal MONSTER damage (DamagePlayer without
+    info.killer) -> char attribute Downed, Health 1, PlatformStand, RevivePrompt (other players hold 3 s -> 30% HP),
+    bleed-out kill. Combat.MonsterHit on a downed player -> TryExecute (Telegraph circle, kill after the wind-up);
+    MS.Damage -> OnMobHit: another player's hit interrupts (knockback + re-target). CombatService `alive()` excludes
+    downed players (no attacks, not a PvP target), no regen while downed. Client push "Downed" overlay + GiveUp request.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

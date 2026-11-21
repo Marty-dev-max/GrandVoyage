@@ -3,7 +3,7 @@ return {
 	GameName = "LarpTales: Voxel Seas", -- player-facing name (v0.24.9, owner); code/files/DataStores keep the GrandVoyage names
 	LogoLines = { "LARPTALES", "VOXEL SEAS" },
 	-- bump on every change: shown bottom-right in game and printed in Output, so you can tell which code is running
-	Version = "0.25.6",
+	Version = "0.25.7",
 	SagaName = "Azure East Saga",
 	DataStoreName = "GV_Player_v1",
 	GuildStoreName = "GV_Guild_v1",
@@ -46,6 +46,9 @@ return {
 	-- ===== Levels =====
 	MaxBaseLevel = 70, -- Azure East level cap
 	MaxJobLevel = 40,
+	-- M1 strings (v0.25.6, owner): every basic attack is a 4-hit string; hits 1-3 come at Quick x the attack interval,
+	-- the 4th is the knockback finisher and is followed by End x the interval (same damage per second overall)
+	M1 = { Hits = 4, Quick = 0.7, End = 1.9, Reset = 1.2 },
 	JobChangeLevel = 5, -- Job Lv needed before your first class switch (v0.25.4, owner: was 10, too grindy at Lv4)
 	ClassSwitchCostPerLevel = 400, -- later switches cost Base Lv x this many Doubloons (the first one is free)
 	GrandLineLevel = 70, -- level required to climb Backflow Peak

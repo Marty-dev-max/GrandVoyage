@@ -44,28 +44,28 @@ add("BlkPouch", "UI", 0.6, CLICK, { pitch = 0.7 })
 add("BlkTalk", "UI", 0.4, CLICK, { pitch = 1.6 })
 add("Talk", "UI", 0.4, CLICK, { pitch = 1.6, prefer = "BlkTalk" }) -- NPC dialog blips (UI/Quest)
 -- v0.24.12 (owner: pickups still sounded shrill): coins = low muted clinks, items = a soft drop into the bag
-add("Coin", "UI", 0.16, PING, { pitch = 0.72, prefer = "BlkCoin" })
-add("Pickup", "UI", 0.5, CLICK, { pitch = 0.7, prefer = "BlkPouch" })
+add("Coin", "UI", 0.4, PING) -- ElevenLabs (v0.25.6)
+add("Pickup", "UI", 0.5, CLICK) -- ElevenLabs (v0.25.6)
 add("Purchase", "UI", 0.55, PING, { pitch = 1.25 })
 add("Equip", "UI", 0.5, "rbxasset://sounds/unsheath.wav")
 -- Progression
 add("BlkLevelUp", "UI", 1.0, PING)
-add("LevelUp", "SFX", 1.0, PING, { pitch = 1.1, prefer = "BlkLevelUp" })
+add("LevelUp", "SFX", 1.0, PING) -- ElevenLabs (v0.25.6)
 for i, tier in ipairs({ "Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic", "Secret" }) do
 	add("Rarity" .. tier, "SFX", 0.45 + i * 0.05, PING, { pitch = 0.8 + i * 0.1 })
 end
-add("CardDrop", "SFX", 0.7, PING, { pitch = 1.8 })
-add("RefineSuccess", "SFX", 0.7, PING, { pitch = 1.3 })
-add("RefineFail", "SFX", 0.6, BOOM, { pitch = 0.7 })
+add("CardDrop", "SFX", 0.7, PING) -- ElevenLabs (v0.25.6)
+add("RefineSuccess", "SFX", 0.7, PING) -- ElevenLabs (v0.25.6)
+add("RefineFail", "SFX", 0.6, BOOM) -- ElevenLabs (v0.25.6)
 add("RefineBreak", "SFX", 0.7, "rbxasset://sounds/glassbreak.wav")
 add("AnvilClang", "SFX", 0.6, "rbxasset://sounds/clickfast.wav", { pitch = 0.9 })
 -- Combat
 add("Hit", "SFX", 0.42, HIT, { pitch = 0.82 })
 -- impact pack (v0.21): the hit you hear depends on the weapon that landed it
-add("PunchHit", "SFX", 0.55, HIT, { pitch = 0.9 })
-add("PunchHeavy", "SFX", 0.65, HIT, { pitch = 0.7 })
-add("SliceHit", "SFX", 0.5, SWORD)
-add("ShotHit", "SFX", 0.5, HIT)
+add("PunchHit", "SFX", 0.55, HIT) -- ElevenLabs (v0.25.6)
+add("PunchHeavy", "SFX", 0.65, HIT) -- ElevenLabs (v0.25.6)
+add("SliceHit", "SFX", 0.5, SWORD) -- ElevenLabs (v0.25.6)
+add("ShotHit", "SFX", 0.5, HIT) -- ElevenLabs (v0.25.6)
 add("ZapHit", "SFX", 0.45, PING)
 add("ThunderCrack", "SFX", 0.7, BOOM, { rolloff = 500 })
 add("WindGust", "SFX", 0.5, "rbxasset://sounds/swordlunge.wav")
@@ -75,23 +75,23 @@ add("CardCharge", "SFX", 0.6, PING)
 add("CardBass", "SFX", 0.75, BOOM)
 add("CardFlip", "SFX", 0.55, CLICK)
 add("CardChime", "SFX", 0.65, PING)
-add("Crit", "SFX", 0.55, HIT, { pitch = 1.05 })
-add("MobAlert", "SFX", 0.6, PING) -- a monster startles when you attack it ("!" over its head)
+add("Crit", "SFX", 0.55, HIT) -- ElevenLabs (v0.25.6)
+add("MobAlert", "SFX", 0.6, PING) -- a monster startles when you attack it ("!" over its head) -- ElevenLabs (v0.25.6)
 add("Slash", "SFX", 0.45, SWORD)
-add("Whoosh", "SFX", 0.4, "rbxasset://sounds/swordlunge.wav")
+add("Whoosh", "SFX", 0.4, "rbxasset://sounds/swordlunge.wav") -- ElevenLabs (v0.25.6)
 add("MagicCast", "SFX", 0.5, PING, { pitch = 0.7 })
-add("Heal", "SFX", 0.5, PING, { pitch = 1.6 })
+add("Heal", "SFX", 0.5, PING) -- ElevenLabs (v0.25.6)
 add("BlkMobPop", "SFX", 0.55, "rbxasset://sounds/splat.wav")
 add("BlkFlap", "SFX", 0.45, "rbxasset://sounds/swoosh.wav")
-add("MonsterDie", "SFX", 0.5, "rbxasset://sounds/splat.wav", { pitch = 0.85, prefer = "BlkMobPop" })
-add("ChestOpen", "SFX", 0.6, PING, { pitch = 0.75, alias = "Purchase" }) -- a lower take on the purchase jingle
+add("MonsterDie", "SFX", 0.5, "rbxasset://sounds/splat.wav") -- ElevenLabs (v0.25.6)
+add("ChestOpen", "SFX", 0.6, PING) -- ElevenLabs (v0.25.6)
 add("ChestRattle", "SFX", 0.55, "rbxasset://sounds/clickfast.wav", { pitch = 0.9 })
 add("BossRoar", "SFX", 0.8, BOOM, { pitch = 0.4 })
 -- Sea
-add("Cannon", "SFX", 0.75, SHOT, { pitch = 0.6, rolloff = 600 })
-add("Explosion", "SFX", 0.8, BOOM, { pitch = 0.5, rolloff = 700 })
+add("Cannon", "SFX", 0.75, SHOT, { rolloff = 600 }) -- ElevenLabs (v0.25.6)
+add("Explosion", "SFX", 0.8, BOOM, { rolloff = 700 }) -- ElevenLabs (v0.25.6)
 add("Splash", "SFX", 0.6, SPLASH, { rolloff = 500 })
-add("ShipHit", "SFX", 0.7, BOOM, { pitch = 0.8, rolloff = 500 })
+add("ShipHit", "SFX", 0.7, BOOM, { rolloff = 500 }) -- ElevenLabs (v0.25.6)
 add("ShipCreak", "SFX", 0.35, BOOM, { pitch = 0.3 })
 add("Bell", "SFX", 0.6, PING, { pitch = 0.5 })
 -- Loops
@@ -108,6 +108,7 @@ add("MusicIsland", "Music", 0.35, "", { looped = true })
 add("MusicJazz", "Music", 0.4, "", { looped = true, id = "rbxassetid://78909647577056" })
 add("MusicSea", "Music", 0.35, "", { looped = true })
 add("MusicBoss", "Music", 0.45, "", { looped = true })
+
 
 
 
@@ -147,29 +148,31 @@ S.BlkTalk.id = "rbxassetid://82440426004284"
 S.BlkTick.id = "rbxassetid://125395146895714"
 S.BlkToggle.id = "rbxassetid://132452117615324"
 S.BossRoar.id = "rbxassetid://94312411489126"
-S.Cannon.id = "rbxassetid://134315093700416"
+S.Cannon.id = "rbxassetid://106125434999649"
 S.CardBass.id = "rbxassetid://94330191075762"
 S.CardCharge.id = "rbxassetid://79853234139502"
 S.CardChime.id = "rbxassetid://130536990205209"
-S.CardDrop.id = "rbxassetid://86837197767896"
+S.CardDrop.id = "rbxassetid://117768441112436"
 S.CardFlip.id = "rbxassetid://128561825665290"
 S.ChargeUp.id = "rbxassetid://124969119684938"
+S.ChestOpen.id = "rbxassetid://102044588121229"
 S.ChestRattle.id = "rbxassetid://94867031271514"
-S.Coin.id = "rbxassetid://97184686943653"
-S.Crit.id = "rbxassetid://116048330313567"
+S.Coin.id = "rbxassetid://126063049895246"
+S.Crit.id = "rbxassetid://80056015080030"
 S.Equip.id = "rbxassetid://74370616073413"
 S.Error.id = "rbxassetid://135368525587273"
-S.Explosion.id = "rbxassetid://98968834810936"
-S.Heal.id = "rbxassetid://85090704433715"
+S.Explosion.id = "rbxassetid://74847389790358"
+S.Heal.id = "rbxassetid://78912431765664"
 S.Hit.id = "rbxassetid://109631882003396"
-S.LevelUp.id = "rbxassetid://85566351375372"
+S.LevelUp.id = "rbxassetid://95921888832743"
 S.MagicCast.id = "rbxassetid://111922509561668"
-S.MobAlert.id = "rbxassetid://92103419072756"
-S.MonsterDie.id = "rbxassetid://100509063761680"
+S.MobAlert.id = "rbxassetid://72821339475034"
+S.MonsterDie.id = "rbxassetid://84900989976982"
 S.MusicIsland.id = "rbxassetid://90901813437721"
+S.Pickup.id = "rbxassetid://85863727351143"
 S.PowderPoof.id = "rbxassetid://84483622469930"
-S.PunchHeavy.id = "rbxassetid://71100249068050"
-S.PunchHit.id = "rbxassetid://134583839099878"
+S.PunchHeavy.id = "rbxassetid://79732203793367"
+S.PunchHit.id = "rbxassetid://124528266738569"
 S.Purchase.id = "rbxassetid://106366826764025"
 S.RarityCommon.id = "rbxassetid://108588977375101"
 S.RarityEpic.id = "rbxassetid://111993988099638"
@@ -179,20 +182,20 @@ S.RarityRare.id = "rbxassetid://85692539480258"
 S.RaritySecret.id = "rbxassetid://118155581267198"
 S.RarityUncommon.id = "rbxassetid://122102101667853"
 S.RefineBreak.id = "rbxassetid://71650473985136"
-S.RefineFail.id = "rbxassetid://127746516165238"
-S.RefineSuccess.id = "rbxassetid://125966446261797"
+S.RefineFail.id = "rbxassetid://124319554433186"
+S.RefineSuccess.id = "rbxassetid://122756443554519"
 S.ShipCreak.id = "rbxassetid://103479643096475"
-S.ShipHit.id = "rbxassetid://119823236880029"
-S.ShotHit.id = "rbxassetid://137492376417086"
+S.ShipHit.id = "rbxassetid://95884596920399"
+S.ShotHit.id = "rbxassetid://119900124209046"
 S.Slash.id = "rbxassetid://125418891873956"
-S.SliceHit.id = "rbxassetid://116955118056765"
+S.SliceHit.id = "rbxassetid://85922952956251"
 S.Splash.id = "rbxassetid://80428746770906"
 S.ThunderCrack.id = "rbxassetid://92004300987583"
 S.UIClick.id = "rbxassetid://85047146917342"
 S.UIClose.id = "rbxassetid://107881653592113"
 S.UIHover.id = "rbxassetid://78923618171273"
 S.UIOpen.id = "rbxassetid://101070708256347"
-S.Whoosh.id = "rbxassetid://87542042603708"
+S.Whoosh.id = "rbxassetid://132119965446011"
 S.WindGust.id = "rbxassetid://72703815837799"
 S.ZapHit.id = "rbxassetid://73320420962425"
 

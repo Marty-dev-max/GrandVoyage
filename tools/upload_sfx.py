@@ -55,6 +55,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--user', required=True)
     ap.add_argument('--only', default='')
+    ap.add_argument('--force', action='store_true', help='re-upload the --only names even if uploaded before')
     a = ap.parse_args()
     ids = json.load(open(CACHE)) if os.path.exists(CACHE) else {}
     only = set(filter(None, a.only.split(',')))
@@ -62,7 +63,7 @@ def main():
         if not f.endswith('.wav'):
             continue
         name = f[:-4]
-        if (only and name not in only) or name in ids:
+        if (only and name not in only) or (name in ids and not (a.force and name in only)):
             continue
         asset, err = upload(os.path.join(SFX, f), name, a.user)
         if asset:

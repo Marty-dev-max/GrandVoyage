@@ -346,15 +346,16 @@ C.Mon_Hit = { rig = "Mon", priority = "Action2", keys = {
 -- weapon -> combo clips (in order), stance, and the clips each skill kind uses
 C.Weapons = {
 	-- freestyle street fighting: jab, cross, body blow, hook, knee, elbow, spinning backfist (the uppercut is a skill now)
-	Knuckles = { combo = { "Brawler_Jab", "Brawler_Cross", "Brawler_BodyBlow", "Brawler_Hook", "Brawler_Knee", "Brawler_Elbow", "Brawler_Backfist" }, stance = "Brawler_Stance", Melee = "Brawler_Uppercut", AoE = "Skill_GroundPunch" },
+	-- 4-hit strings (GameConfig.M1): the 4th clip is the knockback finisher
+	Knuckles = { combo = { "Brawler_Jab", "Brawler_Cross", "Brawler_Hook", "Brawler_Backfist" }, stance = "Brawler_Stance", Melee = "Brawler_Uppercut", AoE = "Skill_GroundPunch" },
 	-- bare hands (no weapon equipped): simple jab-cross punches, no stance
-	Fists = { combo = { "Brawler_Jab", "Brawler_Cross" }, Melee = "Brawler_Uppercut", AoE = "Skill_GroundPunch" },
+	Fists = { combo = { "Brawler_Jab", "Brawler_Cross", "Brawler_Jab", "Brawler_Hook" }, Melee = "Brawler_Uppercut", AoE = "Skill_GroundPunch" },
 	Shoes = { combo = { "Cook_FrontKick", "Cook_SideKick", "Cook_BackKick", "Cook_AxeKick" }, stance = "Cook_Stance", Melee = "Cook_FlyingKick", AoE = "Skill_Spin" },
-	Sword = { combo = { "Sword_Slash", "Sword_Backhand", "Sword_Thrust" }, stance = "Sword_Stance", Melee = "Sword_Thrust", AoE = "Skill_Spin" },
-	Hammer = { combo = { "Hammer_Smash", "Hammer_Sweep" }, stance = "Hammer_Stance", Melee = "Hammer_Smash", AoE = "Hammer_Smash" },
-	Slingshot = { combo = { "Sling_Shoot" }, stance = "Sling_Stance", Ranged = "Sling_Shoot", Melee = "Sling_Shoot" },
-	StormBaton = { combo = { "Baton_Strike" }, stance = "Baton_Stance", Ranged = "Baton_Strike", Melee = "Baton_Strike" },
-	MedKit = { combo = { "Med_Toss" }, Ranged = "Med_Toss", Melee = "Med_Toss" },
+	Sword = { combo = { "Sword_Slash", "Sword_Backhand", "Sword_Slash", "Sword_Thrust" }, stance = "Sword_Stance", Melee = "Sword_Thrust", AoE = "Skill_Spin" },
+	Hammer = { combo = { "Hammer_Sweep", "Hammer_Sweep", "Hammer_Sweep", "Hammer_Smash" }, stance = "Hammer_Stance", Melee = "Hammer_Smash", AoE = "Hammer_Smash" },
+	Slingshot = { combo = { "Sling_Shoot", "Sling_Shoot", "Sling_Shoot", "Sling_Shoot" }, stance = "Sling_Stance", Ranged = "Sling_Shoot", Melee = "Sling_Shoot" },
+	StormBaton = { combo = { "Baton_Strike", "Baton_Strike", "Baton_Strike", "Baton_Strike" }, stance = "Baton_Stance", Ranged = "Baton_Strike", Melee = "Baton_Strike" },
+	MedKit = { combo = { "Med_Toss", "Med_Toss", "Med_Toss", "Med_Toss" }, Ranged = "Med_Toss", Melee = "Med_Toss" },
 }
 -- Heavy Attack (the starter skill): a big kick for kick fighters, a big punch for everyone else
 function C.HeavyFor(weaponType)

@@ -3,6 +3,7 @@ base: luau
 globals:
   game: {any: true}
   workspace: {any: true}
+  UserSettings: {any: true}
   script: {any: true}
   Instance: {any: true}
   Vector3: {any: true}

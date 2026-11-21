@@ -25,7 +25,7 @@ local tracker, tTitle, tChapter, tGoal, tCount, tBar, tHint, tDist, skipBtn, tCh
 -- collapsed by default: chapter, title, goal and progress only (the screen stays clean); tap to expand the hint
 local expanded = false
 local COLLAPSED_H, EXPANDED_H = 82, 118
-local dialog, dName, dText, dNext, dChip
+local dialog, dName, dText, dNext, dChip, dTag
 local data -- last "Quest" push
 
 -- ===== where the marker points =====
@@ -224,6 +224,7 @@ local function buildDialog()
 	dChip.Position = UDim2.fromOffset(14, 32)
 	dChip.Rotation = -5
 	local tag = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), Position = UDim2.fromOffset(20, -16), Size = UDim2.fromOffset(240, 32), ZIndex = 31, Parent = dialog })
+	dTag = tag
 	UI.Corner(tag, 8)
 	UI.Gradient(tag, T.Gold:Lerp(Color3.new(1, 1, 1), 0.3), T.Orange, 90)
 	UI.Stroke(tag, T.Edge, 3)
@@ -278,10 +279,10 @@ local function findNpc(name)
 end
 
 local function portrait(npc, holo)
-	local vp = New("ViewportFrame", { Name = "NpcPortrait", BackgroundColor3 = holo and Color3.fromRGB(10, 40, 60) or T.PanelDeep, BackgroundTransparency = holo and 0.3 or 0,
-		Position = UDim2.fromOffset(14, 26), Size = UDim2.fromOffset(70, 78), ZIndex = 31, Ambient = holo and Color3.fromRGB(90, 220, 255) or Color3.fromRGB(190, 190, 200),
+	-- v0.25.6 (owner's reference): a big half-body "bust" shot that stands out of the box's left edge, no frame
+	local vp = New("ViewportFrame", { Name = "NpcPortrait", BackgroundTransparency = 1, AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, -18, 1, 0), Size = UDim2.fromOffset(200, 230), ZIndex = 33, Ambient = holo and Color3.fromRGB(90, 220, 255) or Color3.fromRGB(200, 200, 210),
 		LightColor = holo and Color3.fromRGB(120, 240, 255) or Color3.new(1, 1, 1), LightDirection = Vector3.new(-0.4, -0.6, -1), Parent = dialog })
-	UI.Stroke(vp, holo and Color3.fromRGB(90, 230, 255) or T.Gold, 3)
 	local m = npc:Clone()
 	for _, d in ipairs(m:GetDescendants()) do
 		if d:IsA("BillboardGui") or d:IsA("ProximityPrompt") or d:IsA("Script") or d:IsA("LocalScript") then
@@ -294,12 +295,21 @@ local function portrait(npc, holo)
 	m.Parent = vp
 	local cf, size = m:GetBoundingBox()
 	local cam = Instance.new("Camera")
-	cam.FieldOfView = 28
-	local headY = cf.Position.Y + size.Y * 0.32 -- frame the head and shoulders
+	cam.FieldOfView = 30
+	local midY = cf.Position.Y + size.Y * 0.16 -- head + torso (half body)
 	local look = m:GetPivot().LookVector
-	cam.CFrame = CFrame.lookAt(Vector3.new(0, headY, 0) + look * 9 + Vector3.new(0, 0.4, 0), Vector3.new(0, headY - 0.2, 0))
+	local side = m:GetPivot().RightVector
+	cam.CFrame = CFrame.lookAt(Vector3.new(0, midY, 0) + look * 11 + side * 2.2 + Vector3.new(0, 0.6, 0), Vector3.new(0, midY, 0))
 	cam.Parent = vp
 	vp.CurrentCamera = cam
+	-- idle: a slow breathing bob so the portrait feels alive
+	task.spawn(function()
+		local base = m:GetPivot()
+		while vp.Parent do
+			m:PivotTo(base * CFrame.new(0, math.sin(os.clock() * 2) * 0.06, 0))
+			task.wait(0.03)
+		end
+	end)
 	if holo then
 		-- scanlines + flicker
 		for y = 0, 1, 0.1 do
@@ -377,6 +387,12 @@ function Quest.Dialog(speaker, newLines)
 		local near = dist <= TALK_NEAR
 		local ok, vp = pcall(portrait, npc, not near)
 		dChip.Visible = not ok
+		-- the bust takes the left of the box: text and name tag move right of it
+		if ok then
+			dText.Position = UDim2.fromOffset(190, 22)
+			dText.Size = UDim2.new(1, -206, 0, 64)
+			dTag.Position = UDim2.fromOffset(180, -16)
+		end
 		local restore = near and focusCamera(npc) or nil
 		endTalk = function()
 			if restore then
@@ -386,6 +402,9 @@ function Quest.Dialog(speaker, newLines)
 				vp:Destroy()
 			end
 			dChip.Visible = true
+			dText.Position = UDim2.fromOffset(92, 22)
+			dText.Size = UDim2.new(1, -110, 0, 64)
+			dTag.Position = UDim2.fromOffset(20, -16)
 		end
 	else
 		dChip.Visible = true

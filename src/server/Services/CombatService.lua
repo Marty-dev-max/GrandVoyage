@@ -244,6 +244,16 @@ local function hitLater(delay, attacker, target, mult, magic, opts)
 	end)
 end
 
+-- the wait before the next basic attack: quick inside a 4-hit string, end-lag after the finisher (GameConfig.M1)
+local function m1Gap(player, d)
+	local c = combos[player]
+	local M1 = GameConfig.M1
+	if not c or os.clock() - c.last >= M1.Reset then
+		return d.attackInterval * M1.Quick
+	end
+	return d.attackInterval * (c.n >= M1.Hits and M1.End or M1.Quick)
+end
+
 -- which combo hit this basic attack is (the clients play the same clip: it is sent in the FX), and how fast to play
 -- it: a swing longer than the attack interval is sped up to fit, so fast attackers never queue swings that lag behind
 local function comboStep(player, wType)
@@ -251,12 +261,12 @@ local function comboStep(player, wType)
 	local c = combos[player] or { n = 0, last = 0 }
 	combos[player] = c
 	local now = os.clock()
-	c.n = (now - c.last < 1.2) and (c.n % #w.combo) + 1 or 1
+	c.n = (now - c.last < GameConfig.M1.Reset) and (c.n % #w.combo) + 1 or 1
 	c.last = now
 	local clip = AnimClips[w.combo[c.n]]
 	local d = R.PlayerService.Derived(player)
 	local length = clip and clip.keys[#clip.keys].t or 0.3
-	local speed = math.clamp(length / math.max(0.15, (d and d.attackInterval or 0.6) * 0.9), 1, 2.5)
+	local speed = math.clamp(length / math.max(0.15, (d and d.attackInterval or 0.6) * GameConfig.M1.Quick * 0.9), 1, 2.5)
 	return c.n, (clip and clip.strike or 0.12) / speed, speed
 end
 
@@ -320,7 +330,7 @@ local function setup()
 		end
 		local d = R.PlayerService.Derived(player)
 		local now = os.clock()
-		if lastAttack[player] and now - lastAttack[player] < d.attackInterval * 0.92 then
+		if lastAttack[player] and now - lastAttack[player] < m1Gap(player, d) * 0.9 then
 			return false
 		end
 		local target = resolveTarget(player, data.target)
@@ -373,7 +383,7 @@ local function setup()
 		end
 		local d = R.PlayerService.Derived(player)
 		local now = os.clock()
-		if lastAttack[player] and now - lastAttack[player] < d.attackInterval * 0.92 then
+		if lastAttack[player] and now - lastAttack[player] < m1Gap(player, d) * 0.9 then
 			return false
 		end
 		local root = R.PlayerService.Root(player)

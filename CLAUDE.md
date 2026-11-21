@@ -325,6 +325,13 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     (product 3733424822). PixelUI TEXT_SCALE 0.82, MIN_TEXT 12. "knuckles" icon = a fist. HUD target bar only while
     its HP changed in the last 6 s or for bosses. Bag slot "Pets". Daybreak SPAWN by the campfire (WORLD_VERSION 14).
     Studio anim status line removed.
+  * v0.25.7: dialog portrait = half-body ViewportFrame bust (200x230) standing out of the box's left edge (text and name
+    tag shift right). M1 = 4-hit strings for every weapon (AnimClips.Weapons combos have exactly 4 clips; GameConfig.M1
+    Quick 0.7 / End 1.9 x attackInterval; server CombatService.m1Gap + client Combat m1Ready/m1Swing mirror it; the 4th
+    = knockback finisher). Sounds: `tools/gen_sfx_elevenlabs.py` (ElevenLabs sound-generation, key injected by the
+    proxy as xi-api-key, never send the header yourself; min 0.5 s) -> assets/sfx/*.wav -> `upload_sfx.py --only ...
+    --force`; replaced entries in Sounds.lua have no prefer/pitch. ElevenLabs MCP in `.mcp.json` (loads next session),
+    jsfxr presets via `node tools/sfx/gen_jsfxr.js <preset> <Name>` (npm install in tools/sfx first).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

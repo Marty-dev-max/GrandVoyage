@@ -22,6 +22,20 @@ for k, v in pairs(require(game:GetService("ReplicatedStorage").Shared.Modules.We
 	WeaponRange[k] = v - 1
 end
 local lastAttack = 0
+-- M1 strings (GameConfig.M1, mirrors CombatService.m1Gap): quick inside a 4-hit string, end-lag after the finisher
+local m1 = { n = 0, at = 0 }
+local function m1Ready(interval)
+	local M1 = GameConfig.M1
+	local inString = os.clock() - m1.at < M1.Reset
+	local gap = interval * ((inString and m1.n >= M1.Hits) and M1.End or M1.Quick)
+	return os.clock() - lastAttack >= gap
+end
+local function m1Swing()
+	local M1 = GameConfig.M1
+	m1.n = (os.clock() - m1.at < M1.Reset) and (m1.n % M1.Hits) + 1 or 1
+	m1.at = os.clock()
+	lastAttack = os.clock()
+end
 local anchor -- where Auto Battle was started
 local busy = false
 local lastPotion = 0
@@ -332,10 +346,10 @@ function Combat.ManualAttack(screenPos)
 			Combat.SetTarget(picked)
 		end
 		local d = State.derived
-		if os.clock() - lastAttack < (d and d.attackInterval or 1.2) then
+		if not m1Ready(d and d.attackInterval or 1.2) then
 			return
 		end
-		lastAttack = os.clock()
+		m1Swing()
 		local dir = r.CFrame.LookVector
 		local cam = workspace.CurrentCamera
 		if screenPos and cam then
@@ -360,10 +374,10 @@ function Combat.ManualAttack(screenPos)
 	end
 	local d = State.derived
 	local interval = d and d.attackInterval or 1.2
-	if os.clock() - lastAttack < interval then
+	if not m1Ready(interval) then
 		return
 	end
-	lastAttack = os.clock()
+	m1Swing()
 	local tpos = target.PrimaryPart.Position
 	local lookAt = Vector3.new(tpos.X, r.Position.Y, tpos.Z)
 	if (lookAt - r.Position).Magnitude > 0.5 then
@@ -436,8 +450,8 @@ local function engage(target, useSkills)
 	end
 	local d = State.derived
 	local interval = d and d.attackInterval or 1.2
-	if os.clock() - lastAttack >= interval then
-		lastAttack = os.clock()
+	if m1Ready(interval) then
+		m1Swing()
 		local look = Vector3.new(tpos.X, r.Position.Y, tpos.Z)
 		if (look - r.Position).Magnitude > 0.5 then
 			r.CFrame = CFrame.lookAt(r.Position, look)

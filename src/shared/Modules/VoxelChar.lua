@@ -770,11 +770,18 @@ local function buildAll(look, heritage, variant, mode, place, emit)
 	-- wings: a solid stepped silhouette of blocks on the back (rows from the spine outward), tips in color 2
 	local SMALL_WING = { "..XX", ".XXX", "XXX.", "XX.." }
 	local GREAT_WING = { "....XXX", "...XXXX", "..XXXXX", ".XXXXX.", "XXXXX..", "XXX....", ".XX...." }
-	local function wings(c1, c2, big, name)
+	-- Skyborn wing shapes by variant (rows top -> bottom, columns spine -> tip)
+	local WING_SHAPES = {
+		sparrow = SMALL_WING,
+		swallow = { "......XX", "....XXXX", "..XXXXX.", "XXXX....", "XX......" }, -- long, pointed, swept back
+		owl = { ".XXXX.", "XXXXXX", "XXXXXX", "XXXXX.", ".XXX..", "..X..." }, -- broad and round
+		angel = { ".....X", "....XX", "...XXX", "..XXX.", ".XXXX.", "XXXX..", "XXX...", ".X...." }, -- tall, upswept
+	}
+	local function wings(c1, c2, big, name, shape)
 		if not ut then
 			return
 		end
-		local pattern = big and GREAT_WING or SMALL_WING
+		local pattern = WING_SHAPES[shape or ""] or (big and GREAT_WING or SMALL_WING)
 		local cell = big and 0.42 or 0.36
 		local topY = (big and 1.9 or 0.95)
 		for _, sx in ipairs({ -1, 1 }) do
@@ -803,7 +810,7 @@ local function buildAll(look, heritage, variant, mode, place, emit)
 		end
 	end
 	if heritage == "Skyborn" then
-		wings(Looks.FromHex(var.wing or "F8F8FF") or WHITE, Looks.FromHex(var.tip or "BEE6FF") or WHITE, false, "Wing")
+		wings(Looks.FromHex(var.wing or "F8F8FF") or WHITE, Looks.FromHex(var.tip or "BEE6FF") or WHITE, var.shape == "angel", "Wing", var.shape)
 	elseif heritage == "Cinderwing" and ut then
 		wings(Color3.fromRGB(26, 22, 28), Color3.fromRGB(62, 54, 70), true, "Wing")
 		-- the flame on the back: neon blocks in a rising column (FLAME mode lights it, CALM mode dims it)
@@ -819,17 +826,47 @@ local function buildAll(look, heritage, variant, mode, place, emit)
 		end
 	elseif heritage == "Tidekin" then
 		local fin = Looks.FromHex(var.fin or "3CC8BE") or Color3.fromRGB(60, 200, 190)
+		local kind = var.fins or "reef"
+		local finL = light(fin, 0.25)
 		emitRuns(function(x, y, z)
-			local top = 8 + ((z >= 3 and z <= 5) and 2 or 1) + (lumpy and 1 or 0)
-			if x >= 3 and x <= 4 and z >= 1 and z <= 7 and y >= 8 and y <= top then
-				return 1
+			if kind == "reef" then
+				local top = 8 + ((z >= 3 and z <= 5) and 2 or 1) + (lumpy and 1 or 0)
+				if x >= 3 and x <= 4 and z >= 1 and z <= 7 and y >= 8 and y <= top then
+					return 1
+				end
 			end
-			if (x == -2 or x == 9) and y >= 3 and y <= 5 and z >= 3 and z <= 4 then
+			-- ear fins on every fish kind (small on sharks)
+			if (x == -2 or x == 9) and y >= 3 and y <= (kind == "shark" and 4 or 5) and z >= 3 and z <= 4 then
 				return 2
 			end
 		end, function(v)
-			return v == 2 and light(fin, 0.2) or fin
+			return v == 2 and finL or fin
 		end, "Fin")
+		local back = ut and ut.Z / 2 or 0.5
+		if kind == "shark" and ut then
+			-- one tall swept-back dorsal fin
+			for i, h in ipairs({ 1.4, 1.1, 0.8, 0.5 }) do
+				block("UpperTorso", Vector3.new(0.22, h, 0.3), CFrame.new(0, 0.1 + h / 2 - 0.3, back + 0.15 + (i - 1) * 0.28), i == 1 and finL or fin, "FinBack")
+			end
+		elseif kind == "lionfish" and ut then
+			-- a row of striped spines down the back + spines on both forearms
+			for i = -2, 2 do
+				block("UpperTorso", Vector3.new(0.14, 0.9 - math.abs(i) * 0.15, 0.14), CFrame.new(i * 0.32, 0.5, back + 0.25) * CFrame.Angles(math.rad(-25), 0, 0), i % 2 == 0 and fin or WHITE, "FinBack")
+			end
+			for _, arm in ipairs({ "LeftLowerArm", "RightLowerArm" }) do
+				local sx = arm == "LeftLowerArm" and -1 or 1
+				for k = 0, 2 do
+					block(arm, Vector3.new(0.5, 0.12, 0.12), CFrame.new(sx * 0.6, 0.3 - k * 0.3, 0.2) * CFrame.Angles(0, 0, sx * math.rad(-20)), k % 2 == 0 and fin or WHITE, "FinArm")
+				end
+			end
+		elseif kind == "manta" and ut then
+			-- wide flat triangles from the shoulder blades
+			for _, sx in ipairs({ -1, 1 }) do
+				for i, w in ipairs({ 1.6, 1.2, 0.8 }) do
+					block("UpperTorso", Vector3.new(w, 0.3, 0.16), CFrame.new(sx * (0.6 + w / 2), 0.55 - (i - 1) * 0.3, back + 0.12) * CFrame.Angles(0, sx * math.rad(-12), 0), i == 1 and fin or finL, "FinBack")
+				end
+			end
+		end
 	elseif heritage == "Beastkin" then
 		local up = lumpy and 1 or 0
 		local kind = var.ears or "cat"
@@ -874,26 +911,43 @@ local function buildAll(look, heritage, variant, mode, place, emit)
 	elseif heritage == "Oni" then
 		local horn = Looks.FromHex(var.horn or "F0E6D2") or WHITE
 		local kind = var.horns or "twin"
-		local up = lumpy and 1 or 0
+		-- v0.25.9 (owner): horns grow out of the FOREHEAD and curve up. z -2 = in front of the bangs (hair sits at
+		-- z -1), y 6-7 = forehead, hair tops out around y 9 so the upper part must reach y 10+ to read.
 		emitRuns(function(x, y, z)
-			local dy = y - (9 + up)
-			if z < 1 or z > 2 or dy < 0 then
-				return nil
-			end
 			if kind == "single" then
-				if (dy <= 2 and x >= 3 and x <= 4) or (dy == 3 and x == 3) then
-					return dy >= 2 and 2 or 1
+				if x >= 3 and x <= 4 then
+					if y >= 6 and y <= 9 and z == -2 then
+						return 1
+					elseif y >= 10 and y <= 11 and z == -1 then
+						return 1
+					elseif y == 12 and z == -1 then
+						return 2
+					end
 				end
 			elseif kind == "curved" then
-				if (dy <= 1 and (x == 1 or x == 2 or x == 5 or x == 6)) or (dy == 2 and (x == 0 or x == 1 or x == 6 or x == 7)) then
-					return 1
+				-- ram-like: from the temples, out to the sides, then up and back
+				local function at(l, r)
+					return x == l or x == r
 				end
-				if dy == 3 and (x == -1 or x == 8) then
+				if y >= 6 and y <= 7 and z == -2 and (x <= 1 or x >= 6) and x >= 0 and x <= 7 then
+					return 1
+				elseif y == 8 and z == -2 and (at(-1, 8) or at(0, 7)) then
+					return 1
+				elseif y == 9 and z == -1 and at(-2, 9) then
+					return 1
+				elseif y == 10 and z == -1 and at(-2, 9) then
+					return 1
+				elseif y == 11 and z == 0 and at(-2, 9) then
 					return 2
 				end
 			else
-				if (dy <= 1 and (x == 1 or x == 2 or x == 5 or x == 6)) or (dy >= 2 and dy <= 3 and (x == 1 or x == 6)) then
-					return dy == 3 and 2 or 1
+				-- twin: two horns from the forehead, up and slightly back, narrowing to a tip
+				if (x == 1 or x == 2 or x == 5 or x == 6) and y >= 6 and y <= 8 and z == -2 then
+					return 1
+				elseif (x == 1 or x == 2 or x == 5 or x == 6) and y >= 9 and y <= 10 and z == -1 then
+					return 1
+				elseif (x == 2 or x == 5) and y == 11 and z == -1 then
+					return 2
 				end
 			end
 		end, function(v)

@@ -1,6 +1,7 @@
 -- Export voxel characters (Shared/Modules/VoxelChar) to JSON for an offline Blender render (tools/blender/render_parts.py)
 --   lune run tools/export_char.luau build/GrandVoyage.rbxlx out.json [lineup|styles]
--- lineup: a row of random looks + each Heritage; styles: every hair / shirt / pants style in rows
+-- lineup: a row of random looks + each Heritage; styles: every hair / shirt / pants style in rows; races: every
+-- Skyborn / Tidekin / Oni variant
 local fs = require("@lune/fs")
 local roblox = require("@lune/roblox")
 local luau = require("@lune/luau")
@@ -95,6 +96,20 @@ if mode == "styles" then
 		look.eyes = i
 		look.mouth = ((i - 1) % #Looks.Mouths) + 1
 		dump(VC.Preview(look, nil), roblox.Vector3.new((i - 1) * 4.2, 0, 4 * 9))
+	end
+elseif mode == "races" then
+	-- every variant of the races with body parts (wings / fins / horns), seen from behind-left so backs show too
+	local r = rng(11)
+	local list = {}
+	for _, h in Looks.Heritages do
+		if h.id == "Skyborn" or h.id == "Tidekin" or h.id == "Oni" then
+			for vi = 1, #h.variants do
+				table.insert(list, { h.id, vi })
+			end
+		end
+	end
+	for i, h in list do
+		dump(VC.Preview(Looks.Random(r), h[1], h[2]), roblox.Vector3.new((i - 1) * 5, 0, 0))
 	end
 else
 	local r = rng(7)

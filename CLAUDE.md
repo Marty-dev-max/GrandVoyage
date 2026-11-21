@@ -339,6 +339,9 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     MusicNight/MusicIsland. NPC ship segments start past a sea boss. M1 Quick 0.55 / End 2.0. Crosshair PX 2. Stats:
     colored derived stats, name in title tier color. Strap bands same angle. Loot flies into the character only
     (HUD.FlyLoot = LootMagnet + sounds). NPC nameplates: UIScale by distance (28/dist), MaxDistance 160, pixel icons.
+  * v0.25.9 (owner): race parts per variant: Skyborn `shape` (sparrow/swallow/owl/angel, VoxelChar WING_SHAPES),
+    Tidekin `fins` (reef crest / shark dorsal / lionfish back + arm spines / manta shoulder fins), Oni horns out of the
+    forehead at z -2 (in front of the bangs) rising to y 10-12 (above the hair). Preview: export_char.luau `races` mode.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

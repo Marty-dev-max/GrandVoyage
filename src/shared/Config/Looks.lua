@@ -55,19 +55,21 @@ L.Heritages = {
 		variants = { { name = "Islander", weight = 1 } } },
 	{ id = "Skyborn", name = "Skyborn", chance = 15, color = Color3.fromRGB(150, 220, 255),
 		desc = "Folk of the high clouds, with small feathered wings.", perk = "Glide, +15% jump, +5% speed, +5% FLEE", glide = true,
+		-- v0.25.8 (owner): variants differ by wing SHAPE (VoxelChar WING_SHAPES), not only color
 		variants = {
-			{ name = "White Wings", weight = 60, wing = "F8F8FF", tip = "BEE6FF" },
-			{ name = "Dusk Wings", weight = 25, wing = "8C8CA0", tip = "D2D2E6" },
-			{ name = "Golden Wings", weight = 12, wing = "FFDC6E", tip = "FFF5C8" },
-			{ name = "Prism Wings", weight = 3, wing = "C8B4FF", tip = "8CFFF0" },
+			{ name = "Sparrow Wings", weight = 60, shape = "sparrow", wing = "F8F8FF", tip = "BEE6FF" },
+			{ name = "Swallow Wings", weight = 25, shape = "swallow", wing = "3C4664", tip = "F0F0FA" },
+			{ name = "Owl Wings", weight = 12, shape = "owl", wing = "B48C64", tip = "F0E1C8" },
+			{ name = "Angel Wings", weight = 3, shape = "angel", wing = "FFFFFF", tip = "FFE6A0" },
 		} },
 	{ id = "Tidekin", name = "Tidekin", chance = 10, color = Color3.fromRGB(60, 210, 190),
 		desc = "Children of the reef, with a fin crest.", perk = "+60% breath, +8% max SP, +5% DEF",
+		-- v0.25.8 (owner): fins sit where that kind of fish has them
 		variants = {
-			{ name = "Reef Fin", weight = 55, fin = "3CC8BE" },
-			{ name = "Coral Fin", weight = 25, fin = "F07864" },
-			{ name = "Deep Fin", weight = 15, fin = "2846A0" },
-			{ name = "Pearl Fin", weight = 5, fin = "F0EBFF" },
+			{ name = "Reef Fin", weight = 55, fins = "reef", fin = "3CC8BE" }, -- head crest + ear fins
+			{ name = "Shark Fin", weight = 25, fins = "shark", fin = "5A6E8C" }, -- tall dorsal fin on the back
+			{ name = "Lionfish Fins", weight = 15, fins = "lionfish", fin = "F07864" }, -- spines on the back + forearms
+			{ name = "Manta Fins", weight = 5, fins = "manta", fin = "2846A0" }, -- wide flat fins from the shoulders
 		} },
 	{ id = "Beastkin", name = "Beastkin", chance = 3, color = Color3.fromRGB(246, 170, 60),
 		desc = "Wild folk with sharp ears and a tail.", perk = "+5% ATK, +5% speed",

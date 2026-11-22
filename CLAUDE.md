@@ -625,6 +625,19 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     aliases until their own pass); DataService RENAMED maps F_FireDash/F_SmokeBody/F_SplitEscape on hotbars. Ward is
     shown as "Shield Shield no Mi" (id stays Ward). Next phases per fruit: Bounce -> Blaze -> Haze -> Shield -> Split
     -> Slick (anims, FX, Slingshot Launch, Blaze flight, barrier stairs, Slick skate, channel wall/dome).
+  * v0.25.66 FRUITS v2 phase 2 = Bounce: skills name clips with `anim` and `chargeAnim` (looped by Combat startAim
+    while the key is held, stopped with a 0.2 fade into the release clip). AnimClips Bounce_* (Wind/Pistol/Gatling/
+    WindBoth/Cannon/Balloon/PumpUp/SlingGrab/SlingFly, uploaded). FruitFX `RubberArm` (skin-colored block chain from
+    the elbow to a fist/palm tip: out, hold or math.huge until `release()`, wobbly snap back) + `HideArm(char, side,
+    seconds)` (LocalTransparencyModifier on the VoxelBody blocks welded to that forearm/hand; 0 = show now) +
+    `SkinOf(char)` (hand block color). Balloon Body = welded voxel shell `GVBalloon` on UpperTorso; Pump Up = red
+    Highlight `GVPumpUp` + steam. Skill fields `hitEvery`, `splash` (extra hits around the target / path width),
+    `knockDist` / `knockPower`. CombatService.HasBuff; fruitBody: Balloon reflects blunt too (not bosses), FX-only
+    "Skill" id F_BalloonBounce (CharAnim ignores Skill FX whose id is not a real skill). `Controllers/Slingshot` =
+    Slingshot Launch (RMB aim, LMB grab, release = LinearVelocity arc; hotkey "Sling" U; Combat LMB ignored while
+    Slingshot.Busy()), server `Sling` request (grab/go/cancel, Fruits.Slingshot) + FX "Sling" for other clients' arms.
+    Pose previews without Studio/Blender: `lune run tools/export_pose.luau build/GrandVoyage.rbxlx x.json Clip@t ...`
+    + `python3 tools/render_pose.py x.json out.png` (FK on VC.Rest; VC.Preview blocks carry attribute Limb).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

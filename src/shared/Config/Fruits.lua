@@ -12,13 +12,13 @@ F.List = {
 		desc = "Your body turns to rubber: stretch, bounce, and shrug off blunt hits.",
 		-- v0.25.65 (owner, docs/Plan-Fruits-v2.md): Rubber Hide reflects gunshots (CombatService fruitBody), Slingshot
 		-- Launch = hold RMB to aim + hold LMB to grab, release to fling yourself
-		passive = { defPct = 0.15, maxHpPct = 0.1 }, passiveText = "Rubber Hide: bullets bounce back at the shooter • Slingshot Launch • +15% DEF, +10% Max HP",
+		passive = { defPct = 0.15, maxHpPct = 0.1 }, passiveText = "Rubber Hide: bullets bounce back at the shooter • Slingshot Launch: hold right mouse to aim, hold left mouse to grab, let go to fling yourself (or hold U) • +15% DEF, +10% Max HP",
 		skills = {
-			{ id = "F_StretchPistol", name = "Stretch Pistol", kind = "Ranged", sp = 10, cd = 3, range = 32, mult = 2.3, charge = true, mastery = 1, fx = "Burst", desc = "Hold to wind the arm back, release: a stretching long-range punch." },
-			{ id = "F_BounceGatling", name = "Bounce Gatling", kind = "Melee", sp = 18, cd = 6, range = 12, mult = 0.75, hits = 5, mastery = 10, fx = "Burst", desc = "A storm of rubber punches." },
-			{ id = "F_RecoilCannon", name = "Recoil Cannon", kind = "Ranged", sp = 24, cd = 9, range = 24, mult = 3.2, charge = true, mastery = 25, fx = "Burst", desc = "Hold to stretch both arms far back, release: a two-palm blast that sends enemies flying." },
-			{ id = "F_BalloonBody", name = "Balloon Body", kind = "Buff", sp = 20, cd = 25, duration = 12, buff = { def = 0.5 }, mastery = 35, fx = "AuraPink", desc = "Inflate: DEF way up." },
-			{ id = "F_GearUp", name = "Pump Up", kind = "Buff", sp = 35, cd = 45, duration = 18, buff = { atk = 0.35, aspd = 0.3 }, mastery = 50, fx = "AuraFire", desc = "Pump your blood: steam pours off you, ATK and attack speed way up." },
+			{ id = "F_StretchPistol", name = "Stretch Pistol", kind = "Ranged", sp = 10, cd = 3, range = 32, mult = 2.3, charge = true, anim = "Bounce_Pistol", chargeAnim = "Bounce_Wind", mastery = 1, fx = "Burst", desc = "Hold to wind the arm back, release: a stretching long-range punch." },
+			{ id = "F_BounceGatling", name = "Bounce Gatling", kind = "Melee", sp = 18, cd = 6, range = 14, mult = 0.5, hits = 8, hitEvery = 0.07, anim = "Bounce_Gatling", mastery = 10, fx = "Burst", desc = "A storm of stretching rubber punches, too fast to see." },
+			{ id = "F_RecoilCannon", name = "Recoil Cannon", kind = "Ranged", sp = 24, cd = 9, range = 24, mult = 3.2, charge = true, anim = "Bounce_Cannon", chargeAnim = "Bounce_WindBoth", splash = 8, knockDist = 26, knockPower = 3, mastery = 25, fx = "Burst", desc = "Hold to stretch both arms far back, release: a two-palm blast that sends enemies flying." },
+			{ id = "F_BalloonBody", name = "Balloon Body", kind = "Buff", sp = 20, cd = 25, duration = 12, buff = { def = 0.5 }, anim = "Bounce_Balloon", mastery = 35, fx = "AuraPink", desc = "Puff up like a balloon: DEF way up, and blunt blows and bullets from any side bounce back at the attacker." },
+			{ id = "F_GearUp", name = "Pump Up", kind = "Buff", sp = 35, cd = 45, duration = 18, buff = { atk = 0.35, aspd = 0.3 }, anim = "Bounce_PumpUp", mastery = 50, fx = "AuraFire", desc = "Pump your blood: steam pours off you, ATK and attack speed way up." },
 		},
 	},
 	{
@@ -46,7 +46,8 @@ F.List = {
 		},
 	},
 	{
-		id = "Ward", name = "Shield Shield no Mi", -- v0.25.65 (owner): renamed; id stays "Ward" (saves) type = "Paramecia", rarity = "Epic", weight = 20,
+		-- v0.25.65 (owner): renamed; id stays "Ward" (saves)
+		id = "Ward", name = "Shield Shield no Mi", type = "Paramecia", rarity = "Epic", weight = 20,
 		color = Color3.fromRGB(120, 220, 255), swirl = Color3.fromRGB(230, 250, 255), icon = "🛡️",
 		desc = "Create unbreakable barriers to shield your crew.",
 		passive = { defPct = 0.12 }, passiveText = "Barrier Steps: hold Space to build stairs of barrier • +12% DEF",
@@ -105,6 +106,10 @@ F.Drops = {
 	TreeLifetime = 15 * 60,
 	AnnounceRank = 5, -- Legendary and above are announced server-wide
 }
+
+-- Slingshot Launch (Bounce passive, v0.25.66): hold right mouse to aim a spot, hold left mouse = both arms stretch out
+-- and grab it, let go = fling yourself there (Controllers/Slingshot; server CombatService "Sling" checks it)
+F.Slingshot = { Range = 70, MinDist = 8, Cooldown = 2.5, Speed = 95, GrabSeconds = 4 }
 
 -- Fruit users sink: they last this long in the sea before the waves drag them ashore
 F.SinkSeconds = 1.5

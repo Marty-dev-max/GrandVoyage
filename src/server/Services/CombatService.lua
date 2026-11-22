@@ -77,6 +77,17 @@ function Combat.AddBuff(player, id, stats, duration)
 	R.PlayerService.Recompute(player)
 end
 
+-- true while the buff `id` is running on the player (Balloon Body bounces blows back, v0.25.66)
+function Combat.HasBuff(player, id)
+	local now = os.clock()
+	for _, b in ipairs(buffs[player] or {}) do
+		if b.id == id and b.expires > now then
+			return true
+		end
+	end
+	return false
+end
+
 local function weaponType(player)
 	-- equipped weapon, else the class's own style (Modules/WeaponInfo, shared with the client)
 	return WeaponInfo.TypeOf(R.DataService.Get(player))
@@ -146,12 +157,17 @@ local function fruitBody(mob, player, mult)
 			Net.FX("Miss", { pos = at, text = "SPLIT!" }, at, 200)
 		end
 		return true
-	elseif fruit == "Bounce" and kind == "shot" then
-		-- the bullet bounces off the rubber and flies back at the shooter
+	elseif fruit == "Bounce" and (kind == "shot" or (kind == "blunt" and not mob.def.isBoss and Combat.HasBuff(player, "F_BalloonBody"))) then
+		-- the bullet bounces off the rubber and flies back at the shooter; puffed up (Balloon Body, v0.25.66) blunt
+		-- blows from any side bounce back too (bosses hit too hard to bounce)
 		local back = math.max(1, math.floor(mob.def.atk * (mult or 1)))
 		if at then
 			Net.FX("Miss", { pos = at, text = "BOING!" }, at, 200)
-			Net.FX("Cannonball", { from = at, to = mob.root.Position, t = 0.18 }, at, 300)
+			if kind == "shot" then
+				Net.FX("Cannonball", { from = at, to = mob.root.Position, t = 0.18 }, at, 300)
+			else
+				Net.FX("Skill", { skill = "F_BalloonBounce", from = at, to = mob.root.Position, char = player.Character }, at, 200)
+			end
 		end
 		task.delay(0.18, function()
 			if not mob.dead then
@@ -520,6 +536,59 @@ local function setup()
 		return true
 	end, 0.3)
 
+	-- Slingshot Launch (Bounce passive, v0.25.66): the client aims, grabs a spot with both arms and flings itself there
+	-- (it owns its character's physics); we check the fruit, the range and the cooldown and show the arms to everyone
+	local FruitsCfg = require(Shared.Config.Fruits)
+	local slings = {} -- player -> { to, at, last }
+	Net.Handle("Sling", function(player, data)
+		local cfg = FruitsCfg.Slingshot
+		local st = slings[player] or { last = 0 }
+		slings[player] = st
+		local root = R.PlayerService.Root(player)
+		if type(data) ~= "table" or not root or not alive(player) or player:GetAttribute("Vending") then
+			return false
+		end
+		if player:GetAttribute("Fruit") ~= "Bounce" then
+			return false, "Only a rubber body can do that"
+		end
+		if (player:GetAttribute("SeastoneUntil") or 0) > os.clock() then
+			return false, "Seastone! Your fruit powers are sealed"
+		end
+		local now = os.clock()
+		if data.phase == "grab" then
+			local to = data.to
+			if typeof(to) ~= "Vector3" or to.Magnitude ~= to.Magnitude or to.Magnitude > 1e6 then
+				return false
+			end
+			local dist = (to - root.Position).Magnitude
+			if dist > cfg.Range + 8 or dist < cfg.MinDist * 0.5 then
+				return false, "Too far"
+			end
+			if now - st.last < cfg.Cooldown * 0.85 then
+				return false, "Arms still stretched"
+			end
+			st.to, st.at = to, now
+			Net.FX("Sling", { char = player.Character, to = to, phase = "grab" }, root.Position, 350)
+			return true
+		elseif data.phase == "go" then
+			if not st.to or now - (st.at or 0) > cfg.GrabSeconds + 1.5 then
+				return false
+			end
+			st.last = now
+			Net.FX("Sling", { char = player.Character, to = st.to, phase = "go" }, root.Position, 350)
+			st.to = nil
+			return true
+		elseif data.phase == "cancel" then
+			st.to = nil
+			Net.FX("Sling", { char = player.Character, phase = "cancel" }, root.Position, 350)
+			return true
+		end
+		return false
+	end, 0.08)
+	Players.PlayerRemoving:Connect(function(pl)
+		slings[pl] = nil
+	end)
+
 	Net.Handle("CastSkill", function(player, data)
 		if not alive(player) or player:GetAttribute("Vending") then
 			return false
@@ -579,8 +648,8 @@ local function setup()
 			skillOpts.slow = skill.slow -- dazed (Navigator Baton Flurry)
 		end
 		-- knockback (v0.24.12): damage skills shove on their LAST hit; power = the skill's multiplier (Heavy Attack 2.2+)
-		local knockPower = (skill.heavy and math.max(2.2, mult)) or mult
-		local knockDist = math.clamp(2.5 + knockPower * 2, 3, 10)
+		local knockPower = skill.knockPower or (skill.heavy and math.max(2.2, mult)) or mult
+		local knockDist = skill.knockDist or math.clamp(2.5 + knockPower * 2, 3, 10) -- Recoil Cannon sends them far
 		local function lastHitOpts(isLast, from)
 			if not isLast or (kind ~= "Melee" and kind ~= "Ranged" and kind ~= "Dash" and kind ~= "AoE" and kind ~= "GroundAoE") then
 				return skillOpts
@@ -622,12 +691,12 @@ local function setup()
 			local land = strike + (kind == "Ranged" and 0.2 or 0)
 			local seen = {}
 			for step = 2, range, 3 do
-				for _, tt in ipairs(inRadiusTargets(player, root.Position + aim3 * step, 4.5)) do
+				for _, tt in ipairs(inRadiusTargets(player, root.Position + aim3 * step, skill.splash or 4.5)) do
 					local key = tt.mob or tt.player
 					if key and not seen[key] then
 						seen[key] = true
 						for i = 1, skill.hits or 1 do
-							hitLater(land + 0.09 * (i - 1), player, tt, mult, magic, lastHitOpts(i == (skill.hits or 1)))
+							hitLater(land + (skill.hitEvery or 0.09) * (i - 1), player, tt, mult, magic, lastHitOpts(i == (skill.hits or 1), root.Position))
 						end
 					end
 				end
@@ -646,7 +715,15 @@ local function setup()
 			end
 			local land = strike + (kind == "Ranged" and 0.2 or 0)
 			for i = 1, skill.hits or 1 do
-				hitLater(land + 0.09 * (i - 1), player, target, mult, magic, lastHitOpts(i == (skill.hits or 1)))
+				hitLater(land + (skill.hitEvery or 0.09) * (i - 1), player, target, mult, magic, lastHitOpts(i == (skill.hits or 1), root.Position))
+			end
+			if skill.splash then
+				-- v0.25.66 Recoil Cannon: the shock wave around the target throws everyone near it too
+				for _, tt in ipairs(inRadiusTargets(player, target.pos, skill.splash)) do
+					if (tt.mob or tt.player) ~= (target.mob or target.player) then
+						hitLater(land + 0.03, player, tt, mult * 0.7, magic, lastHitOpts(true, root.Position))
+					end
+				end
 			end
 			if skill.id == "OniSlash" then
 				hitLater(land + 0.15, player, target, mult * 0.5, magic)

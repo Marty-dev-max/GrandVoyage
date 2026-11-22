@@ -11,6 +11,7 @@ local GameConfig = require(Shared.Config.GameConfig)
 local ClassesCfg = require(Shared.Config.Classes)
 local Reach = require(Shared.Modules.Reach)
 local Net = require(Shared.Modules.Net)
+local Anim = require(Shared.Modules.Anim)
 local State = require(script.Parent.Parent.State)
 local UI = require(script.Parent.Parent.UI.UIKit)
 
@@ -844,6 +845,10 @@ local function stopAim()
 	holding.line:Destroy()
 	holding.spot:Destroy()
 	local h = hum()
+	if holding.chargeAnim and h then
+		-- the release clip (skill `anim`) starts from the same wind-up pose, so a short fade blends straight into it
+		Anim.Stop(h, holding.chargeAnim, 0.2)
+	end
 	if holding.rot and h then
 		h.AutoRotate = true
 	end
@@ -899,7 +904,17 @@ local function startAim(id, slot, src)
 		local c = char()
 		local hand = c and c:FindFirstChild("RightHand")
 		local fdef = skill.fruit and require(Shared.Config.Fruits).ById[skill.fruit]
-		pcall(require(script.Parent.VFX).Charge, hand, fdef and fdef.color or Color3.fromRGB(255, 220, 140), CHARGE_TIME + 0.2)
+		local col = fdef and fdef.color or Color3.fromRGB(255, 220, 140)
+		pcall(require(script.Parent.VFX).Charge, hand, col, CHARGE_TIME + 0.2)
+		if skill.chargeAnim == "Bounce_WindBoth" then -- both arms wind back: both hands gather power
+			pcall(require(script.Parent.VFX).Charge, c and c:FindFirstChild("LeftHand"), col, CHARGE_TIME + 0.2)
+		end
+		-- v0.25.66: the wind-up pose loops while the key is held (replicates: everyone sees the arm pulled back)
+		local h = hum()
+		if skill.chargeAnim and h then
+			Anim.Play(h, skill.chargeAnim, { fade = 0.1 })
+			hold.chargeAnim = skill.chargeAnim
+		end
 	end
 	hold.line = aimPart("AimLine", Color3.fromRGB(255, 230, 120), fx)
 	hold.spot = aimPart("AimSpot", Color3.fromRGB(255, 150, 60), fx)
@@ -995,6 +1010,9 @@ function Combat.Start()
 			return
 		end
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			if require(script.Parent.Slingshot).Busy() then -- v0.25.66: Bounce Slingshot Launch owns the click
+				return
+			end
 			if State.heldFruit then -- v0.25.33: a held Cursed Fruit takes the click (Eat / Store / Drop)
 				State.heldFruit.choose()
 				return

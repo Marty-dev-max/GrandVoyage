@@ -14,7 +14,7 @@ Hotkeys.Actions = {
 	{ "Skill4", "Skill 4", "Z" }, { "Skill5", "Skill 5", "X" }, { "Skill6", "Skill 6", "C" },
 	{ "Skill7", "Skill 7", "One" }, { "Skill8", "Skill 8", "Two" }, { "Skill9", "Skill 9", "Three" },
 	{ "Skill10", "Skill 10", "Four" }, { "Skill11", "Skill 11", "Five" }, { "Skill12", "Skill 12", "Six" },
-	{ "Dash", "Dash", "Q" }, { "Auto", "Auto / Manual", "T" }, { "Target", "Nearest target", "Tab" }, { "Race", "Race mode", "V" },
+	{ "Dash", "Dash", "Q" }, { "Auto", "Auto / Manual", "T" }, { "Target", "Nearest target", "Tab" }, { "Race", "Race mode", "V" }, { "Sling", "Slingshot Launch (Bounce)", "U" },
 	{ "Inventory", "Bag", "I" }, { "Skills", "Skills", "K" }, { "Quests", "Quests", "J" }, { "Map", "Map", "M" },
 	{ "Pets", "Pets", "N" }, { "PearlShop", "Store", "H" }, { "Stats", "Stats", "Y" }, { "Guild", "Guild", "G" },
 	{ "Party", "Party", "P" }, { "BossBoard", "Bosses", "B" }, { "Settings", "Settings", "O" }, { "MenuHub", "Menu", "L" },

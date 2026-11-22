@@ -304,71 +304,432 @@ FX.F_BarrierDome = function(d)
 	fade(top, 1.6, 0.4)
 end
 
--- ===== Bounce Bounce =====
-FX.F_StretchPistol = function(d)
-	local from, to = d.from + Vector3.new(0, 1, 0), d.to or d.from
-	local len = (to - from).Magnitude
-	if len < 1 then
+-- ===== Bounce Bounce (v0.25.66, docs/Plan-Fruits-v2.md phase 2) =====
+-- The rubber arms are real voxel blocks in the character's own skin color (read from its hand block): a chain of
+-- cubes from the elbow to the fist that stretches out, holds, and snaps back with a wobble. The real forearm + hand
+-- hide (LocalTransparencyModifier, on every client) while the rubber arm is out.
+local RunService = game:GetService("RunService")
+local function vfx()
+	return require(script.Parent.VFX)
+end
+local function voxBody(char)
+	return typeof(char) == "Instance" and char:FindFirstChild("VoxelBody")
+end
+local function skinOf(char)
+	local body = voxBody(char)
+	local h = body and (body:FindFirstChild("RightHand") or body:FindFirstChild("LeftHand"))
+	return h and h.Color or C.skin
+end
+FX.SkinOf = skinOf
+-- hide the voxel blocks welded to a forearm / hand for `seconds` (overlapping hides: the latest wins; 0 = show now)
+local hiddenUntil = setmetatable({}, { __mode = "k" })
+local function hideArm(char, side, seconds)
+	local body = voxBody(char)
+	if not body then
 		return
 	end
-	local cf = CFrame.lookAt(from, to)
-	local arm = blk(Vector3.new(0.9, 0.9, 0.1), C.skin, cf, false)
-	tw(arm, 0.14, { Size = Vector3.new(0.9, 0.9, len), CFrame = cf * CFrame.new(0, 0, -len / 2) })
-	local fist = fistBlocks(cf, { C.skin, C.skin }, 1.5, false)
-	moveAll(fist, cf, CFrame.lookAt(to, to + (to - from).Unit), 0.14)
-	task.delay(0.16, function()
-		Voxels.Pixels(to, { count = 30, colors = { C.white, C.pink }, size = 0.35, speed = 14, gravity = 0, life = 0.4, glow = 0.6, spread = 1 })
-		tw(arm, 0.18, { Size = Vector3.new(0.9, 0.9, 0.1), CFrame = cf })
-		moveAll(fist, CFrame.lookAt(to, to + (to - from).Unit), cf, 0.18)
-		fade(arm, 0.18, 0.05)
-		for _, p in ipairs(fist) do
-			fade(p, 0.18, 0.05)
+	local lower, hand = char:FindFirstChild(side .. "LowerArm"), char:FindFirstChild(side .. "Hand")
+	local untilT = os.clock() + seconds
+	for _, b in ipairs(body:GetChildren()) do
+		local w = b:FindFirstChildOfClass("WeldConstraint")
+		if w and w.Part0 and (w.Part0 == lower or w.Part0 == hand) then
+			if seconds <= 0 then -- show it again now (the arm snapped back early)
+				hiddenUntil[b] = nil
+				b.LocalTransparencyModifier = 0
+			else
+				hiddenUntil[b] = math.max(hiddenUntil[b] or 0, untilT)
+				b.LocalTransparencyModifier = 1
+			end
+		end
+	end
+	if seconds <= 0 then
+		return
+	end
+	task.delay(seconds + 0.02, function()
+		for b, t in pairs(hiddenUntil) do
+			if os.clock() >= t then
+				hiddenUntil[b] = nil
+				if b.Parent then
+					b.LocalTransparencyModifier = 0
+				end
+			end
 		end
 	end)
 end
-FX.F_BounceGatling = function(d)
-	local from, to = d.from + Vector3.new(0, 1, 0), d.to or d.from
-	if (to - from).Magnitude < 1 then
+FX.HideArm = hideArm
+-- where a rubber arm starts: the elbow (bottom of the upper arm), or the caster's position
+local function elbow(char, side, fallback)
+	local ua = typeof(char) == "Instance" and char:FindFirstChild(side .. "UpperArm")
+	if ua then
+		return (ua.CFrame * CFrame.new(0, -ua.Size.Y / 2, 0)).Position
+	end
+	return fallback or Vector3.zero
+end
+-- the fist / palm at the end of a rubber arm (offsets in the tip's space, facing -Z = along the arm)
+local function tipShape(palm)
+	if palm then
+		return {
+			{ Vector3.new(2, 2, 0.6), CFrame.new(0, 0, 0) },
+			{ Vector3.new(0.42, 0.9, 0.5), CFrame.new(-0.72, 1.3, 0) }, { Vector3.new(0.42, 1.1, 0.5), CFrame.new(-0.24, 1.4, 0) },
+			{ Vector3.new(0.42, 1.05, 0.5), CFrame.new(0.24, 1.38, 0) }, { Vector3.new(0.42, 0.85, 0.5), CFrame.new(0.72, 1.28, 0) },
+			{ Vector3.new(0.5, 0.9, 0.5), CFrame.new(1.25, 0.2, 0) * CFrame.Angles(0, 0, -0.6) },
+		}
+	end
+	return {
+		{ Vector3.new(1.5, 1.35, 1.35), CFrame.new(0, 0, 0) },
+		{ Vector3.new(0.36, 0.38, 0.4), CFrame.new(-0.54, 0.32, -0.8) }, { Vector3.new(0.36, 0.38, 0.4), CFrame.new(-0.18, 0.32, -0.8) },
+		{ Vector3.new(0.36, 0.38, 0.4), CFrame.new(0.18, 0.32, -0.8) }, { Vector3.new(0.36, 0.38, 0.4), CFrame.new(0.54, 0.32, -0.8) },
+	}
+end
+-- opts: char, side ("Right"/"Left"), from (fallback base), to (Vector3 or function), delay, tOut, hold (seconds or
+-- math.huge = until handle.release()), tBack, palm, thick. Returns a handle { release(tBack), alive() }.
+local function rubberArm(o)
+	local skin = skinOf(o.char)
+	local dark = skin:Lerp(Color3.new(0, 0, 0), 0.12)
+	local thick = o.thick or 0.85
+	local segs, tip = {}, {}
+	for _, sp in ipairs(tipShape(o.palm)) do
+		local b = blk(sp[1], skin, CFrame.new(), false)
+		b.Transparency = 1
+		table.insert(tip, { b = b, rel = sp[2] })
+	end
+	local function seg(i)
+		local s = segs[i]
+		if not s then
+			s = blk(Vector3.new(thick, thick, 1.02), i % 2 == 0 and dark or skin, CFrame.new(), false)
+			segs[i] = s
+		end
+		return s
+	end
+	local h = { phase = "out", t0 = os.clock() + (o.delay or 0) }
+	local tOut, tBack, hold = o.tOut or 0.18, o.tBack or 0.2, o.hold or 0.05
+	local backAt
+	function h.release(t)
+		if h.phase ~= "back" and h.phase ~= "done" then
+			tBack = t or tBack
+			h.phase, backAt = "back", os.clock()
+		end
+	end
+	function h.alive()
+		return h.phase ~= "done"
+	end
+	local conn
+	local function finish()
+		h.phase = "done"
+		if conn then
+			conn:Disconnect()
+		end
+		for _, s in pairs(segs) do
+			s:Destroy()
+		end
+		for _, e in ipairs(tip) do
+			e.b:Destroy()
+		end
+	end
+	conn = RunService.RenderStepped:Connect(function()
+		local now = os.clock()
+		if now < h.t0 then
+			return
+		end
+		if typeof(o.char) == "Instance" and not o.char.Parent then
+			return finish()
+		end
+		local base = elbow(o.char, o.side, o.from)
+		local to = type(o.to) == "function" and o.to() or o.to
+		local full = to - base
+		if full.Magnitude < 0.3 then
+			full = Vector3.new(0, 0, -0.3)
+		end
+		local ext, wob = 1, 0
+		local k = (now - h.t0) / tOut
+		if h.phase == "out" then
+			if k >= 1 then
+				h.phase = "hold"
+			else
+				ext = 1 - (1 - k) ^ 3
+			end
+		end
+		if h.phase == "hold" and hold ~= math.huge and now - h.t0 > tOut + hold then
+			h.release()
+		end
+		if h.phase == "back" then
+			local b = (now - backAt) / tBack
+			if b >= 1 then
+				return finish()
+			end
+			ext = 1 - b * b
+			wob = math.sin(b * math.pi) * 0.9
+		end
+		local len = full.Magnitude * ext
+		local dir = full.Unit
+		local side = dir:Cross(Vector3.yAxis)
+		side = side.Magnitude > 0.05 and side.Unit or Vector3.xAxis
+		local n = math.max(1, math.ceil(len))
+		for i = 1, math.max(n, #segs) do
+			if i <= n then
+				local s = seg(i)
+				local a = (i - 0.5) / n
+				local w = side * math.sin(a * math.pi * 3 + now * 40) * wob * math.sin(a * math.pi)
+				local l = len / n
+				s.Size = Vector3.new(thick, thick, l * 1.04)
+				s.CFrame = CFrame.lookAt(base + dir * (a * len) + w, base + dir * (a * len) + w + dir)
+				s.Transparency = 0
+			elseif segs[i] then
+				segs[i].Transparency = 1
+			end
+		end
+		local tipCF = CFrame.lookAt(base + dir * len, base + dir * (len + 1))
+		for _, e in ipairs(tip) do
+			e.b.CFrame = tipCF * e.rel
+			e.b.Transparency = 0
+		end
+	end)
+	-- safety: never leave an arm behind
+	task.delay((o.delay or 0) + tOut + (hold == math.huge and 12 or hold) + tBack + 1, function()
+		if h.phase ~= "done" then
+			finish()
+		end
+	end)
+	return h
+end
+FX.RubberArm = rubberArm
+local function boing(pos, size)
+	Voxels.Pixels(pos, { count = 18 + math.floor(size * 4), colors = { C.white, C.pink, C.lilac }, size = 0.35, speed = 10 + size * 2, gravity = 0, life = 0.4, glow = 0.6, spread = 1 })
+end
+
+FX.F_StretchPistol = function(d)
+	local to = d.to or d.from
+	local base = elbow(d.char, "Right", d.from + Vector3.new(0, 1, 0))
+	local dir = to - base
+	if dir.Magnitude < 1 then
 		return
 	end
-	for k = 1, 10 do
-		task.delay(k * 0.045, function()
-			local jitter = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5) * 3
-			local cf = CFrame.lookAt(from + jitter * 0.3, to + jitter)
-			local f = fistBlocks(cf, { C.skin, C.skin }, 0.9, false)
-			moveAll(f, cf, CFrame.lookAt(to + jitter, to + jitter + (to - from).Unit), 0.09)
-			for _, p in ipairs(f) do
-				fade(p, 0.09, 0.08)
+	-- server: damage lands at strike 0.08 + 0.2 (Ranged)
+	hideArm(d.char, "Right", 0.62)
+	rubberArm({ char = d.char, side = "Right", from = d.from, to = to, delay = 0.08, tOut = 0.2, hold = 0.06, tBack = 0.24 })
+	task.delay(0.28, function()
+		vfx().ImpactSplit(to, dir, C.pink, 5)
+		boing(to, 2)
+	end)
+end
+FX.F_BounceGatling = function(d)
+	local to = d.to or d.from
+	if (to - d.from).Magnitude < 1 then
+		return
+	end
+	hideArm(d.char, "Right", 0.7)
+	hideArm(d.char, "Left", 0.7)
+	local skin = skinOf(d.char)
+	-- dozens of afterimage arms: a long skin bar + a fist, each one fading in ~0.12 s
+	for k = 0, 21 do
+		task.delay(0.04 + k * 0.026, function()
+			local sideName = k % 2 == 0 and "Right" or "Left"
+			local base = elbow(d.char, sideName, d.from + Vector3.new(0, 1, 0))
+			local jitter = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5) * 3.4
+			local tip = to + jitter
+			local len = (tip - base).Magnitude
+			local cf = CFrame.lookAt(base, tip)
+			local bar = blk(Vector3.new(0.75, 0.75, len), skin, cf * CFrame.new(0, 0, -len / 2), false, 0.25)
+			local fist = blk(Vector3.new(1.3, 1.2, 1.2), skin, CFrame.lookAt(tip, tip + cf.LookVector), false, 0.15)
+			tw(bar, 0.13, { Transparency = 1 })
+			tw(fist, 0.13, { Transparency = 1, Size = Vector3.new(1.7, 1.6, 1.6) })
+			Debris:AddItem(bar, 0.15)
+			Debris:AddItem(fist, 0.15)
+			if k % 3 == 0 then
+				Voxels.Pixels(tip, { count = 6, colors = { C.white, C.pink }, size = 0.3, speed = 9, gravity = 0, life = 0.22, glow = 0.5, spread = 0.6 })
 			end
-			task.delay(0.09, function()
-				Voxels.Pixels(to + jitter, { count = 6, colors = { C.white, C.pink }, size = 0.3, speed = 8, gravity = 0, life = 0.25, glow = 0.5, spread = 0.5 })
-			end)
+		end)
+	end
+	-- one impact per server hit (8 hits, 0.07 s apart, from strike 0.04)
+	for i = 0, 7 do
+		task.delay(0.04 + i * 0.07, function()
+			vfx().ImpactSplit(to + Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5) * 2, to - d.from, C.pink, 2.6)
 		end)
 	end
 end
-FX.F_BalloonBody = function(d)
-	local r = charRoot(d)
-	local at = r and r.Position or d.from
-	local b = blk(Vector3.new(3, 3, 3), C.pink, CFrame.new(at), false, 0.35)
-	tw(b, 0.3, { Size = Vector3.new(8, 8, 8) }, Enum.EasingStyle.Back)
-	task.delay(0.5, function()
-		tw(b, 0.25, { Size = Vector3.new(3, 3, 3), Transparency = 1 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+FX.F_RecoilCannon = function(d)
+	local to = d.to or d.from
+	local dir = to - d.from
+	if dir.Magnitude < 1 then
+		return
+	end
+	hideArm(d.char, "Right", 0.75)
+	hideArm(d.char, "Left", 0.75)
+	local side = dir.Unit:Cross(Vector3.yAxis)
+	side = side.Magnitude > 0.05 and side.Unit or Vector3.xAxis
+	for _, s in ipairs({ { "Right", 1 }, { "Left", -1 } }) do
+		rubberArm({ char = d.char, side = s[1], from = d.from, to = to + side * s[2] * 1.1 + Vector3.new(0, 0.6, 0), delay = 0.1, tOut = 0.2, hold = 0.12, tBack = 0.28, palm = true, thick = 0.95 })
+	end
+	-- the recoil: dust ring at your feet as you shove
+	task.delay(0.1, function()
+		vfx().Ring(ground(d.from) + Vector3.new(0, 0.3, 0), 6, C.white, 0.35)
 	end)
-	Debris:AddItem(b, 0.8)
-	Voxels.Pixels(at, { count = 20, colors = { C.pink, C.white }, size = 0.35, speed = 10, gravity = 0, life = 0.5, glow = 0.4, spread = 3 })
+	task.delay(0.3, function()
+		local V = vfx()
+		V.Shockwave(to, dir, C.white, 13)
+		V.ImpactSplit(to, dir, C.pink, 8)
+		V.Ring(ground(to) + Vector3.new(0, 0.3, 0), 16, C.pink, 0.5)
+		Voxels.Blocks(to, { count = 16, colors = { C.pink, C.white, C.lilac }, size = { 0.3, 0.7 }, speed = 22, up = 8, neon = true, collide = false, life = 0.6, spread = 2 })
+		boing(to, 4)
+	end)
 end
+-- Balloon Body: a round voxel balloon grows around the torso (shirt color, lighter top) for the whole buff
+local function balloonShell()
+	local out = {}
+	local rx, ry, rz = 2.7, 2.1, 2.5
+	for x = -3, 3 do
+		for y = -3, 3 do
+			for z = -3, 3 do
+				local e = (x / rx) ^ 2 + (y / ry) ^ 2 + (z / rz) ^ 2
+				local inner = ((math.abs(x) + 1) / rx) ^ 2 + ((math.abs(y) + 1) / ry) ^ 2 + ((math.abs(z) + 1) / rz) ^ 2
+				if e <= 1 and inner > 1 then
+					table.insert(out, Vector3.new(x, y, z))
+				end
+			end
+		end
+	end
+	return out
+end
+local SHELL = balloonShell()
+FX.F_BalloonBody = function(d)
+	local char = d.char
+	local torso = typeof(char) == "Instance" and char:FindFirstChild("UpperTorso")
+	if not torso then
+		return
+	end
+	local old = char:FindFirstChild("GVBalloon")
+	if old then
+		old:Destroy()
+	end
+	local body = voxBody(char)
+	local shirtB = body and body:FindFirstChild("UpperTorso")
+	local shirt = shirtB and shirtB.Color or C.pink
+	local hum = char:FindFirstChildOfClass("Humanoid")
+	local Fruits = require(game:GetService("ReplicatedStorage").Shared.Config.Fruits)
+	local skill
+	for _, s in ipairs(Fruits.ById.Bounce.skills) do
+		if s.id == "F_BalloonBody" then
+			skill = s
+		end
+	end
+	local dur = skill and skill.duration or 12
+	local model = Instance.new("Model")
+	model.Name = "GVBalloon"
+	local center = CFrame.new(0, -0.55, -0.25)
+	local cells = {}
+	for _, v in ipairs(SHELL) do
+		local c = v.Y >= 2 and shirt:Lerp(C.white, 0.25) or (v.Y <= -2 and shirt:Lerp(Color3.new(0, 0, 0), 0.15) or shirt)
+		local b = Instance.new("Part")
+		b.Size = Vector3.new(0.05, 0.05, 0.05)
+		b.Color = c
+		b.Material = Enum.Material.SmoothPlastic
+		b.CanCollide, b.CanQuery, b.CanTouch, b.Massless, b.CastShadow = false, false, false, true, false
+		b.CFrame = torso.CFrame
+		local w = Instance.new("Weld")
+		w.Part0, w.Part1 = torso, b
+		w.C0 = center
+		w.Parent = b
+		b.Parent = model
+		table.insert(cells, { w = w, b = b, v = v })
+	end
+	model.Parent = char
+	local function scale(k)
+		for _, e in ipairs(cells) do
+			e.w.C0 = center * CFrame.new(e.v * k)
+			e.b.Size = Vector3.new(1.02, 1.02, 1.02) * math.max(0.05, k)
+		end
+	end
+	scale(0.05)
+	local t0 = os.clock() + 0.3 -- grows on the inhale (Bounce_Balloon strike 0.45)
+	local conn
+	conn = RunService.RenderStepped:Connect(function()
+		local t = os.clock() - t0
+		if not model.Parent or not char.Parent or (hum and hum.Health <= 0) or char:GetAttribute("Downed") then
+			t = math.max(t, dur)
+		end
+		if t < 0 then
+			return
+		elseif t < 0.3 then
+			local k = t / 0.3
+			scale(k + math.sin(k * math.pi) * 0.25) -- overshoot
+		elseif t < dur then
+			scale(1 + math.sin(t * 5) * 0.025) -- breathing wobble
+		elseif t < dur + 0.25 then
+			scale(1 - (t - dur) / 0.25)
+		else
+			conn:Disconnect()
+			model:Destroy()
+		end
+	end)
+	task.delay(0.3, function()
+		Voxels.Pixels(torso.Position, { count = 20, colors = { C.pink, C.white }, size = 0.35, speed = 10, gravity = 0, life = 0.5, glow = 0.4, spread = 3 })
+	end)
+	-- deflating: air rushes out of the mouth
+	task.delay(0.3 + dur, function()
+		if torso.Parent then
+			Voxels.Pixels(torso.Position + Vector3.new(0, 1.6, 0), { count = 26, colors = { C.white, Color3.fromRGB(225, 240, 255) }, size = 0.4, speed = 16, gravity = 0, life = 0.45, glow = 0.2, spread = 0.8 })
+		end
+	end)
+end
+-- a blow bounced off the balloon (CombatService fruitBody): a pink spring ring at you, a pop at the attacker
+FX.F_BalloonBounce = function(d)
+	local to = d.to or d.from
+	vfx().Shockwave(d.from, to - d.from, C.pink, 6)
+	task.delay(0.12, function()
+		vfx().ImpactSplit(to, to - d.from, C.pink, 3)
+	end)
+end
+-- Pump Up: steam pours off you and the skin flushes red for the whole buff
 FX.F_GearUp = function(d)
+	local char = d.char
 	local r = charRoot(d)
 	if not r then
 		return
 	end
-	for k = 0, 12 do
-		task.delay(k * 0.15, function()
-			if r.Parent then
-				Voxels.Pixels(r.Position + Vector3.new(0, 1, 0), { count = 10, colors = { Color3.fromRGB(255, 230, 235), C.pink, C.white }, size = 0.45, speed = 3, gravity = -10, life = 0.9, glow = 0.3, spread = 2.5 })
-			end
-		end)
+	local hum = char:FindFirstChildOfClass("Humanoid")
+	local Fruits = require(game:GetService("ReplicatedStorage").Shared.Config.Fruits)
+	local dur = 18
+	for _, s in ipairs(Fruits.ById.Bounce.skills) do
+		if s.id == "F_GearUp" then
+			dur = s.duration or dur
+		end
 	end
+	local old = char:FindFirstChild("GVPumpUp")
+	if old then
+		old:Destroy()
+	end
+	local hl = Instance.new("Highlight")
+	hl.Name = "GVPumpUp"
+	hl.FillColor = Color3.fromRGB(255, 70, 70)
+	hl.FillTransparency = 1
+	hl.OutlineTransparency = 1
+	hl.DepthMode = Enum.HighlightDepthMode.Occluded
+	hl.Parent = char
+	local steam = { Color3.fromRGB(255, 235, 235), C.white, Color3.fromRGB(255, 200, 205) }
+	task.delay(0.5, function() -- the flex (Bounce_PumpUp strike)
+		if not r.Parent then
+			return
+		end
+		tw(hl, 0.25, { FillTransparency = 0.68 })
+		vfx().Ring(ground(r.Position) + Vector3.new(0, 0.3, 0), 9, Color3.fromRGB(255, 120, 120), 0.45)
+		Voxels.Pixels(r.Position + Vector3.new(0, 1, 0), { count = 50, colors = steam, size = 0.5, speed = 12, gravity = -12, life = 1, glow = 0.2, spread = 2.5 })
+	end)
+	task.spawn(function()
+		local t0 = os.clock()
+		while os.clock() - t0 < dur + 0.5 and hl.Parent and r.Parent and not (hum and hum.Health <= 0) do
+			local t = os.clock() - t0
+			if t > 0.5 then
+				-- thick at first, then a light steady steam (and a pulse in the red)
+				Voxels.Pixels(r.Position + Vector3.new(0, 0.8, 0), { count = t < 2 and 10 or 4, colors = steam, size = 0.45, speed = 3, gravity = -9, life = 0.9, glow = 0.2, spread = 2.2 })
+				hl.FillTransparency = 0.68 + math.sin(t * 6) * 0.06
+			end
+			task.wait(t < 2 and 0.12 or 0.35)
+		end
+		if hl.Parent then
+			tw(hl, 0.4, { FillTransparency = 1 })
+			Debris:AddItem(hl, 0.45)
+		end
+	end)
 end
 
 -- ===== Split Split =====
@@ -515,7 +876,6 @@ FX.F_OilSlick = function(d)
 end
 
 -- v0.25.65 fruit v2: new skills borrow the closest existing look until their own pass (docs/Plan-Fruits-v2.md)
-FX.F_RecoilCannon = FX.F_StretchPistol
 FX.F_SmokeFist = FX.F_SmokeGrip
 FX.F_Emberflies = FX.F_FireDash
 FX.F_SplitRunner = FX.F_SplitEscape

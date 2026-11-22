@@ -370,6 +370,105 @@ C.Mon_Hit = { rig = "Mon", priority = "Action2", keys = {
 	{ t = 0.26 },
 } }
 
+-- ===== Cursed Fruit: Bounce Bounce (v0.25.66, docs/Plan-Fruits-v2.md) =====
+-- Skills name these with `anim`; `chargeAnim` loops while a charge skill's key is held (Controllers/Combat startAim).
+-- The stretching arms themselves are FX (Controllers/FruitFX): the real forearm + hand hide while the rubber arm is out.
+local WIND_R = { -- right arm flung far back, left arm points at the target, weight on the back leg
+	RightUpperArm = { -78, 0, 22 }, RightLowerArm = { 12, 0, 0 }, LeftUpperArm = { 75, 0, -8 }, LeftLowerArm = { 12, 0, 0 },
+	UpperTorso = { -6, -42, 0 }, Head = { 0, 34, 0 }, LowerTorso = { 0, -14, 0, 0, -0.3, 0.15 },
+	RightUpperLeg = { -12, 0, 6 }, RightLowerLeg = { -28, 0, 0 }, LeftUpperLeg = { 30, 0, -4 }, LeftLowerLeg = { -32, 0, 0 },
+}
+local PISTOL = { -- straight right punch, shoulder thrown into it
+	RightUpperArm = { 90, 0, 2 }, RightLowerArm = { 0, 0, 0 }, LeftUpperArm = { 28, 0, -28 }, LeftLowerArm = { 95, 0, 0 },
+	UpperTorso = { -12, 40, 0 }, Head = { 0, -26, 0 }, LowerTorso = { 0, 14, 0, 0, -0.25, -0.25 },
+	RightUpperLeg = { -18, 0, 4 }, RightLowerLeg = { -12, 0, 0 }, LeftUpperLeg = { 34, 0, -4 }, LeftLowerLeg = { -30, 0, 0 },
+}
+C.Bounce_Wind = { rig = "R15", loop = true, priority = "Action", length = 0.3, keys = {
+	{ t = 0, pose = WIND_R },
+	{ t = 0.15, pose = with(WIND_R, { RightUpperArm = { -86, 0, 26 }, UpperTorso = { -6, -46, 0 } }) },
+	{ t = 0.3, pose = WIND_R },
+} }
+C.Bounce_Pistol = { rig = "R15", priority = "Action", strike = 0.08, keys = {
+	{ t = 0, pose = WIND_R },
+	{ t = 0.08, pose = PISTOL },
+	{ t = 0.42, pose = with(PISTOL, { UpperTorso = { -10, 34, 0 } }) },
+	{ t = 0.62 },
+} }
+-- Bounce Gatling: both fists pumping in turn (8 punches in 0.56 s), low wide stance
+local GAT_LEGS = { LowerTorso = { 0, 0, 0, 0, -0.35, 0 }, RightUpperLeg = { -8, 0, 10 }, RightLowerLeg = { -22, 0, 0 }, LeftUpperLeg = { 26, 0, -10 }, LeftLowerLeg = { -30, 0, 0 } }
+local GAT_R = with(GAT_LEGS, { RightUpperArm = { 90, 0, 4 }, RightLowerArm = { 0, 0, 0 }, LeftUpperArm = { 40, 0, -18 }, LeftLowerArm = { 115, 0, 0 }, UpperTorso = { -12, 24, 0 }, Head = { 0, -18, 0 } })
+local GAT_L = with(GAT_LEGS, { LeftUpperArm = { 90, 0, -4 }, LeftLowerArm = { 0, 0, 0 }, RightUpperArm = { 40, 0, 18 }, RightLowerArm = { 115, 0, 0 }, UpperTorso = { -12, -24, 0 }, Head = { 0, 18, 0 } })
+do
+	local keys = { { t = 0, pose = with(GAT_LEGS, GUARD) } }
+	for i = 1, 8 do
+		table.insert(keys, { t = 0.07 * i - 0.03, pose = i % 2 == 1 and GAT_R or GAT_L })
+	end
+	table.insert(keys, { t = 0.78 })
+	C.Bounce_Gatling = { rig = "R15", priority = "Action", strike = 0.04, keys = keys }
+end
+-- Recoil Cannon: both arms stretched far back (crouched like a drawn slingshot), then a two-palm shove
+local WIND_BOTH = {
+	RightUpperArm = { -72, 0, 26 }, LeftUpperArm = { -72, 0, -26 }, RightLowerArm = { 15, 0, 0 }, LeftLowerArm = { 15, 0, 0 },
+	UpperTorso = { -20, 0, 0 }, Head = { 18, 0, 0 }, LowerTorso = { 0, 0, 0, 0, -0.55, 0.2 },
+	RightUpperLeg = { 34, 0, 6 }, RightLowerLeg = { -55, 0, 0 }, LeftUpperLeg = { -14, 0, -6 }, LeftLowerLeg = { -30, 0, 0 },
+}
+local CANNON = {
+	RightUpperArm = { 88, 0, -8 }, LeftUpperArm = { 88, 0, 8 }, RightLowerArm = { 0, 0, 0 }, LeftLowerArm = { 0, 0, 0 },
+	RightHand = { -70, 0, 0 }, LeftHand = { -70, 0, 0 },
+	UpperTorso = { -16, 0, 0 }, Head = { 10, 0, 0 }, LowerTorso = { 0, 0, 0, 0, -0.35, -0.45 },
+	RightUpperLeg = { 36, 0, 4 }, RightLowerLeg = { -40, 0, 0 }, LeftUpperLeg = { -26, 0, -4 }, LeftLowerLeg = { -10, 0, 0 },
+}
+C.Bounce_WindBoth = { rig = "R15", loop = true, priority = "Action", length = 0.3, keys = {
+	{ t = 0, pose = WIND_BOTH },
+	{ t = 0.15, pose = with(WIND_BOTH, { RightUpperArm = { -80, 0, 30 }, LeftUpperArm = { -80, 0, -30 } }) },
+	{ t = 0.3, pose = WIND_BOTH },
+} }
+C.Bounce_Cannon = { rig = "R15", priority = "Action", strike = 0.1, keys = {
+	{ t = 0, pose = WIND_BOTH },
+	{ t = 0.1, pose = CANNON },
+	{ t = 0.48, pose = with(CANNON, { UpperTorso = { -12, 0, 0 } }) },
+	{ t = 0.72 },
+} }
+-- Balloon Body: a huge breath in (lean back, arms out), then puffed up with the arms held wide
+local PUFFED = { RightUpperArm = { 8, 0, 70 }, LeftUpperArm = { 8, 0, -70 }, RightLowerArm = { 20, 0, 0 }, LeftLowerArm = { 20, 0, 0 },
+	UpperTorso = { 6, 0, 0 }, Head = { 8, 0, 0 }, RightUpperLeg = { 0, 0, 14 }, LeftUpperLeg = { 0, 0, -14 } }
+C.Bounce_Balloon = { rig = "R15", priority = "Action", strike = 0.45, keys = {
+	{ t = 0 },
+	{ t = 0.28, pose = { UpperTorso = { 22, 0, 0 }, Head = { 26, 0, 0 }, RightUpperArm = { -10, 0, 38 }, LeftUpperArm = { -10, 0, -38 },
+		RightLowerArm = { 30, 0, 0 }, LeftLowerArm = { 30, 0, 0 }, LowerTorso = { 0, 0, 0, 0, 0.1, 0 } } },
+	{ t = 0.45, pose = PUFFED },
+	{ t = 0.75, pose = PUFFED },
+	{ t = 0.95 },
+} }
+-- Pump Up: a low crouch, fists at the hips pumping twice, then a flex as the steam bursts out
+local PUMP = with(CROUCH, { RightUpperArm = { -18, 0, 28 }, LeftUpperArm = { -18, 0, -28 }, RightLowerArm = { 95, 0, 0 }, LeftLowerArm = { 95, 0, 0 },
+	UpperTorso = { -22, 0, 0 }, Head = { 18, 0, 0 } })
+local PUMP_DEEP = with(PUMP, { LowerTorso = { 0, 0, 0, 0, -0.6, 0 }, RightUpperLeg = { 40, 0, 8 }, LeftUpperLeg = { 40, 0, -8 }, RightLowerLeg = { -60, 0, 0 }, LeftLowerLeg = { -60, 0, 0 }, UpperTorso = { -30, 0, 0 } })
+C.Bounce_PumpUp = { rig = "R15", priority = "Action", strike = 0.5, keys = {
+	{ t = 0 },
+	{ t = 0.12, pose = PUMP }, { t = 0.24, pose = PUMP_DEEP }, { t = 0.36, pose = PUMP }, { t = 0.48, pose = PUMP_DEEP },
+	{ t = 0.62, pose = { RightUpperArm = { 0, 0, 88 }, LeftUpperArm = { 0, 0, -88 }, RightLowerArm = { 0, 0, 100 }, LeftLowerArm = { 0, 0, -100 },
+		UpperTorso = { 10, 0, 0 }, Head = { 12, 0, 0 }, RightUpperLeg = { 0, 0, 12 }, LeftUpperLeg = { 0, 0, -12 } } },
+	{ t = 0.9, pose = { RightUpperArm = { 0, 0, 85 }, LeftUpperArm = { 0, 0, -85 }, RightLowerArm = { 0, 0, 95 }, LeftLowerArm = { 0, 0, -95 }, UpperTorso = { 8, 0, 0 } } },
+	{ t = 1.1 },
+} }
+-- Slingshot Launch: braced and leaning back while both arms hold the far point, then flying arms-first after them
+C.Bounce_SlingGrab = { rig = "R15", loop = true, priority = "Action", length = 0.4, keys = {
+	{ t = 0, pose = { RightUpperArm = { 98, 0, -6 }, LeftUpperArm = { 98, 0, 6 }, UpperTorso = { 16, 0, 0 }, Head = { -10, 0, 0 },
+		LowerTorso = { 0, 0, 0, 0, -0.45, 0.35 }, RightUpperLeg = { 30, 0, 4 }, RightLowerLeg = { -55, 0, 0 }, LeftUpperLeg = { -10, 0, -4 }, LeftLowerLeg = { -25, 0, 0 } } },
+	{ t = 0.2, pose = { RightUpperArm = { 100, 0, -6 }, LeftUpperArm = { 100, 0, 6 }, UpperTorso = { 20, 0, 0 }, Head = { -12, 0, 0 },
+		LowerTorso = { 0, 0, 0, 0, -0.5, 0.4 }, RightUpperLeg = { 32, 0, 4 }, RightLowerLeg = { -58, 0, 0 }, LeftUpperLeg = { -12, 0, -4 }, LeftLowerLeg = { -25, 0, 0 } } },
+	{ t = 0.4, pose = { RightUpperArm = { 98, 0, -6 }, LeftUpperArm = { 98, 0, 6 }, UpperTorso = { 16, 0, 0 }, Head = { -10, 0, 0 },
+		LowerTorso = { 0, 0, 0, 0, -0.45, 0.35 }, RightUpperLeg = { 30, 0, 4 }, RightLowerLeg = { -55, 0, 0 }, LeftUpperLeg = { -10, 0, -4 }, LeftLowerLeg = { -25, 0, 0 } } },
+} }
+local SLING_FLY = { LowerTorso = { -70, 0, 0 }, RightUpperArm = { 165, 0, 6 }, LeftUpperArm = { 165, 0, -6 }, Head = { 40, 0, 0 },
+	RightUpperLeg = { -12, 0, 4 }, LeftUpperLeg = { -22, 0, -4 }, LeftLowerLeg = { -35, 0, 0 }, RightLowerLeg = { -10, 0, 0 } }
+C.Bounce_SlingFly = { rig = "R15", loop = true, priority = "Action", length = 0.4, keys = {
+	{ t = 0, pose = SLING_FLY },
+	{ t = 0.2, pose = with(SLING_FLY, { RightUpperLeg = { -20, 0, 4 }, LeftUpperLeg = { -14, 0, -4 }, LeftLowerLeg = { -20, 0, 0 }, RightLowerLeg = { -30, 0, 0 } }) },
+	{ t = 0.4, pose = SLING_FLY },
+} }
+
 -- weapon -> combo clips (in order), stance, and the clips each skill kind uses
 C.Weapons = {
 	-- freestyle street fighting: jab, cross, body blow, hook, knee, elbow, spinning backfist (the uppercut is a skill now)

@@ -7,6 +7,42 @@
   "id": "113150741446246",
   "sha1": "e56fbb9ccee2c1a82913fa415c1fc5b5a4066a69"
  },
+ "Bounce_Balloon": {
+  "id": "96455268769208",
+  "sha1": "d0d80273990bb697a9947832dea3f8d7817395a4"
+ },
+ "Bounce_Cannon": {
+  "id": "100215850542117",
+  "sha1": "9fdc4f54a4f4a936a18aef6b24b74e3088cf2e07"
+ },
+ "Bounce_Gatling": {
+  "id": "111300818492210",
+  "sha1": "0ac7848008fab2f00417a8555e521bb3b7c7a2a3"
+ },
+ "Bounce_Pistol": {
+  "id": "95245132142799",
+  "sha1": "c40ca1340d6e47f2773d44bb53e3b7c633f3ce6f"
+ },
+ "Bounce_PumpUp": {
+  "id": "116003397352579",
+  "sha1": "4666473d427917f92ab2b59bdbc941c70588a8cc"
+ },
+ "Bounce_SlingFly": {
+  "id": "107456629588996",
+  "sha1": "486bfa022b61147efadb951d8e82d95438ead37f"
+ },
+ "Bounce_SlingGrab": {
+  "id": "134329866752460",
+  "sha1": "1d9fb71635d4feb41f5ff35c194c53293da0d053"
+ },
+ "Bounce_Wind": {
+  "id": "87075154888276",
+  "sha1": "380b47fe5cf622b126e672193d096bb3bc8bed2f"
+ },
+ "Bounce_WindBoth": {
+  "id": "106995707609758",
+  "sha1": "036cbb1af6b46d2a63556d89722d09a577839f38"
+ },
  "Brawler_Backfist": {
   "id": "125562387918301",
   "sha1": "d247b618bea4f4c5e7a9bc8fdc6fbd2513760bad"

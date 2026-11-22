@@ -151,7 +151,7 @@ function CharAnim.Start()
 			end
 			CharAnim.Stats.speed = spd
 			hitstop(0.05)
-		elseif kind == "Skill" and mine then
+		elseif kind == "Skill" and mine and ClassesCfg.SkillById[d.skill or ""] then -- (FX-only "skills" like F_BalloonBounce play no clip)
 			local sk = ClassesCfg.SkillById[d.skill or ""]
 			local k = sk and sk.kind or ""
 			local w = Clips.Weapons[weaponOf(d.char)] or {}

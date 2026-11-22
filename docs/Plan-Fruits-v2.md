@@ -85,8 +85,8 @@
 
 ## ลำดับทำ (ทีละผล ทีละเวอร์ชัน ส่งให้เทสทุกผล)
 
-1. ระบบกลาง: Charge-up, Channel, Space passive hook, Logia/สะท้อนกระสุน/กันของมีคม (ฝั่งเซิร์ฟเวอร์) + ข้อมูลชนิดดาเมจของมอน (ปืน/ของมีคม/ทุบ) + `toki` บนบอส
-2. Bounce (แขนยืดสีผิว, Recoil Cannon, Slingshot Launch)
+1. ✅ v0.25.65 ระบบกลาง: Charge-up, Channel, Space passive hook, Logia/สะท้อนกระสุน/กันของมีคม (ฝั่งเซิร์ฟเวอร์) + ข้อมูลชนิดดาเมจของมอน (ปืน/ของมีคม/ทุบ) + `toki` บนบอส
+2. ✅ v0.25.66 Bounce (แขนยืดสีผิว, Recoil Cannon, Balloon/Pump Up FX, Slingshot Launch; ปุ่มมือถือ Slingshot ยังไม่มี)
 3. Blaze (Blaze Fist, Flame Twister, Emberflies, บิน)
 4. Haze (Smoke Fist, Smoke Grip ดึง, White Out ล่องหน)
 5. Shield (ชื่อ/โมเดล/ไอคอนใหม่, Channel wall/dome, บันได)

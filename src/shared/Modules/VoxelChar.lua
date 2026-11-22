@@ -1025,9 +1025,10 @@ function VC.Preview(look, heritage, variant, mode, opts)
 			return nil
 		end
 		return CFrame.new(r[2]), r[1]
-	end, function(b, _, cf)
+	end, function(b, limb, cf)
 		b.Anchored = true
 		b.CFrame = cf
+		b:SetAttribute("Limb", limb) -- the body part it belongs to (tools/export_pose.luau poses previews by it)
 		b.Parent = model
 	end)
 	model.WorldPivot = CFrame.new()

@@ -3,6 +3,10 @@
 Roblox MMORPG (Ragnarok-style systems in an original pirate-sea world). Luau + Rojo, server-authoritative.
 Player-facing text and code are English. The owner (Roblox user Treezaa2, id 1527424396) talks in Thai: reply in Thai.
 Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
+Owner references live in their Google Drive (Drive connector): folder "Ref" `1MgGIJaw871W757h7locqVBoYKwDXhpbJ`
+(sub "Island" `1xOPpu910yCtZn8meRHO88Kc89yk-zvJc` = island concept art, "Vid" `1hN1CCwExWeazFCb7rMvAyN85b6iHHs6E` =
+reference clips). Written specs taken from them: docs/Islands-Concept.md, docs/Plan-*.md. Images sent in chat are NOT
+saved anywhere: what matters from them is written into these docs + CLAUDE.md version notes.
 
 ## Working with Roblox Studio (local sessions)
 

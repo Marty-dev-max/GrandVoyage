@@ -304,7 +304,7 @@ local function die(mob, killer)
 	if mob.opts.model then
 		-- ship crew are welded to their ship: cut them loose first, anchoring them would freeze the whole ship
 		for _, w in ipairs(model:GetDescendants()) do
-			if w:IsA("WeldConstraint") then
+			if w:IsA("WeldConstraint") or w:IsA("JointInstance") then
 				w:Destroy()
 			end
 		end

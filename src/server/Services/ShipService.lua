@@ -13,6 +13,8 @@ local ShipStats = require(Shared.Modules.ShipStats)
 local ShipModel = require(Shared.Modules.ShipModel)
 local SeaZones = require(Shared.Modules.SeaZones)
 local Net = require(Shared.Modules.Net)
+local Reach = require(Shared.Modules.Reach)
+local CollectionService = game:GetService("CollectionService")
 
 local Ship = {}
 local R
@@ -316,6 +318,16 @@ function Ship.SkillHit(player, from, to, width, damage)
 	return hit
 end
 
+-- v0.25.42: the NPC ship a clicked part belongs to (basic attacks and targeted skills can smash hulls)
+function Ship.NpcShipOf(inst)
+	for _, s in pairs(ships) do
+		if s.npc and not s.sinking and s.model and inst:IsDescendantOf(s.model) then
+			return s
+		end
+	end
+	return nil
+end
+
 function Ship.InCircle(center, radius)
 	local out = {}
 	for _, ship in pairs(ships) do
@@ -382,6 +394,10 @@ function Ship.DamageShip(ship, dmg, srcShip, player)
 	end
 	if srcShip and ship.npc and srcShip.owner and not ship.target then
 		ship.target = srcShip
+	end
+	local proot = player and ship.crew and R.PlayerService.Root(player)
+	if proot and flat(proot.Position, ship.root.Position) <= ship.radius + 10 then
+		ship.provoker = player -- someone on (or right by) the deck is smashing the hull: the crew drop everything
 	end
 	Net.FX("ShipHit", { pos = ship.root.Position, amount = math.floor(dmg) }, ship.root.Position, 500)
 	local lostSteps = math.floor((1 - ship.hp / ship.maxHp) * 4)
@@ -769,25 +785,29 @@ local function addCrew(ship, def)
 			if child.Name == "Helm" then
 				-- behind the wheel, facing the bow
 				local at = main.Position - root.CFrame.LookVector * 3
-				table.insert(spots, { pos = at, face = root.CFrame.LookVector, y = main.Position.Y - G / 2 })
+				table.insert(spots, { pos = at, face = root.CFrame.LookVector, y = main.Position.Y - G / 2, role = "helm" })
 			elseif child.Name == "LightCannon" or child.Name == "HeavyCannon" then
 				cannons += 1
 				if def.cannons <= 6 or cannons % 2 == 1 then
 					local look = main.CFrame.LookVector
 					local at = main.Position - Vector3.new(look.X, 0, look.Z).Unit * 3.2
-					table.insert(spots, { pos = at, face = look, y = main.Position.Y - G / 2 })
+					table.insert(spots, { pos = at, face = look, y = main.Position.Y - G / 2, role = "gunner" })
 				end
 			end
 		end
 	end
 	local crewFolder = Instance.new("Model")
 	crewFolder.Name = "Crew"
+	local figs = {}
 	for _, spot in ipairs(spots) do
 		local fig = VoxelChar.Preview(crewLook(def.faction), nil, nil, nil, { lite = true })
 		local face = Vector3.new(spot.face.X, 0, spot.face.Z)
 		face = face.Magnitude > 0.01 and face.Unit or Vector3.zAxis
 		local base = Vector3.new(spot.pos.X, spot.y, spot.pos.Z)
 		fig:PivotTo(CFrame.lookAt(base, base + face))
+		-- v0.25.42: blocks hang off the figure's main part, which rides the ship on a Weld whose C0 (deck space) the
+		-- server moves when the crew walk over to fight a boarder (crewStep)
+		local main = fig.PrimaryPart
 		for _, d in ipairs(fig:GetDescendants()) do
 			if d:IsA("BasePart") then
 				d.Anchored = false
@@ -795,20 +815,35 @@ local function addCrew(ship, def)
 				d.CanQuery = true -- clicks and aim rays find the crew (v0.25.17)
 				d.CanTouch = false
 				d.Massless = true
-				local w = Instance.new("WeldConstraint")
-				w.Part0 = root
-				w.Part1 = d
-				w.Parent = d
+				if d ~= main then
+					local w = Instance.new("WeldConstraint")
+					w.Part0 = main
+					w.Part1 = d
+					w.Parent = d
+				end
 			end
 		end
+		local weld = Instance.new("Weld")
+		weld.Name = "DeckWeld"
+		weld.Part0 = root
+		weld.Part1 = main
+		weld.C0 = root.CFrame:ToObjectSpace(main.CFrame)
+		weld.Parent = main
+		CollectionService:AddTag(fig, "ShipCrew") -- client target lists (Combat) look here: crew are not in workspace.Monsters
 		fig.Parent = crewFolder
+		table.insert(figs, { fig = fig, weld = weld, home = weld.C0, role = spot.role })
 	end
 	crewFolder.Parent = ship.model
 	if ship.npc then
 		local cdef = crewDef(def, root.Position)
-		for _, fig in ipairs(crewFolder:GetChildren()) do
+		ship.crew = {}
+		for _, c in ipairs(figs) do
+			local fig = c.fig
 			local mob = R.MonsterService.Spawn("ShipCrew", fig.PrimaryPart.Position, { def = cdef, model = fig, noRespawn = true })
 			if mob then
+				c.mob = mob
+				c.at = c.home
+				table.insert(ship.crew, c)
 				fig.AncestryChanged:Connect(function()
 					if not fig:IsDescendantOf(game) and not mob.dead then
 						R.MonsterService.Forget(mob)
@@ -910,6 +945,16 @@ end
 local function npcThink(ship, now)
 	local def = ship.npc
 	local pos = ship.root.Position
+	-- v0.25.42 (owner): no helmsman = no sailing; boarded = gunners and helmsman leave their posts to fight
+	local helmUp, gunners = true, 0
+	for _, c in ipairs(ship.crew or {}) do
+		if c.role == "helm" then
+			helmUp = not c.mob.dead
+		elseif not c.mob.dead then
+			gunners += 1
+		end
+	end
+	local manned = not ship.crew or (gunners > 0 and not ship.boarded)
 	-- Acquire target
 	if ship.target and (ship.target.sinking or not ships[ship.target.id] or flat(ship.target.root.Position, pos) > 520) then
 		ship.target = nil
@@ -945,7 +990,7 @@ local function npcThink(ship, now)
 			desired = fwd:Dot(perp) >= 0 and perp or -perp
 			throttle = 0.7
 		end
-		if d < 270 and now - ship.lastVolley >= def.reload then
+		if manned and d < 270 and now - ship.lastVolley >= def.reload then
 			ship.lastVolley = now
 			local tv = ship.target.root.AssemblyLinearVelocity
 			local flight = d / cfg.CannonballSpeed + 0.25
@@ -971,6 +1016,77 @@ local function npcThink(ship, now)
 	local desiredYaw = math.atan2(-desired.X, -desired.Z)
 	ship.steer = math.clamp(-wrapAngle(desiredYaw - ship.yaw) * 2, -1, 1)
 	ship.throttle = throttle
+	if not helmUp or ship.boarded then
+		ship.steer, ship.throttle = 0, 0
+	end
+end
+
+-- ===== NPC crew on deck (v0.25.42, owner) =====
+-- Crew are static monsters (MonsterService does not move them): here they walk the deck toward whoever they fight
+-- (mob.target, set by MS.Provoke when hit), swing when in reach, and walk back to their posts when nobody is left.
+local CREW_SPEED = 9
+local function crewStep(ship, dt, now)
+	local root = ship.root
+	local fight
+	for _, c in ipairs(ship.crew) do
+		local mob = c.mob
+		local pl = mob.target
+		local proot = pl and R.PlayerService.Root(pl)
+		local hum = pl and R.PlayerService.Humanoid(pl)
+		if pl and (not proot or not hum or hum.Health <= 0 or flat(proot.Position, root.Position) > ship.radius + 40) then
+			mob.target, pl, proot = nil, nil, nil
+		end
+		if pl and not mob.dead then
+			fight = fight or pl
+		end
+	end
+	local caller = ship.provoker or fight
+	ship.provoker = nil
+	ship.boarded = caller ~= nil
+	for _, c in ipairs(ship.crew) do
+		local mob = c.mob
+		if not mob.dead and c.weld.Parent then
+			if caller and not mob.target then
+				R.MonsterService.Provoke(mob, caller) -- one is hit, they all come
+			end
+			local pl = mob.target
+			local proot = pl and R.PlayerService.Root(pl)
+			local here = c.at.Position
+			local goal, faceTo = c.home.Position, nil
+			if proot then
+				local l = root.CFrame:PointToObjectSpace(proot.Position)
+				local hx, hz = math.max(1, ship.width / 2 - 1.5), math.max(1, ship.length / 2 - 1.5)
+				goal = Vector3.new(math.clamp(l.X, -hx, hx), here.Y, math.clamp(l.Z, -hz, hz))
+				faceTo = Vector3.new(l.X, here.Y, l.Z)
+			end
+			local to = Vector3.new(goal.X - here.X, 0, goal.Z - here.Z)
+			local stopAt = proot and mob.def.attackRange * 0.7 or 0.05
+			local nextPos = here
+			if to.Magnitude > stopAt then
+				nextPos = here + to.Unit * math.min(to.Magnitude - stopAt * 0.5, CREW_SPEED * dt)
+				faceTo = faceTo or (here + to)
+			end
+			local cf
+			if faceTo and (faceTo - nextPos).Magnitude > 0.3 then
+				cf = CFrame.lookAt(nextPos, Vector3.new(faceTo.X, nextPos.Y, faceTo.Z))
+			elseif not proot and to.Magnitude <= 0.05 then
+				cf = c.home -- back at the post: original facing
+			else
+				cf = c.at.Rotation + nextPos
+			end
+			c.at = cf
+			c.weld.C0 = cf
+			if proot and Reach.Gap(proot.Position, mob.model) <= mob.def.attackRange + 1 and now - mob.lastAttack >= mob.def.attackSpeed then
+				mob.lastAttack = now
+				Net.FX("MobAttack", { model = mob.model, to = proot.Position, ranged = false, from = mob.root.Position }, mob.root.Position, 200)
+				task.delay(0.3, function()
+					if not mob.dead and mob.target == pl then
+						R.CombatService.MonsterHit(mob, pl, 1)
+					end
+				end)
+			end
+		end
+	end
 end
 
 -- ===== Leviathans in the Doldrums =====
@@ -1213,6 +1329,12 @@ function Ship.Start()
 				local ok, err = pcall(stepShip, ship, dt, now)
 				if not ok then
 					warn("[ShipService]", err)
+				end
+				if ship.crew then
+					local okC, errC = pcall(crewStep, ship, dt, now)
+					if not okC then
+						warn("[ShipService] crew:", errC)
+					end
 				end
 				if #ship.seaKings > 0 then
 					updateSeaKings(ship, dt)

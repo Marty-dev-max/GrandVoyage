@@ -417,7 +417,11 @@ function Quest.Dialog(speaker, newLines)
 			dTag.Position = UDim2.fromOffset(180, -16)
 		end
 		local restore = near and focusCamera(npc) or nil
+		-- v0.25.42 (owner): the NPC turns to face you while you talk
+		local NpcLife = require(script.Parent.Parent.Controllers.NpcLife)
+		NpcLife.Face(npc, near)
 		endTalk = function()
+			NpcLife.Face(npc, false)
 			if restore then
 				restore()
 			end

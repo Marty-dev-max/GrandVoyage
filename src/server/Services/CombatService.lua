@@ -163,6 +163,11 @@ local function resolveTarget(attacker, inst)
 	if pl and pl ~= attacker and alive(pl) and R.PvPService.CanFight(attacker, pl) then
 		return { kind = "player", player = pl, pos = R.PlayerService.Root(pl).Position, model = pl.Character }
 	end
+	-- v0.25.42 (owner): NPC hulls can be beaten apart by hand too, not only with cannons
+	local ship = R.ShipService.NpcShipOf(inst)
+	if ship then
+		return { kind = "ship", ship = ship, pos = inst:IsA("BasePart") and inst.Position or ship.root.Position, model = ship.model }
+	end
 	return nil
 end
 
@@ -187,6 +192,7 @@ end
 local FRUIT_ELEMENT = { Blaze = "fire", Haze = "smoke", Ward = "barrier", Split = "slash", Slick = "slick", Bounce = "rubber" }
 
 -- opts: critBonus, ignoreDef, slow, splash (ammo), element (number color), dot = { kind, pct, ticks }
+local SHIP_HIT = 0.6
 local function hitTarget(attacker, target, mult, magic, opts)
 	local d = R.PlayerService.Derived(attacker)
 	if not d then
@@ -195,6 +201,12 @@ local function hitTarget(attacker, target, mult, magic, opts)
 	opts = opts or {}
 	local crit = (d.crit or 0) + (opts.critBonus or 0)
 	local atk = magic and d.matk or d.atk
+	if target.kind == "ship" then
+		-- hulls shrug off most of a blow (they have ship HP); crits still count
+		local dmg = atk * mult * SHIP_HIT * (math.random() * 100 < crit and 1.5 or 1)
+		R.ShipService.DamageShip(target.ship, math.max(1, math.floor(dmg)), nil, attacker)
+		return
+	end
 	if target.kind == "mob" then
 		local mob = target.mob
 		local flee = mob.def.level * 1.3 + 10
@@ -269,6 +281,9 @@ local function hitLater(delay, attacker, target, mult, magic, opts)
 			return
 		end
 		if target.kind == "mob" and target.mob.dead then
+			return
+		end
+		if target.kind == "ship" and target.ship.sinking then
 			return
 		end
 		if target.kind == "player" and not alive(target.player) then
@@ -520,8 +535,8 @@ local function setup()
 			local range = skill.range or 10
 			root.CFrame = CFrame.lookAt(root.Position, root.Position + aimDir)
 			fxData.to = root.Position + aimDir * range
-			-- ships in the path take the hit too (at sea there are rarely monsters to aim at)
-			if R.ShipService.IsOnShip(player) then
+			-- ships in the path take the hit too (at sea there are rarely monsters to aim at); v0.25.42: from anywhere
+			do
 				local shipRange = math.max(range, 40)
 				fxData.to = root.Position + aimDir * shipRange
 				local dmg = math.floor((magic and d.matk or d.atk) * mult * (skill.hits or 1) * 0.8)

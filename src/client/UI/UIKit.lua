@@ -201,7 +201,10 @@ end
 
 -- two-tone pixel frame: dark outer edge (UIStroke) + light bevel line just inside (child frame)
 function UI.Bevel(frame, color, inset, transparency)
-	local b = New("Frame", { Name = "Bevel", BackgroundTransparency = 1, Position = UDim2.fromOffset(inset or 2, inset or 2), Size = UDim2.new(1, -(inset or 2) * 2, 1, -(inset or 2) * 2), ZIndex = frame.ZIndex, Parent = frame })
+	-- v0.25.42: inside a Folder, so a UIListLayout / UIGridLayout on the frame does not lay the rim out as its first
+	-- item (it pushed a card's whole content below the card: the Guild window "fell down")
+	local holder = frame:FindFirstChild("BevelHolder") or New("Folder", { Name = "BevelHolder", Parent = frame })
+	local b = New("Frame", { Name = "Bevel", BackgroundTransparency = 1, Position = UDim2.fromOffset(inset or 2, inset or 2), Size = UDim2.new(1, -(inset or 2) * 2, 1, -(inset or 2) * 2), ZIndex = frame.ZIndex, Parent = holder })
 	UI.Stroke(b, color or T.Bevel, 1.5).Transparency = transparency or 0.2
 	return b
 end

@@ -574,7 +574,9 @@ local function makeSlot(parent, keyText, order)
 	local keyBox = New("Frame", { BackgroundColor3 = T.PanelDeep, BackgroundTransparency = 0.15, Position = UDim2.fromOffset(3, 3), Size = UDim2.fromOffset(#keyText > 1 and 24 or 18, 17), ZIndex = 7, Parent = slot })
 	UI.Corner(keyBox, 5)
 	local key = UI.Text(keyBox, keyText, 13, T.Gold, "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 8 })
-	local count = UI.Text(slot, "", 13, T.Text, "Number", { AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -4, 1, -1), Size = UDim2.fromOffset(44, 15), TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 7 })
+	-- one line, the full slot width (v0.25.42, owner: "10 SP" wrapped onto two lines over the icon)
+	local count = UI.Text(slot, "", 12, T.Text, "Number", { AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -3, 1, -2), Size = UDim2.new(1, -6, 0, 14), TextXAlignment = Enum.TextXAlignment.Right, TextWrapped = false, ZIndex = 7 })
+	New("UIStroke", { Color = T.Edge, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual, Parent = count })
 	local cd = New("Frame", { BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.35, Size = UDim2.new(1, 0, 0, 0), AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), ZIndex = 5, Parent = slot })
 	UI.Corner(cd, 12)
 	local cdText = UI.Text(slot, "", 24, T.Text, "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 6 })
@@ -1159,9 +1161,11 @@ local function refresh()
 		local iconId = skill and skillIconId(skill)
 		s.icon.Image = iconId or ""
 		s.icon.Visible = iconId ~= nil
+		-- skill icons are full tiles already (gen_skill_icons.py): they fill the slot, no second frame inside it
+		s.icon.Size = UDim2.fromScale(1, 1)
 		-- with an icon the name moves to the tooltip; without one it stays as text
 		s.name.Text = (skill and not iconId) and skill.name or ""
-		s.sp.Text = skill and (skill.sp .. " SP") or ""
+		s.sp.Text = skill and (skill.sp .. "SP") or ""
 		s.sp.TextColor3 = Color3.fromRGB(150, 200, 255)
 		local c = skillColor(skill)
 		s.grad.Color = skill and ColorSequence.new(c:Lerp(Color3.new(1, 1, 1), 0.15), c:Lerp(Color3.new(0, 0, 0), 0.45)) or ColorSequence.new(T.PanelTop, T.PanelDeep)

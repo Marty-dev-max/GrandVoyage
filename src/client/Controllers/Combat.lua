@@ -89,6 +89,17 @@ local function mobModel(inst)
 	return nil
 end
 
+-- every monster you can fight: workspace.Monsters + NPC ship crew (they ride inside their ship model, v0.25.42)
+local CollectionService = game:GetService("CollectionService")
+local function mobList()
+	local folder = workspace:FindFirstChild("Monsters")
+	local list = folder and folder:GetChildren() or {}
+	for _, m in ipairs(CollectionService:GetTagged("ShipCrew")) do
+		table.insert(list, m)
+	end
+	return list
+end
+
 local function alive(model)
 	return model and model.Parent and (model:GetAttribute("HP") or 0) > 0 and model.PrimaryPart ~= nil
 end
@@ -98,14 +109,15 @@ function Combat.SetTarget(model)
 	State.Fire("target")
 end
 
-local function onShip()
+-- mine = only your own ship counts (there a click fires the cannons; on an NPC deck you fight the crew)
+local function onShip(mine)
 	local r = root()
 	if not r then
 		return false
 	end
 	for _, s in ipairs(workspace:FindFirstChild("Ships") and workspace.Ships:GetChildren() or {}) do
 		local sr = s.PrimaryPart
-		if sr and (Vector2.new(sr.Position.X, sr.Position.Z) - Vector2.new(r.Position.X, r.Position.Z)).Magnitude < sr.Size.Magnitude / 2 + 4 then
+		if sr and (not mine or s:GetAttribute("OwnerId") == player.UserId) and (Vector2.new(sr.Position.X, sr.Position.Z) - Vector2.new(r.Position.X, r.Position.Z)).Magnitude < sr.Size.Magnitude / 2 + 4 then
 			return true
 		end
 	end
@@ -148,9 +160,8 @@ local function aimedTarget(dir, mob, range)
 	if mob and Reach.Gap(r.Position, mob) <= range + 2 then
 		return mob
 	end
-	local folder = workspace:FindFirstChild("Monsters")
 	local best, bestD
-	for _, m in ipairs(folder and folder:GetChildren() or {}) do
+	for _, m in ipairs(mobList()) do
 		if alive(m) and m:GetAttribute("MonsterId") ~= "FortCore" then
 			local gap = Reach.Gap(r.Position, m)
 			local to = (m.PrimaryPart.Position - r.Position) * Vector3.new(1, 0, 1)
@@ -277,12 +288,8 @@ function Combat.PickMob(screenPos)
 	if m and alive(m) then
 		return m
 	end
-	local folder = workspace:FindFirstChild("Monsters")
-	if not folder then
-		return nil
-	end
 	local best, bestD = nil, math.huge
-	for _, mob in ipairs(folder:GetChildren()) do
+	for _, mob in ipairs(mobList()) do
 		if alive(mob) and mob:GetAttribute("MonsterId") ~= "FortCore" then
 			local _, size = mob:GetBoundingBox()
 			local center = mob.PrimaryPart.Position
@@ -321,10 +328,9 @@ local function manualTarget(screenPos)
 	if alive(State.target) and Reach.Gap(r.Position, State.target) <= reach then
 		return State.target
 	end
-	local folder = workspace:FindFirstChild("Monsters")
 	local best, bestScore
 	local look = r.CFrame.LookVector
-	for _, m in ipairs(folder and folder:GetChildren() or {}) do
+	for _, m in ipairs(mobList()) do
 		if alive(m) and m:GetAttribute("MonsterId") ~= "FortCore" then
 			local gap = Reach.Gap(r.Position, m)
 			if gap <= reach then
@@ -342,7 +348,7 @@ end
 
 -- one swing (rate-limited to your attack speed); screenPos = pointer position or nil (attack button)
 function Combat.ManualAttack(screenPos)
-	if State.auto or State.build.active or player:GetAttribute("Vending") or onShip() then
+	if State.auto or State.build.active or player:GetAttribute("Vending") or onShip(true) then
 		return
 	end
 	local r, h = root(), hum()
@@ -362,6 +368,15 @@ function Combat.ManualAttack(screenPos)
 			return
 		end
 		m1Swing()
+		-- an NPC hull in reach takes the blow (v0.25.42, owner: wreck ships by hand, not only with cannons)
+		for _, s in ipairs(workspace:FindFirstChild("Ships") and workspace.Ships:GetChildren() or {}) do
+			if s:GetAttribute("NPC") and s.PrimaryPart and (s:GetAttribute("HP") or 0) > 0 and Reach.Gap(r.Position, s) <= attackReach() then
+				local sp = s.PrimaryPart.Position
+				turnTo(r, Vector3.new(sp.X, r.Position.Y, sp.Z))
+				task.spawn(Net.Request, "Attack", { target = s.PrimaryPart })
+				return
+			end
+		end
 		local dir = r.CFrame.LookVector
 		local cam = workspace.CurrentCamera
 		if screenPos and cam then
@@ -399,7 +414,7 @@ function Combat.ManualAttack(screenPos)
 end
 
 function Combat.ClickAt(screenPos)
-	if State.build.active or onShip() then
+	if State.build.active or onShip(true) then
 		return
 	end
 	local pos = Vector2.new(screenPos.X, screenPos.Y)
@@ -504,12 +519,9 @@ end
 
 local function findNearestMob(center, radius, exclude)
 	local best, bestD = nil, radius
-	local folder = workspace:FindFirstChild("Monsters")
-	if not folder then
-		return nil
-	end
-	for _, m in ipairs(folder:GetChildren()) do
-		if alive(m) and m ~= exclude and m:GetAttribute("MonsterId") ~= "FortCore" then
+	local aboard = onShip(true) -- sailing your own ship: Auto Battle never walks you off it after enemy crew
+	for _, m in ipairs(mobList()) do
+		if alive(m) and m ~= exclude and m:GetAttribute("MonsterId") ~= "FortCore" and not (aboard and CollectionService:HasTag(m, "ShipCrew")) then
 			local d = (m.PrimaryPart.Position - center).Magnitude
 			-- monsters already attacking you count as closer, so Auto Battle defends itself first
 			if m:GetAttribute("TargetId") == player.UserId then

@@ -510,6 +510,15 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     v0.25.41: CharacterView opts zoomStart / shiftY (Job Master 1.5 / 0.07 keeps the feet above the button), ripples
     = rings of small blocks (a cylinder is a solid disc). Item previews (Bag, Store) have no focuslines rays and no
     rarity jingle on open. Class card lines have fixed heights (the HTML renderer ignores AutomaticSize).
+  * v0.25.42 (owner): shop cards = Panels `shopGrid` / `shopCard` / `byRarity` (Shop, Stall buyer, StallSetup: price box
+    on each card + PICK, then OPEN STALL); Dev (Studio or CreatorId) skips the Gem stall gates in MarketService.StallOpen.
+    `Controllers/NpcLife`: NPC blocks breathe + wave (limb = rest position in root space) via BulkMoveTo, `NpcLife.Face`
+    from Quest.Dialog. UI.Bevel lives in a `BevelHolder` Folder (list layouts skipped it -> Guild content fell down).
+    Ship crew: figure blocks weld to the figure's main part, which rides a `DeckWeld` (C0 in ship-root space);
+    ShipService `crewStep` (Heartbeat) walks provoked crew across the deck to fight (one hit -> all crew, `ship.boarded`
+    = no volleys, no steering), helmsman dead = ship stops, no gunners = no volleys. Crew tagged `ShipCrew` (client
+    `Combat.mobList`). Hulls: CombatService target kind "ship" (`ShipService.NpcShipOf`, SHIP_HIT 0.6 x atk), manual
+    swings hit an NPC hull in reach, aimed skills hit ships from anywhere. Combat `onShip(true)` = your own ship only.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

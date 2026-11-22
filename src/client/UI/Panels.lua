@@ -2137,36 +2137,102 @@ function Panels.Refine(opts)
 end
 
 -- ===================== SHOP =====================
+-- v0.25.42 (owner reference "SHOP" board): one item card for the Shop, a player's stall and the stall setup:
+-- rarity tile, icon, name, quantity badge, a price (or a price box) and a row of buttons along the bottom
+local function shopGrid(parent, size)
+	local grid = UI.Scroll(parent, size)
+	New("UIGridLayout", { CellSize = UDim2.fromOffset(150, 214), CellPadding = UDim2.fromOffset(12, 12), SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Center, Parent = grid })
+	New("UIPadding", { PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8), Parent = grid })
+	return grid
+end
+local function byRarity(list, defOf)
+	table.sort(list, function(x, y)
+		local rx, ry = ItemDB.Rarity(defOf(x)).rank, ItemDB.Rarity(defOf(y)).rank
+		if rx ~= ry then
+			return rx > ry
+		end
+		return (x.i or 0) < (y.i or 0)
+	end)
+	return list
+end
+-- o = { def, entry?, order, qty?, price? (text), priceBox? (default text), buttons = { { label, color, fn }, ... } }
+-- returns the card and the price TextBox (when asked for one)
+local function shopCard(parent, o)
+	local def = o.def
+	local card = New("Frame", { LayoutOrder = o.order or 0, Parent = parent })
+	UI.Corner(card, 12)
+	UI.RarityStyle(card, def.rarity)
+	if def.kind == "Fruit" then
+		UI.FruitFx(card, def.fruit, 4)
+	end
+	local iconId = UI.ItemIconId(def)
+	if iconId then
+		New("ImageLabel", { BackgroundTransparency = 1, Image = iconId, ScaleType = Enum.ScaleType.Fit, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 10), Size = UDim2.fromOffset(82, 82), ZIndex = 4, Parent = card })
+	else
+		UI.Text(card, def.icon or kindIcon[def.kind] or "❔", 44, T.Text, "Display", { Position = UDim2.fromOffset(0, 18), Size = UDim2.new(1, 0, 0, 70), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 4 })
+	end
+	if o.qty and o.qty > 1 then
+		UI.Text(card, "x" .. o.qty, 14, T.Text, "Number", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -6, 0, 4), Size = UDim2.fromOffset(60, 16), TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 5 })
+	end
+	local nm = UI.Text(card, o.entry and ItemDB.DisplayName(o.entry) or def.name, 15, T.Text, "Semi", { Position = UDim2.fromOffset(6, 94), Size = UDim2.new(1, -12, 0, 36), TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Center, ZIndex = 4 })
+	UI.RarityText(nm, def.rarity)
+	local box
+	if o.priceBox then
+		box = New("TextBox", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 132), Size = UDim2.new(1, -20, 0, 28), PlaceholderText = "Price", Text = o.priceBox, FontFace = UI.Fonts.Number, TextSize = 16, TextColor3 = T.Gold, BackgroundColor3 = T.PanelDeep, ZIndex = 5, Parent = card })
+		UI.Corner(box, 6)
+		UI.Stroke(box, T.Edge, 2)
+		box:GetPropertyChangedSignal("Text"):Connect(function()
+			local digits = box.Text:gsub("%D", "")
+			if digits ~= box.Text then
+				box.Text = digits
+			end
+		end)
+	elseif o.price then
+		UI.Text(card, o.price, 15, T.Gold, "Number", { Position = UDim2.fromOffset(6, 134), Size = UDim2.new(1, -12, 0, 22), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 4 })
+	end
+	local row = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -8), Size = UDim2.new(1, -16, 0, 38), ZIndex = 4, Parent = card })
+	UI.List(row, Enum.FillDirection.Horizontal, 6, Enum.HorizontalAlignment.Center)
+	local n = #(o.buttons or {})
+	local btns = {}
+	for _, bt in ipairs(o.buttons or {}) do
+		table.insert(btns, (UI.Button(row, bt[1], bt[2], UDim2.new(1 / n, n > 1 and -3 or 0, 1, 0), bt[3])))
+	end
+	UI.Tooltip(card, function()
+		return "<b>" .. def.name .. "</b>  " .. string.upper(ItemDB.Rarity(def).id) .. (def.desc and ("\n" .. def.desc) or ""), ItemDB.Rarity(def).color
+	end)
+	return card, box, btns
+end
+
 function Panels.Shop()
-	local win = UI.Window("Shop", "General Store", UDim2.fromOffset(640, 580), T.Green, "🛒")
-	local list = UI.Scroll(win.body)
-	UI.List(list, nil, 6)
-	UI.Section(list, "🧺", "Supplies", T.Green)
-	for _, id in ipairs(ItemDB.Shop) do
+	-- grid of item cards (icon, name, price, BUY, and a bulk button beside it for stackable things), rarest first
+	local win = UI.Window("Shop", "Shop", UDim2.fromOffset(820, 600), T.Green, "🛍️")
+	local grid = shopGrid(win.body)
+	local items = {}
+	for i, id in ipairs(ItemDB.Shop) do
 		local def = ItemDB.Get(id)
-		local card = New("Frame", { Size = UDim2.new(1, -12, 0, 60), Parent = list })
-		UI.Corner(card, 12)
-		UI.RarityStyle(card, def.rarity)
-		UI.Pad(card, 8)
-		UI.Text(card, (kindIcon[def.kind] or "") .. " " .. def.name, 18, T.Text, "Display", { Size = UDim2.new(1, -230, 0, 22), ZIndex = 4 })
-		UI.Text(card, COIN .. " " .. UI.Format(def.price) .. (def.desc and ("  •  " .. def.desc) or ""), 14, T.Text, "Semi", { Position = UDim2.fromOffset(0, 22), Size = UDim2.new(1, -230, 0, 20), ZIndex = 4 })
+		if def then
+			table.insert(items, { def = def, i = i })
+		end
+	end
+	byRarity(items, function(x)
+		return x.def
+	end)
+	for order, it in ipairs(items) do
+		local def, id = it.def, it.def.id
 		-- ammo comes in handfuls
 		local q1, q2 = 1, 10
 		if def.kind == "Ammo" then
 			q1, q2 = 20, 99
 		end
-		local _, h = UI.Button(card, q1 == 1 and "Buy" or ("x" .. q1), T.Green, UDim2.fromOffset(100, 40), function()
+		local buttons = { { "BUY", T.Red, function()
 			req("ShopBuy", { id = id, qty = q1 }, "Purchase")
-		end)
-		h.Position = UDim2.new(1, -210, 0, 2)
-		h.ZIndex = 5
+		end } }
 		if def.stack then
-			local _, h2 = UI.Button(card, "x" .. q2, T.Ocean, UDim2.fromOffset(96, 40), function()
+			table.insert(buttons, { "x" .. q2, T.Ocean, function()
 				req("ShopBuy", { id = id, qty = q2 }, "Purchase")
-			end)
-			h2.Position = UDim2.new(1, -100, 0, 2)
-			h2.ZIndex = 5
+			end })
 		end
+		shopCard(grid, { def = def, order = order, qty = q1 > 1 and q1 or nil, price = COIN .. " " .. UI.Format(def.price * q1), buttons = buttons }) -- ammo: BUY = one handful (badge xN)
 	end
 end
 
@@ -2542,39 +2608,37 @@ function Panels.Stall(args)
 		return
 	end
 	local data = res.data
-	local win = UI.Window("Stall", data.title, UDim2.fromOffset(640, 540), T.Orange, "🏪")
+	local win = UI.Window("Stall", data.title, UDim2.fromOffset(820, 600), T.Orange, "🏪")
 	local pearlStall = data.currency == "pearls"
 	local CUR = pearlStall and PearlsCfg.Icon or COIN
 	local have = pearlStall and (State.profile.pearls or 0) or State.profile.beli
 	UI.Text(win.body, "Seller: " .. data.seller .. "   •   You have " .. CUR .. " " .. UI.Format(have) .. (pearlStall and " tradable Gems" or ""), 16, T.TextSoft, "Semi")
-	local list = UI.Scroll(win.body, UDim2.new(1, 0, 1, -32))
-	list.Position = UDim2.fromOffset(0, 32)
-	UI.List(list, nil, 6)
-	for _, it in ipairs(data.items) do
-		if it.qty > 0 then
-			local def = ItemDB.Get(it.id)
-			local card = New("Frame", { Size = UDim2.new(1, -12, 0, 64), Parent = list })
-			UI.Corner(card, 12)
-			UI.RarityStyle(card, def and def.rarity)
-			UI.Pad(card, 8)
-			UI.Text(card, ItemDB.DisplayName(it) .. "  x" .. it.qty, 18, T.Text, "Display", { Size = UDim2.new(1, -150, 0, 22), ZIndex = 4 })
-			UI.Text(card, CUR .. " " .. UI.Format(it.price) .. " each", 15, T.Text, "Number", { Position = UDim2.fromOffset(0, 26), Size = UDim2.new(1, -150, 0, 20), ZIndex = 4 })
-			local _, h = UI.Button(card, "Buy", T.Green, UDim2.fromOffset(120, 42), function()
-				local r = req("StallBuy", { sellerId = args.sellerId, index = it.index, qty = 1 }, "Purchase")
-				if r.ok then
-					win:Destroy()
-					Panels.Stall(args)
-				end
-			end)
-			h.Position = UDim2.new(1, -122, 0, 2)
-			h.ZIndex = 5
+	local grid = shopGrid(win.body, UDim2.new(1, 0, 1, -32))
+	grid.Position = UDim2.fromOffset(0, 32)
+	local items = {}
+	for i, it in ipairs(data.items) do
+		if it.qty > 0 and ItemDB.Get(it.id) then
+			it.i = i
+			table.insert(items, it)
 		end
+	end
+	byRarity(items, function(x)
+		return ItemDB.Get(x.id)
+	end)
+	for order, it in ipairs(items) do
+		shopCard(grid, { def = ItemDB.Get(it.id), entry = it, order = order, qty = it.qty, price = CUR .. " " .. UI.Format(it.price), buttons = { { "BUY", T.Red, function()
+			local r = req("StallBuy", { sellerId = args.sellerId, index = it.index, qty = 1 }, "Purchase")
+			if r.ok then
+				win:Destroy()
+				Panels.Stall(args)
+			end
+		end } } })
 	end
 end
 
 -- ===================== MARKET (seller) =====================
 function Panels.StallSetup()
-	local win = UI.Window("StallSetup", "Your Stall", UDim2.fromOffset(740, 580), T.Orange, "🏪")
+	local win = UI.Window("StallSetup", "Your Stall", UDim2.fromOffset(820, 620), T.Orange, "🏪")
 	if State.stall.open then
 		UI.List(win.body, nil, 6)
 		UI.Text(win.body, State.stall.title, 26, T.Gold, "Display")
@@ -2602,39 +2666,37 @@ function Panels.StallSetup()
 		end, 36)
 	end
 	drawCurrency()
-	local title = New("TextBox", { Size = UDim2.new(0.6, 0, 0, 44), PlaceholderText = "Stall name, e.g. Cheap Cards!", Text = "", FontFace = UI.Fonts.Bold, TextSize = 20, TextColor3 = T.Text, PlaceholderColor3 = T.TextSoft, BackgroundColor3 = T.PanelDeep, Parent = win.body })
+	-- v0.25.42 (owner): the same cards as the Shop: set a price on a card, Pick it, then OPEN STALL. The header row
+	-- sits inside the body (it used to poke up into the title plaque)
+	local title = New("TextBox", { Position = UDim2.fromOffset(0, 6), Size = UDim2.new(0.6, -8, 0, 40), PlaceholderText = "Stall name, e.g. Cheap Cards!", Text = "", FontFace = UI.Fonts.Bold, TextSize = 20, TextColor3 = T.Text, PlaceholderColor3 = T.TextSoft, BackgroundColor3 = T.PanelDeep, Parent = win.body })
 	UI.Corner(title, 10)
 	UI.Stroke(title, T.Edge, 2.5)
-	local list = UI.Scroll(win.body, UDim2.new(1, 0, 1, -120))
-	list.Position = UDim2.fromOffset(0, 54)
-	UI.List(list, nil, 4)
+	curRow.Position = UDim2.new(0.6, 0, 0, 4)
+	curRow.Size = UDim2.new(0.4, 0, 0, 44)
+	local grid = shopGrid(win.body, UDim2.new(1, 0, 1, -118))
+	grid.Position = UDim2.fromOffset(0, 54)
 	local chosen = {}
 	local p = State.profile
-	for _, e in ipairs(p.inventory) do
+	local list = {}
+	for i, e in ipairs(p.inventory) do
 		local def = ItemDB.Get(e.id)
 		if def and not equippedUid(e.uid) then
-			local row = New("Frame", { Size = UDim2.new(1, -12, 0, 50), Parent = list })
-			UI.Corner(row, 10)
-			UI.RarityStyle(row, def.rarity)
-			UI.Pad(row, 6)
-			UI.Text(row, ItemDB.DisplayName(e) .. " x" .. (e.qty or 1), 16, T.Text, "Bold", { Size = UDim2.new(1, -270, 1, 0), ZIndex = 4 })
-			local price = New("TextBox", { Position = UDim2.new(1, -262, 0, 2), Size = UDim2.fromOffset(130, 34), PlaceholderText = "Price", Text = tostring(def.price or 100), FontFace = UI.Fonts.Number, TextSize = 18, TextColor3 = T.Text, BackgroundColor3 = T.PanelDeep, ZIndex = 5, Parent = row })
-			UI.Corner(price, 8)
-			local btn, h = UI.Button(row, "Pick", T.Grey, UDim2.fromOffset(118, 34), nil)
-			h.Position = UDim2.new(1, -122, 0, 2)
-			h.ZIndex = 5
-			btn.Activated:Connect(function()
-				if chosen[e.uid] then
-					chosen[e.uid] = nil
-					UI.SetButtonColor(btn, T.Grey)
-					btn.Text = "Pick"
-				else
-					chosen[e.uid] = price
-					UI.SetButtonColor(btn, T.Green)
-					btn.Text = "✓ Listed"
-				end
-			end)
+			table.insert(list, { e = e, def = def, i = i })
 		end
+	end
+	byRarity(list, function(x)
+		return x.def
+	end)
+	for order, it in ipairs(list) do
+		local e = it.e
+		local pickBtn, price -- (set right below; the click comes later)
+		local _, box, btns = shopCard(grid, { def = it.def, entry = e, order = order, qty = e.qty or 1, priceBox = tostring(it.def.price or 100), buttons = { { "PICK", T.Grey, function()
+			local on = not chosen[e.uid]
+			chosen[e.uid] = on and price or nil
+			UI.SetButtonColor(pickBtn, on and T.Green or T.Grey)
+			pickBtn.Text = on and "LISTED" or "PICK"
+		end } } })
+		pickBtn, price = btns[1], box
 	end
 	local _, h = UI.Button(win.body, "OPEN STALL", T.Green, UDim2.new(1, 0, 0, 52), function()
 		local items = {}
@@ -2649,6 +2711,7 @@ function Panels.StallSetup()
 	end)
 	h.Position = UDim2.new(0, 0, 1, -54)
 end
+
 
 -- ===================== SETTINGS =====================
 -- Anime-Vanguards-style: category sidebar on the left, toggle rows on the right

@@ -130,7 +130,10 @@ function Market.Start()
 			maxItems += 2 -- Bigger Stall (Pearl Shop)
 		end
 		local currency = data.currency == "pearls" and "pearls" or "beli"
-		if currency == "pearls" then
+		-- v0.25.42 (owner): the developer can open a Gem stall right away to test it (Studio or the place's creator,
+		-- the same rule as the Dev tab): no Lv / account-age gate, no 24 h trade lock on fresh items
+		local dev = game:GetService("RunService"):IsStudio() or player.UserId == game.CreatorId
+		if currency == "pearls" and not dev then
 			local ok, why = R.PearlService.CanTrade(player)
 			if not ok then
 				return false, why
@@ -158,7 +161,7 @@ function Market.Start()
 			end
 			if currency == "pearls" then
 				local def = ItemDB.Get(entry.id)
-				if R.PearlService.TradeLocked(entry) then
+				if R.PearlService.TradeLocked(entry) and not dev then
 					return false, (def and def.name or "That item") .. " was obtained less than " .. PearlsCfg.Trade.LockHours .. "h ago"
 				end
 				local okPrice, lo, hi = R.PearlService.PriceOk(entry.id, price)

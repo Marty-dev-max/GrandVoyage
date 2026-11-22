@@ -49,7 +49,7 @@ return {
 	Env_Pine_1 = 137361647724411,
 	Env_Pine_2 = 98306762594236,
 	Fruit_Blaze = 111828664093975,
-	Fruit_Bounce = 97375591165630,
+	Fruit_Bounce = 83058143751205,
 	Fruit_Haze = 114199647505316,
 	Fruit_Slick = 102084538470468,
 	Fruit_Split = 84446671611819,

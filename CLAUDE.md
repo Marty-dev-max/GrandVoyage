@@ -465,6 +465,16 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     `Shared/Modules/Accessory` (Build/Wear) for players (WeaponService OUTFIT = Accessory.Cfg), monsters and previews:
     an item whose id has an accessory shows when worn (new headgear/capes/beards in Items.lua, dropped by their monster).
     Preview: `lune run tools/export_char.luau build/GrandVoyage.rbxlx out.json monsters [row]` + render_parts.py front|three.
+  * v0.25.33 (owner): WILL POWER = the downed player's own RevivePrompt (E): one try per knockdown (char attr WillTried
+    = Downed stamp), chance Knockdown.WillBase + WillPerLuk x LUK (cap WillMax), success stands at WillHp (50%);
+    Interact shows your own card as "Get up / Will power x%". ExecuteWindup 4 s; an execute pushes "Executed" { by,
+    level } -> init.client black cut "YOU DIED" + cause + MusicDefeat (Audio.SetMenuMusic override until respawn).
+    Fruits: Bag "Use" -> `HoldFruit` (model welded to RightHand, char attr HeldFruit = uid) -> State.heldFruit; a click
+    (Combat routes it) opens Panels.FruitChoice EAT / STORE (`StoreFruit` = put away) / DROP (`DropFruit`: world fruit
+    for 2 min, others pick it up only if PearlService.CanTrade and the entry was not TradeLocked). Fruit spawn = its own
+    PointLight + soft sparks (no beam). Fruit Notifier holders get push "FruitSpawn" -> `Controllers/FruitAlert`
+    (FruitTwinkle + narrator Narr_Fruit<IslandId> from tools/gen_voice_elevenlabs.py, TTS fallback with
+    AudioTextToSpeech while the ids are empty: audio upload quota spent until 6 Dec 2026; "? FRUIT ?" marker).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

@@ -314,9 +314,9 @@ def fruit_ward(s):
 
 
 def fruit_bounce(s):
-    s.oval(16, 19, 10, 9, (170, 70, 200))
+    s.oval(16, 19, 10, 9, (255, 120, 190))  # v0.25.33 (owner): purple bulges over pink creases
     for x, y in ((10, 15), (17, 13), (23, 17), (11, 22), (18, 21), (22, 25), (14, 27)):
-        s.oval(x, y, 4, 4, (255, 130, 190))
+        s.oval(x, y, 4, 4, (175, 70, 215))
         s.px(x - 1, y - 2, WHITE)
     fruit_stem(s, 16, 8)
 

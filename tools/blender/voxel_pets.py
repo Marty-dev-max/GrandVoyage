@@ -381,14 +381,14 @@ def fruit_v2(kind):
         g.add(d, col)
         stem(P, cx, cy, top + 1, rgb(80, 170, 200))
     elif kind == "bounce":
-        # rubber bubbles: a squashed ball covered in round bulges, pink with purple creases and white shine dots
+        # rubber bubbles: a squashed ball covered in round bulges; v0.25.33 (owner): purple bulges, pink in the creases
         pts = fib_points(18, 9, (cx, cy, cz), 0.85)
         d, n1, n2 = lobes(g, pts, (4.6, 4.6, 4.6))
         d = np.minimum(d, g.d_ellipsoid((cx, cy, cz), (10.5, 10.5, 9)))
         crease = np.clip((n2 - n1) / 2.0, 0, 1)
 
         def col(m):
-            c = np.where((crease < 0.22)[..., None], np.array(rgb(170, 70, 200), np.float32), np.array(rgb(255, 130, 190), np.float32))
+            c = np.where((crease < 0.5)[..., None], np.array(rgb(255, 120, 190), np.float32), np.array(rgb(175, 70, 215), np.float32))
             return c * g.noise(0.02)[..., None]
         g.add(d, col)
         for x, y, z in pts:

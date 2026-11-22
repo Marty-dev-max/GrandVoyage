@@ -8,7 +8,7 @@ local F = {}
 F.List = {
 	{
 		id = "Bounce", name = "Bounce Bounce no Mi", type = "Paramecia", rarity = "Secret", weight = 2,
-		color = Color3.fromRGB(255, 120, 200), swirl = Color3.fromRGB(150, 60, 220), icon = "🍇",
+		color = Color3.fromRGB(175, 70, 215), swirl = Color3.fromRGB(255, 120, 190), icon = "🍇", -- v0.25.33: purple, pink inside
 		desc = "Your body turns to rubber: stretch, bounce, and shrug off blunt hits.",
 		passive = { defPct = 0.15, maxHpPct = 0.1 }, passiveText = "Rubber body: +15% DEF, +10% Max HP",
 		skills = {

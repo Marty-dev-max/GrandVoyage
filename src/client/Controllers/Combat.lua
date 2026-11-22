@@ -751,6 +751,10 @@ function Combat.Start()
 			return
 		end
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			if State.heldFruit then -- v0.25.33: a held Cursed Fruit takes the click (Eat / Store / Drop)
+				State.heldFruit.choose()
+				return
+			end
 			holding, holdPos = true, input.Position
 			Combat.ClickAt(input.Position)
 		elseif input.KeyCode == Enum.KeyCode.T then
@@ -778,6 +782,10 @@ function Combat.Start()
 	-- Taps (not drags, not on buttons) select monsters on touch screens
 	UserInputService.TouchTapInWorld:Connect(function(pos, processedByUI)
 		if not processedByUI then
+			if State.heldFruit then
+				State.heldFruit.choose()
+				return
+			end
 			Combat.ClickAt(pos)
 		end
 	end)
@@ -807,6 +815,7 @@ function Combat.Start()
 		end
 	end)
 	player.CharacterAdded:Connect(function()
+		State.heldFruit = nil -- the held fruit model went with the old body
 		Combat.SetTarget(nil)
 		if State.auto then
 			Combat.SetAuto(false)

@@ -237,50 +237,26 @@ local function fruitModel(f, pos)
 		stem.CFrame = body.CFrame * CFrame.new(0, 1.5, 0) * CFrame.Angles(0, 0, 0.4)
 		stem.Parent = m
 	end
+	-- v0.25.33 (owner: the light column was too much): the fruit is its own light source in its color, a few
+	-- slow pixel sparks around it, no beam
 	local light = Instance.new("PointLight")
 	light.Color = f.color
-	light.Range = 18
-	light.Brightness = 2
+	light.Range = 14
+	light.Brightness = 3
+	light.Shadows = true
 	light.Parent = body
-	-- v0.25.1 (owner: fruit should glow): square pixel sparks in the fruit's colors + a soft light column seen from far
 	local Tex = require(ReplicatedStorage.Shared.Config.Textures)
 	local e = Instance.new("ParticleEmitter")
 	e.Texture = Tex.px_square or ""
 	e.Color = ColorSequence.new(f.color, f.swirl)
 	e.LightEmission = 1
-	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.35), NumberSequenceKeypoint.new(1, 0) })
-	e.Lifetime = NumberRange.new(0.8, 1.6)
-	e.Speed = NumberRange.new(1, 3)
+	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.25), NumberSequenceKeypoint.new(1, 0) })
+	e.Lifetime = NumberRange.new(0.8, 1.4)
+	e.Speed = NumberRange.new(0.5, 1.5)
 	e.SpreadAngle = Vector2.new(180, 180)
-	e.Acceleration = Vector3.new(0, 3, 0)
-	e.Rate = 14
+	e.Acceleration = Vector3.new(0, 1.5, 0)
+	e.Rate = 6
 	e.Parent = body
-	local column = Instance.new("Part")
-	column.Name = "GlowColumn"
-	column.Anchored = true
-	column.CanCollide = false
-	column.CanQuery = false
-	column.CanTouch = false
-	column.CastShadow = false
-	column.Material = Enum.Material.Neon
-	column.Color = f.color
-	column.Transparency = 0.72
-	column.Size = Vector3.new(1.2, 70, 1.2)
-	column.CFrame = body.CFrame * CFrame.new(0, 36, 0)
-	column.Parent = m
-	local ringBase = Instance.new("Part")
-	ringBase.Name = "GlowRing"
-	ringBase.Anchored = true
-	ringBase.CanCollide = false
-	ringBase.CanQuery = false
-	ringBase.CanTouch = false
-	ringBase.CastShadow = false
-	ringBase.Material = Enum.Material.Neon
-	ringBase.Color = f.swirl
-	ringBase.Transparency = 0.5
-	ringBase.Size = Vector3.new(6, 0.12, 6)
-	ringBase.CFrame = CFrame.new(pos + Vector3.new(0, 0.08, 0))
-	ringBase.Parent = m
 	m.PrimaryPart = body
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.ActionText = "Pick up"
@@ -322,10 +298,14 @@ function FS.SpawnTreeFruit()
 	local f = pickFruit()
 	local m, prompt = fruitModel(f, pos)
 	spawned = m
-	-- Fruit Notifier holders (Store) learn the island; everyone else only hears that a fruit appeared
+	-- Fruit Notifier holders (Store) learn the island + get a marker and the narrator (FruitAlert); never which fruit.
+	-- Everyone else only hears that a fruit appeared
 	for _, pl in ipairs(game:GetService("Players"):GetPlayers()) do
 		local knows = R.StoreService and R.StoreService.BoostActive(pl, "fruit")
 		Net.Push(pl, "Announce", { text = knows and ("📡 A strange fruit has appeared on " .. island.name .. "!") or "🍎 A strange fruit has appeared somewhere in the sea!", rarity = "Epic" })
+		if knows then
+			Net.Push(pl, "FruitSpawn", { island = island.id, name = island.name, pos = m.PrimaryPart.Position, life = Fruits.Drops.TreeLifetime })
+		end
 	end
 	prompt.Triggered:Connect(function(player)
 		local root = R.PlayerService.Root(player)
@@ -340,6 +320,59 @@ function FS.SpawnTreeFruit()
 			m:Destroy()
 		end
 	end)
+end
+
+-- ===== holding a fruit (v0.25.33, owner): Use in the Bag puts it in your right hand; a click then picks
+-- Eat / Store (back in the bag) / Drop (on the ground; another player may take it only under the trade rules) =====
+local function clearHeld(player)
+	local char = player.Character
+	if char then
+		local old = char:FindFirstChild("HeldFruit")
+		if old then
+			old:Destroy()
+		end
+		char:SetAttribute("HeldFruit", nil)
+	end
+end
+FS.ClearHeld = clearHeld
+
+local function heldEntry(player, uid)
+	local p = profile(player)
+	local char = player.Character
+	if not p or not char or char:GetAttribute("HeldFruit") ~= uid then
+		return nil
+	end
+	local entry = Formulas.FindItem(p, uid)
+	local fid = entry and string.match(entry.id, "^Fruit_(.+)$")
+	return entry, fid and Fruits.ById[fid]
+end
+
+local function holdModel(f)
+	local assets = ReplicatedStorage:FindFirstChild("Assets")
+	local custom = assets and assets:FindFirstChild("Fruits") and assets.Fruits:FindFirstChild(f.id)
+	local m
+	if custom then
+		m = custom:Clone()
+	else
+		m = Instance.new("Model")
+		local ball = Instance.new("Part")
+		ball.Shape = Enum.PartType.Ball
+		ball.Size = Vector3.new(2, 2, 2)
+		ball.Color = f.color
+		ball.Parent = m
+	end
+	local _, size = m:GetBoundingBox()
+	m:ScaleTo(m:GetScale() * 1.5 / math.max(size.X, size.Y, size.Z, 0.1))
+	for _, d in ipairs(m:GetDescendants()) do
+		if d:IsA("BasePart") then
+			d.Anchored = false
+			d.CanCollide = false
+			d.CanQuery = false
+			d.CanTouch = false
+			d.Massless = true
+		end
+	end
+	return m
 end
 
 function FS.Init(registry)
@@ -377,6 +410,7 @@ function FS.Start()
 				return string.match(id, "^F_") ~= nil
 			end)
 		end
+		clearHeld(player)
 		p.fruit = { id = f.id, mastery = 1, exp = 0 }
 		addToBar(p)
 		setAttrs(player, p)
@@ -387,6 +421,85 @@ function FS.Start()
 		end
 		Net.PushAll("Announce", { text = player.DisplayName .. " ate the " .. f.name .. "!", rarity = f.rarity })
 		return true, "You ate the " .. f.name .. "! (You can no longer swim)"
+	end, 1)
+	Net.Handle("HoldFruit", function(player, data)
+		local p = profile(player)
+		local char = player.Character
+		local hand = char and char:FindFirstChild("RightHand")
+		local entry = p and type(data) == "table" and Formulas.FindItem(p, data.uid)
+		local fid = entry and string.match(entry.id, "^Fruit_(.+)$")
+		local f = fid and Fruits.ById[fid]
+		if not f or not hand then
+			return false, "That is not a Cursed Fruit"
+		end
+		clearHeld(player)
+		local m = holdModel(f)
+		m.Name = "HeldFruit"
+		m:PivotTo(hand.CFrame * CFrame.new(0, -0.9, -0.3))
+		local main = m.PrimaryPart or m:FindFirstChildWhichIsA("BasePart", true)
+		for _, d in ipairs(m:GetDescendants()) do
+			if d:IsA("BasePart") then
+				local w = Instance.new("WeldConstraint")
+				w.Part0 = hand
+				w.Part1 = d
+				w.Parent = d
+			end
+		end
+		if main then
+			local light = Instance.new("PointLight")
+			light.Color = f.color
+			light.Range = 6
+			light.Brightness = 1.5
+			light.Parent = main
+		end
+		m.Parent = char
+		char:SetAttribute("HeldFruit", entry.uid)
+		return true
+	end, 0.5)
+	Net.Handle("StoreFruit", function(player)
+		clearHeld(player)
+		return true, "Put away in your Bag"
+	end, 0.3)
+	Net.Handle("DropFruit", function(player, data)
+		local entry, f = heldEntry(player, type(data) == "table" and data.uid)
+		local root = R.PlayerService.Root(player)
+		if not entry or not f or not root then
+			return false, "Hold the fruit first"
+		end
+		if player:GetAttribute("Vending") then
+			return false, "Close your stall first"
+		end
+		local locked = R.PearlService.TradeLocked(entry)
+		R.InventoryService.RemoveUid(player, entry.uid, 1)
+		clearHeld(player)
+		local pos = root.Position + root.CFrame.LookVector * 3 - Vector3.new(0, 2.6, 0)
+		local m, prompt = fruitModel(f, pos)
+		CollectionService:RemoveTag(m, "CursedFruit") -- not a natural spawn: no Fruit Notifier marker
+		m.Name = "DroppedFruit"
+		prompt.ObjectText = player.DisplayName .. "'s fruit"
+		prompt.Triggered:Connect(function(picker)
+			local proot = R.PlayerService.Root(picker)
+			if not m.Parent or not proot or (proot.Position - m.PrimaryPart.Position).Magnitude > 16 then
+				return
+			end
+			-- anyone else follows the trade rules (no moving fruits to a fresh alt)
+			if picker ~= player then
+				local ok, why = R.PearlService.CanTrade(picker)
+				if not ok or locked then
+					R.PlayerService.Notify(picker, locked and "This fruit is still trade-locked: only its owner can pick it up" or ("Picking up other players' fruits follows the trade rules: " .. tostring(why)), "bad")
+					return
+				end
+			end
+			m:Destroy()
+			R.InventoryService.AddItem(picker, "Fruit_" .. f.id, 1)
+			Net.Push(picker, "Loot", { items = { { id = "Fruit_" .. f.id, qty = 1 } } })
+		end)
+		task.delay(Fruits.DropLifetime or 120, function()
+			if m.Parent then
+				m:Destroy()
+			end
+		end)
+		return true, "Dropped the fruit (it fades in 2 minutes)"
 	end, 1)
 	-- natural spawns
 	task.spawn(function()

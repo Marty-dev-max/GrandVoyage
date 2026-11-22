@@ -10,6 +10,8 @@ OUT = os.path.join(os.path.dirname(__file__), '..', 'assets', 'sfx')
 API = 'https://api.elevenlabs.io/v1/sound-generation'
 
 SFX = {
+    # v0.25.33: Cursed Fruit appeared (Fruit Notifier), played with the narrator line
+    'FruitTwinkle': ('a magical twinkling shimmer, bright glittering chime sparkle, mysterious, fantasy game, no voice', 1.6),
     # v0.25.16 (owner: sounds still felt the same): footsteps by ground + weightier impacts
     'StepGrass': ('a single footstep on soft grass, short soft rustle, game foley, no voice', 0.5),
     'StepWood': ('a single footstep on wooden planks of a pier, short hollow knock, game foley', 0.5),

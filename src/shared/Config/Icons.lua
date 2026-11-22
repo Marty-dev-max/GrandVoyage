@@ -27,7 +27,7 @@ return {
 	flag = "rbxassetid://138353799407949",
 	flame = "rbxassetid://125873078716361",
 	fruit_blaze = "rbxassetid://136280625016157",
-	fruit_bounce = "rbxassetid://125217977356340",
+	fruit_bounce = "rbxassetid://87202657313919",
 	fruit_haze = "rbxassetid://108125277506685",
 	fruit_slick = "rbxassetid://94276487114674",
 	fruit_split = "rbxassetid://140138849250341",

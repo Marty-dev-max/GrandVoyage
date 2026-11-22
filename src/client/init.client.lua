@@ -42,6 +42,7 @@ local WorldCull = require(script.Controllers.WorldCull)
 local FruitFX = require(script.Controllers.FruitFX)
 local Footsteps = require(script.Controllers.Footsteps)
 local ShiftLock = require(script.Controllers.ShiftLock)
+local FruitAlert = require(script.Controllers.FruitAlert)
 
 pcall(function()
 	StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Health, false)
@@ -140,11 +141,63 @@ local function showDowned(d)
 	task.spawn(function()
 		while gui.Parent do
 			local left = math.max(0, math.ceil((d.seconds or 25) - (os.clock() - t0)))
-			sub.Text = "Getting up in " .. left .. "s. An ally can hold REVIVE on you."
+			sub.Text = "Getting up in " .. left .. "s. Hold E for WILL POWER (one try), or an ally can REVIVE you."
 			vig.BackgroundTransparency = 0.62 + 0.1 * math.sin(os.clock() * 4)
 			task.wait(0.1)
 		end
 	end)
+end
+
+-- v0.25.33 (owner): EXECUTED = hard cut to black, "YOU DIED" + what killed you, a sad piano track until you respawn
+local function showExecuted(d)
+	if downedGui then
+		downedGui:Destroy()
+		downedGui = nil
+	end
+	local TweenService = game:GetService("TweenService")
+	local lp = game:GetService("Players").LocalPlayer
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "Executed"
+	gui.IgnoreGuiInset = true
+	gui.ResetOnSpawn = false
+	gui.DisplayOrder = 60
+	gui.Parent = lp:WaitForChild("PlayerGui")
+	local black = Instance.new("Frame")
+	black.BackgroundColor3 = Color3.new(0, 0, 0)
+	black.BorderSizePixel = 0
+	black.Size = UDim2.fromScale(1, 1)
+	black.Parent = gui
+	local title = UI.Text(black, "YOU DIED", 56, Color3.fromRGB(200, 40, 50), "Display", { TextXAlignment = Enum.TextXAlignment.Center, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.new(1, 0, 0, 64) })
+	local cause = UI.Text(black, "Executed by " .. tostring(d.by or "a monster") .. (d.level and (" (Lv." .. d.level .. ")") or ""), 22, Color3.fromRGB(230, 230, 235), "Semi", { TextXAlignment = Enum.TextXAlignment.Center, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.52), Size = UDim2.new(1, 0, 0, 30) })
+	title.TextTransparency, cause.TextTransparency = 1, 1
+	Audio.SetMenuMusic("MusicDefeat", 0.4)
+	task.delay(0.6, function()
+		TweenService:Create(title, TweenInfo.new(1.2), { TextTransparency = 0 }):Play()
+	end)
+	task.delay(1.6, function()
+		TweenService:Create(cause, TweenInfo.new(1.2), { TextTransparency = 0 }):Play()
+	end)
+	local done = false
+	local function finish()
+		if done then
+			return
+		end
+		done = true
+		for _, o in ipairs({ black, title, cause }) do
+			TweenService:Create(o, TweenInfo.new(1.4), o == black and { BackgroundTransparency = 1 } or { TextTransparency = 1 }):Play()
+		end
+		Audio.SetMenuMusic(nil, 3)
+		task.delay(1.5, function()
+			gui:Destroy()
+		end)
+	end
+	local conn
+	conn = lp.CharacterAdded:Connect(function()
+		conn:Disconnect()
+		task.wait(1)
+		finish()
+	end)
+	task.delay(30, finish) -- never stuck behind the black screen
 end
 
 -- v0.25.25 (owner): low HP = red edges pulsing, faster and stronger the lower it goes (the DOWNED screen has its own)
@@ -191,6 +244,7 @@ end)
 
 local handlers = {
 	Downed = showDowned,
+	Executed = showExecuted,
 	-- INT monsters (v0.25.18): a short stun freezes movement and jumping
 	Stun = function(d)
 		local char = game:GetService("Players").LocalPlayer.Character
@@ -350,7 +404,7 @@ end)
 for _, c in ipairs({
 	{ "Sailing", Sailing }, { "Builder", Builder }, { "VFX", VFX }, { "Readability", Readability }, { "Swim", Swim },
 	{ "Pets", PetsCtl }, { "Titles", Titles }, { "Ocean", Ocean }, { "Atmos", Atmos }, { "GrassField", GrassField },
-	{ "CreatureAnim", CreatureAnim }, { "CharAnim", CharAnim }, { "Interact", Interact }, { "ChartsView", ChartsView }, { "ShipBars", ShipBars }, { "Underwater", Underwater }, { "SerpentBody", SerpentBody }, { "Heritage", Heritage }, { "Flight", Flight }, { "Crosshair", Crosshair }, { "HeritageAnim", HeritageAnim }, { "QuestPath", QuestPath }, { "WorldCull", WorldCull }, { "FruitFX", FruitFX }, { "Footsteps", Footsteps }, { "ShiftLock", ShiftLock },
+	{ "CreatureAnim", CreatureAnim }, { "CharAnim", CharAnim }, { "Interact", Interact }, { "ChartsView", ChartsView }, { "ShipBars", ShipBars }, { "Underwater", Underwater }, { "SerpentBody", SerpentBody }, { "Heritage", Heritage }, { "Flight", Flight }, { "Crosshair", Crosshair }, { "HeritageAnim", HeritageAnim }, { "QuestPath", QuestPath }, { "WorldCull", WorldCull }, { "FruitFX", FruitFX }, { "Footsteps", Footsteps }, { "ShiftLock", ShiftLock }, { "FruitAlert", FruitAlert },
 }) do
 	task.spawn(start, c[1], c[2])
 end

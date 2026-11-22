@@ -86,6 +86,13 @@ local function standUp(player, hpRatio)
 	Net.Push(player, "Downed", { downed = false })
 end
 
+-- WILL POWER (v0.25.33, owner): the downed player's own try at getting up, LUK raises it
+function KD.WillChance(player)
+	local d = R.PlayerService.Derived(player)
+	local luk = d and d.LUK or 0
+	return math.min(CFG.WillMax, CFG.WillBase + luk * CFG.WillPerLuk)
+end
+
 -- called by CombatService.DamagePlayer when a monster hit would bring HP to 0
 function KD.Down(player)
 	local char = player.Character
@@ -109,8 +116,25 @@ function KD.Down(player)
 	prompt.HoldDuration = CFG.ReviveHold
 	prompt.MaxActivationDistance = 10
 	prompt.RequiresLineOfSight = false
+	prompt:SetAttribute("Will", KD.WillChance(player)) -- the downed player's own card shows it (Interact)
 	prompt.Parent = root
 	prompt.Triggered:Connect(function(helper)
+		if helper == player then
+			-- one try per knockdown
+			if not KD.IsDowned(player) or char:GetAttribute("WillTried") == stamp then
+				return
+			end
+			char:SetAttribute("WillTried", stamp)
+			local chance = KD.WillChance(player)
+			if math.random() < chance then
+				standUp(player, CFG.WillHp)
+				Net.FX("Miss", { pos = root.Position + Vector3.new(0, 3, 0), text = "WILL POWER!" }, root.Position, 250)
+				R.PlayerService.Notify(player, "Will power! You got back up.", "good")
+			else
+				R.PlayerService.Notify(player, string.format("Not enough strength... (%d%%)", math.floor(chance * 100 + 0.5)), "bad")
+			end
+			return
+		end
 		if helper ~= player and KD.IsDowned(player) and R.PlayerService.Humanoid(helper) and R.PlayerService.Humanoid(helper).Health > 0 and not KD.IsDowned(helper) then
 			standUp(player, CFG.ReviveHp)
 			R.PlayerService.Notify(player, helper.DisplayName .. " revived you!", "good")
@@ -155,6 +179,7 @@ function KD.TryExecute(mob, player)
 		if mob.executing and mob.executing.token == token then
 			mob.executing = nil
 			if not mob.dead and KD.IsDowned(player) and (mob.root.Position - root.Position).Magnitude < 16 then
+				Net.Push(player, "Executed", { by = mob.def.name, level = mob.def.level })
 				kill(player, "EXECUTED")
 			end
 		end

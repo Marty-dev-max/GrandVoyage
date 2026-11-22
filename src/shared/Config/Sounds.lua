@@ -118,7 +118,23 @@ add("MusicBattle", "Music", 0.32, "", { looped = true, id = "rbxassetid://986624
 -- owner's pick (v0.22.5): jazz piano track (assets/music/MusicJazz.mp3). v0.24.0: title menu + character creator only
 add("MusicJazz", "Music", 0.4, "", { looped = true, id = "rbxassetid://78909647577056" })
 add("MusicSea", "Music", 0.3, "", { looped = true, id = "rbxassetid://1836603880" }) -- Deep Blue Sea Shanty 2 (APM)
+-- v0.25.33 (owner): Fruit Notifier = a narrator says WHERE a Cursed Fruit appeared (never which one) + a twinkle
+-- (tools/gen_voice_elevenlabs.py, ids filled by upload_sfx.py; the audio upload quota ran out until 6 Dec 2026,
+-- so until then the client speaks the line with Roblox text-to-speech: Controllers/FruitAlert)
+add("FruitTwinkle", "SFX", 0.7, "", { id = "rbxassetid://9116396069" }) -- Magic Insect Dive Down Pixie Dust Twinkles 2 (ProSoundEffects)
+add("Narr_FruitDaybreak", "SFX", 1, "")
+add("Narr_FruitConchBay", "SFX", 1, "")
+add("Narr_FruitMarmalade", "SFX", 1, "")
+add("Narr_FruitHoneyslope", "SFX", 1, "")
+add("Narr_FruitBarracuda", "SFX", 1, "")
+add("Narr_FruitMikan", "SFX", 1, "")
+add("Narr_FruitEpilogue", "SFX", 1, "")
+add("Narr_FruitFortWest", "SFX", 1, "")
+add("Narr_FruitFortMid", "SFX", 1, "")
+add("Narr_FruitFortEast", "SFX", 1, "")
+add("MusicDefeat", "Music", 0.45, "", { looped = true, id = "rbxassetid://1838577168" }) -- Sad Story (Piano & Harp) (APM), death screen
 add("MusicBoss", "Music", 0.4, "", { looped = true, id = "rbxassetid://139997523791273" }) -- Boss Battle Burnout
+
 
 
 

@@ -168,6 +168,57 @@ local function itemTile(parent, entry, onClick, selected)
 end
 
 -- ===================== INVENTORY =====================
+-- held Cursed Fruit (v0.25.33): EAT / STORE / DROP card at the bottom of the screen
+local fruitCard
+function Panels.FruitChoice(uid, def)
+	if fruitCard then
+		fruitCard:Destroy()
+	end
+	local pg = game:GetService("Players").LocalPlayer:FindFirstChildOfClass("PlayerGui")
+	local gui = New("ScreenGui", { Name = "FruitChoice", ResetOnSpawn = true, DisplayOrder = 25, Parent = pg })
+	fruitCard = gui
+	local card = New("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -150), Size = UDim2.fromOffset(520, 116), BackgroundColor3 = T.Panel, Parent = gui })
+	UI.Bevel(card)
+	UI.Text(card, def.name, 20, Rarity.Get(def.rarity).color, "Display", { Position = UDim2.fromOffset(0, 8), Size = UDim2.new(1, 0, 0, 26), TextXAlignment = Enum.TextXAlignment.Center })
+	local row = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(16, 46), Size = UDim2.new(1, -32, 0, 54), Parent = card })
+	UI.List(row, Enum.FillDirection.Horizontal, 12, Enum.HorizontalAlignment.Center)
+	local function done()
+		State.heldFruit = nil
+		if gui.Parent then
+			gui:Destroy()
+		end
+	end
+	UI.Button(row, "🍎 EAT", T.Pink, UDim2.fromOffset(150, 50), function()
+		local cur = State.profile.fruit
+		local warn = cur and ("\nYou will LOSE your current fruit power (" .. (FruitsCfg.ById[cur.id] and FruitsCfg.ById[cur.id].name or cur.id) .. ").") or ""
+		gui.Enabled = false
+		UI.Confirm("Eat the " .. def.name .. "?" .. warn .. "\nFruit users can never swim again.", function()
+			local res = req("EatFruit", { uid = uid })
+			if res.ok then
+				UI.Banner("Cursed Fruit!", def.name, Rarity.Get(def.rarity).color, def.rarity)
+				done()
+			else
+				gui.Enabled = true
+			end
+		end, function()
+			gui.Enabled = true
+		end, "Eat it", "Not yet")
+	end)
+	UI.Button(row, "🎒 STORE", T.Blue, UDim2.fromOffset(150, 50), function()
+		req("StoreFruit", {})
+		done()
+	end)
+	UI.Button(row, "⬇ DROP", T.Red, UDim2.fromOffset(150, 50), function()
+		gui.Enabled = false
+		UI.Confirm("Drop the " .. def.name .. " on the ground?\nOther players may pick it up (trade rules apply). It fades in 2 minutes.", function()
+			req("DropFruit", { uid = uid })
+			done()
+		end, function()
+			gui.Enabled = true
+		end, "Drop it", "Keep it")
+	end)
+end
+
 function Panels.Inventory(args)
 	local win = UI.Window("Inventory", "Inventory", UDim2.fromOffset(1180, 600), T.Ocean, "🎒", { fullscreen = true })
 	-- left: your character wearing your gear, with the equipment slots around it (tap a slot to inspect it)
@@ -419,15 +470,16 @@ function Panels.Inventory(args)
 			end
 		end
 		if def.kind == "Fruit" then
-			act("🍎 Eat", T.Pink, function()
-				local cur = State.profile.fruit
-				local warn = cur and ("\nYou will LOSE your current fruit power (" .. (FruitsCfg.ById[cur.id] and FruitsCfg.ById[cur.id].name or cur.id) .. ").") or ""
-				UI.Confirm("Eat the " .. def.name .. "?" .. warn .. "\nFruit users can never swim again.", function()
-					local res = req("EatFruit", { uid = entry.uid })
-					if res.ok then
-						UI.Banner("Cursed Fruit!", def.name, Rarity.Get(def.rarity).color, def.rarity)
-					end
-				end, nil, "Eat it", "Not yet")
+			-- v0.25.33 (owner): Use = hold it in your hand; a click then chooses Eat / Store / Drop (Panels.FruitChoice)
+			act("🍎 Use", T.Pink, function()
+				local res = req("HoldFruit", { uid = entry.uid })
+				if res.ok then
+					State.heldFruit = { uid = entry.uid, def = def, choose = function()
+						Panels.FruitChoice(entry.uid, def)
+					end }
+					UI.CloseAll()
+					UI.Toast("Click (or tap) to Eat, Store or Drop the " .. def.name, "info")
+				end
 			end)
 		end
 		if def.kind == "Card" then
@@ -667,7 +719,7 @@ function Panels.Stats()
 	-- scrolls when the window is short (small screens) instead of spilling out of the frame
 	local right = UI.Scroll(win.body, UDim2.new(0.62, 0, 1, 0))
 	right.Position = UDim2.new(0.38, 0, 0, 0)
-	local desc = { STR = "Physical attack", AGI = "Attack speed / dodge", VIT = "HP / defense", INT = "Magic / SP", DEX = "Accuracy / ranged", LUK = "Crits / drops" }
+	local desc = { STR = "Physical attack", AGI = "Attack speed / dodge", VIT = "HP / defense", INT = "Magic / SP", DEX = "Accuracy / ranged", LUK = "Crits / drops / will power" }
 	local pend = {}
 	local drawn = false
 

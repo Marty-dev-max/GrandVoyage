@@ -30,6 +30,22 @@ local function buildPrompt(prompt, inputType)
 	if not gui then
 		return
 	end
+	-- v0.25.33 (owner): your own Revive prompt while downed = WILL POWER, one try per knockdown (KnockdownService)
+	local char = player.Character
+	local mine = prompt.Name == "RevivePrompt" and char ~= nil and prompt:IsDescendantOf(char)
+	if mine then
+		if char:GetAttribute("WillTried") ~= nil and char:GetAttribute("WillTried") == char:GetAttribute("Downed") then
+			prompt.Enabled = false -- local only: the try is spent
+			return
+		end
+		local conn
+		conn = char:GetAttributeChangedSignal("WillTried"):Connect(function()
+			conn:Disconnect()
+			prompt.Enabled = false
+		end)
+	end
+	local actionText = mine and "Get up" or prompt.ActionText
+	local objectText = mine and string.format("Will power %d%% (one try)", math.floor((prompt:GetAttribute("Will") or 0.1) * 100 + 0.5)) or prompt.ObjectText
 	-- v0.25.23 (owner: too small, off to the side): centered over the head, where the NPC's nameplate sits (hidden
 	-- while the card shows), 1.35x bigger
 	local plate = prompt.Parent:FindFirstChild("Nameplate")
@@ -58,9 +74,9 @@ local function buildPrompt(prompt, inputType)
 		fill = New("Frame", { BackgroundColor3 = T.Green, AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 0, 1, 0), Size = UDim2.new(0, 0, 0, 5), Parent = card })
 		UI.Corner(fill, 3)
 	end
-	local action = New("TextLabel", { BackgroundTransparency = 1, Position = UDim2.fromOffset(80, 6), Size = UDim2.new(1, -88, 0, 30), Text = string.upper(prompt.ActionText), FontFace = FONT, TextSize = 26, TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = card })
+	local action = New("TextLabel", { BackgroundTransparency = 1, Position = UDim2.fromOffset(80, 6), Size = UDim2.new(1, -88, 0, 30), Text = string.upper(actionText), FontFace = FONT, TextSize = 26, TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = card })
 	New("UIStroke", { Color = T.Edge, Thickness = 2.5, Parent = action })
-	New("TextLabel", { BackgroundTransparency = 1, Position = UDim2.fromOffset(80, 34), Size = UDim2.new(1, -88, 0, 22), Text = prompt.ObjectText, FontFace = FONT, TextSize = 17, TextColor3 = T.Gold, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = card })
+	New("TextLabel", { BackgroundTransparency = 1, Position = UDim2.fromOffset(80, 34), Size = UDim2.new(1, -88, 0, 22), Text = objectText, FontFace = FONT, TextSize = 17, TextColor3 = T.Gold, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = card })
 	-- slide in
 	local sc = New("UIScale", { Scale = 0.6, Parent = card })
 	card.BackgroundTransparency = 0

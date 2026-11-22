@@ -139,18 +139,21 @@ local function styleNameplate(model)
 	end
 	bb.Size = UDim2.fromOffset(320, 92)
 	bb.LightInfluence = 0
-	local holder = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Parent = bb })
+	-- v0.25.27 (owner: the icon drifted off the head): anchored bottom-center, so the distance UIScale shrinks the plate
+	-- toward the NPC's head instead of toward the billboard's top-left corner
+	local holder = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.fromScale(0.5, 1), Size = UDim2.fromScale(1, 1), Parent = bb })
 	bb.MaxDistance = 160
 	local entry = { sc = New("UIScale", { Parent = holder }) }
 	plates[bb] = entry
 	local row = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 48), Parent = holder })
+	entry.row = row
 	New("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 6), Parent = row })
 	local icon = ROLE_ICON[model:GetAttribute("Role") or ""] or "scroll"
-	local chip = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), Size = UDim2.fromOffset(40, 40), Parent = row })
+	local chip = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), Size = UDim2.fromOffset(46, 46), Parent = row })
 	UI.Corner(chip, 10)
 	New("UIGradient", { Color = ColorSequence.new(color:Lerp(Color3.new(1, 1, 1), 0.3), color:Lerp(Color3.new(0, 0, 0), 0.3)), Rotation = 90, Parent = chip })
 	UI.Stroke(chip, T.Edge, 3)
-	UI.Icon(chip, icon, 40, { Size = UDim2.fromScale(1, 1) })
+	UI.Icon(chip, icon, 46, { Size = UDim2.fromScale(1, 1) })
 	local t = New("TextLabel", { BackgroundTransparency = 1, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 44), Text = title, FontFace = FONT, TextSize = 22, TextColor3 = color, Parent = row })
 	New("UIStroke", { Color = T.Edge, Thickness = 3, Parent = t })
 	entry.text = t
@@ -199,8 +202,10 @@ function Interact.Start()
 					local a = bb.Adornee or bb.Parent
 					if a and a:IsA("BasePart") then
 						local dist = (a.Position - cam.CFrame.Position).Magnitude
-						e.sc.Scale = math.clamp(28 / math.max(dist, 1), 0.3, 1.1)
 						local near = root ~= nil and (a.Position - root.Position).Magnitude < NEAR
+						-- far = icon only: never below ~30 px, and it drops to the bottom row = right over the head
+						e.sc.Scale = math.clamp(28 / math.max(dist, 1), near and 0.3 or 0.65, 1.1)
+						e.row.Position = near and UDim2.new() or UDim2.new(0, 0, 1, -48)
 						if e.text then
 							e.text.Visible = near
 						end

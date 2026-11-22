@@ -127,15 +127,6 @@ local function turnGroup(group, island, a)
 end
 
 local function buildDock(island, side)
-	-- v0.25.25: the east dock (side 1) turns with the shipyard toward the next island (they keep their spacing)
-	local group, prevParent
-	if side > 0 and island.yardAngle then
-		group = Instance.new("Model")
-		group.Name = "HarborDock"
-		group.Parent = Kit.parent
-		prevParent = Kit.parent
-		Kit.parent = group
-	end
 	local zc = island.z or 0
 	local x0 = island.x + side * (island.radius - 25)
 	local len = 90
@@ -174,15 +165,11 @@ local function buildDock(island, side)
 	Kit.CrateStack(Vector3.new(x0 + side * 14, dockY + 0.5, zc - 5))
 	Kit.Lamp(Vector3.new(tip.X - side * 3, dockY + 0.5, zc + 7))
 	sign(island.name, CFrame.new(x0 + side * 6, dockY + 10, zc - 10) * CFrame.Angles(0, side > 0 and -math.pi / 2 or math.pi / 2, 0), Vector2.new(18, 4))
-	if group then
-		turnGroup(group, island, island.yardAngle)
-		Kit.parent = prevParent
-	end
 end
 
 -- v0.25.25 (owner): the shipyard sits on the side that faces the NEXT island, so you launch toward where you are
 -- going instead of crossing the island (it used to be fixed at local east and often faced the Doldrums).
--- Angle (local, before the island's own yaw) that turns the default spot toward the next island; nil = keep.
+-- Angle (local, before the island's own yaw) that turns the default east yard; nil = keep (Daybreak).
 local function yardAngle(island, worldZ)
 	local nxt = island.index and IslandsCfg.List[island.index + 1]
 	if not island.yaw or not nxt then
@@ -191,9 +178,17 @@ local function yardAngle(island, worldZ)
 	local wx, wz = nxt.x - island.x, (nxt.z or 0) - worldZ
 	local c, s = math.cos(island.yaw), math.sin(island.yaw)
 	local lx, lz = wx * c - wz * s, wx * s + wz * c -- world -> island-local (undo Angles(0, yaw))
-	local l = GameConfig.Ship.PlotSize.Z * G
-	local phi0 = math.atan2(-(70 + l / 2), island.radius + 40) -- the default spot (local east, a bit north)
-	return phi0 - math.atan2(lz, lx) -- Angles(0, a) turns an XZ angle phi into phi - a
+	local want = math.atan2(lz, lx)
+	-- v0.25.27 (owner): keep the yard parallel to the island: pick the island SIDE (east / north / west) closest to
+	-- the next island; never the south side, that is the front harbor facing the previous island
+	local best, bestD = 0, math.huge
+	for _, side in ipairs({ 0, -math.pi / 2, math.pi }) do
+		local d = math.abs(math.atan2(math.sin(want - side), math.cos(want - side)))
+		if d < bestD then
+			best, bestD = side, d
+		end
+	end
+	return -best -- Angles(0, a) turns an XZ angle phi into phi - a: the east yard goes to `best`
 end
 
 local function buildShipyard(island)
@@ -324,7 +319,7 @@ local function makeCtx(island, c, r, g)
 	if island.boss and not island.boss.atSea then
 		ctx.reserve(island.boss.offset.X, island.boss.offset.Y, 38)
 	end
-	ctx.reserve((r - 25) * math.cos(island.yardAngle or 0), -(r - 25) * math.sin(island.yardAngle or 0), 18) -- east dock (turns with the yard)
+	ctx.reserve(r - 25, 0, 18) -- east dock
 	ctx.reserve(-r + 25, 0, 18) -- west dock
 	local ya = island.yardAngle or 0 -- shipyard platform (turned toward the next island, buildShipyard)
 	ctx.reserve((r + 20) * math.cos(ya) - 110 * math.sin(ya), -(r + 20) * math.sin(ya) - 110 * math.cos(ya), 80)
@@ -975,7 +970,7 @@ end
 -- away and rebuilt from code at server start (so the owner's published place updates through Rojo too).
 -- Hand-built content made in Studio goes in workspace.Handmade (never touched by rebuilds). Kit props placed there
 -- (tagged EnvProp/EnvPart) are dressed with the stylized meshes like the generated ones.
-WB.WORLD_VERSION = 21 -- v21 (v0.25.25): shipyards face the next island, circus ship offshore; v20 (v0.25.24): Marmalade Town hand-laid (World/Marmalade); v19 (v0.25.23): Conch Bay street spawns keep their houses; v18 (v0.25.22): Conch Bay terraced (quay, two terraces, garrison plateau, tapered towers); v17 (v0.25.21): islands turned to face the previous one, Conch Bay stairs; v16 (v0.25.20): Daybreak spawn by Rowan, Conch Bay hand-laid (World/ConchBay); v15 (v0.25.11): islands spread north/south, wider sea, islets; v14 (v0.25.6): Daybreak spawn by the campfire; v13: voxel NPCs; v12: Voxelize pass
+WB.WORLD_VERSION = 22 -- v22 (v0.25.27): shipyards snap to the island side nearest the next island; v21 (v0.25.25): shipyards face the next island, circus ship offshore; v20 (v0.25.24): Marmalade Town hand-laid (World/Marmalade); v19 (v0.25.23): Conch Bay street spawns keep their houses; v18 (v0.25.22): Conch Bay terraced (quay, two terraces, garrison plateau, tapered towers); v17 (v0.25.21): islands turned to face the previous one, Conch Bay stairs; v16 (v0.25.20): Daybreak spawn by Rowan, Conch Bay hand-laid (World/ConchBay); v15 (v0.25.11): islands spread north/south, wider sea, islets; v14 (v0.25.6): Daybreak spawn by the campfire; v13: voxel NPCs; v12: Voxelize pass
 
 -- Old copies of the map can hide anywhere in Workspace: a renamed or regrouped World, an island dragged into
 -- Handmade, single NPCs / chests / docks pasted from an old bake. They draw on top of the new islands and register

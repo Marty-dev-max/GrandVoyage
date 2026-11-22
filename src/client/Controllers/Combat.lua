@@ -539,12 +539,8 @@ end
 -- the cooldown and tells everyone else to draw the streak.
 Combat.dashReadyAt = 0
 function Combat.Dash()
-	-- in flight, Q is a barrel roll (Controllers/Flight)
+	-- v0.25.27 (owner): ONE dash on the ground, in a jump and in flight: same cooldown, trail and server FX
 	local Flight = require(script.Parent.Flight)
-	if Flight.IsFlying() then
-		Flight.Roll()
-		return
-	end
 	local r, h = root(), hum()
 	local cfg = GameConfig.Dash
 	if not r or not h or h.Health <= 0 or os.clock() < Combat.dashReadyAt then
@@ -554,6 +550,14 @@ function Combat.Dash()
 		return
 	end
 	Combat.dashReadyAt = os.clock() + cfg.Cooldown
+	if Flight.IsFlying() then
+		-- flying: a burst along where the camera looks, added to the flight velocity and fading out (momentum)
+		local look = workspace.CurrentCamera.CFrame.LookVector
+		Flight.Shove(look * cfg.Speed)
+		require(script.Parent.VFX).Afterimages(r.Parent, cfg.Duration + 0.06, 0.03)
+		task.spawn(Net.Request, "Dash", { dir = look })
+		return
+	end
 	local dir = h.MoveDirection
 	if dir.Magnitude < 0.1 then
 		dir = r.CFrame.LookVector
@@ -571,8 +575,7 @@ function Combat.Dash()
 	lv.RelativeTo = Enum.ActuatorRelativeTo.World
 	lv.Parent = r
 	turnTo(r, r.Position + dir)
-	-- v0.25.26 (owner): ghost trail right away (others see it from the Dash FX), a quick FOV kick, and a HARD STOP:
-	-- the burst ends dead instead of sliding out, which makes the dash read faster
+	-- ghost trail right away (others see it from the Dash FX) and a quick FOV kick
 	local char = r.Parent
 	require(script.Parent.VFX).Afterimages(char, cfg.Duration + 0.02, 0.03)
 	local cam = workspace.CurrentCamera
@@ -581,11 +584,7 @@ function Combat.Dash()
 	task.delay(cfg.Duration, function()
 		lv:Destroy()
 		att:Destroy()
-		if r.Parent then
-			local v = r.AssemblyLinearVelocity
-			r.AssemblyLinearVelocity = Vector3.new(0, math.min(v.Y, 0), 0)
-			require(script.Parent.VFX).Smoke(r.Position - Vector3.new(0, 2.6, 0), Color3.fromRGB(225, 220, 210), 4, 1.6)
-		end
+		-- v0.25.27 (owner): no hard stop, the body keeps its momentum and slows down by itself
 		TweenService:Create(cam, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { FieldOfView = fov0 }):Play()
 	end)
 	task.spawn(Net.Request, "Dash", { dir = dir })

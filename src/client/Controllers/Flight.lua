@@ -3,7 +3,7 @@
 --  * Take off: in the air, HOLD Jump (Space / the jump button) for a moment. Hold Jump to climb, Ctrl to dive (C is the Stats window).
 --  * Steer: you fly where the camera looks (move keys / thumbstick are camera-relative, pitch included). With Shift Lock
 --    the body always faces the camera, so you fly exactly along the crosshair.
---  * Q while flying = barrel roll (a full roll with a speed burst) instead of the ground Dash.
+--  * Q while flying = the same Dash as on the ground (Combat.Dash -> Flight.Shove along the camera).
 --  * Lands by itself on touching the ground while not climbing; dropping into the sea ends it too (swim).
 -- The character is PlatformStand while flying; LinearVelocity + AlignOrientation move it (client-owned physics).
 local Players = game:GetService("Players")
@@ -24,7 +24,6 @@ local flying = false
 local startedAt = 0
 local holdStart
 local att, lv, ao
-local roll = { t0 = 0, dur = 0.55, dir = 1, active = false }
 
 local function char()
 	local c = player.Character
@@ -96,17 +95,6 @@ local function start()
 	ao.Parent = r
 end
 
--- Q while flying: barrel roll. Returns true when it handled the key (so the ground Dash does not fire)
-function Flight.Roll()
-	if not flying or roll.active then
-		return flying
-	end
-	roll.active = true
-	roll.t0 = os.clock()
-	roll.dir = (UserInputService:IsKeyDown(Enum.KeyCode.A) and -1) or 1
-	return true
-end
-
 local function shiftLocked()
 	return UserInputService.MouseBehavior == Enum.MouseBehavior.LockCenter
 end
@@ -172,19 +160,8 @@ function Flight.Start()
 		-- Cinderwing CALM mode flies 25% faster than FLAME (v0.24.12, owner)
 		local modeK = player:GetAttribute("HeritageMode") == "calm" and 1.25 or 1
 		local vel = (look * f + right * s) * SPEED * modeK + Vector3.yAxis * up * CLIMB * modeK
-		local boost = 1
-		local rollAngle = 0
-		if roll.active then
-			local k = (os.clock() - roll.t0) / roll.dur
-			if k >= 1 then
-				roll.active = false
-			else
-				rollAngle = roll.dir * k * math.pi * 2
-				boost = 1.9 - k * 0.9
-			end
-		end
 		local sk = math.max(0, 1 - (os.clock() - shoveT) / 0.45)
-		lv.VectorVelocity = vel * boost + shove * sk
+		lv.VectorVelocity = vel + shove * sk
 		-- body: faces the camera with Shift Lock, else the way it flies; leans forward with speed
 		local horiz = Vector3.new(vel.X, 0, vel.Z)
 		local face = shiftLocked() and flatLook or (horiz.Magnitude > 2 and horiz.Unit or Vector3.new(r.CFrame.LookVector.X, 0, r.CFrame.LookVector.Z).Unit)
@@ -193,7 +170,7 @@ function Flight.Start()
 		if shiftLocked() and f > 0.2 then
 			pitch = -math.rad(70) + math.asin(math.clamp(look.Y, -1, 1)) * 0.6
 		end
-		ao.CFrame = CFrame.lookAt(Vector3.zero, face) * CFrame.Angles(pitch, 0, 0) * CFrame.Angles(0, 0, rollAngle)
+		ao.CFrame = CFrame.lookAt(Vector3.zero, face) * CFrame.Angles(pitch, 0, 0)
 		-- land: close to the ground and not climbing; end over water
 		local params = RaycastParams.new()
 		params.FilterType = Enum.RaycastFilterType.Exclude

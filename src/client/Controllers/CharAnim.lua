@@ -172,6 +172,7 @@ function CharAnim.Start()
 	-- the combat stance softens while you run (arms swing a bit again) and comes back when you stop
 	-- swimming (v0.24.14): front crawl while moving, treading water when still (Controllers/Swim keeps us afloat)
 	local swimClip
+	local sweepAt = 0
 	RunService.Heartbeat:Connect(function()
 		local hum, char = humanoid()
 		local Swim = require(script.Parent.Swim)
@@ -184,6 +185,13 @@ function CharAnim.Start()
 			want = v.Magnitude > 6 and "Fly" or "FlyIdle"
 		elseif hum and hum.Health > 0 and Swim.IsSwimming() then
 			want = Vector3.new(v.X, 0, v.Z).Magnitude > 2 and "Swim" or "SwimIdle"
+		end
+		-- safety net (v0.25.27): neither flying nor swimming = no fly / swim clip may still be running
+		if not want and hum and os.clock() > sweepAt then
+			sweepAt = os.clock() + 0.5
+			for _, n in ipairs({ "Fly", "FlyIdle", "Swim", "SwimIdle" }) do
+				Anim.Stop(hum, n, 0.2)
+			end
 		end
 		if want ~= swimClip then
 			if hum then -- all of them: a quick Fly <-> FlyIdle flip could leave one running

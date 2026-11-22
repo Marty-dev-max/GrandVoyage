@@ -293,7 +293,7 @@ function VFX.Afterimages(char, dur, every, c)
 	if typeof(char) ~= "Instance" or not char:IsA("Model") then
 		return
 	end
-	c = c or Color3.fromRGB(110, 215, 255)
+	-- c = optional tint; none = the character's own colors (owner, v0.25.27)
 	local root = char:FindFirstChild("HumanoidRootPart")
 	local t0, prev = os.clock(), root and root.Position
 	task.spawn(function()
@@ -309,7 +309,7 @@ function VFX.Afterimages(char, dur, every, c)
 					g:ClearAllChildren()
 					g.Size, g.CFrame = p.Size, p.CFrame
 					g.Anchored, g.CanCollide, g.CanQuery, g.CanTouch, g.CastShadow = true, false, false, false, false
-					g.Color = p.Color:Lerp(c, 0.6)
+					g.Color = c and p.Color:Lerp(c, 0.6) or p.Color
 					g.Material = Enum.Material.SmoothPlastic
 					g.Transparency = 0.3
 					g.Parent = ghost

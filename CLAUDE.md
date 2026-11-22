@@ -431,6 +431,12 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     `turnTo` skips body snaps toward targets while MouseBehavior is LockCenter. Dash: `VFX.Afterimages(char, dur,
     every, color)` ghost copies of the visible blocks (own dash local + instant, others from the Dash FX `char`),
     more wind streaks, Speed 120 / Duration 0.14, FOV kick, hard stop (horizontal velocity zeroed) + skid puff.
+  * v0.25.27 (owner): one Dash everywhere (Combat.Dash; in flight = Flight.Shove along the camera, same cooldown,
+    trail and Dash FX; the barrel roll is gone). Afterimages keep the character's own colors; no hard stop (momentum).
+    CharAnim sweeps Fly/FlyIdle/Swim/SwimIdle every 0.5 s while neither flying nor swimming. Shipyard snaps to the
+    island side (east / north / west, never the south front) nearest the next island, parallel to the island; docks
+    stay at local +-x. NPC plates: holder anchored bottom-center (distance UIScale shrinks toward the head), far
+    icon >= 0.65 scale and on the bottom row.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

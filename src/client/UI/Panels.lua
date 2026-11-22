@@ -1581,6 +1581,17 @@ local function statRing(parent, stat, rank, k, color, size)
 	return f
 end
 
+-- each class's particles drifting over the Job Master backdrop (pixel icons from Config/Icons)
+local CLASS_FX = {
+	Brawler = { icons = { "knuckles", "flame" } },
+	Swordsman = { icons = { "sword" } },
+	Sniper = { icons = { "slingshot" } },
+	Cook = { icons = { "meat", "flame" } },
+	Navigator = { icons = { "pt_cloud", "compass" }, bubble = true },
+	Doctor = { icons = { "potion" }, plus = true },
+	Shipwright = { icons = { "gear", "hammer" } },
+}
+
 function Panels.JobMaster()
 	UI.FullPref.Job = true -- always full screen: no shrink button, only the X (owner)
 	local win = UI.Window("Job", "Job Master", UDim2.fromOffset(1180, 620), T.Green, "🎓", { fullscreen = true })
@@ -1594,20 +1605,30 @@ function Panels.JobMaster()
 	-- owner: the background is the class's own color, a bright gradient (not dark)
 	local bg = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Position = UDim2.fromOffset(-24, -14), Size = UDim2.new(1, 48, 1, 28), ZIndex = 0, Parent = win.body })
 	local bgGrad = New("UIGradient", { Rotation = 115, Parent = bg })
-	local bgGlow = New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.glow, ImageColor3 = Color3.new(1, 1, 1), ImageTransparency = 0.55, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.48, 0.42), Size = UDim2.fromScale(0.9, 1.1), ZIndex = 0, Parent = bg })
+	local bgGlow = New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.glow, ImageColor3 = Color3.new(1, 1, 1), ImageTransparency = 0.55, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.39, 0.42), Size = UDim2.fromScale(0.9, 1.1), ZIndex = 0, Parent = bg })
 	local _ = bgGlow
+	-- v0.25.40 (owner): the shallow sea covers the whole screen below the horizon, a gradient in the class color
+	local water = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Position = UDim2.fromScale(0, 0.47), Size = UDim2.fromScale(1, 0.53), ZIndex = 0, Parent = bg })
+	local waterGrad = New("UIGradient", { Rotation = 90, Parent = water })
+	local shoreLine = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.45, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 3), ZIndex = 0, Parent = water })
+	local _ = shoreLine
+	local fxLayer -- class particles, remade per class
 	-- left: the class wheel
-	local wheel = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(0.2, 0, 1, 0), ClipsDescendants = true, Parent = win.body })
+	local wheel = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(0.2, 0, 1, 0), ClipsDescendants = true, ZIndex = 2, Parent = win.body })
 	-- middle: the character on a podium, the button under it
-	local mid = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromScale(0.2, 0), Size = UDim2.new(0.38, 0, 1, 0), Parent = win.body })
+	local mid = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromScale(0.2, 0), Size = UDim2.new(0.38, 0, 1, 0), ZIndex = 2, Parent = win.body })
 	local aura = New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.glow, ImageTransparency = 0.35, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.45), Size = UDim2.fromScale(1.1, 0.9), Parent = mid })
-	local stage = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0.76, 0), Parent = mid })
-	-- the character stands in shallow water lit by the class color (reference), drag to turn 360, wheel to zoom
-	local _, refreshChar = UI.CharacterView(stage, nil, { water = true, zoom = true })
+	-- the character stands in the sea lit by the class color (reference), drag to turn 360, wheel to zoom. The view
+	-- covers the whole window (the water must reach every edge) and puts the character in the middle column
+	local stage = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(-24, -14), Size = UDim2.new(1, 48, 1, 28), ZIndex = 1, Parent = win.body })
+	local _, refreshChar = UI.CharacterView(stage, nil, { water = true, zoom = true, shiftX = -0.11, onFrame = function(h)
+		water.Position = UDim2.fromScale(0, h)
+		water.Size = UDim2.fromScale(1, 1 - h)
+	end })
 	UI.Text(mid, "drag to turn  •  scroll to zoom", 12, Color3.new(1, 1, 1), "Semi", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.76, 4), Size = UDim2.fromOffset(260, 16), TextXAlignment = Enum.TextXAlignment.Center })
 	local btnHolder = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -6), Size = UDim2.fromOffset(260, 92), Parent = mid })
 	-- right: name, description, stat rings, then the type card
-	local right = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromScale(0.6, 0), Size = UDim2.new(0.4, 0, 1, 0), Parent = win.body })
+	local right = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromScale(0.6, 0), Size = UDim2.new(0.4, 0, 1, 0), ZIndex = 2, Parent = win.body })
 
 	local items = {}
 	local show
@@ -1648,17 +1669,6 @@ function Panels.JobMaster()
 		end)
 		items[i] = { btn = btn, ring = ring }
 	end
-	-- the mouse wheel over the class column turns it too (clicking an emblem is the main way)
-	pcall(function()
-		wheel.InputChanged:Connect(function(input)
-			if input.UserInputType == Enum.UserInputType.MouseWheel then
-				sel = ((sel - 1 - (input.Position.Z > 0 and 1 or -1)) % n) + 1
-				place(true)
-				show(true)
-			end
-		end)
-	end)
-
 	local lastWeapon
 	show = function(animate)
 		local p = State.profile
@@ -1670,6 +1680,12 @@ function Panels.JobMaster()
 		local Types = require(Shared.Config.MonsterTypes)
 		local ty = Types[c.mtype or ""]
 		aura.ImageColor3 = c.color:Lerp(Color3.new(1, 1, 1), 0.6)
+		waterGrad.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, c.color:Lerp(Color3.new(1, 1, 1), 0.55)), ColorSequenceKeypoint.new(0.35, c.color:Lerp(Color3.new(1, 1, 1), 0.2)), ColorSequenceKeypoint.new(1, c.color:Lerp(Color3.fromRGB(24, 20, 52), 0.45)) })
+		if fxLayer then
+			fxLayer:Destroy()
+		end
+		local fx = CLASS_FX[cid] or {}
+		fxLayer = UI.Sparkles(bg, c.color:Lerp(Color3.new(1, 1, 1), 0.5), 22, { float = true, icons = fx.icons, iconFrac = 0.45, iconMin = 16, iconMax = 26, star = 0.5, plus = fx.plus, bubble = fx.bubble, color2 = Color3.new(1, 1, 1), z = 0 })
 		bgGrad.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, c.color:Lerp(Color3.new(1, 1, 1), 0.35)), ColorSequenceKeypoint.new(0.55, c.color), ColorSequenceKeypoint.new(1, c.color:Lerp(Color3.fromRGB(30, 26, 60), 0.35)) })
 		-- the statue holds this class's weapon
 		local w = c.weapons[1] or "Fists"

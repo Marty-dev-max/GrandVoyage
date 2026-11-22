@@ -1024,8 +1024,9 @@ end
 
 -- Your own character in a ViewportFrame (Bag / Stats): a still copy of the avatar holding the weapon you have equipped
 -- (weaponType -> Assets.Weapons model in the right hand). Drag left/right to turn it. Returns the frame and refresh(weaponType).
--- opts (v0.25.39, Job Master): zoom = mouse wheel zooms; water = the statue stands in shallow water with its
--- reflection and a ripple ring, lit in the color passed to refresh(weaponType, tint)
+-- opts (v0.25.39, Job Master): zoom = mouse wheel zooms; water = a true mirror reflection under the feet + ripple
+-- rings, lit in the color passed to refresh(weaponType, tint); shiftX = put the statue that far left (-) / right (+)
+-- of the viewport's center (fraction of its width); onFrame(horizon) = the water line, fraction of the height
 function UI.CharacterView(parent, props, opts)
 	opts = opts or {}
 	local vp = New("ViewportFrame", {
@@ -1045,22 +1046,41 @@ function UI.CharacterView(parent, props, opts)
 	cam.Parent = vp
 	vp.CurrentCamera = cam
 	local yaw = math.rad(-18) -- face the camera (it sits on the -Z side), turned a little for a 3/4 look
-	local model, mirror, feetY
+	local model, mirror, mirrorPairs, feetY
 	local zoom, frameCF, frameExt = 1, nil, nil
 	local function frameCam()
-		if frameCF then
-			local dist = frameExt.Y * 0.62 / math.tan(math.rad(13)) * zoom
-			cam.CFrame = CFrame.lookAt(frameCF.Position + Vector3.new(0, frameExt.Y * 0.04, -dist), frameCF.Position)
+		if not frameCF then
+			return
 		end
+		local tan = math.tan(math.rad(13))
+		local dist = frameExt.Y * 0.62 / tan * zoom
+		local aspect = 1.8
+		pcall(function()
+			aspect = vp.AbsoluteSize.X / math.max(1, vp.AbsoluteSize.Y)
+		end)
+		-- the camera looks along +Z, so screen right is world -X: shifting the aim right moves the statue left
+		local side = Vector3.new((opts.shiftX or 0) * 2 * dist * tan * aspect, 0, 0)
+		local target = frameCF.Position + side
+		cam.CFrame = CFrame.lookAt(target + Vector3.new(0, frameExt.Y * 0.04, -dist), target)
+		if opts.onFrame then
+			-- the horizon of a flat sea sits at eye height: a little above the middle (the camera looks slightly down)
+			opts.onFrame(0.5 - (frameExt.Y * 0.04 / dist) / (2 * tan))
+		end
+	end
+	-- a true mirror image (v0.25.40, owner: the flipped copy swapped left and right): every block reflected on its own
+	-- across the water plane, rotation S*R*S with S = diag(1, -1, 1)
+	local function reflect(cf)
+		local x, y, z, r00, r01, r02, r10, r11, r12, r20, r21, r22 = cf:GetComponents()
+		return CFrame.new(x, 2 * feetY - y, z, r00, -r01, r02, -r10, r11, -r12, r20, -r21, r22)
 	end
 	local function place()
 		if model then
 			model:PivotTo(CFrame.Angles(0, yaw, 0))
 		end
-		if mirror and feetY then
-			-- the reflection: the statue turned upside down about its feet (left/right swap, nobody notices on blocks)
-			local f = CFrame.new(0, feetY, 0)
-			mirror:PivotTo(f * CFrame.Angles(0, 0, math.pi) * f:Inverse() * CFrame.Angles(0, -yaw, 0))
+		if mirrorPairs and feetY then
+			for _, pr in ipairs(mirrorPairs) do
+				pr[2].CFrame = reflect(pr[1].CFrame)
+			end
 		end
 	end
 	local lastType, watched, watchConns = nil, nil, {}
@@ -1176,26 +1196,21 @@ function UI.CharacterView(parent, props, opts)
 			vp.LightColor = c:Lerp(Color3.new(1, 1, 1), 0.45)
 			vp.Ambient = c:Lerp(Color3.fromRGB(180, 180, 200), 0.55)
 			mirror = copy:Clone()
-			for _, d in ipairs(mirror:GetDescendants()) do
+			mirrorPairs = {}
+			local src, dst = copy:GetDescendants(), mirror:GetDescendants() -- a clone keeps the same order
+			for i, d in ipairs(dst) do
 				if d:IsA("BasePart") then
-					d.Transparency = 1 - (1 - d.Transparency) * 0.45
-					d.Color = d.Color:Lerp(c, 0.35)
+					d.Transparency = 1 - (1 - d.Transparency) * 0.42
+					d.Color = d.Color:Lerp(c, 0.4)
+					table.insert(mirrorPairs, { src[i], d })
 				elseif d:IsA("Decal") then
-					d.Transparency = 1 - (1 - d.Transparency) * 0.45
+					d.Transparency = 1 - (1 - d.Transparency) * 0.42
 				end
 			end
 			mirror.Parent = world
 			local water = Instance.new("Model")
 			water.Name = "GVWater"
-			local plane = Instance.new("Part")
-			plane.Anchored = true
-			plane.Size = Vector3.new(80, 0.1, 80)
-			plane.CFrame = CFrame.new(0, feetY - 0.02, 0)
-			plane.Color = c:Lerp(Color3.new(1, 1, 1), 0.35)
-			plane.Transparency = 0.45
-			plane.Material = Enum.Material.SmoothPlastic
-			plane.Parent = water
-			-- ripples where the feet touch the water
+			-- ripples where the feet touch the water (the water itself is drawn by the window behind the viewport)
 			for i = 1, 2 do
 				local ring = Instance.new("Part")
 				ring.Name = "Ripple"
@@ -1214,19 +1229,22 @@ function UI.CharacterView(parent, props, opts)
 					return
 				end
 				for _, r in ipairs(water:GetChildren()) do
-					if r.Name == "Ripple" then
-						local k = (os.clock() * 0.45 + r:GetAttribute("Phase")) % 1
-						local d = 2.5 + k * 6
-						r.Size = Vector3.new(0.05, d, d)
-						r.CFrame = CFrame.new(0, feetY + 0.01 + k * 0.001, 0) * CFrame.Angles(0, 0, math.pi / 2)
-						r.Transparency = 0.35 + k * 0.65
-					end
+					local k = (os.clock() * 0.45 + r:GetAttribute("Phase")) % 1
+					local d = 2.5 + k * 6
+					r.Size = Vector3.new(0.05, d, d)
+					r.CFrame = CFrame.new(0, feetY + 0.01, 0) * CFrame.Angles(0, 0, math.pi / 2)
+					r.Transparency = 0.35 + k * 0.65
 				end
 			end)
+		else
+			mirrorPairs = nil
 		end
 		frameCam()
 		place()
 	end
+	pcall(function()
+		vp:GetPropertyChangedSignal("AbsoluteSize"):Connect(frameCam)
+	end)
 	if opts.zoom then
 		pcall(function()
 			vp.InputChanged:Connect(function(input)

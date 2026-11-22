@@ -503,7 +503,10 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     Round UI pieces set attribute PxKeep (PixelUI squares every other UICorner) and use a Round stroke join (a Miter
     join fills the corners = a square box around the circle; PixelUI skips PxKeep strokes). v0.25.39:
     UI.CharacterView(parent, props, { water, zoom }) frames the BODY only (before the weapon), refresh(weapon, tint);
-    water = translucent plane + upside-down reflection about the feet + ripple rings, light/ambient tinted.
+    water = mirror (each block reflected across the plane: CFrame S*R*S, S = diag(1,-1,1), pairs updated in place())
+    + ripple rings, light/ambient tinted; shiftX moves the statue off-center, onFrame(horizon) reports the water line.
+    v0.25.40 Job Master: the view spans the whole window behind the columns, the sea is a UI gradient frame from the
+    horizon down (class color), CLASS_FX pixel particles per class on the backdrop; no wheel-scroll class cycling.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

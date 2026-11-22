@@ -25,6 +25,7 @@ local lastHurt = {}
 local AnimClips = require(Shared.Config.AnimClips)
 local AmmoCfg = require(Shared.Config.Ammo)
 -- ranged basic attacks: the shot flies this long after the release frame (matches VFX.Projectile durations)
+local CHARGE_BONUS = 0.6 -- full charge = x1.6 damage (client Combat CHARGE_TIME = 1.2 s)
 local SHOT_FLIGHT = { Slingshot = 0.18, MedKit = 0.2 } -- (v0.25.51: the Navigator's baton is melee now)
 local combos = {} -- player -> { n, last }
 local WeaponInfo = require(Shared.Modules.WeaponInfo)
@@ -111,6 +112,57 @@ function Combat.DamagePlayer(player, amount, info)
 end
 
 -- Monster hits player
+-- v0.25.65 fruit passives (docs/Plan-Fruits-v2.md): how a monster's blows land. Gunners shoot, blades/claws/axes
+-- cut, everything else is blunt. Bosses / elites with Tōki (def.toki) or Seastone weapons ignore Logia bodies.
+local MonsterLooks = require(Shared.Config.MonsterLooks)
+local HELD_DMG = { HeldRifle = "shot", HeldPistol = "shot", HeldCutlass = "slash", HeldClaws = "slash", HeldBattleAxe = "slash", HeldTrident = "slash" }
+local function monsterDmgType(def)
+	if def.dmgType then
+		return def.dmgType
+	end
+	local look = MonsterLooks.ById[def.id]
+	return look and HELD_DMG[look.held or ""] or "blunt"
+end
+Combat.MonsterDmgType = monsterDmgType
+local LOGIA = { Blaze = true, Haze = true }
+
+-- true = the blow was absorbed by the victim's fruit body (Logia passes through, rubber bounces bullets back,
+-- a split body lets blades through)
+local function fruitBody(mob, player, mult)
+	local fruit = player:GetAttribute("Fruit")
+	if not fruit or (player:GetAttribute("SeastoneUntil") or 0) > os.clock() then
+		return false
+	end
+	local root = R.PlayerService.Root(player)
+	local at = root and root.Position + Vector3.new(0, 3, 0)
+	local kind = monsterDmgType(mob.def)
+	if LOGIA[fruit] and not mob.def.toki then
+		if at then
+			Net.FX("Miss", { pos = at, text = fruit == "Blaze" and "FLAME BODY" or "SMOKE BODY" }, at, 200)
+		end
+		return true
+	elseif fruit == "Split" and kind == "slash" then
+		if at then
+			Net.FX("Miss", { pos = at, text = "SPLIT!" }, at, 200)
+		end
+		return true
+	elseif fruit == "Bounce" and kind == "shot" then
+		-- the bullet bounces off the rubber and flies back at the shooter
+		local back = math.max(1, math.floor(mob.def.atk * (mult or 1)))
+		if at then
+			Net.FX("Miss", { pos = at, text = "BOING!" }, at, 200)
+			Net.FX("Cannonball", { from = at, to = mob.root.Position, t = 0.18 }, at, 300)
+		end
+		task.delay(0.18, function()
+			if not mob.dead then
+				R.MonsterService.Damage(mob, back, player, false, "fruit")
+			end
+		end)
+		return true
+	end
+	return false
+end
+
 function Combat.MonsterHit(mob, player, mult)
 	if R.KnockdownService.IsDowned(player) then
 		R.KnockdownService.TryExecute(mob, player)
@@ -118,6 +170,9 @@ function Combat.MonsterHit(mob, player, mult)
 	end
 	local d = R.PlayerService.Derived(player)
 	if not d then
+		return
+	end
+	if fruitBody(mob, player, mult) then
 		return
 	end
 	local hit = (mob.def.level * 1.8 + 25) * (1 + (mob.def.hitBonus or 0)) -- AGI monsters aim better (Config/Monsters types)
@@ -502,6 +557,11 @@ local function setup()
 		local root = R.PlayerService.Root(player)
 		local d = R.PlayerService.Derived(player)
 		local mult = (skill.mult or 1) * (1 + 0.1 * (lv - 1))
+		-- v0.25.65: charge-up skills hit harder the longer the key was held (client sends 0..1)
+		if skill.charge then
+			local c = tonumber(data.charge) or 0
+			mult *= 1 + CHARGE_BONUS * math.clamp(c == c and c or 0, 0, 1)
+		end
 		local magic = skill.magic == true
 		if skill.fruit then
 			magic = d.matk > d.atk -- fruits use whichever attack stat is better
@@ -591,6 +651,19 @@ local function setup()
 			if skill.id == "OniSlash" then
 				hitLater(land + 0.15, player, target, mult * 0.5, magic)
 			end
+			if skill.pull and target.kind == "mob" then
+				-- v0.25.65 Smoke Grip: drag the monster to you (a shove away from a point behind it)
+				local from = root.Position
+				task.delay(land, function()
+					local mob = target.mob
+					if mob and not mob.dead and mob.root then
+						local away = (mob.root.Position - from) * Vector3.new(1, 0, 1)
+						if away.Magnitude > 6 then
+							R.MonsterService.Knockback(mob, mob.root.Position + away.Unit * 5, away.Magnitude - 5, 3)
+						end
+					end
+				end)
+			end
 		elseif kind == "Dash" then
 			-- dash toward the target (or straight ahead), hitting everything along the way
 			local t = resolveTarget(player, data.target)
@@ -627,8 +700,23 @@ local function setup()
 			fxData.to = root.Position
 			fxData.radius = skill.radius
 			shipCircle(root.Position, skill.radius or 10)
-			for _, t in ipairs(inRadiusTargets(player, root.Position, skill.radius)) do
-				hitLater(strike, player, t, mult, magic, lastHitOpts(true, root.Position))
+			if skill.ticks then
+				-- v0.25.65: lingering storms (White Out, Split Festival) hit again every tickEvery seconds, around you
+				fxData.vanish = skill.vanish
+				for i = 1, skill.ticks do
+					task.delay(strike + (skill.delay or 0) + (i - 1) * (skill.tickEvery or 0.3), function()
+						local r = R.PlayerService.Root(player)
+						if r and alive(player) then
+							for _, t in ipairs(inRadiusTargets(player, r.Position, skill.radius)) do
+								hitTarget(player, t, mult, magic, lastHitOpts(i == skill.ticks, r.Position))
+							end
+						end
+					end)
+				end
+			else
+				for _, t in ipairs(inRadiusTargets(player, root.Position, skill.radius)) do
+					hitLater(strike, player, t, mult, magic, lastHitOpts(true, root.Position))
+				end
 			end
 		elseif kind == "GroundAoE" then
 			local pos = typeof(data.pos) == "Vector3" and data.pos or nil
@@ -642,11 +730,14 @@ local function setup()
 			fxData.to = pos
 			fxData.radius = skill.radius
 			shipCircle(pos, skill.radius or 10)
-			task.delay(math.max(0.25, strike), function()
-				for _, t in ipairs(inRadiusTargets(player, pos, skill.radius)) do
-					hitTarget(player, t, mult, magic, lastHitOpts(true, pos))
-				end
-			end)
+			-- v0.25.65: `ticks` = a lingering area (Flame Twister) or a delayed chain of bursts (Emberflies `delay`)
+			for i = 1, skill.ticks or 1 do
+				task.delay(math.max(0.25, strike) + (skill.delay or 0) + (i - 1) * (skill.tickEvery or 0.3), function()
+					for _, t in ipairs(inRadiusTargets(player, pos, skill.radius)) do
+						hitTarget(player, t, mult, magic, lastHitOpts(i == (skill.ticks or 1), pos))
+					end
+				end)
+			end
 		elseif kind == "Heal" then
 			Combat.HealPlayer(player, (skill.power or 50) * (1 + 0.25 * (lv - 1)) + d.matk * 0.5)
 		elseif kind == "PartyHeal" then

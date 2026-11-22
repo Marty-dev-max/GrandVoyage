@@ -182,6 +182,13 @@ local STYLE = {
 	INT = { stun = 0.15 },
 }
 local LONG_RANGE = { MarineRifleman = 2.5, ArmoredGunner = 2.5 } -- the gunners shoot from afar whatever their type
+-- v0.25.65 (owner): Tōki users / Seastone weapons ignore Logia bodies (Blaze, Haze). In the first sea: the Mist
+-- Commodore (Tōki) and the Elite Marines (Seastone-tipped batons)
+for _, id in ipairs({ "MistCommodore", "MarineElite" }) do
+	if M[id] then
+		M[id].toki = true
+	end
+end
 for t, ids in pairs(TYPE_OF) do
 	for _, id in ipairs(ids) do
 		local def = M[id]

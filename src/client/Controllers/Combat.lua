@@ -186,7 +186,8 @@ local function aimedTarget(dir, mob, range)
 	return best
 end
 
-function Combat.CastSkill(skillId, targetModel, aim)
+-- charge (v0.25.65, docs/Plan-Fruits-v2.md): 0..1 for skills with `charge = true` (how long the key was held)
+function Combat.CastSkill(skillId, targetModel, aim, charge)
 	local skill = ClassesCfg.SkillById[skillId]
 	if not skill then
 		return false
@@ -201,6 +202,9 @@ function Combat.CastSkill(skillId, targetModel, aim)
 	end
 	local target = targetModel or State.target
 	local payload = { skillId = skillId }
+	if skill.charge then
+		payload.charge = math.clamp(charge or (State.auto and 0.25 or 0), 0, 1)
+	end
 	local kind = skill.kind
 	-- on a ship skills always fire along the aim (v0.25.17: Auto mode needed a monster target, and at sea there are ships)
 	if (not State.auto or onShip()) and not targetModel and (kind == "Melee" or kind == "Ranged" or kind == "GroundAoE" or kind == "Dash") then
@@ -830,6 +834,7 @@ end
 -- the pointer, or the screen center with Shift Lock, up and down too; a square on the ground for ground skills) and the
 -- character turns with it; letting go casts it there. Auto mode and skills without a direction cast on the press.
 local AIM_KINDS = { Melee = true, Ranged = true, GroundAoE = true, Dash = true }
+local CHARGE_TIME = 1.2 -- seconds of holding for a full charge (server: CombatService CHARGE_BONUS)
 local holding -- { id, slot, conn, line, spot, rot }
 local function stopAim()
 	if not holding then
@@ -888,7 +893,14 @@ local function startAim(id, slot, src)
 		return
 	end
 	local fx = workspace:FindFirstChild("ClientFX") or workspace
-	local hold = { id = id, slot = slot }
+	local hold = { id = id, slot = slot, t0 = os.clock() }
+	if skill.charge then
+		-- power gathers in the hand while you hold (full at CHARGE_TIME)
+		local c = char()
+		local hand = c and c:FindFirstChild("RightHand")
+		local fdef = skill.fruit and require(Shared.Config.Fruits).ById[skill.fruit]
+		pcall(require(script.Parent.VFX).Charge, hand, fdef and fdef.color or Color3.fromRGB(255, 220, 140), CHARGE_TIME + 0.2)
+	end
 	hold.line = aimPart("AimLine", Color3.fromRGB(255, 230, 120), fx)
 	hold.spot = aimPart("AimSpot", Color3.fromRGB(255, 150, 60), fx)
 	-- v0.25.49 (owner: the aim line stayed after letting go): the key-up event from ContextActionService did not arrive
@@ -908,7 +920,8 @@ local function startAim(id, slot, src)
 		end
 		if released then
 			stopAim()
-			Combat.CastSkill(hold.id, nil, hold.aim) -- the aim shown last frame (a lifted finger has no pointer)
+			-- the aim shown last frame (a lifted finger has no pointer) + how long it was charged
+			Combat.CastSkill(hold.id, nil, hold.aim, (os.clock() - hold.t0) / CHARGE_TIME)
 			return
 		end
 		local r, h = root(), hum()
@@ -1010,9 +1023,9 @@ function Combat.Start()
 				local skill = ClassesCfg.SkillById[id]
 				if skill and AIM_KINDS[skill.kind] and (not State.auto or onShip()) then
 					if holding then -- another skill key while aiming: the held one goes first
-						local held = holding.id
+						local held, t0 = holding.id, holding.t0
 						stopAim()
-						Combat.CastSkill(held)
+						Combat.CastSkill(held, nil, nil, (os.clock() - t0) / CHARGE_TIME)
 					end
 					startAim(id, i)
 				else
@@ -1022,10 +1035,10 @@ function Combat.Start()
 		end)
 		Hotkeys.OnRelease("Skill" .. i, function(cancelled)
 			if holding and holding.slot == i then
-				local id = holding.id
+				local id, t0 = holding.id, holding.t0
 				stopAim()
 				if not cancelled then
-					Combat.CastSkill(id)
+					Combat.CastSkill(id, nil, nil, (os.clock() - t0) / CHARGE_TIME)
 				end
 			end
 		end)

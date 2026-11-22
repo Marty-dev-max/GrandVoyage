@@ -394,6 +394,7 @@ SKILLS = {
     # Bounce
     'F_StretchPistol': R('Bounce', stretch_arm),
     'F_BounceGatling': R('Bounce', gatling),
+    'F_RecoilCannon': R('Bounce', lambda s: (hand_open(s, 11, 12, SKIN), hand_open(s, 11, 22, SKIN), s.arc(20, 17, 8, 300, 420, WHITE, 2, True), speed_lines(s, 18, 17, 30, 17, 3, WHITE, 3))),
     'F_BalloonBody': R('Bounce', lambda s: balloon(s)),
     'F_GearUp': R('Bounce', lambda s: (s.oval(16, 16, 11, 11, (255, 120, 150)), fist(s, 16, 17, 0.8), smoke(s, 26, 6, 0.4, (255, 220, 230), (255, 180, 200)), smoke(s, 6, 6, 0.4, (255, 220, 230), (255, 180, 200)))),
     # Blaze
@@ -401,7 +402,9 @@ SKILLS = {
     'F_FlamePillar': R('Blaze', lambda s: (s.rect(10, 3, 22, 27, FIRE3), s.rect(13, 3, 19, 27, FIRE2), s.rect(15, 6, 17, 26, FIRE1, True), cracks(s, 27, (90, 50, 40)))),
     'F_FireDash': R('Blaze', lambda s: (flame(s, 22, 16, 7, 0.9), speed_lines(s, 2, 16, 15, 16, 5, FIRE2, 2))),
     'F_Inferno': R('Blaze', lambda s: boom(s, 16, 16, 1.0)),
+    'F_Emberflies': R('Blaze', lambda s: (s.oval(8, 9, 2, 2, (120, 255, 120)), s.oval(23, 7, 2, 2, (120, 255, 120)), s.oval(15, 14, 2, 2, (150, 255, 140)), flame(s, 16, 23, 7, 0.9), sparkle(s, 27, 17, YEL, 1))),
     # Haze
+    'F_SmokeFist': R('Haze', lambda s: (smoke(s, 18, 16, 0.9), fist(s, 19, 17, 0.7, glove=SMOKE1), speed_lines(s, 2, 18, 8, 18, 3, SMOKE1, 3))),
     'F_SmokeGrip': R('Haze', lambda s: (smoke(s, 9, 22, 0.7), hand_open(s, 19, 14, SMOKE1))),
     'F_SmokeScreen': R('Haze', lambda s: (smoke(s, 16, 12, 1.0), smoke(s, 16, 22, 1.0))),
     'F_SmokeBody': R('Haze', lambda s: (smoke(s, 16, 20, 1.0), s.oval(16, 9, 5, 5, SMOKE2), s.oval(16, 9, 3, 3, SMOKE1, True))),
@@ -415,6 +418,7 @@ SKILLS = {
     'F_SplitCannon': R('Split', lambda s: (fist(s, 21, 15, 0.8), s.rect(2, 13, 10, 17, SKIN), s.line([(11, 13), (11, 17)], PURP, 1, True), speed_lines(s, 2, 22, 11, 22, 2, WHITE, 3))),
     'F_ChopRush': R('Split', lambda s: (sword(s, 6, 26, 22, 10), s.line([(4, 6), (28, 6)], PURP, 1, True), s.line([(4, 26), (28, 26)], PURP, 1, True))),
     'F_SplitEscape': R('Split', lambda s: (s.rect(10, 3, 22, 10, SKIN), s.rect(9, 12, 23, 20, (90, 90, 140)), s.rect(10, 22, 22, 29, (60, 60, 100)), speed_lines(s, 26, 6, 30, 6, 1), speed_lines(s, 2, 24, 6, 24, 1))),
+    'F_SplitRunner': R('Split', lambda s: (s.arc(16, 18, 9, 0, 360, (60, 60, 100), 3, False), s.rect(13, 14, 19, 22, (90, 90, 140)), speed_lines(s, 2, 18, 6, 18, 3, WHITE, 3))),
     'F_SplitFestival': R('Split', lambda s: (fist(s, 8, 8, 0.45), fist(s, 24, 9, 0.45), fist(s, 9, 24, 0.45), fist(s, 24, 24, 0.45), star(s, 16, 16, 6, 2.5, 6, PURP, fx=True))),
     # Slick
     'F_SlickSlide': R('Slick', lambda s: (drop(s, 20, 16, 0.75, OIL, OIL_HI), speed_lines(s, 2, 16, 12, 16, 4, OIL_HI, 3))),

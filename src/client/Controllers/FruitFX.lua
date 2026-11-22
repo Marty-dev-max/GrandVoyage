@@ -514,6 +514,12 @@ FX.F_OilSlick = function(d)
 	oilDrops(at + Vector3.new(0, 2, 0), 20)
 end
 
+-- v0.25.65 fruit v2: new skills borrow the closest existing look until their own pass (docs/Plan-Fruits-v2.md)
+FX.F_RecoilCannon = FX.F_StretchPistol
+FX.F_SmokeFist = FX.F_SmokeGrip
+FX.F_Emberflies = FX.F_FireDash
+FX.F_SplitRunner = FX.F_SplitEscape
+
 function FX.Play(d)
 	local f = FX[d.skill or ""]
 	if f then

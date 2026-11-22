@@ -610,6 +610,17 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     like "David - The Movie Trailer" return 402 on this plan) + ffmpeg DEEPEN (asetrate 0.86, atempo 1.08, bass, echo),
     line "Yes. A Cursed Fruit has appeared... on X. Go get it." -> assets/sfx/Narr_Fruit*.wav (upload after 6 Dec with
     the other queued sounds). Interim TTS in FruitAlert.speak: Pitch -6, Speed 0.9, same line.
+  * v0.25.65 FRUITS v2 phase 1 (owner spec: docs/Plan-Fruits-v2.md, the source of truth for the fruit rework; never
+    use One Piece move names). CombatService `fruitBody` (in MonsterHit): Logia Blaze/Haze ignore monsters without
+    `def.toki` (Monsters: MistCommodore, MarineElite), Bounce reflects "shot" blows back (MS.Damage on the shooter),
+    Split ignores "slash"; `monsterDmgType(def)` = def.dmgType or MonsterLooks held weapon (Rifle/Pistol shot,
+    Cutlass/Claws/BattleAxe/Trident slash, else blunt). Charge skills (`charge = true`): client startAim keeps t0 +
+    VFX.Charge on the hand, CastSkill(id, target, aim, charge 0..1) sends `charge` (Auto = 0.25), server mult x (1 +
+    CHARGE_BONUS 0.6 x charge), CHARGE_TIME 1.2 s. AoE / GroundAoE `ticks` + `tickEvery` (+ `delay`), Ranged `pull`
+    (MS.Knockback toward the caster). New ids F_RecoilCannon, F_Emberflies, F_SmokeFist, F_SplitRunner (FruitFX
+    aliases until their own pass); DataService RENAMED maps F_FireDash/F_SmokeBody/F_SplitEscape on hotbars. Ward is
+    shown as "Shield Shield no Mi" (id stays Ward). Next phases per fruit: Bounce -> Blaze -> Haze -> Shield -> Split
+    -> Slick (anims, FX, Slingshot Launch, Blaze flight, barrier stairs, Slick skate, channel wall/dome).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

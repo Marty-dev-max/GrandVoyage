@@ -63,6 +63,10 @@
   "id": "116661614125944",
   "sha1": "9316e65ec3060d7b5e785b1c974de48939a0e6dc"
  },
+ "F_Emberflies": {
+  "id": "87667118144358",
+  "sha1": "7181a8914822f5b78789231be322ed2c89ce97eb"
+ },
  "F_FireDash": {
   "id": "100418934799113",
   "sha1": "e8581684cb9abb1d84d09285963eb4ba3e088d61"
@@ -87,6 +91,10 @@
   "id": "93072940170218",
   "sha1": "ef2bc6cc92cfc1b5842049215a693338832a7519"
  },
+ "F_RecoilCannon": {
+  "id": "110510723085160",
+  "sha1": "b43d1eec484680f2022f1867ef89bde622443346"
+ },
  "F_SlickSlide": {
   "id": "125966238087895",
   "sha1": "04544c123de9cb73cc29a74cad34a509507381ae"
@@ -102,6 +110,10 @@
  "F_SmokeBody": {
   "id": "97598379451419",
   "sha1": "0e3a16cca4a319288926d63b1b0ca173b1a94479"
+ },
+ "F_SmokeFist": {
+  "id": "83580633093669",
+  "sha1": "1a793c927d40311d7907095ef36c86240ec52ca1"
  },
  "F_SmokeGrip": {
   "id": "78766358226147",
@@ -122,6 +134,10 @@
  "F_SplitFestival": {
   "id": "72035967733725",
   "sha1": "ccb8e4b4c9eccdbf545ea3ea7fa66d5f4e61bca2"
+ },
+ "F_SplitRunner": {
+  "id": "83792223571723",
+  "sha1": "f2abb42be5ae5a1d8deae9b6fa6d5b602a18b70b"
  },
  "F_StretchPistol": {
   "id": "76523890002477",

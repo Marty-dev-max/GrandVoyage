@@ -165,7 +165,8 @@ function DataService.Load(player, slot)
 	end
 	-- v0.25.51 (owner: Navigator was too strong): its storm skills became baton tricks (the storms return with the
 	-- Storm Caller second job); learned levels and hotbar slots follow the new ids
-	local RENAMED = { ThunderCall = "BatonFlurry", CycloneCall = "TrickVault" }
+	-- v0.25.65 fruit v2 (docs/Plan-Fruits-v2.md): replaced fruit skills keep their hotbar slot
+	local RENAMED = { ThunderCall = "BatonFlurry", CycloneCall = "TrickVault", F_FireDash = "F_Emberflies", F_SmokeBody = "F_SmokeFist", F_SplitEscape = "F_SplitRunner" }
 	local bars = { data.skillBar }
 	for _, bar in pairs(data.classBars or {}) do
 		table.insert(bars, bar)

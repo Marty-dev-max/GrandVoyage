@@ -478,6 +478,8 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     v0.25.34: FruitAlert dresses every CursedFruit-tagged model for all players (looping `FruitHum` via
     `Audio.Attach(name, part, range)`, spawn flash + double blink every ~2 s with Highlight/light/sparkles);
     Dev "spawnfruit" passes the tester to FS.SpawnTreeFruit(tester) so they get the Notifier alert.
+    v0.25.35 (owner): "FruitSpawn" goes to EVERY player ({ knows = false } without the boost): FruitTwinkle + gold
+    screen-edge blink x3 + UI.Banner anywhere on the map; narrator + marker stay Notifier-only (knows = true).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

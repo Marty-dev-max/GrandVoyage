@@ -10,6 +10,7 @@ local Sounds = require(ReplicatedStorage.Shared.Config.Sounds)
 local Audio = require(script.Parent.Audio)
 local Tex = require(ReplicatedStorage.Shared.Config.Textures)
 local TweenService = game:GetService("TweenService")
+local UI = require(script.Parent.Parent.UI.UIKit)
 
 local FruitAlert = {}
 
@@ -129,6 +130,46 @@ local function dress(m)
 	end)
 end
 
+-- the whole screen twinkles when a fruit appears anywhere (v0.25.35, owner: people who never read the chat must
+-- notice): gold edge glow blinks three times + a banner. Neutral gold so it never tells which fruit it is
+local function screenBlink(knows, name)
+	local pg = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
+	if not pg then
+		return
+	end
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "FruitBlink"
+	gui.IgnoreGuiInset = true
+	gui.ResetOnSpawn = false
+	gui.DisplayOrder = 28
+	gui.Parent = pg
+	local edges = {}
+	for _, e in ipairs({ { UDim2.fromScale(1, 0.2), UDim2.fromScale(0, 0), 90 }, { UDim2.fromScale(1, 0.2), UDim2.fromScale(0, 0.8), -90 }, { UDim2.fromScale(0.14, 1), UDim2.fromScale(0, 0), 0 }, { UDim2.fromScale(0.14, 1), UDim2.fromScale(0.86, 0), 180 } }) do
+		local f = Instance.new("Frame")
+		f.BorderSizePixel = 0
+		f.BackgroundColor3 = Color3.fromRGB(255, 214, 110)
+		f.BackgroundTransparency = 1
+		f.Size, f.Position = e[1], e[2]
+		local g = Instance.new("UIGradient")
+		g.Rotation = e[3]
+		g.Transparency = NumberSequence.new(0, 1)
+		g.Parent = f
+		f.Parent = gui
+		table.insert(edges, f)
+	end
+	task.spawn(function()
+		for i = 1, 3 do
+			for _, f in ipairs(edges) do
+				f.BackgroundTransparency = 0.25 + i * 0.1
+				TweenService:Create(f, TweenInfo.new(0.45), { BackgroundTransparency = 1 }):Play()
+			end
+			task.wait(0.55)
+		end
+		gui:Destroy()
+	end)
+	pcall(UI.Banner, "A Cursed Fruit appeared!", knows and ("On " .. tostring(name)) or "Somewhere in the sea...", Color3.fromRGB(255, 214, 110), "Legendary")
+end
+
 function FruitAlert.Start()
 	for _, m in ipairs(CollectionService:GetTagged("CursedFruit")) do
 		task.spawn(dress, m)
@@ -138,6 +179,10 @@ function FruitAlert.Start()
 	end)
 	Net.OnPush("FruitSpawn", function(d)
 		Audio.Play("FruitTwinkle")
+		screenBlink(d.knows, d.name)
+		if not d.knows then
+			return -- the narrator and the marker are the Fruit Notifier's
+		end
 		local key = "Narr_Fruit" .. tostring(d.island)
 		task.delay(0.8, function()
 			local def = Sounds[key]

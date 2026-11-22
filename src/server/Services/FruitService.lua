@@ -304,9 +304,8 @@ function FS.SpawnTreeFruit(tester)
 	for _, pl in ipairs(game:GetService("Players"):GetPlayers()) do
 		local knows = pl == tester or (R.StoreService and R.StoreService.BoostActive(pl, "fruit"))
 		Net.Push(pl, "Announce", { text = knows and ("📡 A strange fruit has appeared on " .. island.name .. "!") or "🍎 A strange fruit has appeared somewhere in the sea!", rarity = "Epic" })
-		if knows then
-			Net.Push(pl, "FruitSpawn", { island = island.id, name = island.name, pos = m.PrimaryPart.Position, life = Fruits.Drops.TreeLifetime })
-		end
+		-- v0.25.35 (owner): everyone, anywhere, gets the twinkle + screen blink; only Notifier holders the where
+		Net.Push(pl, "FruitSpawn", knows and { knows = true, island = island.id, name = island.name, pos = m.PrimaryPart.Position, life = Fruits.Drops.TreeLifetime } or { knows = false })
 	end
 	prompt.Triggered:Connect(function(player)
 		local root = R.PlayerService.Root(player)

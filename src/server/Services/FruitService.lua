@@ -300,13 +300,13 @@ function FS.SpawnTreeFruit(tester)
 	local f = pickFruit()
 	local m, prompt = fruitModel(f, pos)
 	spawned = m
-	-- Fruit Notifier holders (Store) learn the island + get a marker and the narrator (FruitAlert); never which fruit.
-	-- Everyone else only hears that a fruit appeared
+	-- Fruit Notifier holders (Store) learn the island + get a marker and the narrator (FruitAlert); never which fruit
+	-- v0.25.59 (owner): only Fruit Notifier holders are told (announce + FruitAlert); nobody else hears of it
 	for _, pl in ipairs(game:GetService("Players"):GetPlayers()) do
-		local knows = pl == tester or (R.StoreService and R.StoreService.BoostActive(pl, "fruit"))
-		Net.Push(pl, "Announce", { text = knows and ("📡 A strange fruit has appeared on " .. island.name .. "!") or "🍎 A strange fruit has appeared somewhere in the sea!", rarity = "Epic" })
-		-- v0.25.35 (owner): everyone, anywhere, gets the twinkle + screen blink; only Notifier holders the where
-		Net.Push(pl, "FruitSpawn", knows and { knows = true, island = island.id, name = island.name, pos = m.PrimaryPart.Position, life = Fruits.Drops.TreeLifetime } or { knows = false })
+		if pl == tester or (R.StoreService and R.StoreService.BoostActive(pl, "fruit")) then
+			Net.Push(pl, "Announce", { text = "📡 A strange fruit has appeared on " .. island.name .. "!", rarity = "Epic" })
+			Net.Push(pl, "FruitSpawn", { knows = true, island = island.id, name = island.name, pos = m.PrimaryPart.Position, life = Fruits.Drops.TreeLifetime })
+		end
 	end
 	prompt.Triggered:Connect(function(player)
 		local root = R.PlayerService.Root(player)
@@ -362,8 +362,7 @@ local function holdModel(f)
 		ball.Color = f.color
 		ball.Parent = m
 	end
-	local _, size = m:GetBoundingBox()
-	m:ScaleTo(m:GetScale() * 1.35 / math.max(size.X, size.Y, size.Z, 0.1))
+	-- v0.25.59 (owner): held at the same size as the fruit lying on the ground (no more shrinking to 1.35 studs)
 	for _, d in ipairs(m:GetDescendants()) do
 		if d:IsA("BasePart") then
 			d.Anchored = false
@@ -437,7 +436,8 @@ function FS.Start()
 		local m = holdModel(f)
 		m.Name = "HeldFruit"
 		-- v0.25.36 (owner): gripped in the fist from the side (the hand covers its back), not hung by the stem
-		m:PivotTo(hand.CFrame * CFrame.new(0, -0.4, -0.6))
+		local _, size = m:GetBoundingBox()
+		m:PivotTo(hand.CFrame * CFrame.new(0, -0.3, -(math.max(size.X, size.Z) * 0.45 + 0.1)))
 		local main = m.PrimaryPart or m:FindFirstChildWhichIsA("BasePart", true)
 		for _, d in ipairs(m:GetDescendants()) do
 			if d:IsA("BasePart") then

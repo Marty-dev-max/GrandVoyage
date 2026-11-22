@@ -592,6 +592,12 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     v0.25.57: SP icons sized by tier so they read without the letter: grog_s small tankard, grog_m upright barrel,
     grog_l big keg on its side (owner references). v0.25.58: meat icons sized the same way (S half the slot, M two
     thirds, L the full slot).
+  * v0.25.59 (owner): held fruit = the ground model at native size (holdModel no longer ScaleTo 1.35; grip offset by its
+    size). Fruit spawn alerts are Notifier-only again (server pushes Announce + FruitSpawn only to BoostActive "fruit"
+    / tester; client beacon is raised from the push by finding the CursedFruit model near d.pos, no longer in dress()).
+    Sonar = ONE looped Audio.Attach("FruitSonar") on a Terrain attachment kept 30 studs out toward the fruit (pans
+    with the camera), volume x facing ((look.dir+1)/2)^1.5 x distance x fade envelope, high-cut EQ. FruitSonar prefers
+    FruitSonarLoop (ElevenLabs, assets/sfx, upload after 2026-12-06 with RewardRare/RewardLegend/ShipCreakLoop).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

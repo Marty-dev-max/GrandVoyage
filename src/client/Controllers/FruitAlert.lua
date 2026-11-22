@@ -11,6 +11,7 @@ local Audio = require(script.Parent.Audio)
 local Tex = require(ReplicatedStorage.Shared.Config.Textures)
 local Icons = require(ReplicatedStorage.Shared.Config.Icons)
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 local UI = require(script.Parent.Parent.UI.UIKit)
 
 local FruitAlert = {}
@@ -81,8 +82,9 @@ local function mark(pos, life)
 end
 
 -- v0.25.50 (owner: wanted to see WHERE from anywhere on the map + a sonar sound for about a minute): a tall pulsing
--- light pillar over a fresh fruit, a marker drawn on top of everything (any distance; v0.25.55 = black "?" fruit), and every 2 s a sonar
--- ping (louder the closer you are) with a square ripple spreading on the ground. Runs BEACON seconds from the spawn.
+-- light pillar over a fresh fruit, a marker drawn on top of everything (any distance; v0.25.55 = black "?" fruit), a
+-- looping directional sonar and a square ripple on the ground every 2 s. Runs BEACON seconds from the spawn.
+-- v0.25.59: Fruit Notifier holders only (raised from the FruitSpawn push).
 local BEACON = 60
 local function beacon(m, body, color)
 	local born = m:GetAttribute("SpawnedAt")
@@ -153,12 +155,43 @@ local function beacon(m, body, color)
 			end
 		end)
 	end
+	-- v0.25.59 (owner: the sonar sounded choppy, like a bad mp3, and came from everywhere): ONE looping sonar for the
+	-- whole beacon (it used to restart a 12 s clip every 2 s = six copies on top of each other), fading in and out,
+	-- played from a point 30 studs out in the fruit's direction so it pans around you as you turn, and louder when
+	-- you face the fruit than when it is behind you
+	local emitter = Instance.new("Attachment")
+	emitter.Name = "FruitSonar"
+	emitter.Parent = workspace.Terrain
+	local sonar = Audio.Attach("FruitSonar", emitter, 600)
+	if sonar then
+		sonar.RollOffMinDistance = 60
+		sonar.Volume = 0
+		local eq = Instance.new("EqualizerSoundEffect")
+		eq.HighGain, eq.MidGain, eq.LowGain = -9, 0, 2
+		eq.Parent = sonar
+	end
+	local born0 = os.clock()
+	local endAt = born0 + left
+	local follow = RunService.RenderStepped:Connect(function()
+		local cam = workspace.CurrentCamera
+		if not cam or not sonar then
+			return
+		end
+		local cp = cam.CFrame.Position
+		local to = Vector3.new(base.X - cp.X, 0, base.Z - cp.Z)
+		local dist = to.Magnitude
+		local dir = dist > 1 and to.Unit or Vector3.new(0, 0, -1)
+		emitter.WorldPosition = cp + dir * math.min(30, math.max(dist, 1))
+		local look = Vector3.new(cam.CFrame.LookVector.X, 0, cam.CFrame.LookVector.Z)
+		local facing = look.Magnitude > 0.01 and (look.Unit:Dot(dir) + 1) / 2 or 0.5 -- 1 = straight ahead, 0 = behind
+		local near = math.clamp(1.2 - dist / 3500, 0.35, 1)
+		local now = os.clock()
+		local env = math.clamp((now - born0) / 1.5, 0, 1) * math.clamp((endAt - now) / 2.5, 0, 1)
+		sonar.Volume = 0.9 * near * (0.3 + 0.7 * facing ^ 1.5) * env
+	end)
 	task.spawn(function()
-		local stop = os.clock() + left
+		local stop = endAt
 		while os.clock() < stop and m.Parent and body.Parent do
-			local cam = workspace.CurrentCamera
-			local d = cam and (cam.CFrame.Position - base).Magnitude or 0
-			Audio.Play("FruitSonar", { volume = math.clamp(1.2 - d / 3500, 0.3, 1) })
 			ripple()
 			pillar.Transparency = 0.15
 			TweenService:Create(pillar, TweenInfo.new(1.2), { Transparency = 0.6 }):Play()
@@ -169,6 +202,8 @@ local function beacon(m, body, color)
 			TweenService:Create(aura, TweenInfo.new(1.4), { ImageTransparency = 0.35, Size = UDim2.fromScale(1, 1) }):Play()
 			task.wait(2)
 		end
+		follow:Disconnect()
+		emitter:Destroy()
 		TweenService:Create(pillar, TweenInfo.new(1.5), { Transparency = 1 }):Play()
 		task.wait(1.6)
 		pillar:Destroy()
@@ -216,7 +251,6 @@ local function dress(m)
 	-- the moment it appears: a big flash and burst
 	flash(1)
 	e:Emit(30)
-	beacon(m, body, color)
 	task.spawn(function()
 		while m.Parent and body.Parent do
 			task.wait(1.8 + math.random() * 0.6)
@@ -275,11 +309,29 @@ function FruitAlert.Start()
 	CollectionService:GetInstanceAddedSignal("CursedFruit"):Connect(function(m)
 		task.spawn(dress, m)
 	end)
+	-- v0.25.59 (owner): the whole alert (twinkle, screen blink, banner, narrator, marker, pillar + sonar) is the Fruit
+	-- Notifier's only; the server no longer tells anyone else
 	Net.OnPush("FruitSpawn", function(d)
+		if not d.knows then
+			return
+		end
 		Audio.Play("FruitTwinkle")
 		screenBlink(d.knows, d.name)
-		if not d.knows then
-			return -- the narrator and the marker are the Fruit Notifier's
+		if typeof(d.pos) == "Vector3" then
+			task.spawn(function()
+				-- the fruit model replicates around the push: wait for it, then raise its beacon
+				for _ = 1, 30 do
+					for _, fm in ipairs(CollectionService:GetTagged("CursedFruit")) do
+						local b = fm:FindFirstChild("Body")
+						if b and (b.Position - d.pos).Magnitude < 12 then
+							local light = b:FindFirstChildOfClass("PointLight")
+							beacon(fm, b, light and light.Color or Color3.fromRGB(255, 220, 120))
+							return
+						end
+					end
+					task.wait(0.2)
+				end
+			end)
 		end
 		local key = "Narr_Fruit" .. tostring(d.island)
 		task.delay(0.8, function()

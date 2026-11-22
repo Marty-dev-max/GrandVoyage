@@ -41,6 +41,8 @@ SFX = {
     'RewardRare': ('a warm achievement unlocked sound, soft mellow bell chime with a gentle rising harp, low-mid pitch, cozy RPG game reward, not shrill, no voice', 1.8),
     'RewardLegend': ('a warm grand achievement unlocked fanfare, soft brass swell with mellow bells and a shimmer, triumphant but gentle, low-mid pitch, RPG game, not shrill, no voice', 2.6),
     'ShipCreakLoop': ('a wooden sailing ship hull creaking and groaning at sea, slow rhythmic wood creaks, ropes straining, timbers rubbing, no water splash, no music, seamless', 6.0),
+    # v0.25.59 (owner: the fruit sonar sounded choppy): a clean looping sonar for the Fruit Notifier beacon
+    'FruitSonarLoop': ('a deep calm submarine sonar ping repeating every two seconds, each ping with a long soft echo tail, underwater, clean, no music, no voice, seamless', 8.0),
     # sea
     'Cannon': ('a pirate ship cannon firing, deep boom with a wooden echo', 1.2),
     'Explosion': ('a cannonball explosion on wood, punchy blast with debris', 1.2),

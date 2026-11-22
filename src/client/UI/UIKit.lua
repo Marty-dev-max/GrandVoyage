@@ -548,7 +548,7 @@ local EMOJI_ICON = {
 	["🗺️"] = "map", ["👑"] = "crown", ["📜"] = "scroll", ["🐾"] = "paw", ["💎"] = "gem", ["⚙️"] = "gear",
 	["🪙"] = "coin", ["☠"] = "skull", ["☠️"] = "skull", ["🏳"] = "whiteflag", ["🔨"] = "hammer", ["🃏"] = "card",
 	["🥚"] = "egg", ["🪺"] = "golden_egg", ["🪤"] = "bait", ["🧰"] = "chest", ["📘"] = "book", ["⛵"] = "ship",
-	["🧿"] = "charm", ["🍖"] = "meat", ["🪵"] = "wood", ["⚔️"] = "sword", ["👊"] = "knuckles", ["🛍️"] = "chest",
+	["🧿"] = "charm", ["🍖"] = "meat", ["🪵"] = "wood", ["⚔️"] = "sword", ["👊"] = "knuckles", ["🛍️"] = "shop",
 	["🏆"] = "crown", ["📅"] = "scroll", ["🎁"] = "chest", ["📖"] = "book", ["🧑‍✈️"] = "party", ["🎓"] = "book",
 	["🛡️"] = "armor", ["💉"] = "medkit", ["🧭"] = "map", ["🎯"] = "slingshot", ["🍳"] = "boots",
 	-- v0.25.3 pixel pack additions
@@ -753,16 +753,39 @@ function UI.Sparkles(frame, color, n, opts)
 	local holder = New("Frame", { Name = "Sparkles", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ClipsDescendants = true, ZIndex = z, Parent = frame })
 	local parts = {}
 	local rnd = Random.new()
+	-- v0.25.29 (owner): themed particles: opts.icons = pixel icon names that float up among the sparks (coins in the
+	-- Bag, paws in Pets, skulls for Bosses...), opts.iconFrac = share of them, opts.iconColor = optional tint,
+	-- opts.plus = plus signs instead of stars, opts.bubble = hollow rising bubbles (sea), opts.color2 = second spark color
+	local iconIds = {}
+	for _, nm in ipairs(opts.icons or {}) do
+		local id = UI.IconId(nm)
+		if id then
+			table.insert(iconIds, id)
+		end
+	end
 	for i = 1, n do
-		local star = rnd:NextNumber() < (opts.star or 0.35)
-		local sz = star and rnd:NextInteger(9, 16) or rnd:NextInteger(4, 7)
+		local isIcon = #iconIds > 0 and rnd:NextNumber() < (opts.iconFrac or 0.5)
+		local star = not isIcon and rnd:NextNumber() < (opts.star or 0.35)
+		local sz = isIcon and rnd:NextInteger(opts.iconMin or 12, opts.iconMax or 18) or (star and rnd:NextInteger(9, 16) or rnd:NextInteger(4, 7))
 		local p = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(rnd:NextNumber(), rnd:NextNumber()), Size = UDim2.fromOffset(sz, sz), ZIndex = z, Parent = holder })
 		local bits = {}
-		if star then
-			table.insert(bits, New("Frame", { BorderSizePixel = 0, BackgroundColor3 = color, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.new(0, 2, 1, 0), ZIndex = z, Parent = p }))
-			table.insert(bits, New("Frame", { BorderSizePixel = 0, BackgroundColor3 = color, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.new(1, 0, 0, 2), ZIndex = z, Parent = p }))
+		local c = (opts.color2 and rnd:NextNumber() < 0.5) and opts.color2 or color
+		if isIcon then
+			local img = New("ImageLabel", { BackgroundTransparency = 1, Image = iconIds[rnd:NextInteger(1, #iconIds)], ImageColor3 = opts.iconColor or Color3.new(1, 1, 1), ScaleType = Enum.ScaleType.Fit, Size = UDim2.fromScale(1, 1), Rotation = rnd:NextInteger(-15, 15), ZIndex = z, Parent = p })
+			table.insert(bits, img)
+		elseif star and opts.plus then
+			table.insert(bits, New("Frame", { BorderSizePixel = 0, BackgroundColor3 = c, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.new(0, 3, 1, 0), ZIndex = z, Parent = p }))
+			table.insert(bits, New("Frame", { BorderSizePixel = 0, BackgroundColor3 = c, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.new(1, 0, 0, 3), ZIndex = z, Parent = p }))
+		elseif opts.bubble and not star then
+			local bub = New("Frame", { BackgroundColor3 = c, BackgroundTransparency = 1, BorderSizePixel = 0, Size = UDim2.fromScale(1, 1), ZIndex = z, Parent = p })
+			UI.Stroke(bub, c, 1.5)
+			p.Size = UDim2.fromOffset(sz + 3, sz + 3)
+			table.insert(bits, bub:FindFirstChildOfClass("UIStroke"))
+		elseif star then
+			table.insert(bits, New("Frame", { BorderSizePixel = 0, BackgroundColor3 = c, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.new(0, 2, 1, 0), ZIndex = z, Parent = p }))
+			table.insert(bits, New("Frame", { BorderSizePixel = 0, BackgroundColor3 = c, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.new(1, 0, 0, 2), ZIndex = z, Parent = p }))
 		else
-			table.insert(bits, New("Frame", { BorderSizePixel = 0, BackgroundColor3 = color, Size = UDim2.fromScale(1, 1), ZIndex = z, Parent = p }))
+			table.insert(bits, New("Frame", { BorderSizePixel = 0, BackgroundColor3 = c, Size = UDim2.fromScale(1, 1), ZIndex = z, Parent = p }))
 		end
 		parts[i] = { f = p, bits = bits, ph = rnd:NextNumber(0, 6.28), sp = rnd:NextNumber(1.2, 3), vy = opts.float and rnd:NextNumber(0.015, 0.05) or 0, max = rnd:NextNumber(0.5, 0.95) }
 	end
@@ -783,7 +806,13 @@ function UI.Sparkles(frame, color, n, opts)
 		for _, q in ipairs(parts) do
 			local tw = (math.sin(t * q.sp + q.ph) + 1) / 2
 			for _, b in ipairs(q.bits) do
-				b.BackgroundTransparency = 1 - tw * q.max
+				if b:IsA("ImageLabel") then
+					b.ImageTransparency = 1 - tw * q.max
+				elseif b:IsA("UIStroke") then
+					b.Transparency = 1 - tw * q.max
+				else
+					b.BackgroundTransparency = 1 - tw * q.max
+				end
 			end
 			if q.vy > 0 then
 				local pos = q.f.Position
@@ -1056,6 +1085,28 @@ function UI.Scroll(parent, size)
 		BorderSizePixel = 0,
 		Parent = parent,
 	})
+end
+
+-- v0.25.29 (owner): menu tiles (HUD column + MENU window) wear their entry's own colors and particle theme:
+-- it.bg = { top, bottom } gradient, it.fx = Sparkles options (+ color), it.stripes = pennant stripes (Guild)
+function UI.DressMenuTile(tile, it, count)
+	local fill = tile:FindFirstChild("Fill") or tile:FindFirstChildOfClass("UIGradient")
+	if it.bg and fill then
+		fill.Color = ColorSequence.new(it.bg[1], it.bg[2])
+	end
+	if it.stripes then
+		for k = 0, 1 do
+			New("Frame", { Name = "Pennant", BackgroundColor3 = it.stripes, BackgroundTransparency = 0.35, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.82 - k * 0.12, 0, 0.5, 0), Size = UDim2.new(0, 5, 1.6, 0), Rotation = 24, ZIndex = tile.ZIndex, Parent = tile })
+		end
+		tile.ClipsDescendants = true
+	end
+	local fx = it.fx or {}
+	local opts = { float = true, star = fx.star or 0.45, icons = fx.icons, iconFrac = fx.iconFrac, iconColor = fx.iconColor, plus = fx.plus, bubble = fx.bubble, color2 = fx.color2, iconMin = fx.iconMin, iconMax = fx.iconMax }
+	if fx.faction then
+		local f = player:GetAttribute("Faction")
+		opts.iconColor = f == "Marine" and T.Marine or (f == "Pirate" and T.Pirate or Color3.fromRGB(230, 230, 240))
+	end
+	return UI.Sparkles(tile, fx.color or Color3.new(1, 1, 1), count or 8, opts)
 end
 
 -- ===== Window =====

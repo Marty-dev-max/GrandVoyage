@@ -297,12 +297,15 @@ local skillIconId, skillColor = SkillLook.IconId, SkillLook.Color
 
 local function buildStatus()
 	-- the card sits behind the ring; the ring overlaps its left edge
-	local card = softPanel(UI.Root, UDim2.fromOffset(400, 150), UDim2.fromOffset(100, 22), nil, "right")
+	-- v0.25.29 (owner reference): ONE framed character card: portrait + level ring, class • faction, HP / SP, EXP /
+	-- JOB, boost timers (PC: bottom-left next to the hotbar; phones keep it top-left, the thumbstick is bottom-left)
+	local card = glass(UI.Root, UDim2.fromOffset(420, 128), UDim2.fromOffset(100, 22))
+	UI.Bevel(card, T.Bevel, 2, 0.3)
 	statusCard = card
 	buildRing(UI.Root, UDim2.fromOffset(14, 10))
-	local name = UI.Text(card, player.DisplayName, 24, T.Text, "Display", { Position = UDim2.fromOffset(70, 6), Size = UDim2.new(1, -80, 0, 28), TextWrapped = false })
-	local cls = UI.Text(card, "", 14, T.TextSoft, "Semi", { Position = UDim2.fromOffset(70, 33), Size = UDim2.new(1, -80, 0, 18), TextWrapped = false })
-	local holder = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(70, 55), Size = UDim2.new(1, -82, 0, 46), Parent = card })
+	local name = UI.Text(card, player.DisplayName, 24, T.Text, "Display", { Position = UDim2.fromOffset(70, 6), Size = UDim2.new(1, -80, 0, 28), TextWrapped = false, Visible = false })
+	local cls = UI.Text(card, "", 16, T.TextSoft, "Semi", { Position = UDim2.fromOffset(70, 7), Size = UDim2.new(1, -80, 0, 20), TextWrapped = false })
+	local holder = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(70, 31), Size = UDim2.new(1, -82, 0, 46), Parent = card })
 	UI.List(holder, nil, 5)
 	bars = {
 		hp = UI.Bar(holder, T.Green, UDim2.new(1, 0, 0, 22), "HP"),
@@ -311,18 +314,19 @@ local function buildStatus()
 		cls = cls,
 	}
 	-- EXP readouts that match the two ring halves
-	local row = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(70, 104), Size = UDim2.new(1, -82, 0, 18), Parent = card })
+	local row = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(70, 80), Size = UDim2.new(1, -82, 0, 18), Parent = card })
 	UI.List(row, Enum.FillDirection.Horizontal, 14)
 	bars.expText = UI.Text(row, "", 15, T.Green, "Display", { Size = UDim2.fromOffset(110, 18), TextWrapped = false })
 	bars.jobText = UI.Text(row, "", 15, T.Purple, "Display", { Size = UDim2.fromOffset(110, 18), TextWrapped = false })
 	-- v0.24.12 (owner): Store boost timers (2x EXP / 2x DROP / FRUIT RADAR) sit right under the EXP readouts;
 	-- Controllers/Heritage fills this row
-	HUD.boostRow = New("Frame", { Name = "BoostRow", BackgroundTransparency = 1, Position = UDim2.fromOffset(70, 126), Size = UDim2.new(1, -82, 0, 20), Parent = card })
+	HUD.boostRow = New("Frame", { Name = "BoostRow", BackgroundTransparency = 1, Position = UDim2.fromOffset(70, 101), Size = UDim2.new(1, -82, 0, 20), Parent = card })
 	UI.List(HUD.boostRow, Enum.FillDirection.Horizontal, 6)
 	buffRow = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(170, 158), Size = UDim2.fromOffset(300, 30), Parent = UI.Root })
 	-- v0.24.8 (owner): the party sits right under the player card as one horizontal strip (above the quest tracker):
 	-- member chips with name + HP while in a party, else a PARTY button that opens the Party window
-	local partyBar = softPanel(UI.Root, UDim2.fromOffset(400, 36), UDim2.fromOffset(16, 156), nil, "right")
+	local partyBar = glass(UI.Root, UDim2.fromOffset(400, 36), UDim2.fromOffset(16, 156))
+	UI.Bevel(partyBar, T.Bevel, 2, 0.4)
 	HUD.partyBar = partyBar
 	New("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 4), Parent = partyBar })
 	local partyRow = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Parent = partyBar })
@@ -363,6 +367,19 @@ local function buildStatus()
 			renderParty()
 		end
 	end)
+	-- PC layout (v0.25.29): the party strip sits right under the quest tracker / hunt card, wherever they end
+	RunService.RenderStepped:Connect(function()
+		if not HUD.bottomCard or not HUD.questFrame then
+			return
+		end
+		local tr = HUD.questFrame
+		local y = tr.Position.Y.Offset + (tr.Visible and tr.Size.Y.Offset + 8 or 44)
+		local hunt = UI.Root:FindFirstChild("HuntCard")
+		if hunt and hunt.Visible then
+			y = math.max(y, hunt.Position.Y.Offset + hunt.Size.Y.Offset + 8)
+		end
+		partyBar.Position = UDim2.fromOffset(16, y)
+	end)
 	renderParty()
 	task.spawn(function()
 		while true do
@@ -379,14 +396,16 @@ local function buildStatus()
 	UI.List(buffRow, Enum.FillDirection.Horizontal, 6)
 
 	-- one compact row of currencies (was three tall pills)
-	local row = softPanel(UI.Root, UDim2.fromOffset(470, 42), UDim2.new(1, -16, 0, 14), Vector2.new(1, 0), "left")
+	-- v0.25.29 (owner reference): top-right = separate framed pills (coins, bounty, gems), easy to read at a glance
+	local row = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 12), Size = UDim2.fromOffset(470, 42), Parent = UI.Root })
 	row.Name = "CurrencyRow" -- Readability fits the compass between the MENU button and this row
-	New("UIPadding", { PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 10), Parent = row })
-	UI.List(row, Enum.FillDirection.Horizontal, 4).VerticalAlignment = Enum.VerticalAlignment.Center
+	UI.List(row, Enum.FillDirection.Horizontal, 8, Enum.HorizontalAlignment.Right).VerticalAlignment = Enum.VerticalAlignment.Center
 	local function segment(order, icon, color, width, tip)
-		local seg = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(width, 42), LayoutOrder = order, Parent = row })
-		local ic = UI.Icon(seg, icon, 40, { Name = "PillIcon", Position = UDim2.fromOffset(-2, 0) })
-		local label = UI.Text(seg, "0", 20, color, "Number", { Position = UDim2.fromOffset(38, 0), Size = UDim2.new(1, -38, 1, 0), TextWrapped = false })
+		local seg = glass(row, UDim2.fromOffset(width, 40), UDim2.new())
+		seg.LayoutOrder = order
+		UI.Bevel(seg, T.Bevel, 2, 0.35)
+		local ic = UI.Icon(seg, icon, 36, { Name = "PillIcon", AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 2, 0.5, 0) })
+		local label = UI.Text(seg, "0", 20, color, "Number", { Position = UDim2.fromOffset(38, 0), Size = UDim2.new(1, -46, 1, 0), TextWrapped = false, TextXAlignment = Enum.TextXAlignment.Right })
 		if tip then
 			UI.Tooltip(seg, tip)
 		end
@@ -416,19 +435,25 @@ end
 
 -- Anime-Vanguards-style menu: square colored tiles with a big icon, a label and a key hint, in two columns
 -- Every window with its icon, color, hotkey and label. main = shown as a tile; the rest live in the MENU hub.
+-- v0.25.29 (owner): each tile has its own color pair (bg) and a particle theme (fx) that says what it is:
+-- coins in the Bag, twinkling stars in Skills, sea bubbles on the Map / Ships, paws in Pets, gems + gold coins in the
+-- Store, green pluses in Stats / Party, your faction's flags in Guild, skulls + embers for Bosses, gears in Settings
+local function hex(h)
+	return Color3.fromHex(h)
+end
 local MENU = {
-	{ "🎒", "Inventory", T.Ocean, "I", "Bag", main = true },
-	{ "✨", "Skills", T.Gold, "K", "Skills", main = true },
-	{ "📜", "Quests", T.Gold:Lerp(T.Orange, 0.4), "J", "Quests", main = true },
-	{ "🗺️", "Map", T.Ocean, "M", "Map", main = true },
-	{ "🐾", "Pets", T.Green:Lerp(T.Ocean, 0.3), "N", "Pets", main = true },
-	{ "🛍️", "PearlShop", Color3.fromRGB(80, 170, 220), "H", "Store", main = true },
-	{ "📊", "Stats", T.Purple, "C", "Stats", main = true },
-	{ "ship", "SummonShip", T.OceanDark, nil, "Ships" }, -- calls / stores the ship (editing = Shipwright NPC)
-	{ "🏴", "Guild", T.Pirate, "G", "Guild" },
-	{ "👥", "Party", T.Green, "P", "Party" },
-	{ "👑", "BossBoard", T.Red, "B", "Bosses" },
-	{ "⚙️", "Settings", T.Grey, "O", "Settings" },
+	{ "🎒", "Inventory", T.Ocean, "I", "Bag", main = true, fx = { icons = { "coin" }, color = hex("FFE297") } },
+	{ "✨", "Skills", hex("6852AD"), "K", "Skills", main = true, bg = { hex("6852AD"), hex("352259") }, fx = { color = hex("FFF195"), star = 0.85 } },
+	{ "📜", "Quests", T.Gold:Lerp(T.Orange, 0.4), "J", "Quests", main = true, fx = { icons = { "scroll" }, iconFrac = 0.35, color = hex("FFE7B0") } },
+	{ "🗺️", "Map", T.Ocean, "M", "Map", main = true, fx = { bubble = true, color = hex("B8F0FF"), star = 0.15 } },
+	{ "🐾", "Pets", T.Green:Lerp(T.Ocean, 0.3), "N", "Pets", main = true, fx = { icons = { "paw" }, color = hex("D8FFE0") } },
+	{ "🛍️", "PearlShop", hex("846030"), "H", "Store", main = true, bg = { hex("846030"), hex("513648") }, fx = { icons = { "gem", "coin" }, color = hex("FFE297"), star = 0.2 } },
+	{ "📊", "Stats", T.Purple, "C", "Stats", main = true, fx = { plus = true, star = 0.9, color = hex("7DFF8E") } },
+	{ "ship", "SummonShip", T.OceanDark, nil, "Ships", fx = { bubble = true, color = hex("B8F0FF"), star = 0.15 } }, -- calls / stores the ship (editing = Shipwright NPC)
+	{ "🏴", "Guild", hex("A44C64"), "G", "Guild", bg = { hex("A44C64"), hex("58293F") }, stripes = hex("FFC6A8"), fx = { icons = { "flag" }, faction = true, color = hex("FFC6A8") } },
+	{ "👥", "Party", T.Green, "P", "Party", fx = { plus = true, star = 0.9, color = hex("C8FFC8") } },
+	{ "👑", "BossBoard", hex("AC404F"), "B", "Bosses", bg = { hex("AC404F"), hex("541E35") }, fx = { icons = { "skull" }, iconFrac = 0.35, color = hex("FF9373"), star = 0 } },
+	{ "⚙️", "Settings", T.Grey, "O", "Settings", fx = { icons = { "gear" }, color = hex("D8DCEA") } },
 }
 HUD.Menu = MENU
 Panels.MenuItems = MENU
@@ -445,8 +470,8 @@ local function menuTile(parent, it)
 	UI.Stroke(tile, T.Edge, 3)
 	UI.Bevel(tile, UI.Shade(it[3], 0.2), 2, 0.1)
 	New("ImageLabel", { BackgroundTransparency = 1, Image = require(game:GetService("ReplicatedStorage").Shared.Config.Textures).glow, ImageColor3 = UI.Shade(it[3], 0.3), ImageTransparency = 0.35, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, 26), Size = UDim2.fromOffset(84, 84), Parent = tile })
-	-- v0.25.17 (owner): the tile background twinkles: floating pixel sparkles + a shine sweeping across
-	UI.Sparkles(tile, Color3.new(1, 1, 1), 7, { float = true, star = 0.55 })
+	-- v0.25.17 / v0.25.29 (owner): the tile's own colors + its themed floating particles + a shine sweeping across
+	UI.DressMenuTile(tile, it, 7)
 	UI.Shine(tile, math.random())
 	UI.Icon(tile, it[1], 54, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 0) })
 	UI.Text(tile, string.upper(it[5]), 14, Color3.new(1, 1, 1), "Display", { AnchorPoint = Vector2.new(0, 1), Size = UDim2.new(1, 0, 0, 18), Position = UDim2.new(0, 0, 1, -4), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false })
@@ -481,9 +506,10 @@ local function buildMenu()
 			menuTile(menu, it)
 		end
 	end
-	menuTile(menu, { "anchor", "MenuHub", Color3.fromRGB(70, 60, 110), "L", "Menu" })
+	menuTile(menu, { "anchor", "MenuHub", Color3.fromRGB(70, 60, 110), "L", "Menu", fx = { icons = { "anchor" }, color = Color3.fromHex("C9D4F0") } })
 	-- v0.25.21 (owner): a tab on the left of the tiles folds the whole menu column away (and back)
 	local tab, tabHolder = UI.Button(UI.Root, "▶", T.PanelDeep, UDim2.fromOffset(24, 56), function() end)
+	UI.Bevel(tab, T.Bevel, 2, 0.3) -- v0.25.29: kept (owner), framed like the rest
 	tab.TextScaled = false
 	tab.TextSize = 14
 	tab.Activated:Connect(function()
@@ -690,6 +716,7 @@ HUD.AmmoCount = ammoCount
 
 local function buildSkillBar()
 	local bar = New("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -12), Size = UDim2.fromOffset(900, 2 * (SLOT + 4) + 8), BackgroundTransparency = 1, Parent = UI.Root })
+	HUD.hotbar = bar
 	local vlist = UI.List(bar, Enum.FillDirection.Vertical, 6, Enum.HorizontalAlignment.Center)
 	vlist.VerticalAlignment = Enum.VerticalAlignment.Bottom
 	vlist.SortOrder = Enum.SortOrder.LayoutOrder
@@ -1237,11 +1264,31 @@ function HUD.Layout()
 		inset = GuiService.TopbarInset.Max.Y
 	end)
 	local topY = math.floor(inset / sc) + 4
-	ring.frame.Position = UDim2.fromOffset(14, topY)
-	statusCard.Position = UDim2.fromOffset(100, topY + 12)
-	statusCard.Size = UDim2.fromOffset(compact and 330 or 400, 150)
-	-- v0.24.12: party + quest moved below the level badge at the bottom of the ring (it covered the PARTY button)
-	buffRow.Position = UDim2.fromOffset(compact and 356 or 426, topY + 176)
+	-- v0.25.29 (owner reference): PC = quest + party top-left, the character card bottom-left beside the hotbar,
+	-- currencies top-right. Phones / small windows keep the card on top (thumbstick bottom-left, no room for both).
+	local bottomCard = not compact and not UI.IsMobile
+	HUD.bottomCard = bottomCard
+	if bottomCard then
+		statusCard.AnchorPoint = Vector2.new(0, 1)
+		statusCard.Position = UDim2.new(0, 100, 1, -14)
+		statusCard.Size = UDim2.fromOffset(420, 128)
+		ring.frame.Position = UDim2.new(0, 14, 1, -166)
+		buffRow.AnchorPoint = Vector2.new(0, 1)
+		buffRow.Position = UDim2.new(0, 170, 1, -146)
+		if HUD.hotbar then
+			HUD.hotbar.Position = UDim2.new(0, 536 + 450, 1, -12)
+		end
+	else
+		statusCard.AnchorPoint = Vector2.zero
+		ring.frame.Position = UDim2.fromOffset(14, topY)
+		statusCard.Position = UDim2.fromOffset(100, topY + 12)
+		statusCard.Size = UDim2.fromOffset(compact and 330 or 400, 128)
+		buffRow.AnchorPoint = Vector2.zero
+		buffRow.Position = UDim2.fromOffset(compact and 356 or 426, topY + 176)
+		if HUD.hotbar then
+			HUD.hotbar.Position = UDim2.new(0.5, 0, 1, -12)
+		end
+	end
 	if HUD.partyBar then
 		HUD.partyBar.Position = UDim2.fromOffset(16, topY + 176)
 		HUD.partyBar.Size = UDim2.fromOffset(compact and 330 or 400, 36)
@@ -1263,7 +1310,7 @@ function HUD.Layout()
 	end
 	-- quest tracker sits under the player card
 	if HUD.questFrame then
-		HUD.questFrame.Position = UDim2.fromOffset(16, topY + 222)
+		HUD.questFrame.Position = UDim2.fromOffset(16, bottomCard and topY + 8 or topY + 222)
 		HUD.questFrame.Size = UDim2.fromOffset(compact and 300 or 330, HUD.questFrame.Size.Y.Offset)
 	end
 	-- loot feed: bottom-left on PC; on touch screens the thumbstick lives there, so stack it under the tracker
@@ -1276,7 +1323,7 @@ function HUD.Layout()
 		end
 	else
 		lootFeed.AnchorPoint = Vector2.new(0, 1)
-		lootFeed.Position = UDim2.new(0, 16, 1, -24)
+		lootFeed.Position = bottomCard and UDim2.new(0, 16, 1, -190) or UDim2.new(0, 16, 1, -24)
 		if list then
 			list.VerticalAlignment = Enum.VerticalAlignment.Bottom
 		end

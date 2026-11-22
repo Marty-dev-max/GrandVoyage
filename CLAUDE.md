@@ -445,6 +445,12 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     a top shine line + bottom lip, item tiles (`UI.RarityStyle`) = dark slot tinted by rarity + bright rim + glow
     aura, menu tiles the same. Fonts: Display/Bold/Number = pixel, Semi/Body = Builder Sans Bold (PixelUI leaves
     BuilderSans text alone). AUTO/MANUAL + UI.Toggle = sliding switches.
+  * v0.25.29 (owner): HUD.MENU entries carry `bg` (gradient pair), `fx` (particle theme) and `stripes` (Guild pennant);
+    `UI.DressMenuTile(tile, it, n)` applies them to the HUD tiles and the MENU window tiles. UI.Sparkles opts: icons
+    (pixel icon names), iconFrac, iconColor, plus, bubble, color2. Pixel icons: bag = backpack, new `shop` storefront
+    ("🛍️" -> shop). HUD layout (PC, `HUD.bottomCard`): framed character card bottom-left (class • faction header, no
+    big name) beside the hotbar (`HUD.hotbar` shifted right), quest tracker top-left with the party strip following
+    the tracker/hunt card, framed currency pills top-right; phones / compact keep the old top-left card.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

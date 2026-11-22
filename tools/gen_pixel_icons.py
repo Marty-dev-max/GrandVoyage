@@ -483,6 +483,41 @@ def chest(s):
     s.rect(15, 16, 17, 17, DARK)
 
 
+# v0.25.29 (owner reference: a real backpack, a real shop front) in the same 32px lit-top-left style
+def backpack(s):
+    body, dark, flap = (214, 74, 140), (160, 46, 104), (248, 150, 62)
+    s.arc(16, 7, 3, 180, 360, (110, 64, 40), w=2)  # small top loop
+    s.rect(4, 13, 6, 25, (120, 70, 44))  # shoulder straps peeking out at the sides
+    s.rect(26, 13, 28, 25, (120, 70, 44))
+    s.poly([(11, 7), (21, 7), (25, 10), (26, 14), (26, 28), (6, 28), (6, 14), (7, 10)], body)  # domed top
+    s.rect(4, 21, 6, 26, dark)  # side pockets
+    s.rect(26, 21, 28, 26, dark)
+    s.rect(9, 20, 23, 27, dark)  # front pocket
+    s.rect(10, 21, 22, 21, lerp(dark, WHITE, 0.25))  # pocket seam
+    s.poly([(10, 8), (22, 8), (25, 11), (25, 17), (16, 20), (7, 17), (7, 11)], flap)  # flap over the top
+    s.rect(10, 9, 22, 9, lerp(flap, WHITE, 0.35))  # flap highlight
+    s.rect(14, 16, 18, 19, GOLD)  # buckle
+    s.px(16, 17, DARK)
+
+
+def shopfront(s):
+    wood, wood_d = (188, 124, 70), (130, 80, 44)
+    s.rect(6, 15, 26, 28, wood)  # stall body
+    s.rect(9, 18, 23, 24, (70, 44, 56))  # open window
+    s.rect(10, 21, 12, 23, (90, 210, 255))  # goods: a gem
+    s.oval(16, 22, 2, 2, GOLD)  # a coin
+    s.rect(20, 20, 21, 23, (90, 220, 110))  # a potion
+    s.px(20, 19, WHITE)
+    s.rect(5, 24, 27, 27, lerp(wood, WHITE, 0.2))  # counter
+    s.rect(5, 27, 27, 28, wood_d)
+    s.rect(7, 3, 25, 6, wood_d)  # sign board
+    s.rect(9, 4, 23, 5, GOLD)
+    for i in range(6):  # striped awning
+        c = (232, 76, 62) if i % 2 == 0 else (255, 226, 160)
+        s.poly([(3 + i * 4.4, 8), (7.4 + i * 4.4, 8), (8.4 + i * 4.4, 14), (2 + i * 4.4, 14)], c)
+        s.oval(5.2 + i * 4.4, 14, 2.2, 1.6, c)  # scalloped edge
+
+
 def menu_icon(s):
     anchor(s, (210, 220, 240))
 
@@ -628,7 +663,7 @@ def st_stall(s):
 
 ICONS = {
     # HUD / menus
-    'bag': sack, 'skills': lambda s: (star(s, 16, 16, 13, 5, 4, YEL), sparkle(s, 26, 6, WHITE, 2), sparkle(s, 6, 26, WHITE, 1)),
+    'bag': backpack, 'shop': shopfront, 'skills': lambda s: (star(s, 16, 16, 13, 5, 4, YEL), sparkle(s, 26, 6, WHITE, 2), sparkle(s, 6, 26, WHITE, 1)),
     'scroll': scroll, 'map': map_icon, 'paw': paw, 'chest': chest, 'stats': chart, 'anchor': menu_icon, 'menu': menu_icon,
     'coin': coin, 'gem': gem, 'pearl': pearl, 'crown': crown, 'flag': flag, 'whiteflag': lambda s: flag(s, (245, 245, 245), False),
     'skull': skull, 'party': heads, 'gear': cog, 'merit': merit,

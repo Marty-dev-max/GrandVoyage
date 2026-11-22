@@ -2565,6 +2565,7 @@ function Panels.MenuHub()
 			UI.Stroke(tile, T.Edge, 3)
 			UI.Bevel(tile, UI.Shade(it[3], 0.2), 2, 0.1)
 			New("ImageLabel", { BackgroundTransparency = 1, Image = TexturesCfg.glow, ImageColor3 = UI.Shade(it[3], 0.3), ImageTransparency = 0.35, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, -6), Size = UDim2.fromOffset(120, 120), Parent = tile })
+			UI.DressMenuTile(tile, it, 14)
 			UI.Icon(tile, it[1], 88, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 6) })
 			UI.Text(tile, string.upper(it[5]), 22, Color3.new(1, 1, 1), "Display", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 0, 1, -10), Size = UDim2.new(1, 0, 0, 26), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false })
 			if it[4] then

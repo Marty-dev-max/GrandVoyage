@@ -138,7 +138,7 @@ local function updateHud(ship)
 	if left > 0 then
 		hud.reload:Set(1 - left / GameConfig.Ship.ReloadTime, string.format("RELOADING %.1fs", left))
 	else
-		hud.reload:Set(1, "🔥 READY  (click water / F)")
+		hud.reload:Set(1, "🔥 READY  (helm: click water / F)")
 	end
 end
 
@@ -170,6 +170,10 @@ function Sailing.FireAtNearest()
 	if not ship or not ship.PrimaryPart then
 		return
 	end
+	if not seated(ship) then
+		UI.Toast("Take the helm to fire the cannons", "info")
+		return
+	end
 	local best, bestD = nil, 280
 	local pos = ship.PrimaryPart.Position
 	for _, s in ipairs(workspace.Ships:GetChildren()) do
@@ -198,89 +202,111 @@ function Sailing.FireAtNearest()
 	end
 end
 
--- ===== aim arcs (port / starboard firing sectors drawn on the water) =====
-local arcs = { model = nil, ship = nil }
-local function seg(parent, a, b, color)
-	local mid = (a + b) / 2
-	local p = Instance.new("Part")
-	p.Anchored = true
-	p.CanCollide = false
-	p.CanQuery = false
-	p.CastShadow = false
-	p.Material = Enum.Material.Neon
-	p.Color = color
-	p.Transparency = 0.35
-	p.Size = Vector3.new(0.5, 0.15, (b - a).Magnitude)
-	p.CFrame = CFrame.lookAt(mid, b)
-	p.Parent = parent
-end
-local function buildArcs(ship)
-	if arcs.model then
-		arcs.model:Destroy()
+-- ===== cannon aim preview (v0.25.53, owner reference: broadside lines out of the ship's side, a bow gun's line
+-- straight ahead, both dropping like the real ball) =====
+-- The same cannons the server would fire (Ship volley: facing within ~75 deg of the target, best aligned first,
+-- as many as are manned). One gun = one arc; more = the two outermost guns' arcs, parallel (the server fires a
+-- player's broadside in parallel lanes). Arc = the ball's flight: sin curve, height clamp(dist * 0.12, 6, 40).
+local aimFolder = Instance.new("Folder")
+aimFolder.Name = "CannonAim"
+local aimPool = {}
+local AIM_STEPS = 18
+local function aimSeg(i)
+	local p = aimPool[i]
+	if not p then
+		p = Instance.new("Part")
+		p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.CastShadow = true, false, false, false, false
+		p.Material = Enum.Material.Neon
+		p.Transparency = 0.3
+		aimPool[i] = p
 	end
-	local m = Instance.new("Model")
-	m.Name = "AimArcs"
-	local center = Instance.new("Part")
-	center.Anchored = true
-	center.Transparency = 1
-	center.CanCollide = false
-	center.CanQuery = false
-	center.Size = Vector3.one
-	center.Parent = m
-	m.PrimaryPart = center
-	-- cannon ranges per side from the ship's parts (cannons face along their own LookVector)
-	local rootCf = ship.PrimaryPart.CFrame
-	local range = { [1] = 0, [-1] = 0 }
+	p.Parent = aimFolder
+	return p
+end
+local function cannonsOf(ship)
+	local list = {}
 	for _, child in ipairs(ship:GetChildren()) do
 		local def = ShipParts[child.Name]
 		if def and def.cannon and child.PrimaryPart then
-			local look = rootCf:VectorToObjectSpace(child.PrimaryPart.CFrame.LookVector)
-			local side = look.X >= 0 and 1 or -1
-			range[side] = math.max(range[side], def.cannon.range)
+			local barrel = child:FindFirstChild("Barrel", true)
+			local muzzle = barrel and barrel:FindFirstChild("Muzzle")
+			table.insert(list, { pos = muzzle and muzzle.WorldPosition or child.PrimaryPart.Position, face = child.PrimaryPart.CFrame.LookVector, range = def.cannon.range })
 		end
 	end
-	for side, r in pairs(range) do
-		if r > 0 then
-			local span = math.rad(75)
-			local n = 14
-			local prev
-			for i = 0, n do
-				local a = -span + 2 * span * i / n
-				local dir = Vector3.new(side * math.cos(a), 0, math.sin(a))
-				local p = dir * r
-				if prev then
-					seg(m, prev, p, Color3.fromRGB(120, 255, 150))
-				end
-				prev = p
-			end
-			for _, a in ipairs({ -span, span }) do
-				seg(m, Vector3.new(side * 10, 0, 0), Vector3.new(side * math.cos(a), 0, math.sin(a)) * r, Color3.fromRGB(120, 255, 150))
-			end
-		end
-	end
-	m.Parent = windFolder
-	arcs.model = m
-	arcs.ship = ship
+	return list
 end
-local function updateArcs(ship, show)
-	if not show then
-		if arcs.model then
-			arcs.model:PivotTo(CFrame.new(0, -500, 0))
+local function drawAim(ship, target)
+	local used = 0
+	if ship and target then
+		local chosen = {}
+		for _, c in ipairs(cannonsOf(ship)) do
+			local to = Vector3.new(target.X - c.pos.X, 0, target.Z - c.pos.Z)
+			local face = Vector3.new(c.face.X, 0, c.face.Z)
+			if to.Magnitude > 1 and face.Magnitude > 0.01 then
+				c.dot = face.Unit:Dot(to.Unit)
+				if c.dot > 0.25 then
+					table.insert(chosen, c)
+				end
+			end
 		end
-		return
-	end
-	if arcs.ship ~= ship or not arcs.model then
-		buildArcs(ship)
-	end
-	local cf = ship.PrimaryPart.CFrame
-	local _, yaw = cf:ToOrientation()
-	arcs.model:PivotTo(CFrame.new(cf.Position.X, 0.35, cf.Position.Z) * CFrame.Angles(0, yaw, 0))
-	local ready = (ship:GetAttribute("ReloadEnd") or 0) <= workspace:GetServerTimeNow()
-	local color = ready and Color3.fromRGB(120, 255, 150) or Color3.fromRGB(160, 170, 190)
-	for _, p in ipairs(arcs.model:GetChildren()) do
-		if p:IsA("BasePart") and p ~= arcs.model.PrimaryPart then
-			p.Color = color
+		table.sort(chosen, function(a, b)
+			return a.dot > b.dot
+		end)
+		local n = math.min(#chosen, ship:GetAttribute("Manned") or #chosen)
+		if n > 0 then
+			local center = Vector3.zero
+			for i = 1, n do
+				center += chosen[i].pos / n
+			end
+			local lanes = { chosen[1] }
+			if n > 1 then
+				-- the outermost guns across the firing direction
+				local dir = Vector3.new(target.X - center.X, 0, target.Z - center.Z).Unit
+				local side = Vector3.new(-dir.Z, 0, dir.X)
+				local lo, hi = chosen[1], chosen[1]
+				for i = 1, n do
+					local d = side:Dot(chosen[i].pos - center)
+					if d < side:Dot(lo.pos - center) then
+						lo = chosen[i]
+					end
+					if d > side:Dot(hi.pos - center) then
+						hi = chosen[i]
+					end
+				end
+				lanes = lo == hi and { lo } or { lo, hi }
+			end
+			local ready = (ship:GetAttribute("ReloadEnd") or 0) <= workspace:GetServerTimeNow()
+			local color = ready and Color3.fromRGB(255, 225, 120) or Color3.fromRGB(160, 170, 190)
+			for _, c in ipairs(lanes) do
+				local land = target + (n > 1 and Vector3.new(c.pos.X - center.X, 0, c.pos.Z - center.Z) or Vector3.zero)
+				local flatTo = Vector3.new(land.X - c.pos.X, 0, land.Z - c.pos.Z)
+				if flatTo.Magnitude > c.range then
+					land = c.pos + flatTo.Unit * c.range
+				end
+				land = Vector3.new(land.X, GameConfig.SeaLevel + 0.4, land.Z)
+				local h = math.clamp((land - c.pos).Magnitude * 0.12, 6, 40)
+				local prev = c.pos
+				for k = 1, AIM_STEPS do
+					local t = k / AIM_STEPS
+					local pt = c.pos:Lerp(land, t) + Vector3.new(0, math.sin(t * math.pi) * h, 0)
+					used += 1
+					local seg = aimSeg(used)
+					seg.Color = color
+					seg.Size = Vector3.new(0.35, 0.35, (pt - prev).Magnitude)
+					seg.CFrame = CFrame.lookAt((prev + pt) / 2, pt)
+					prev = pt
+				end
+				-- where it lands: a flat square on the water
+				used += 1
+				local mark = aimSeg(used)
+				mark.Color = color
+				mark.Size = Vector3.new(6, 0.2, 6)
+				mark.CFrame = CFrame.new(land)
+			end
 		end
+	end
+	for i = used + 1, #aimPool do
+		aimPool[i].Parent = nil
 	end
 end
 
@@ -335,6 +361,7 @@ function Sailing.Start()
 	aimMarker.Color = Color3.fromRGB(255, 80, 60)
 	aimMarker.Transparency = 1
 	aimMarker.Parent = windFolder
+	aimFolder.Parent = windFolder
 
 	UserInputService.InputBegan:Connect(function(input, processed)
 		if processed then
@@ -344,6 +371,10 @@ function Sailing.Start()
 		if not ship or not aboard(ship) then
 			return
 		end
+		-- v0.25.53 (owner): cannons + docking keys belong to the helm only; on deck the click / E / F fight (Combat)
+		if not seated(ship) then
+			return
+		end
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
 			local p = waterPoint(Vector2.new(input.Position.X, input.Position.Y) + GuiService:GetGuiInset())
 			if p then
@@ -351,7 +382,7 @@ function Sailing.Start()
 			end
 		elseif input.KeyCode == Enum.KeyCode.F then
 			Sailing.FireAtNearest()
-		elseif input.KeyCode == Enum.KeyCode.E and not seated(ship) then
+		elseif input.KeyCode == Enum.KeyCode.E then
 			local res = Net.Request("DockShip")
 			if res.msg then
 				UI.Toast(res.msg, res.ok and "good" or "bad")
@@ -385,18 +416,17 @@ function Sailing.Start()
 			player.CameraMaxZoomDistance = 120
 		end
 		local onBoard = ship ~= nil and ship.PrimaryPart ~= nil and aboard(ship)
-		updateArcs(ship, onBoard and Settings.Values.rangeRings)
-		if onBoard and not UI.IsMobile then
+		local helm = onBoard and seated(ship)
+		-- (v0.25.53, owner: the green firing-sector rings are gone; the trajectory lines show where the balls go)
+		local aimAt
+		if helm and not UI.IsMobile then
 			local p = waterPoint(UserInputService:GetMouseLocation())
 			if p and (p - ship.PrimaryPart.Position).Magnitude < 300 then
-				aimMarker.Transparency = 0.45
-				aimMarker.CFrame = CFrame.new(p.X, 0.3, p.Z) * CFrame.Angles(0, 0, math.pi / 2)
-			else
-				aimMarker.Transparency = 1
+				aimAt = p
 			end
-		else
-			aimMarker.Transparency = 1
 		end
+		aimMarker.Transparency = 1 -- (v0.25.53: replaced by the trajectory preview)
+		drawAim(helm and ship or nil, aimAt)
 		updateHud(ship)
 		-- wind: white streaks blowing east toward the Crimson Wall, only where there is wind
 		fxAcc += dt

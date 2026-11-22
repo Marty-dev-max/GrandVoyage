@@ -125,6 +125,14 @@ local function onShip(mine)
 end
 Combat.OnShip = onShip
 
+-- v0.25.53 (owner: on deck the click fired cannons, so you could not fight the Bay Serpent): only the helm belongs to
+-- sailing (click = cannons, E / F = dock / fire); anywhere else on your ship you fight normally
+local function atHelm()
+	local h = hum()
+	return h ~= nil and h.SeatPart ~= nil and h.SeatPart.Name == "HelmSeat"
+end
+Combat.AtHelm = atHelm
+
 -- manual mode aiming (v0.24.6, owner): skills go where you point (mouse, or the screen center with Shift Lock /
 -- touch), no monster lock needed. Returns flat direction, aimed world point, monster under the pointer (or nil)
 local function aimInfo()
@@ -357,7 +365,7 @@ end
 
 -- one swing (rate-limited to your attack speed); screenPos = pointer position or nil (attack button)
 function Combat.ManualAttack(screenPos)
-	if State.auto or State.build.active or player:GetAttribute("Vending") or onShip(true) then
+	if State.auto or State.build.active or player:GetAttribute("Vending") or atHelm() then
 		return
 	end
 	local r, h = root(), hum()
@@ -423,7 +431,7 @@ function Combat.ManualAttack(screenPos)
 end
 
 function Combat.ClickAt(screenPos)
-	if State.build.active or onShip(true) then
+	if State.build.active or atHelm() then
 		return
 	end
 	local pos = Vector2.new(screenPos.X, screenPos.Y)
@@ -940,9 +948,9 @@ function Combat.Start()
 	for i = 1, GameConfig.SkillBarSize do
 		Hotkeys.On("Skill" .. i, function()
 			local key = Hotkeys.Key("Skill" .. i)
-			-- E still talks / opens what you stand by (a prompt card is up), and on your own ship E docks and F fires
+			-- E still talks / opens what you stand by (a prompt card is up), and at your ship's helm E docks and F fires
 			-- the cannons (Sailing): those keys pass on there instead of casting
-			if State.build.active or (key == "E" and Interact.AnyShown()) or ((key == "E" or key == "F") and onShip(true)) then
+			if State.build.active or (key == "E" and Interact.AnyShown()) or ((key == "E" or key == "F") and atHelm()) then
 				return false
 			end
 			local id = State.profile and State.profile.skillBar[i]

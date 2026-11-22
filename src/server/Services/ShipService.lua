@@ -459,14 +459,9 @@ sink = function(ship)
 		if top and top ~= owner then
 			R.PvPService.OnPlayerKilled(owner, top)
 		end
+		-- v0.25.53 (owner): no warp back to the island; you stay in the water and can call the ship again on the spot
 		for _, pl in ipairs(playersOn(ship)) do
-			R.PlayerService.Notify(pl, "Your ship sank! Swimming back to shore...", "bad")
-			task.delay(2.5, function()
-				local pp = R.DataService.Get(pl)
-				if pp then
-					R.PlayerService.TeleportTo(pl, R.PlayerService.SpawnCFrame(pp.lastIsland))
-				end
-			end)
+			R.PlayerService.Notify(pl, pl == owner and "Your ship sank! Call it again: MENU > Ships" or "The ship sank!", "bad")
 		end
 	end
 	ship.lv.VectorVelocity = Vector3.new(0, -4, 0)
@@ -568,10 +563,18 @@ local function volley(ship, target, count, damageMult, player, spread, fixedDama
 		return a.dot > b.dot
 	end)
 	local fired = 0
-	for i = 1, math.min(count, #chosen) do
+	local n = math.min(count, #chosen)
+	-- v0.25.53 (owner): a player's broadside flies in parallel lanes (each cannon keeps its offset from the group's
+	-- middle), matching the aim preview drawn by the client (Sailing); NPC ships still converge on their target
+	local center = Vector3.zero
+	for i = 1, n do
+		center += chosen[i].pos / n
+	end
+	for i = 1, n do
 		local item = chosen[i]
 		local err = spread and Vector3.new((math.random() - 0.5) * spread, 0, (math.random() - 0.5) * spread) or Vector3.zero
-		task.delay((i - 1) * 0.09, fireBall, item.pos, target + err, fixedDamage or item.c.damage * damageMult, item.c.range, ship, player)
+		local lane = player and Vector3.new(item.pos.X - center.X, 0, item.pos.Z - center.Z) or Vector3.zero
+		task.delay((i - 1) * 0.09, fireBall, item.pos, target + lane + err, fixedDamage or item.c.damage * damageMult, item.c.range, ship, player)
 		fired += 1
 	end
 	return fired
@@ -1299,6 +1302,11 @@ function Ship.Start()
 		local ship = Ship.GetShipOf(player)
 		if not ship or shipUnder(player) ~= ship then
 			return false, "You must be aboard your own ship"
+		end
+		-- v0.25.53 (owner): only the captain at the helm fires; on deck you fight with your own weapons
+		local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+		if not (hum and hum.SeatPart and hum.SeatPart.Name == "HelmSeat") then
+			return false, "Take the helm to fire the cannons"
 		end
 		local target = typeof(data.target) == "Vector3" and data.target
 		if not target then

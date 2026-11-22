@@ -566,6 +566,13 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     style. Classes.SecondJobs = the planned path ids. "Haki" is One Piece: any willpower system needs our own names.
     v0.25.52 (owner): Navigator stays INT: build INT/DEX/VIT, baton basic attack + BatonFlurry/TrickVault use MATK
     (magic), Baton item line magic = true. Solo boss sim (22 Nov): bosses take 2.5-33 min solo and kill in ~20 s.
+  * v0.25.53 (owner): only the HELM fires cannons (server FireCannons checks Humanoid.SeatPart = HelmSeat; client
+    Sailing input returns unless seated; Combat `atHelm()` replaces onShip(true) for click/E/F blocking, so on deck you
+    fight normally). Sailing `drawAim`: trajectory preview from the guns the server would pick (dot > 0.25, best first,
+    Manned count): 1 gun = 1 arc, more = the two outermost guns' parallel arcs; arc = VFX.Projectile's sin curve,
+    height clamp(dist*0.12, 6, 40); yellow ready / grey reloading. Player volleys fly in parallel lanes (volley: target
+    + gun offset from the group middle; NPC volleys still converge). Green firing-sector rings removed. A sunk ship no
+    longer warps players home (call it again: MENU > Ships).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

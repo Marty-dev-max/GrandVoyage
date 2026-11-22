@@ -162,13 +162,12 @@ mob("FortCore", { name = "Giant Signal Conch", level = 80, hp = 60000, atk = 0, 
 --   AGI = blades and martial precision (more accurate, can crit) -- like a Swordsman
 --   DEX = raw speed and reflexes (moves and attacks faster)
 --   INT = tactics: stuns / crowd control on hit
---   PHY = physical attacks from range                            -- like a Sharpshooter
+--   (v0.25.38: PHY is gone; its two gunners keep their long range below: Rifleman = DEX, Armored Gunner = STR)
 local TYPE_OF = {
-	STR = { "WildBoar", "MountainBandit", "CircusLion", "ClawCat", "ArmadaRaider", "SharkfolkBrawler", "OctofolkBrute", "AxeCaptain", "ArmadaAdmiral", "Leviathan" },
+	STR = { "ArmoredGunner", "WildBoar", "MountainBandit", "CircusLion", "ClawCat", "ArmadaRaider", "SharkfolkBrawler", "OctofolkBrute", "AxeCaptain", "ArmadaAdmiral", "Leviathan" },
 	AGI = { "MarineRecruit", "NightCatPirate", "SawfolkRaider", "MarineElite", "BountyHunter", "SilentClaw", "SawtoothOverlord" },
-	DEX = { "ForestMonkey", "JungleTiger", "GuardWolf", "CircusAcrobat", "StarvedPirate", "BaySerpent" },
+	DEX = { "MarineRifleman", "ForestMonkey", "JungleTiger", "GuardWolf", "CircusAcrobat", "StarvedPirate", "BaySerpent" },
 	INT = { "ClownGrunt", "HypnoThug", "MistSoldier", "CaptainConfetti", "RingMaster", "DepthsWarden", "MistCommodore" },
-	PHY = { "MarineRifleman", "ArmoredGunner" },
 }
 -- stars: 1 = plain animals, 2 = regular fighters, 3 = elites, 4 = bosses, 5 = the strongest bosses
 local STARS = {
@@ -181,8 +180,8 @@ local STYLE = {
 	AGI = { hitBonus = 0.25, crit = 0.1 },
 	DEX = { moveSpeed = 1.25, attackSpeed = 0.8 },
 	INT = { stun = 0.15 },
-	PHY = { attackRange = 2.5 },
 }
+local LONG_RANGE = { MarineRifleman = 2.5, ArmoredGunner = 2.5 } -- the gunners shoot from afar whatever their type
 for t, ids in pairs(TYPE_OF) do
 	for _, id in ipairs(ids) do
 		local def = M[id]
@@ -192,7 +191,7 @@ for t, ids in pairs(TYPE_OF) do
 			def.atk = math.floor(def.atk * (st.atk or 1))
 			def.attackSpeed = def.attackSpeed * (st.attackSpeed or 1)
 			def.moveSpeed = def.moveSpeed * (st.moveSpeed or 1)
-			def.attackRange = def.attackRange * (st.attackRange or 1)
+			def.attackRange = def.attackRange * (st.attackRange or 1) * (LONG_RANGE[id] or 1)
 			def.hitBonus = st.hitBonus
 			def.critChance = st.crit
 			def.stunChance = st.stun

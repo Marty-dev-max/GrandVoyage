@@ -63,8 +63,8 @@ local Classes = {
 		hpMod = 0.95,
 		spMod = 1.0,
 		weapons = { "Slingshot" },
-		color = Color3.fromRGB(240, 200, 60), -- v0.25.37: the color of its type (Config/MonsterTypes)
-		mtype = "PHY", role = "Deadeye", build = { DEX = 5, AGI = 3, LUK = 2 },
+		color = Color3.fromRGB(70, 185, 240), -- v0.25.38: DEX (sky blue; Sea Cook is the deeper blue)
+		mtype = "DEX", role = "Deadeye", build = { DEX = 5, AGI = 3, LUK = 2 },
 		icon = "🎯",
 		passive = { cannonDamage = 0.15 },
 		skills = {

@@ -1544,11 +1544,15 @@ local function typeDisc(parent, typeId, color, size)
 		end)
 	end
 	if ty then
-		for i, id in ipairs(ty.beats) do
-			badge(id, -90 + (i == 1 and -40 or 40))
+		local function spread(i, count)
+			return count == 1 and 0 or (i == 1 and -40 or 40)
 		end
-		for i, id in ipairs(Types.WeakTo(typeId)) do
-			badge(id, 90 + (i == 1 and 40 or -40))
+		for i, id in ipairs(ty.beats) do
+			badge(id, -90 + spread(i, #ty.beats))
+		end
+		local weak = Types.WeakTo(typeId)
+		for i, id in ipairs(weak) do
+			badge(id, 90 - spread(i, #weak))
 		end
 	end
 	return disc

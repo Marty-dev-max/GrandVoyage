@@ -495,9 +495,11 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     class wheel left (cycle -3..3 around `sel`, click / arrows / wheel), CharacterView center holding c.weapons[1] on a
     podium with CHOOSE (first switch) / SWITCH / CURRENT, right = role + name + stat rings (top 3 of `build`, ranked) +
     type card (`typeDisc`: kanji core, green top = beats, red bottom = weak to). Background = bright gradient of the
-    class color. Classes have `mtype`, `role`, `build` (PlayerService.AutoStats reads it). MonsterTypes: 5-cycle `beats`
-    (STR>AGI,INT · AGI>DEX,PHY · DEX>INT,STR · INT>PHY,AGI · PHY>STR,DEX), `Mult(a, b)` = Bonus 1.2 / Penalty 0.85, used
-    by CombatService both ways. Class colors follow their type (Navigator purple, Doctor magenta INT, Shipwright rust STR).
+    class color. Classes have `mtype`, `role`, `build` (PlayerService.AutoStats reads it). MonsterTypes (v0.25.38, owner:
+    PHY removed, it was only toughness): 4-cycle `beats` AGI>STR>INT>DEX>AGI (one each, even with the opposite),
+    `Mult(a, b)` = Bonus 1.2 / Penalty 0.85, used by CombatService both ways. Class colors follow their type (Navigator
+    purple, Doctor magenta INT, Shipwright rust STR, Sharpshooter sky-blue DEX). Ex-PHY gunners: Rifleman DEX,
+    Armored Gunner STR, both keep x2.5 range via Monsters LONG_RANGE.
     Round UI pieces set attribute PxKeep (PixelUI squares every other UICorner).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).

@@ -4,18 +4,19 @@ local T = {
 	AGI = { name = "Agility", kanji = "技", color = Color3.fromRGB(70, 200, 90) },
 	DEX = { name = "Dexterity", kanji = "速", color = Color3.fromRGB(60, 140, 240) },
 	INT = { name = "Intelligence", kanji = "心", color = Color3.fromRGB(170, 80, 230) },
-	PHY = { name = "Physical", kanji = "知", color = Color3.fromRGB(240, 200, 50) },
 }
 
--- v0.25.37 (owner): every class has a type too (Config/Classes mtype). A five-way cycle, each type beats two and
--- loses to two: the attacker deals Bonus x damage to a type it beats, Penalty x to one that beats it (both ways:
--- players vs monsters and monsters vs players). Shown on the Job Master as a green (beats) / red (weak to) disc.
-T.STR.beats = { "AGI", "INT" }
-T.AGI.beats = { "DEX", "PHY" }
-T.DEX.beats = { "INT", "STR" }
-T.INT.beats = { "PHY", "AGI" }
-T.PHY.beats = { "STR", "DEX" }
-T.Order = { "STR", "AGI", "DEX", "INT", "PHY" }
+-- v0.25.37 (owner): every class has a type too (Config/Classes mtype). v0.25.38 (owner): four types in a cycle,
+-- PHY is gone (it was only toughness, nothing to beat): each type beats one, is weak to one, even with the opposite.
+--   AGI beats STR (dodges slow heavy blows) · STR beats INT (casters are frail up close)
+--   INT beats DEX (spells hit an area, no aim to dodge) · DEX beats AGI (a precise shot catches the dodger)
+-- The attacker deals Bonus x damage to a type it beats, Penalty x to one that beats it (players vs monsters and
+-- monsters vs players). Shown on the Job Master as a green (beats) / red (weak to) disc.
+T.AGI.beats = { "STR" }
+T.STR.beats = { "INT" }
+T.INT.beats = { "DEX" }
+T.DEX.beats = { "AGI" }
+T.Order = { "STR", "AGI", "DEX", "INT" }
 T.Bonus, T.Penalty = 1.2, 0.85
 
 function T.Beats(a, b)
@@ -36,9 +37,9 @@ function T.Mult(a, b)
 	return (T.Beats(a, b) and T.Bonus) or (T.Beats(b, a) and T.Penalty) or 1
 end
 
--- self-check: each type beats exactly two and is weak to exactly two
+-- self-check: each type beats exactly one and is weak to exactly one
 for _, id in ipairs(T.Order) do
-	assert(#T[id].beats == 2 and #T.WeakTo(id) == 2, "MonsterTypes cycle broken at " .. id)
+	assert(#T[id].beats == 1 and #T.WeakTo(id) == 1, "MonsterTypes cycle broken at " .. id)
 end
 
 return T

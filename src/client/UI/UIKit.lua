@@ -209,8 +209,16 @@ end
 -- ===== animated gradients (rarity shine / rainbow) =====
 local shines = {}
 local rainbows = {}
+local pulses = {} -- v0.25.36: ImageLabel -> base transparency (rarity aura breathing in and out)
 RunService.RenderStepped:Connect(function()
 	local t = os.clock()
+	for img, base in pairs(pulses) do
+		if img.Parent then
+			img.ImageTransparency = base + 0.18 * (0.5 + 0.5 * math.sin(t * 2.6))
+		else
+			pulses[img] = nil
+		end
+	end
 	for g in pairs(shines) do
 		if g.Parent then
 			g.Offset = Vector2.new(((t * 0.6 + (g:GetAttribute("Phase") or 0)) % 2) - 1, 0)
@@ -274,11 +282,25 @@ end
 -- rarity rim and a soft aura of that color behind the icon, so the icon itself is what glows (no flat bright fills)
 function UI.RarityStyle(frame, rarityId, strong)
 	local tier = Rarity.Get(rarityId)
+	-- v0.25.36 (owner: Secret looked plain gray): every tier has its own look and motion, climbing with the rank
+	--   Common/Uncommon flat · Rare + sheen sweep · Epic + breathing aura + glowing rim · Legendary + pixel particles
+	--   Mythic prismatic · Secret dark violet with a holographic foil that drifts + rainbow rim
+	local secret = tier.id == "Secret" or tier.rainbow
 	frame.BackgroundColor3 = tier.prismatic and Color3.fromRGB(110, 100, 170) or Color3.new(1, 1, 1)
 	local g = frame:FindFirstChild("RarityGradient") or New("UIGradient", { Name = "RarityGradient", Rotation = 90, Parent = frame })
-	g.Color = tier.prismatic and PRISM or ColorSequence.new(T.PanelTop:Lerp(tier.color, 0.38), T.PanelDeep:Lerp(tier.color, 0.12))
+	g.Color = tier.prismatic and PRISM
+		or (secret and ColorSequence.new(Color3.fromRGB(92, 40, 140), Color3.fromRGB(14, 8, 30)))
+		or ColorSequence.new(T.PanelTop:Lerp(tier.color, 0.38), T.PanelDeep:Lerp(tier.color, 0.12))
 	if tier.prismatic then
 		rainbows[g] = true
+	end
+	if secret and not frame:FindFirstChild("Foil") then
+		local foil = New("Frame", { Name = "Foil", BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.78, BorderSizePixel = 0, Size = UDim2.fromScale(1, 1), ZIndex = frame.ZIndex, Parent = frame })
+		local corner = frame:FindFirstChildOfClass("UICorner")
+		if corner then
+			corner:Clone().Parent = foil
+		end
+		rainbows[New("UIGradient", { Color = RAINBOW, Parent = foil })] = true
 	end
 	if not frame:FindFirstChild("RarityAura") then
 		local okT, texCfg = pcall(require, ReplicatedStorage.Shared.Config.Textures)
@@ -288,21 +310,53 @@ function UI.RarityStyle(frame, rarityId, strong)
 	end
 	local aura = frame:FindFirstChild("RarityAura")
 	if aura then
-		aura.ImageColor3 = tier.prismatic and Color3.fromRGB(255, 230, 255) or UI.Shade(tier.color, 0.25)
+		aura.ImageColor3 = (tier.prismatic or secret) and Color3.fromRGB(255, 230, 255) or UI.Shade(tier.color, 0.25)
 		aura.ImageTransparency = tier.rank <= 1 and 0.7 or (0.55 - math.min(tier.rank, 5) * 0.05)
+		if tier.rank >= 4 then
+			pulses[aura] = aura.ImageTransparency
+		end
 	end
-	local s = frame:FindFirstChild("RarityStroke") or UI.Stroke(frame, tier.color, strong and 3.5 or 2.5)
-	s.Name = "RarityStroke"
-	s.Thickness = strong and 3.5 or 2.5
-	s.Color = (tier.rainbow or tier.prismatic) and Color3.new(1, 1, 1) or UI.Shade(tier.color, 0.15)
+	local st = frame:FindFirstChild("RarityStroke") or UI.Stroke(frame, tier.color, strong and 3.5 or 2.5)
+	st.Name = "RarityStroke"
+	st.Thickness = strong and 3.5 or 2.5
+	st.Color = (tier.rainbow or tier.prismatic or tier.rank >= 4) and Color3.new(1, 1, 1) or UI.Shade(tier.color, 0.15)
 	if tier.rainbow or tier.prismatic then
-		local sg = s:FindFirstChild("Rainbow") or New("UIGradient", { Name = "Rainbow", Color = RAINBOW, Parent = s })
+		local sg = st:FindFirstChild("Rainbow") or New("UIGradient", { Name = "Rainbow", Color = RAINBOW, Parent = st })
 		rainbows[sg] = true
+	elseif tier.rank >= 4 and not st:FindFirstChild("Glow") then
+		-- animated border glow: a bright highlight runs round the rim
+		local c = UI.Shade(tier.color, 0.1)
+		rainbows[New("UIGradient", { Name = "Glow", Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, c), ColorSequenceKeypoint.new(0.45, c), ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 1)), ColorSequenceKeypoint.new(0.55, c), ColorSequenceKeypoint.new(1, c) }), Parent = st })] = true
 	end
-	if tier.rank >= 5 and not frame:FindFirstChild("Shine") then
+	if tier.rank >= 3 and not frame:FindFirstChild("Shine") then
 		UI.Shine(frame)
 	end
+	if tier.rank >= 5 and not frame:FindFirstChild("Sparkles") then
+		UI.Sparkles(frame, secret and Color3.new(1, 1, 1) or UI.Shade(tier.color, 0.3), strong and 10 or 5, { float = true, star = 0.6, color2 = secret and Color3.fromRGB(255, 150, 230) or nil })
+	end
 	return tier
+end
+
+-- v0.25.36 (owner): a fruit's tile / stage gets pixel particles shaped like its power (rubber swirls, flames, smoke...)
+local FRUIT_PT = { Bounce = "pt_swirl", Blaze = "pt_flame", Haze = "pt_cloud", Ward = "pt_hex", Split = "pt_slice", Slick = "pt_drop" }
+function UI.FruitFx(frame, fruitId, n)
+	local icon = FRUIT_PT[fruitId or ""]
+	if not icon or frame:FindFirstChild("FruitFx") then
+		return
+	end
+	local layer = UI.Sparkles(frame, Color3.new(1, 1, 1), n or 6, { float = true, icons = { icon }, iconFrac = 0.8, iconMin = 10, iconMax = 20, star = 0.5 })
+	if layer then
+		layer.Name = "FruitFx"
+	end
+end
+
+-- rainbow text for the top tiers (item names / rarity labels); text has no background, so the gradient tints it
+function UI.RarityText(label, rarityId)
+	local tier = Rarity.Get(rarityId)
+	if tier.rainbow or tier.prismatic then
+		label.TextColor3 = Color3.new(1, 1, 1)
+		rainbows[New("UIGradient", { Color = tier.prismatic and PRISM or RAINBOW, Parent = label })] = true
+	end
 end
 
 -- ===== motion helpers =====
@@ -584,6 +638,10 @@ function UI.ItemIconName(def)
 	if not def then
 		return nil
 	end
+	-- v0.25.36: worn pieces show themselves (tools/gen_acc_icons.py draws acc_<id> from Config/Accessories)
+	if Icons["acc_" .. def.id] then
+		return "acc_" .. def.id
+	end
 	return ITEM_ICON[def.id]
 		or (def.fruit and ("fruit_" .. string.lower(def.fruit)))
 		or (def.weaponType and WEAPON_ICON[def.weaponType])
@@ -706,6 +764,51 @@ function UI.ModelView(parent, folder, key, size, spin, props)
 	if not src then
 		return nil
 	end
+	return UI.ModelViewOf(parent, src:Clone(), size, spin, props)
+end
+
+-- v0.25.36: a worn accessory as 3D blocks on a plain stand (same blocks as on the character), spinning
+function UI.AccessoryView(parent, id, size, props)
+	local Accessory = require(ReplicatedStorage.Shared.Modules.Accessory)
+	local VC = require(ReplicatedStorage.Shared.Modules.VoxelChar)
+	if not Accessory.Has(id) then
+		return nil
+	end
+	local m = Instance.new("Model")
+	local used = {}
+	local function block(sz, cf, color, material)
+		local p = Instance.new("Part")
+		p.Anchored = true
+		p.Size = sz
+		p.CFrame = cf
+		p.Color = color
+		p.Material = material or Enum.Material.SmoothPlastic
+		p.Parent = m
+	end
+	local function limbOf(limb)
+		used[limb] = true
+		if limb == "Head" then
+			local r = VC.Rest.Head
+			return CFrame.new(r[2] + Vector3.new(0, (VC.HEAD - r[1].Y) / 2, 0)), Vector3.new(VC.HEAD, VC.HEAD, VC.HEAD)
+		end
+		local r = VC.Rest[limb]
+		return r and CFrame.new(r[2]), r and r[1]
+	end
+	Accessory.Build(id, limbOf, function(sz, cf, color, material)
+		block(sz, cf, color, material)
+	end)
+	for limb in pairs(used) do
+		local cf, sz = limbOf(limb)
+		if cf then
+			block(sz * 0.98, cf, limb == "Head" and Color3.fromRGB(222, 200, 178) or Color3.fromRGB(120, 126, 146))
+		end
+	end
+	local cf = m:GetBoundingBox()
+	m.WorldPivot = CFrame.new(cf.Position)
+	return UI.ModelViewOf(parent, m, size, 0.8, props)
+end
+
+function UI.ModelViewOf(parent, m, size, spin, props)
 	local vp = New("ViewportFrame", {
 		BackgroundTransparency = 1,
 		Size = UDim2.fromOffset(size, size),
@@ -717,7 +820,6 @@ function UI.ModelView(parent, folder, key, size, spin, props)
 	for k, v in pairs(props or {}) do
 		vp[k] = v
 	end
-	local m = src:Clone()
 	m:PivotTo(CFrame.new())
 	m.Parent = vp
 	local _, ext = m:GetBoundingBox()
@@ -946,7 +1048,45 @@ function UI.CharacterView(parent, props)
 			model:PivotTo(CFrame.Angles(0, yaw, 0))
 		end
 	end
-	local function refresh(weaponType)
+	local lastType, watched, watchConns = nil, nil, {}
+	local refresh
+	-- v0.25.36 (owner: equip showed only after reopening the Bag): re-copy the statue as soon as worn pieces or the
+	-- held fruit change on the real character
+	local function watch(char)
+		if watched == char then
+			return
+		end
+		for _, c in ipairs(watchConns) do
+			c:Disconnect()
+		end
+		watchConns, watched = {}, char
+		local pending = false
+		local function changed(child)
+			if child:IsA("Model") and (child:GetAttribute("GVOutfit") or child.Name == "HeldFruit") and not pending and vp.Parent then
+				pending = true
+				task.delay(0.1, function()
+					pending = false
+					if vp.Parent then
+						refresh(lastType)
+					end
+				end)
+			end
+		end
+		table.insert(watchConns, char.ChildAdded:Connect(changed))
+		table.insert(watchConns, char.ChildRemoved:Connect(changed))
+	end
+	pcall(function()
+		vp.Destroying:Connect(function()
+			for _, c in ipairs(watchConns) do
+				c:Disconnect()
+			end
+		end)
+	end)
+	refresh = function(weaponType)
+		lastType = weaponType
+		if player.Character then
+			pcall(watch, player.Character)
+		end
 		if model then
 			model:Destroy()
 			model = nil
@@ -1251,6 +1391,9 @@ function UI.Window(id, title, size, color, icon, opts)
 	UI.Sparkles(frame, color:Lerp(Color3.new(1, 1, 1), 0.6), 30, { float = true, z = 20, star = 0.4 })
 	UI.Sparkles(frame, T.Gold:Lerp(Color3.new(1, 1, 1), 0.4), 14, { float = true, z = 20, star = 0.6 })
 	local body = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(16, 46), Size = UDim2.new(1, -32, 1, -60), Parent = frame, ZIndex = 21 })
+	-- v0.25.36 (owner: full screen looked tiny): in full screen the body keeps the framed window's layout and is
+	-- scaled up to fill the screen (fonts, tiles, buttons grow together)
+	local bodyScale = New("UIScale", { Scale = 1, Parent = body })
 	local win = { frame = frame, body = body, id = id, header = header, resized = Instance.new("BindableEvent") }
 	local windowSize = size or UDim2.fromOffset(560, 520)
 	local restPos = UDim2.fromScale(0.5, 0.53)
@@ -1330,7 +1473,16 @@ function UI.Window(id, title, size, color, icon, opts)
 			slimTitle.Size = UDim2.new(1, -(left + 180), 1, 0)
 			target = full and target or UI.FitSize(windowSize)
 			body.Position = full and UDim2.fromOffset(20, top + 10) or UDim2.fromOffset(16, 46)
-			body.Size = full and UDim2.new(1, -40, 1, -(top + 22)) or UDim2.new(1, -32, 1, -60)
+			local k = 1
+			if full then
+				pcall(function()
+					local vs = workspace.CurrentCamera.ViewportSize / math.max(0.01, rootScale.Scale)
+					local design = UI.FitSize(windowSize)
+					k = math.clamp(math.min((vs.X - 40) / math.max(1, design.X.Offset - 32), (vs.Y - top - 22) / math.max(1, design.Y.Offset - 60)), 1, 1.6)
+				end)
+			end
+			bodyScale.Scale = k
+			body.Size = full and UDim2.new(1 / k, -40 / k, 1 / k, -(top + 22) / k) or UDim2.new(1, -32, 1, -60)
 			big.Size = full and UDim2.fromOffset(16, 13) or UDim2.fromOffset(22, 18)
 			big.Position = full and UDim2.new(0.5, -3, 0.5, 3) or UDim2.fromScale(0.5, 0.5)
 			back.Visible = full

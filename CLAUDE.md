@@ -480,6 +480,17 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     Dev "spawnfruit" passes the tester to FS.SpawnTreeFruit(tester) so they get the Notifier alert.
     v0.25.35 (owner): "FruitSpawn" goes to EVERY player ({ knows = false } without the boost): FruitTwinkle + gold
     screen-edge blink x3 + UI.Banner anywhere on the map; narrator + marker stay Notifier-only (knows = true).
+  * v0.25.36 (owner): accessory items show themselves: `tools/gen_acc_icons.py` (export_char.luau `accessories` mode ->
+    3/4 flat-shaded 32x32 pixel art on a plain head/torso stand, capes seen from behind) -> `acc_<ItemId>` icons, picked
+    first by UI.ItemIconName; Bag stage = `UI.AccessoryView(parent, id, size)` (blocks via Accessory.Build on a stand,
+    `UI.ModelViewOf(parent, model, ...)`). Vanity per piece: settings.hiddenGear[itemId] (SetAutoSettings `gearVisible`
+    { id, show }, Bag detail toggle); `WeaponService.RefreshOutfit(player)` right after equip/unequip; UI.CharacterView
+    re-copies the statue when GVOutfit models / HeldFruit change. Full-screen windows scale their body (UIScale k =
+    fit of the framed design size, 1..1.6) instead of stretching. Rarity tiers in UI.RarityStyle: Rare+ Shine sweep,
+    Epic+ pulsing aura (`pulses`) + rim Glow gradient, Legendary+ Sparkles, Secret = dark violet + rotating rainbow
+    `Foil`; `UI.RarityText(label, rarity)` rainbow text for Mythic/Secret; `UI.FruitFx(frame, fruitId, n)` = fruit
+    particles (pt_swirl/flame/cloud/hex/slice/drop icons). Bag tabs text only; stall button = `stall` icon + tooltip.
+    Held fruit gripped from the side. ui_render.js scales UIScale around the AnchorPoint like Roblox.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

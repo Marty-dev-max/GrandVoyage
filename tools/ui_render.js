@@ -55,6 +55,8 @@ function render(n, parentLayout) {
     if (n.Rotation) tf.push(`rotate(${n.Rotation}deg)`);
     if (mods.scale && mods.scale !== 1) tf.push(`scale(${mods.scale})`);
     if (tf.length) st.push(`transform:${tf.join(' ')}`);
+    // Roblox UIScale grows the object around its AnchorPoint (CSS defaults to the center)
+    if (mods.scale && mods.scale !== 1) st.push(`transform-origin:${(ax || 0) * 100}% ${(ay || 0) * 100}%`);
     st.push(`z-index:${n.ZIndex || 1}`);
     const bgT = n.BackgroundTransparency ?? 0;
     if (bgT < 1) {

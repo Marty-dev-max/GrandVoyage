@@ -362,7 +362,7 @@ local function holdModel(f)
 		ball.Parent = m
 	end
 	local _, size = m:GetBoundingBox()
-	m:ScaleTo(m:GetScale() * 1.5 / math.max(size.X, size.Y, size.Z, 0.1))
+	m:ScaleTo(m:GetScale() * 1.35 / math.max(size.X, size.Y, size.Z, 0.1))
 	for _, d in ipairs(m:GetDescendants()) do
 		if d:IsA("BasePart") then
 			d.Anchored = false
@@ -435,7 +435,8 @@ function FS.Start()
 		clearHeld(player)
 		local m = holdModel(f)
 		m.Name = "HeldFruit"
-		m:PivotTo(hand.CFrame * CFrame.new(0, -0.9, -0.3))
+		-- v0.25.36 (owner): gripped in the fist from the side (the hand covers its back), not hung by the stem
+		m:PivotTo(hand.CFrame * CFrame.new(0, -0.4, -0.6))
 		local main = m.PrimaryPart or m:FindFirstChildWhichIsA("BasePart", true)
 		for _, d in ipairs(m:GetDescendants()) do
 			if d:IsA("BasePart") then

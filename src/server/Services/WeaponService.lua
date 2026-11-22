@@ -147,11 +147,12 @@ local OUTFIT = Accessory.Cfg
 
 local function wearOutfit(char, p)
 	local ids = {}
-	local hide = p.settings and p.settings.hideGear == true
-	for _, slot in ipairs(hide and {} or { "headgear", "armor", "accessory" }) do
+	-- v0.25.36 (owner): vanity per piece (settings.hiddenGear[itemId] = true hides that one), set in its Bag detail
+	local hidden = p.settings and p.settings.hiddenGear or {}
+	for _, slot in ipairs({ "headgear", "armor", "accessory" }) do
 		local uid = p.equipment and p.equipment[slot]
 		local e = uid and Formulas.FindItem(p, uid)
-		if e and OUTFIT[e.id] then
+		if e and OUTFIT[e.id] and not hidden[e.id] then
 			table.insert(ids, e.id)
 		end
 	end
@@ -164,6 +165,15 @@ local function wearOutfit(char, p)
 		Accessory.Wear(char, id)
 	end
 	char:SetAttribute("OutfitKey", key)
+end
+
+-- rebuild the worn pieces now (equip / unequip / vanity), not on the next 1 s sync: the Bag statue copies them
+function WS.RefreshOutfit(player)
+	local char = player.Character
+	local p = R.DataService.Get(player)
+	if char and p then
+		pcall(wearOutfit, char, p)
+	end
 end
 
 local function typeOf(player)

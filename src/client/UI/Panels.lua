@@ -136,6 +136,9 @@ local function itemTile(parent, entry, onClick, selected)
 	local b = New("TextButton", { Size = UDim2.fromOffset(84, 84), Text = "", AutoButtonColor = false, Parent = parent })
 	UI.Corner(b, 12)
 	local tier = UI.RarityStyle(b, def.rarity, selected)
+	if def.kind == "Fruit" then
+		UI.FruitFx(b, def.fruit, 4)
+	end
 	UI.Tactile(b)
 	local iconId = UI.ItemIconId(def)
 	if iconId then
@@ -146,6 +149,7 @@ local function itemTile(parent, entry, onClick, selected)
 	-- v0.25.28: item names in the readable body font, fitted to the tile (the pixel font ran over the edges)
 	local nm = UI.Text(b, def.name, 13, T.Text, "Semi", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 3, 1, -3), Size = UDim2.new(1, -6, 0, 26), TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Bottom, TextScaled = true, ZIndex = 4 })
 	New("UITextSizeConstraint", { MaxTextSize = 13, MinTextSize = 8, Parent = nm })
+	UI.RarityText(nm, def.rarity)
 	if (entry.qty or 1) > 1 then
 		UI.Text(b, "x" .. entry.qty, 14, T.Text, "Number", { Position = UDim2.new(1, -44, 0, 2), Size = UDim2.fromOffset(40, 16), TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 4 })
 	end
@@ -239,23 +243,6 @@ function Panels.Inventory(args)
 	end
 	local lastWeaponType
 	-- title: shown above the statue; tap to choose one (Config/Titles)
-	-- vanity on/off (v0.25.17, owner): show or hide the worn headgear / armor / accessory blocks on the character
-	local vanityOn = not (State.profile.settings and State.profile.settings.hideGear)
-	local vanityBtn = UI.Button(charPanel, vanityOn and "👕 GEAR ON" or "👕 GEAR OFF", vanityOn and T.Green or T.Grey, UDim2.fromOffset(150, 34), function() end)
-	vanityBtn.Parent.AnchorPoint = Vector2.new(1, 0)
-	vanityBtn.Parent.Position = UDim2.new(1, -10, 0, 10)
-	vanityBtn.Parent.ZIndex = 6
-	vanityBtn.Activated:Connect(function()
-		vanityOn = not vanityOn
-		State.profile.settings = State.profile.settings or {}
-		State.profile.settings.hideGear = not vanityOn
-		vanityBtn.Text = vanityOn and "👕 GEAR ON" or "👕 GEAR OFF"
-		UI.SetButtonColor(vanityBtn, vanityOn and T.Green or T.Grey)
-		task.spawn(req, "SetAutoSettings", { hideGear = not vanityOn })
-	end)
-	UI.Tooltip(vanityBtn, function()
-		return "Vanity: show or hide your headgear, armor and accessory on your character. Stats stay the same.", T.Green
-	end)
 	local titleBtn = New("TextButton", { Text = "", AutoButtonColor = false, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -26), Size = UDim2.new(1, -24, 0, 44), BackgroundColor3 = Color3.new(1, 1, 1), ZIndex = 5, Parent = charPanel })
 	UI.Corner(titleBtn, 12)
 	New("UIGradient", { Color = ColorSequence.new(T.PanelTop, T.PanelDeep), Rotation = 90, Parent = titleBtn })
@@ -387,9 +374,13 @@ function Panels.Inventory(args)
 		New("UIAspectRatioConstraint", { Parent = rays })
 		local glow = New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.glow, ImageColor3 = tier.color:Lerp(Color3.new(1, 1, 1), 0.3), ImageTransparency = 0.15, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.45), Size = UDim2.fromScale(0.85, 0.85), ZIndex = 3, Parent = head })
 		UI.Sparkles(head, Color3.new(1, 1, 1), 14, { float = true, z = 4, star = 0.6 })
+		if def.kind == "Fruit" then
+			UI.FruitFx(head, def.fruit, 10)
+		end
 		New("UIAspectRatioConstraint", { Parent = glow })
 		local iconId = UI.ItemIconId(def)
 		local big = (def.kind == "Fruit" and UI.ModelView(head, "Fruits", def.fruit, 200, 0.9, { ZIndex = 5 }))
+			or (UI.AccessoryView(head, def.id, 200, { ZIndex = 5 }))
 			or (def.weaponType and UI.ModelView(head, "Weapons", def.weaponType, 200, 0.7, { ZIndex = 5 }))
 			or (def.kind == "Egg" and (UI.VoxelEgg(head, def.id, 200, { ZIndex = 5 })))
 			or (UI.VoxelIcon(head, UI.ItemIconName(def), 200, { ZIndex = 5 }))
@@ -416,13 +407,26 @@ function Panels.Inventory(args)
 			rays.Rotation = (rays.Rotation + dt * 18) % 360
 			big.Position = UDim2.new(0.5, 0, 0.43, math.sin((os.clock() - t0) * 2.2) * 5)
 		end)
-		local big2 = win.full and 26 or 21
-		UI.Text(head, ItemDB.DisplayName(entry), big2, T.Text, "Display", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -24), Size = UDim2.new(1, -16, 0, big2 + 4), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 6, TextWrapped = false })
-		UI.Text(head, string.upper(tier.id), 15, tier.color:Lerp(Color3.new(1, 1, 1), 0.4), "Display", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -6), Size = UDim2.new(1, -16, 0, 16), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 6 })
+		local big2 = 21
+		local nameL = UI.Text(head, ItemDB.DisplayName(entry), big2, T.Text, "Display", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -24), Size = UDim2.new(1, -16, 0, big2 + 4), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 6, TextWrapped = false })
+		local tierL = UI.Text(head, string.upper(tier.id), 15, tier.color:Lerp(Color3.new(1, 1, 1), 0.4), "Display", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -6), Size = UDim2.new(1, -16, 0, 16), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 6 })
+		UI.RarityText(nameL, def.rarity)
+		UI.RarityText(tierL, def.rarity)
 		-- details (scrolls if long)
 		local info = UI.Scroll(right, UDim2.new(1, 0, 0.45, -70))
 		info.Position = UDim2.new(0, 0, 0.55, 2)
-		UI.Text(info, describe(entry, def), win.full and 17 or 15, T.TextSoft, "Semi", { Size = UDim2.new(1, -10, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextYAlignment = Enum.TextYAlignment.Top })
+		UI.List(info, nil, 6)
+		UI.Text(info, describe(entry, def), 15, T.TextSoft, "Semi", { Size = UDim2.new(1, -10, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextYAlignment = Enum.TextYAlignment.Top })
+		-- v0.25.36 (owner): vanity per piece: show or hide THIS worn piece on your character (stats stay)
+		if def.slot and def.slot ~= "weapon" and require(ReplicatedStorage.Shared.Modules.Accessory).Has(def.id) then
+			local hidden = State.profile.settings and State.profile.settings.hiddenGear or {}
+			UI.Toggle(info, "Show on character", not hidden[def.id], function(on)
+				State.profile.settings = State.profile.settings or {}
+				State.profile.settings.hiddenGear = State.profile.settings.hiddenGear or {}
+				State.profile.settings.hiddenGear[def.id] = (not on) or nil
+				task.spawn(req, "SetAutoSettings", { gearVisible = { id = def.id, show = on } })
+			end, "Hide it without losing its stats")
+		end
 		-- actions
 		local actions = {}
 		local function act(label, color, fn)
@@ -471,7 +475,7 @@ function Panels.Inventory(args)
 		end
 		if def.kind == "Fruit" then
 			-- v0.25.33 (owner): Use = hold it in your hand; a click then chooses Eat / Store / Drop (Panels.FruitChoice)
-			act("🍎 Use", T.Pink, function()
+			act("Use", T.Pink, function()
 				local res = req("HoldFruit", { uid = entry.uid })
 				if res.ok then
 					State.heldFruit = { uid = entry.uid, def = def, choose = function()
@@ -502,7 +506,7 @@ function Panels.Inventory(args)
 			local btn = UI.Button(bar, a[1], a[2], w, a[3])
 			local cap = btn:FindFirstChildOfClass("UITextSizeConstraint")
 			if cap then
-				cap.MaxTextSize = win.full and 28 or 22
+				cap.MaxTextSize = 22
 			end
 		end
 	end
@@ -634,12 +638,12 @@ function Panels.Inventory(args)
 		end
 		drawEquip(p)
 		local bar = UI.TabBar(filterRow, {
-			{ "All", "🎒", "All", T.Ocean },
-			{ "Weapon", "⚔️", "Weapons", T.Red },
-			{ "Armor", "🛡️", "Gear", T.Blue },
-			{ "Consumable", "🍖", "Food", T.Green },
-			{ "Material", "🪵", "Mats", T.Orange },
-			{ "Card", "🃏", "Cards", T.Purple },
+			{ "All", "", "All", T.Ocean },
+			{ "Weapon", "", "Weapons", T.Red },
+			{ "Armor", "", "Gear", T.Blue },
+			{ "Consumable", "", "Food", T.Green },
+			{ "Material", "", "Mats", T.Orange },
+			{ "Card", "", "Cards", T.Purple },
 		}, filter, function(f)
 			filter = f
 			render()
@@ -696,8 +700,13 @@ function Panels.Inventory(args)
 		end
 	end
 	onProfile(win, render)
-	local _, h = UI.Button(win.header, "🏪 Open Stall", T.Orange, UDim2.fromOffset(170, 42), function()
+	-- v0.25.36 (owner): the stall is an icon (pixel market stall), its name shows on hover
+	local stallBtn, h = UI.Button(win.header, "", T.Orange, UDim2.fromOffset(48, 42), function()
 		Panels.StallSetup()
+	end)
+	UI.Icon(stallBtn, "stall", 34, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), ZIndex = stallBtn.ZIndex + 1 })
+	UI.Tooltip(stallBtn, function()
+		return "Open Stall: sell your items to other players", T.Orange
 	end)
 	h.AnchorPoint = Vector2.new(1, 0.5)
 	h.Position = UDim2.new(1, -128, 0.5, -2)

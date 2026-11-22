@@ -534,6 +534,53 @@ def shopfront(s):
         s.oval(5.2 + i * 4.4, 14, 2.2, 1.6, c)  # scalloped edge
 
 
+def market_stall(s):
+    # v0.25.36 (owner reference): an open market stall, red/white scalloped awning, two posts, empty plank counter
+    wood, wood_l, wood_d = (214, 160, 98), (236, 196, 136), (150, 100, 56)
+    s.rect(5, 4, 26, 5, (196, 200, 214))  # awning rod
+    for i in range(6):
+        c = (226, 62, 58) if i % 2 == 0 else (250, 244, 236)
+        s.poly([(4 + i * 4, 6), (8 + i * 4, 6), (8.6 + i * 4, 12), (3.4 + i * 4, 12)], c)
+        s.oval(6 + i * 4, 12.5, 2, 1.5, c)  # scalloped edge
+    s.rect(6, 14, 7, 21, wood)  # posts
+    s.rect(24, 14, 25, 21, wood)
+    s.rect(3, 21, 28, 22, wood_l)  # counter top
+    s.rect(4, 23, 27, 25, wood)  # two planks
+    s.rect(4, 26, 27, 28, wood)
+    s.rect(4, 25, 27, 25, wood_d)
+    s.rect(5, 29, 26, 29, wood_d)
+
+
+# fruit-themed UI particles (v0.25.36, owner): Panels / UI.RarityFx float these around a fruit's tile and stage
+def pt_swirl(s):
+    for i in range(260):
+        a = i * 0.075
+        r = 1 + i * 0.045
+        c = (255, 140, 210) if (i // 40) % 2 == 0 else (190, 90, 235)
+        for dx, dy in ((0, 0), (1, 0), (0, 1)):  # 2 px thick line
+            s.px(int(16 + math.cos(a) * r) + dx, int(16 + math.sin(a) * r) + dy, c)
+
+
+def pt_cloud(s):
+    for cx, cy, r in ((11, 18, 6), (18, 14, 7), (23, 19, 5)):
+        s.oval(cx, cy, r, r * 0.85, (226, 230, 240))
+    s.oval(17, 21, 9, 3, (186, 190, 204))
+
+
+def pt_hex(s):
+    pts = [(16 + math.cos(math.radians(60 * i + 30)) * 12, 16 + math.sin(math.radians(60 * i + 30)) * 12) for i in range(6)]
+    s.poly(pts, (90, 220, 255))
+    inner = [(16 + math.cos(math.radians(60 * i + 30)) * 8, 16 + math.sin(math.radians(60 * i + 30)) * 8) for i in range(6)]
+    s.poly(inner, (20, 40, 70))
+
+
+def pt_slice(s):
+    s.oval(16, 16, 12, 6, (90, 200, 110))
+    s.oval(16, 16, 10, 4, (220, 180, 255))
+    for x in (11, 16, 21):
+        s.px(x, 16, (60, 40, 70))
+
+
 def menu_icon(s):
     anchor(s, (210, 220, 240))
 
@@ -713,7 +760,9 @@ def st_stall(s):
 
 ICONS = {
     # HUD / menus
-    'bag': backpack, 'shop': shopfront, 'skills': lambda s: (star(s, 16, 16, 13, 5, 4, YEL), sparkle(s, 26, 6, WHITE, 2), sparkle(s, 6, 26, WHITE, 1)),
+    'bag': backpack, 'shop': shopfront, 'stall': market_stall, 'pt_swirl': pt_swirl, 'pt_cloud': pt_cloud,
+    'pt_hex': pt_hex, 'pt_slice': pt_slice, 'pt_flame': lambda s: flame(s, 16, 18, 10, 1.3),
+    'pt_drop': lambda s: drop(s, 16, 17, 1.0, (120, 86, 34), (240, 220, 110)), 'skills': lambda s: (star(s, 16, 16, 13, 5, 4, YEL), sparkle(s, 26, 6, WHITE, 2), sparkle(s, 6, 26, WHITE, 1)),
     'scroll': scroll, 'map': map_icon, 'paw': paw, 'chest': chest, 'stats': chart, 'anchor': menu_icon, 'menu': menu_icon,
     'coin': coin, 'gem': gem, 'pearl': pearl, 'crown': crown, 'flag': flag, 'whiteflag': lambda s: flag(s, (245, 245, 245), False),
     'skull': skull, 'party': heads, 'gear': cog, 'merit': merit,

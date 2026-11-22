@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage.Shared
+local Accessory = require(game:GetService("ReplicatedStorage").Shared.Modules.Accessory)
 local GameConfig = require(Shared.Config.GameConfig)
 local ClassesCfg = require(Shared.Config.Classes)
 local Islands = require(Shared.Config.Islands)
@@ -879,8 +880,12 @@ local function setupHandlers()
 		if tonumber(data.autoPotionPct) then
 			p.settings.autoPotionPct = math.clamp(math.floor(data.autoPotionPct), 0, 90)
 		end
-		if type(data.hideGear) == "boolean" then
-			p.settings.hideGear = data.hideGear -- vanity off: worn gear is not drawn (WeaponService)
+		-- v0.25.36: vanity per worn piece { id = itemId, show = bool } (only items that have an accessory model)
+		if type(data.gearVisible) == "table" and type(data.gearVisible.id) == "string" and Accessory.Has(data.gearVisible.id) then
+			p.settings.hiddenGear = p.settings.hiddenGear or {}
+			p.settings.hiddenGear[data.gearVisible.id] = (data.gearVisible.show == false) or nil
+			p.settings.hideGear = nil -- the old all-or-nothing switch is gone
+			task.defer(R.WeaponService.RefreshOutfit, player)
 		end
 		if type(data.autoStats) == "boolean" then
 			p.settings.autoStats = data.autoStats

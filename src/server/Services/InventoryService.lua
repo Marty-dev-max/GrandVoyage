@@ -195,6 +195,7 @@ local function setup()
 		end
 		p.equipment[def.slot] = entry.uid
 		R.PlayerService.Recompute(player)
+		R.WeaponService.RefreshOutfit(player)
 		return true
 	end)
 
@@ -204,6 +205,7 @@ local function setup()
 			p.equipment[data.slot] = nil
 		end
 		R.PlayerService.Recompute(player)
+		R.WeaponService.RefreshOutfit(player)
 		return true
 	end)
 

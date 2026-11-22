@@ -138,6 +138,41 @@ elseif mode == "monsters" then
 		end
 		dump(m, roblox.Vector3.new(((i - 1) % 8) * 6, 0, row and 0 or math.floor((i - 1) / 8) * 9))
 	end
+elseif mode == "accessories" then
+	-- every accessory's blocks on a rest-pose mannequin (head = the voxel head cube), for tools/gen_acc_icons.py
+	local Acc = req(RS.Shared.Modules.Accessory)
+	out.acc = {}
+	local function limbCF(limb)
+		if limb == "Head" then
+			local r = VC.Rest.Head
+			return roblox.CFrame.new(r[2] + roblox.Vector3.new(0, (VC.HEAD - r[1].Y) / 2, 0)), roblox.Vector3.new(VC.HEAD, VC.HEAD, VC.HEAD)
+		end
+		local r = VC.Rest[limb]
+		return r and roblox.CFrame.new(r[2]), r and r[1]
+	end
+	for id in Acc.Cfg do
+		local blocks, used = {}, {}
+		Acc.Build(id, function(limb)
+			used[limb] = true
+			if limb == "Head" then
+				local r = VC.Rest.Head
+				return roblox.CFrame.new(r[2] + roblox.Vector3.new(0, (VC.HEAD - r[1].Y) / 2, 0)), roblox.Vector3.new(VC.HEAD, VC.HEAD, VC.HEAD)
+			end
+			local r = VC.Rest[limb]
+			return r and roblox.CFrame.new(r[2]), r and r[1]
+		end, function(size, cf, color)
+			table.insert(blocks, { size = { size.X, size.Y, size.Z }, cf = cfArr(cf), color = { math.floor(color.R * 255 + 0.5), math.floor(color.G * 255 + 0.5), math.floor(color.B * 255 + 0.5) } })
+		end)
+		-- a plain stand the piece sits on (head / torso / hand), so the icon reads as "a hat", "a cape"...
+		for limb in used do
+			local cf, size = limbCF(limb)
+			if cf then
+				local gray = limb == "Head" and { 222, 200, 178 } or { 120, 126, 146 }
+				table.insert(blocks, { size = { size.X, size.Y, size.Z }, cf = cfArr(cf), color = gray, stand = true })
+			end
+		end
+		out.acc[id] = blocks
+	end
 elseif mode == "races" then
 	-- every variant of the races with body parts (wings / fins / horns), seen from behind-left so backs show too
 	local r = rng(11)

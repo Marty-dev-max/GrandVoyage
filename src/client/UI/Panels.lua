@@ -3911,7 +3911,17 @@ function Panels.PearlShop(args)
 		local pill = New("Frame", { BackgroundColor3 = T.OceanDark, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 2), Size = UDim2.fromOffset(190, 42), Parent = top })
 		UI.Stroke(pill, T.Edge, 2.5)
 		UI.Icon(pill, "💎", 34, { Position = UDim2.fromOffset(6, 4) })
-		UI.Text(pill, UI.Format(d and (d.pearls + d.bound) or info.gems or 0), 20, T.Text, "Display", { Position = UDim2.fromOffset(46, 0), Size = UDim2.new(1, -52, 1, 0), TextXAlignment = Enum.TextXAlignment.Right, TextYAlignment = Enum.TextYAlignment.Center, TextWrapped = false })
+		-- v0.25.63 (owner: the Gems went down late after a purchase): the live "Pearls" attribute (set by the server the
+		-- moment it spends), not the cached store data, which only refreshed on the next request
+		local gemsText = UI.Text(pill, "", 20, T.Text, "Display", { Position = UDim2.fromOffset(46, 0), Size = UDim2.new(1, -52, 1, 0), TextXAlignment = Enum.TextXAlignment.Right, TextYAlignment = Enum.TextYAlignment.Center, TextWrapped = false })
+		local function showGems()
+			gemsText.Text = UI.Format(Players.LocalPlayer:GetAttribute("Pearls") or (d and (d.pearls + d.bound)) or info.gems or 0)
+		end
+		showGems()
+		local gemConn = Players.LocalPlayer:GetAttributeChangedSignal("Pearls"):Connect(showGems)
+		gemsText.Destroying:Connect(function()
+			gemConn:Disconnect()
+		end)
 		-- left: big cards; right: detail
 		local split = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 56), Size = UDim2.new(1, 0, 1, -56), Parent = body })
 		local grid = UI.Scroll(split, UDim2.new(0.62, -8, 1, 0))

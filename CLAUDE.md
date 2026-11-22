@@ -602,6 +602,10 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     v0.25.61 (owner): FS.SpawnTreeFruit() has no tester bypass any more (Dev "spawnfruit" leaked the island in chat):
     only BoostActive(pl, "fruit") players get the island Announce + FruitSpawn push; v0.25.62 (owner): everyone else
     gets a chat Announce that a fruit appeared "somewhere in the sea" (no place, no FruitAlert).
+  * v0.25.63: `Net.OnPush(kind, fn(data))` is now supported next to `Net.OnPush(fn(kind, data))`. FruitAlert
+    ("FruitSpawn", since v0.25.33) and Combat ("SkillDash" since v0.24.15, "Knock" since v0.25.17) used the 2-arg form
+    while Net only had the 1-arg one, so those handlers NEVER ran (Notifier showed nothing; dash skills never slid the
+    caster; boss knocks never pushed). Store gem pill reads the live "Pearls" attribute (+ AttributeChanged).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

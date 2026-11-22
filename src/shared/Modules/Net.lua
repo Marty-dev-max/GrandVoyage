@@ -136,8 +136,18 @@ function Net.Request(action, payload)
 	return result or { ok = false }
 end
 
-function Net.OnPush(fn)
-	return Net.Get("Push").OnClientEvent:Connect(fn)
+-- Net.OnPush(fn(kind, data)) = every push; Net.OnPush(kind, fn(data)) = only that kind.
+-- v0.25.63: the second form was used (FruitAlert "FruitSpawn", Combat "SkillDash" / "Knock") but never supported, so
+-- those handlers never ran (the Fruit Notifier showed nothing at all)
+function Net.OnPush(a, b)
+	if type(a) == "string" then
+		return Net.Get("Push").OnClientEvent:Connect(function(kind, data)
+			if kind == a then
+				b(data or {})
+			end
+		end)
+	end
+	return Net.Get("Push").OnClientEvent:Connect(a)
 end
 
 function Net.OnFX(fn)

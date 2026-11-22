@@ -573,6 +573,12 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     height clamp(dist*0.12, 6, 40); yellow ready / grey reloading. Player volleys fly in parallel lanes (volley: target
     + gun offset from the group middle; NPC volleys still converge). Green firing-sector rings removed. A sunk ship no
     longer warps players home (call it again: MENU > Ships).
+  * v0.25.54 (owner: reward sounds shrill; sail beep sounded like an alert): Rarity* no longer pitch up per tier,
+    Sounds `warm = true` -> Audio.Play adds an EqualizerSoundEffect (High -14 dB) (Rarity*, ChestOpen, CardDrop);
+    Rare+ `prefer` RewardRare / RewardLegend (ElevenLabs wavs in assets/sfx, NOT uploaded: Roblox audio quota spent
+    until 2026-12-06 21:47Z -> `upload_sfx.py --user 1527424396 --only RewardRare,RewardLegend,ShipCreakLoop` then).
+    Sailing: no ShipCreak on sail changes; `creak` = Audio.Attach("ShipCreakLoop") on your ship root while aboard,
+    volume eased to 0.55 x clamp(speed*0.6 + |yaw rate|*1.6) (licensed rope creak 9118714001 until ours is uploaded).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

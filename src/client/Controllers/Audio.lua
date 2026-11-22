@@ -84,6 +84,12 @@ function Audio.Play(name, opts)
 	s.Volume = (opts.volume or 1) * def.volume
 	s.PlaybackSpeed = (opts.pitch or 1) * (def.pitch or 1) * (1 + (math.random() - 0.5) * 0.06)
 	s.SoundGroup = groups[def.group]
+	if def.warm then
+		-- v0.25.54: soften bright jingles (owner found the reward sounds shrill)
+		local eq = Instance.new("EqualizerSoundEffect")
+		eq.HighGain, eq.MidGain, eq.LowGain = -14, -2, 2
+		eq.Parent = s
+	end
 	if opts.pos then
 		local att = Instance.new("Attachment")
 		att.WorldPosition = opts.pos

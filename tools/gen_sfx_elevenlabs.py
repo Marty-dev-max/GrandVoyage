@@ -37,6 +37,10 @@ SFX = {
     'RefineSuccess': ('a blacksmith upgrade success, metal ring with a bright magical sparkle, RPG game', 1.0),
     'RefineFail': ('a blacksmith upgrade failure, dull metal clunk and a sad descending tone, game', 0.9),
     'Heal': ('a gentle healing spell, soft rising sparkles, RPG game', 0.9),
+    # v0.25.54 (owner: rare drops / fruits sounded too shrill, wants an achievement-like tone; ship needs wood creaks)
+    'RewardRare': ('a warm achievement unlocked sound, soft mellow bell chime with a gentle rising harp, low-mid pitch, cozy RPG game reward, not shrill, no voice', 1.8),
+    'RewardLegend': ('a warm grand achievement unlocked fanfare, soft brass swell with mellow bells and a shimmer, triumphant but gentle, low-mid pitch, RPG game, not shrill, no voice', 2.6),
+    'ShipCreakLoop': ('a wooden sailing ship hull creaking and groaning at sea, slow rhythmic wood creaks, ropes straining, timbers rubbing, no water splash, no music, seamless', 6.0),
     # sea
     'Cannon': ('a pirate ship cannon firing, deep boom with a wooden echo', 1.2),
     'Explosion': ('a cannonball explosion on wood, punchy blast with debris', 1.2),

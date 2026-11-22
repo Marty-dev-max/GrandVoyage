@@ -347,6 +347,7 @@ local function updateAudio(zone, onIsland)
 end
 
 local pendingZone, pendingSince = nil, 0
+local creak -- hull creak loop (Sound) while aboard your ship
 
 function Sailing.Start()
 	buildHud()
@@ -399,10 +400,8 @@ function Sailing.Start()
 			local th = seat.ThrottleFloat
 			if th > 0.5 and lastThrottleInput <= 0.5 then
 				sailLevel = math.min(3, sailLevel + 1)
-				Audio.Play("ShipCreak")
 			elseif th < -0.5 and lastThrottleInput >= -0.5 then
 				sailLevel = math.max(-1, sailLevel - 1)
-				Audio.Play("ShipCreak")
 			end
 			lastThrottleInput = th
 			sendAcc += dt
@@ -428,6 +427,29 @@ function Sailing.Start()
 		aimMarker.Transparency = 1 -- (v0.25.53: replaced by the trajectory preview)
 		drawAim(helm and ship or nil, aimAt)
 		updateHud(ship)
+		-- v0.25.54 (owner: the sail-up beep sounded like an alert; wants wood creaking when sailing / turning): a hull
+		-- creak loop on your ship, louder the faster it goes and the harder it turns, silent when still
+		if onBoard then
+			if not creak or creak.Parent ~= ship.PrimaryPart then
+				if creak then
+					creak:Destroy()
+				end
+				creak = Audio.Attach("ShipCreakLoop", ship.PrimaryPart, 90)
+				if creak then
+					creak.Volume = 0 -- fades in with the motion below
+				end
+			end
+			if creak then
+				local sp = (ship:GetAttribute("Speed") or 0) / math.max(1, ship:GetAttribute("MaxSpeed") or 1)
+				local turn = math.abs(ship.PrimaryPart.AssemblyAngularVelocity.Y)
+				local k = math.clamp(math.abs(sp) * 0.6 + turn * 1.6, 0, 1)
+				creak.Volume += (0.55 * k - creak.Volume) * math.min(1, dt * 3)
+				creak.PlaybackSpeed = 0.9 + 0.15 * k
+			end
+		elseif creak then
+			creak:Destroy()
+			creak = nil
+		end
 		-- wind: white streaks blowing east toward the Crimson Wall, only where there is wind
 		fxAcc += dt
 		local cam = workspace.CurrentCamera

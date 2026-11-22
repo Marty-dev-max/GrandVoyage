@@ -51,10 +51,16 @@ add("Equip", "UI", 0.5, "rbxasset://sounds/unsheath.wav")
 -- Progression
 add("BlkLevelUp", "UI", 1.0, PING)
 add("LevelUp", "SFX", 1.0, PING) -- ElevenLabs (v0.25.6)
+-- v0.25.54 (owner: rare drops / fruits / eating sounded too shrill, wants a warm achievement tone): no more pitch-up
+-- per tier (Secret played at 1.5x), a high-cut EQ (`warm`, Audio.Play), and Rare+ prefer the warm ElevenLabs reward
+-- chimes once they are uploaded (audio upload quota is spent until 6 Dec 2026: run upload_sfx.py --only
+-- RewardRare,RewardLegend,ShipCreakLoop then)
+add("RewardRare", "SFX", 0.7, "")
+add("RewardLegend", "SFX", 0.75, "")
 for i, tier in ipairs({ "Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic", "Secret" }) do
-	add("Rarity" .. tier, "SFX", 0.45 + i * 0.05, PING, { pitch = 0.8 + i * 0.1 })
+	add("Rarity" .. tier, "SFX", 0.45 + i * 0.05, PING, { pitch = 0.9 - (i >= 5 and 0.06 or 0), warm = true, prefer = i >= 5 and "RewardLegend" or (i >= 3 and "RewardRare" or nil) })
 end
-add("CardDrop", "SFX", 0.7, PING) -- ElevenLabs (v0.25.6)
+add("CardDrop", "SFX", 0.7, PING, { warm = true, pitch = 0.9 }) -- ElevenLabs (v0.25.6); v0.25.54 warmer
 add("RefineSuccess", "SFX", 0.7, PING) -- ElevenLabs (v0.25.6)
 add("RefineFail", "SFX", 0.6, BOOM) -- ElevenLabs (v0.25.6)
 add("RefineBreak", "SFX", 0.7, "rbxasset://sounds/glassbreak.wav")
@@ -91,7 +97,7 @@ add("Heal", "SFX", 0.5, PING) -- ElevenLabs (v0.25.6)
 add("BlkMobPop", "SFX", 0.55, "rbxasset://sounds/splat.wav")
 add("BlkFlap", "SFX", 0.45, "rbxasset://sounds/swoosh.wav")
 add("MonsterDie", "SFX", 0.5, "rbxasset://sounds/splat.wav") -- ElevenLabs (v0.25.6)
-add("ChestOpen", "SFX", 0.6, PING) -- ElevenLabs (v0.25.6)
+add("ChestOpen", "SFX", 0.6, PING, { warm = true, pitch = 0.9 }) -- ElevenLabs (v0.25.6); v0.25.54 warmer
 add("ChestRattle", "SFX", 0.55, "rbxasset://sounds/clickfast.wav", { pitch = 0.9 })
 add("BossRoar", "SFX", 0.8, BOOM, { pitch = 0.4 })
 -- Sea
@@ -100,6 +106,9 @@ add("Explosion", "SFX", 0.8, BOOM, { rolloff = 700 }) -- ElevenLabs (v0.25.6)
 add("Splash", "SFX", 0.6, SPLASH, { rolloff = 500 })
 add("ShipHit", "SFX", 0.7, BOOM, { rolloff = 500 }) -- ElevenLabs (v0.25.6)
 add("ShipCreak", "SFX", 0.35, BOOM, { pitch = 0.3 })
+-- v0.25.54 (owner): the hull creaks while the ship sails and turns (Sailing; volume follows speed + turning).
+-- Rope Creaks Handling Various Creaks 1 (ProSoundEffects) until our ElevenLabs loop is uploaded (it then overrides id)
+add("ShipCreakLoop", "SFX", 1, "", { looped = true, id = "rbxassetid://9118714001" })
 add("Bell", "SFX", 0.6, PING, { pitch = 0.5 })
 -- Loops
 -- v0.22.8 (owner: the synthesized loops crackled): real recordings from Roblox's licensed ProSoundEffects library
@@ -137,6 +146,7 @@ add("Narr_FruitFortMid", "SFX", 1, "")
 add("Narr_FruitFortEast", "SFX", 1, "")
 add("MusicDefeat", "Music", 0.45, "", { looped = true, id = "rbxassetid://1838577168" }) -- Sad Story (Piano & Harp) (APM), death screen
 add("MusicBoss", "Music", 0.4, "", { looped = true, id = "rbxassetid://139997523791273" }) -- Boss Battle Burnout
+
 
 
 

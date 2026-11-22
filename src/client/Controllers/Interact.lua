@@ -124,6 +124,11 @@ local function buildPrompt(prompt, inputType)
 	shown[prompt] = { bb = bb, conns = conns, plate = plate }
 end
 
+-- a prompt card is on screen (Combat lets E go to it instead of casting skill 1)
+function Interact.AnyShown()
+	return next(shown) ~= nil
+end
+
 local function hidePrompt(prompt)
 	local s = shown[prompt]
 	if not s then

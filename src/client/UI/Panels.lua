@@ -1,5 +1,6 @@
 -- Panels: every window (bag, stats, skills, job, refine, shop, tavern, shipyard, map, bosses,
 -- guild, dungeon, party, market, settings)
+local UserInputService = game:GetService("UserInputService")
 local TexturesCfg = require(game:GetService("ReplicatedStorage").Shared.Config.Textures)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -1452,39 +1453,6 @@ function Panels.Skills(args)
 			h.Position = UDim2.new(1, 0, 0, 0)
 		end
 
-		-- Auto Battle range + potion threshold
-		local ab = GameConfig.AutoBattle
-		local auto = UI.Card(right, UDim2.new(1, -12, 0, 150), T.PanelDeep)
-		auto.LayoutOrder = 2
-		UI.Pad(auto, 12)
-		UI.Text(auto, "AUTO BATTLE", 20, T.Green, "Display", { Size = UDim2.new(1, 0, 0, 24) })
-		local function stepper(y, label, value, onStep, hint)
-			UI.Text(auto, label, 16, T.Text, "Bold", { Position = UDim2.fromOffset(0, y + 8), Size = UDim2.new(0.5, 0, 0, 24) })
-			UI.Text(auto, hint, 12, T.TextSoft, "Semi", { Position = UDim2.fromOffset(0, y + 30), Size = UDim2.new(0.5, 0, 0, 16) })
-			for k, d in ipairs({ -1, 1 }) do
-				local _, h = UI.Button(auto, d < 0 and "-" or "+", d < 0 and T.Pink or T.Green, UDim2.fromOffset(44, 40), function()
-					onStep(d)
-				end)
-				h.AnchorPoint = Vector2.new(1, 0)
-				h.Position = UDim2.new(1, k == 1 and -128 or 0, 0, y + 4)
-			end
-			UI.Text(auto, value, 22, T.Gold, "Number", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -50, 0, y + 8), Size = UDim2.fromOffset(74, 30), TextXAlignment = Enum.TextXAlignment.Center })
-		end
-		local radius = State.SearchRadius()
-		stepper(30, "Search range", radius .. "", function(d)
-			local v = math.clamp(radius + d * 5, ab.MinRadius, ab.SearchRadius)
-			p.settings = p.settings or {}
-			p.settings.autoRadius = v
-			State.Fire("profile")
-			task.spawn(req, "SetAutoSettings", { autoRadius = v })
-		end, "how far Auto Battle looks for monsters (studs)")
-		local pct = p.settings and p.settings.autoPotionPct or 35
-		stepper(86, "Eat below", pct .. "%", function(d)
-			local v = math.clamp(pct + d * 5, 0, 90)
-			p.settings.autoPotionPct = v
-			State.Fire("profile")
-			task.spawn(req, "SetAutoSettings", { autoPotionPct = v })
-		end, "HP % where Auto Battle eats food")
 	end
 
 	render = function()
@@ -2618,6 +2586,51 @@ function Panels.Party()
 	end)
 end
 
+-- ===================== AUTO BATTLE (v0.25.44, owner: the gear next to the AUTO / MANUAL switch) =====================
+function Panels.AutoBattle()
+	local win = UI.Window("AutoBattle", "Auto Battle", UDim2.fromOffset(560, 330), T.Green, "autobattle")
+	local ab = GameConfig.AutoBattle
+	local function render()
+		clear(win.body)
+		local p = State.profile
+		if not p then
+			return
+		end
+		p.settings = p.settings or {}
+		local function stepper(y, label, value, onStep, hint)
+			local row = UI.Card(win.body, UDim2.new(1, 0, 0, 70), T.PanelDeep)
+			row.Position = UDim2.fromOffset(0, y)
+			UI.Text(row, label, 18, T.Text, "Bold", { Position = UDim2.fromOffset(14, 10), Size = UDim2.new(0.55, 0, 0, 26) })
+			UI.Text(row, hint, 13, T.TextSoft, "Semi", { Position = UDim2.fromOffset(14, 38), Size = UDim2.new(0.55, 0, 0, 18) })
+			for k, d in ipairs({ -1, 1 }) do
+				local _, h = UI.Button(row, d < 0 and "-" or "+", d < 0 and T.Pink or T.Green, UDim2.fromOffset(48, 44), function()
+					onStep(d)
+				end)
+				h.AnchorPoint = Vector2.new(1, 0.5)
+				h.Position = UDim2.new(1, k == 1 and -142 or -10, 0.5, -2)
+			end
+			UI.Text(row, value, 22, T.Gold, "Number", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -62, 0.5, 0), Size = UDim2.fromOffset(78, 30), TextXAlignment = Enum.TextXAlignment.Center })
+		end
+		local radius = State.SearchRadius()
+		stepper(0, "Search range", radius .. "", function(d)
+			local v = math.clamp(radius + d * 5, ab.MinRadius, ab.SearchRadius)
+			p.settings.autoRadius = v
+			State.Fire("profile")
+			task.spawn(req, "SetAutoSettings", { autoRadius = v })
+		end, "how far Auto Battle looks for monsters (studs)")
+		local pct = p.settings.autoPotionPct or 35
+		stepper(80, "Eat below", pct .. "%", function(d)
+			local v = math.clamp(pct + d * 5, 0, 90)
+			p.settings.autoPotionPct = v
+			State.Fire("profile")
+			task.spawn(req, "SetAutoSettings", { autoPotionPct = v })
+		end, "HP % where Auto Battle eats food")
+		UI.Text(win.body, "Auto Battle never wanders more than " .. ab.LeashRadius .. " studs from where it started. Pick the skills it may use in Skills -> Loadout (green tick).", 14, T.TextSoft, "Semi", { Position = UDim2.fromOffset(4, 160), Size = UDim2.new(1, -8, 0, 44) })
+	end
+	render()
+	onProfile(win, render)
+end
+
 -- ===================== MARKET (buyer) =====================
 function Panels.Stall(args)
 	local res = Net.Request("StallView", { sellerId = args.sellerId })
@@ -2797,14 +2810,17 @@ end
 -- ===================== SETTINGS =====================
 -- Anime-Vanguards-style: category sidebar on the left, toggle rows on the right
 local settingsCategory = "Graphics"
-function Panels.Settings()
+function Panels.Settings(args)
+	if args and args.cat then
+		settingsCategory = args.cat
+	end
 	local win = UI.Window("Settings", "Settings", UDim2.fromOffset(820, 600), T.Accent, "⚙️")
 	local side = UI.Card(win.body, UDim2.new(0, 190, 1, 0), T.PanelDeep)
 	UI.Pad(side, 8)
 	UI.List(side, nil, 6)
 	local list = UI.Scroll(win.body, UDim2.new(1, -204, 1, 0))
 	list.Position = UDim2.fromOffset(204, 0)
-	local cats = { { "Graphics", "🖥️" }, { "Audio", "🔊" }, { "Interface", "🪟" }, { "Auto Battle", "🤖" } }
+	local cats = { { "Graphics", "🖥️" }, { "Audio", "🔊" }, { "Interface", "🪟" }, { "Hotkeys", "⌨️" } }
 	if RunService:IsStudio() or game.CreatorId == player.UserId then
 		table.insert(cats, { "Developer", "🛠️" })
 	end
@@ -2880,20 +2896,48 @@ function Panels.Settings()
 					render()
 				end)
 			end
-		elseif settingsCategory == "Auto Battle" then
-			local p = State.profile
-			local pct = p and p.settings.autoPotionPct or 35
-			local r = UI.Card(list, UDim2.new(1, -8, 0, 56), T.Panel)
-			UI.Text(r, "Eat food below " .. pct .. "% HP", 18, T.Text, "Bold", { Position = UDim2.fromOffset(12, 0), Size = UDim2.new(0.6, 0, 1, 0) })
-			for i, delta in ipairs({ -10, 10 }) do
-				local _, h = UI.Button(r, (delta > 0 and "+" or "") .. delta .. "%", delta > 0 and T.Green or T.Pink, UDim2.fromOffset(84, 40), function()
-					req("SetAutoSettings", { autoPotionPct = math.clamp(pct + delta, 0, 90) })
-					task.wait(0.4)
-					render()
+		elseif settingsCategory == "Hotkeys" then
+			-- v0.25.44 (owner): rebind keys: tap a key cap, then press the new key (Esc cancels). Taking a key that is
+			-- in use swaps the two actions
+			local Hotkeys = require(script.Parent.Parent.Controllers.Hotkeys)
+			local top = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, -8, 0, 46), Parent = list })
+			UI.Text(top, "Tap a key, then press the new one.", 15, T.TextSoft, "Semi", { Size = UDim2.new(1, -200, 1, 0) })
+			local _, rh = UI.Button(top, "Reset all", T.Red, UDim2.fromOffset(180, 40), function()
+				Hotkeys.Reset()
+				render()
+			end)
+			rh.AnchorPoint = Vector2.new(1, 0)
+			rh.Position = UDim2.new(1, 0, 0, 2)
+			-- two per row (plain frames: scale-sized grid cells do not show in the snapshot renderer)
+			local row
+			for i, a in ipairs(Hotkeys.Actions) do
+				if i % 2 == 1 then
+					row = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, -8, 0, 46), Parent = list })
+				end
+				local r = UI.Card(row, UDim2.new(0.5, -6, 1, 0), T.Panel)
+				r.Position = UDim2.new(i % 2 == 1 and 0 or 0.5, i % 2 == 1 and 0 or 6, 0, 0)
+				UI.Text(r, a[2], 16, T.Text, "Bold", { Position = UDim2.fromOffset(12, 0), Size = UDim2.new(1, -110, 1, 0) })
+				local btn, h
+				btn, h = UI.Button(r, Hotkeys.Label(a[1]), T.Gold, UDim2.fromOffset(88, 36), function()
+					btn.Text = "..."
+					UI.SetButtonColor(btn, T.Accent)
+					local conn
+					conn = UserInputService.InputBegan:Connect(function(input)
+						if input.UserInputType ~= Enum.UserInputType.Keyboard then
+							return
+						end
+						conn:Disconnect()
+						if input.KeyCode ~= Enum.KeyCode.Escape then
+							if not Hotkeys.Set(a[1], input.KeyCode.Name) then
+								UI.Toast(input.KeyCode.Name .. " can't be used", "bad")
+							end
+						end
+						render()
+					end)
 				end)
-				h.Position = UDim2.new(1, -184 + (i - 1) * 92, 0, 8)
+				h.AnchorPoint = Vector2.new(1, 0.5)
+				h.Position = UDim2.new(1, -6, 0.5, -2)
 			end
-			UI.Text(list, "Press T or the AUTO button to toggle. Auto Battle fights within your search range (now " .. State.SearchRadius() .. " studs, change it in Skills -> Loadout) and never wanders more than " .. GameConfig.AutoBattle.LeashRadius .. " studs from where it started. Pick which skills it uses in Skills -> Loadout (green tick = Auto).", 15, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 80) })
 		elseif settingsCategory == "Developer" then
 			UI.Text(list, "Only works in Studio or for the game's owner.", 13, T.TextSoft, "Semi")
 			local function devGrid(title, icon, color, buttons)
@@ -2984,7 +3028,7 @@ function Panels.MenuHub()
 				local key = New("Frame", { Position = UDim2.fromOffset(8, 8), Size = UDim2.fromOffset(28, 28), BackgroundColor3 = T.PanelDeep, Parent = tile })
 				UI.Corner(key, 8)
 				UI.Stroke(key, T.Edge, 2)
-				UI.Text(key, it[4], 16, T.Gold, "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center })
+				UI.Text(key, require(script.Parent.Parent.Controllers.Hotkeys).Label(it[2]), 16, T.Gold, "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center })
 			end
 			UI.Tactile(tile)
 			tile.Activated:Connect(function()

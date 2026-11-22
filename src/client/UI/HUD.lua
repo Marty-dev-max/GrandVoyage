@@ -19,6 +19,7 @@ local CardReveal = require(script.Parent.CardReveal)
 local Panels = require(script.Parent.Panels)
 local State = require(script.Parent.Parent.State)
 local Combat = require(script.Parent.Parent.Controllers.Combat)
+local Hotkeys = require(script.Parent.Parent.Controllers.Hotkeys)
 local Audio = require(script.Parent.Parent.Controllers.Audio)
 local Readability = require(script.Parent.Parent.Controllers.Readability)
 
@@ -464,7 +465,7 @@ local MENU = {
 	{ "🗺️", "Map", T.Ocean, "M", "Map", main = true, fx = { bubble = true, color = hex("B8F0FF"), star = 0.15 } },
 	{ "🐾", "Pets", T.Green:Lerp(T.Ocean, 0.3), "N", "Pets", main = true, fx = { icons = { "paw" }, color = hex("D8FFE0") } },
 	{ "🛍️", "PearlShop", hex("846030"), "H", "Store", main = true, bg = { hex("846030"), hex("513648") }, fx = { icons = { "gem", "coin" }, color = hex("FFE297"), star = 0.2 } },
-	{ "📊", "Stats", T.Purple, "C", "Stats", main = true, fx = { plus = true, star = 0.9, color = hex("7DFF8E") } },
+	{ "📊", "Stats", T.Purple, "Y", "Stats", main = true, fx = { plus = true, star = 0.9, color = hex("7DFF8E") } },
 	{ "ship", "SummonShip", T.OceanDark, nil, "Ships", fx = { bubble = true, color = hex("B8F0FF"), star = 0.15 } }, -- calls / stores the ship (editing = Shipwright NPC)
 	{ "🏴", "Guild", hex("A44C64"), "G", "Guild", bg = { hex("A44C64"), hex("58293F") }, stripes = hex("FFC6A8"), fx = { icons = { "flag" }, faction = true, color = hex("FFC6A8") } },
 	{ "👥", "Party", T.Green, "P", "Party", fx = { plus = true, star = 0.9, color = hex("C8FFC8") } },
@@ -495,7 +496,10 @@ local function menuTile(parent, it)
 		local key = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(6, 6), Size = UDim2.fromOffset(22, 22), BackgroundColor3 = T.PanelDeep, ZIndex = 3, Parent = tile })
 		UI.Corner(key, 6)
 		UI.Stroke(key, T.Edge, 2)
-		UI.Text(key, it[4], 13, T.Gold, "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 4 })
+		local cap = UI.Text(key, Hotkeys.Label(it[2]), 13, T.Gold, "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 4 })
+		Hotkeys.Changed.Event:Connect(function()
+			cap.Text = Hotkeys.Label(it[2])
+		end)
 	end
 	UI.Tactile(tile)
 	tile.Activated:Connect(function()
@@ -540,21 +544,20 @@ local function buildMenu()
 		tabHolder.Position = menu.Position + UDim2.fromOffset(menu.Visible and (-w - 6) or 0, 0)
 		tabHolder.Visible = not UI.AnyOpen()
 	end)
-	local keymap = {}
+	-- v0.25.44: window keys come from Controllers/Hotkeys (rebindable; CAS, so the camera's I / O zoom no longer eats
+	-- the Bag key)
 	for _, it in ipairs(MENU) do
 		if it[4] then
-			keymap[Enum.KeyCode[it[4]]] = it[2]
+			Hotkeys.On(it[2], function()
+				Panels.Toggle(it[2])
+			end)
 		end
-		keymap[Enum.KeyCode.L] = "MenuHub"
 	end
+	Hotkeys.On("MenuHub", function()
+		Panels.Toggle("MenuHub")
+	end)
 	UserInputService.InputBegan:Connect(function(input, processed)
-		if processed then
-			return
-		end
-		local panel = keymap[input.KeyCode]
-		if panel then
-			Panels.Toggle(panel)
-		elseif input.KeyCode == Enum.KeyCode.Escape then
+		if not processed and input.KeyCode == Enum.KeyCode.Escape then
 			UI.CloseAll()
 		end
 	end)
@@ -806,6 +809,11 @@ local function buildSkillBar()
 	HUD.heritageSlot = her
 
 	skillSlots = {}
+	Hotkeys.Changed.Event:Connect(function()
+		for i, s in ipairs(skillSlots) do
+			s.key.Text = Combat.SKILL_KEY_LABELS[i]
+		end
+	end)
 	for i = 1, GameConfig.SkillBarSize do
 		local parent = i <= 6 and main or second
 		local s = makeSlot(parent, Combat.SKILL_KEY_LABELS[i], i)
@@ -891,10 +899,20 @@ local function buildSkillBar()
 	New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Size = UDim2.fromOffset(5, 5), Position = UDim2.fromOffset(2, 2), ZIndex = autoBtn.ZIndex + 5, Parent = knob })
 	HUD.autoSwitch = { track = track, knob = knob }
 	UI.Tooltip(autoBtn, function()
-		return State.auto and "<b>AUTO</b>  [T]\nFights monsters within your search range (Skills -> Loadout), uses ticked skills and drinks potions. Tap for MANUAL."
-			or "<b>MANUAL</b>  [T]\nYou aim and attack yourself. Tap for AUTO.", T.Green
+		return State.auto and "<b>AUTO</b>  [" .. Hotkeys.Label("Auto") .. "]\nFights monsters within your search range (gear button), uses ticked skills and eats food. Tap for MANUAL."
+			or "<b>MANUAL</b>  [" .. Hotkeys.Label("Auto") .. "]\nYou aim and attack yourself. Tap for AUTO.", T.Green
 	end)
 	New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(132, SLOT), LayoutOrder = 220, Parent = second })
+	-- v0.25.44 (owner): a gear right of the switch opens the Auto Battle settings (search range, eat below)
+	local gearBtn, gh = UI.Button(main, "", T.PanelTop, UDim2.fromOffset(40, SLOT), function()
+		Panels.Toggle("AutoBattle")
+	end)
+	gh.LayoutOrder = 221
+	UI.Icon(gearBtn, "gear", 30, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), ZIndex = gearBtn.ZIndex + 1 })
+	UI.Tooltip(gearBtn, function()
+		return "<b>Auto Battle settings</b>\nSearch range and when to eat", T.Green
+	end)
+	New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(40, SLOT), LayoutOrder = 221, Parent = second })
 
 	-- ammo (slingshot classes): the loaded bullet, tap to pick another kind
 	local ammoHolder = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(SLOT, SLOT + 4), LayoutOrder = 210, Visible = false, Parent = main })

@@ -900,7 +900,8 @@ local function setupHandlers()
 		local clean = {}
 		local n = 0
 		for k, v in pairs(data.settings) do
-			if type(k) == "string" and #k <= 24 and (type(v) == "number" or type(v) == "boolean" or (type(v) == "string" and #v <= 16)) then
+			-- "keys" = rebound hotkeys, a longer "Action=Key;..." string (client Controllers/Hotkeys)
+			if type(k) == "string" and #k <= 24 and (type(v) == "number" or type(v) == "boolean" or (type(v) == "string" and #v <= (k == "keys" and 600 or 16))) then
 				clean[k] = v
 				n += 1
 				if n >= 24 then

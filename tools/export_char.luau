@@ -173,6 +173,34 @@ elseif mode == "accessories" then
 		end
 		out.acc[id] = blocks
 	end
+elseif mode == "cinder" then
+	-- v0.25.44: Cinderwing great wings folded (as built) and spread (HeritageAnim's open pose), front + back
+	local r = rng(5)
+	local look = Looks.Random(r)
+	for i = 1, 4 do
+		local m = VC.Preview(look, "Cinderwing", 1)
+		local spread = i > 2
+		local turn = (i % 2 == 0) and math.pi or 0
+		if spread then
+			local ut = m:FindFirstChild("UpperTorso", true)
+			for _, p in m:GetDescendants() do
+				if p:IsA("BasePart") and (p.Name == "GreatWing" or p.Name == "GreatWingTip") and ut then
+					local rel = ut.CFrame:ToObjectSpace(p.CFrame)
+					local side = rel.Position.X >= 0 and 1 or -1
+					local hinge = roblox.CFrame.new(side * 0.3, 0.6, ut.Size.Z / 2 + 0.22)
+					p.CFrame = ut.CFrame * hinge * roblox.CFrame.Angles(0, 0, side * 0.35) * roblox.CFrame.Angles(0, side * 0.9, 0) * hinge:Inverse() * rel
+				end
+			end
+		end
+		if turn ~= 0 then
+			for _, p in m:GetDescendants() do
+				if p:IsA("BasePart") then
+					p.CFrame = roblox.CFrame.Angles(0, turn, 0) * p.CFrame
+				end
+			end
+		end
+		dump(m, roblox.Vector3.new((i - 1) * 12, 0, 0))
+	end
 elseif mode == "races" then
 	-- every variant of the races with body parts (wings / fins / horns), seen from behind-left so backs show too
 	local r = rng(11)

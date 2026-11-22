@@ -524,6 +524,15 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     away and says "Manage" on your own `Stall_<UserId>`; the seller's trigger opens StallSetup = editor of the open stall
     (`StallAdd` / `StallRemove`, sold/removed slots stay qty 0 so buyer indexes hold; MarketService checkItem / payFee /
     escrow / giveBack shared with StallOpen). Stats header: name / class / levels centered; combat card fixed 3x4 grid.
+  * v0.25.44 (owner): `Controllers/Hotkeys` = every rebindable key (Actions list: Skill1-12 default E R F Z X C then
+    1-6, Dash Q, Auto T, Target Tab, Race V, window keys, Stats = Y), one ContextActionService binding at High priority
+    (Roblox's camera sank I / O = dead Bag key), `Hotkeys.On(action, fn)` (fn returns false = pass the key on),
+    overrides saved as Settings.Values.keys "Action=Key;..." (server allows 600 chars for "keys"). Skill keys pass E
+    to a shown prompt card (`Interact.AnyShown`) and E/F to Sailing on your own ship. Settings tab "Hotkeys" (rebind +
+    Reset all, pixel icon `keyboard`); Auto Battle settings = `Panels.AutoBattle` from the gear right of AUTO/MANUAL
+    (removed from Loadout). Cinderwing = `greatWings` (VoxelChar: spread bird wing GREAT_SPREAD folded back 0.9 rad
+    around a shoulder hinge; pieces GreatWing/GreatWingTip), HeritageAnim kind "great" unfolds (GREAT_FOLD) + slow deep
+    flaps when flying/airborne. Preview: export_char.luau `cinder` mode (folded + spread, front + back).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

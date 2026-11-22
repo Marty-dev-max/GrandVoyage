@@ -359,6 +359,16 @@ def window_ui(s):
         s.line([(17, y), (25, y)], (150, 150, 170), 1, True)
 
 
+def keyboard(s):
+    # v0.25.44: Settings -> Hotkeys. A keyboard: dark case, rows of light key caps, a long space bar, one gold key
+    s.rect(3, 9, 29, 25, (70, 76, 98))
+    for row, (y, n, off) in enumerate(((11, 6, 5), (15, 6, 6), (19, 5, 7))):
+        for i in range(n):
+            x = off + i * 4
+            s.rect(x, y, x + 2, y + 2, GOLD if (row == 1 and i == 2) else (220, 224, 240), True)
+    s.rect(9, 22, 23, 23, (220, 224, 240), True)
+
+
 def robot(s):
     s.rect(7, 9, 25, 24, (170, 180, 200))
     s.rect(10, 13, 13, 16, CYAN, True)
@@ -767,7 +777,7 @@ ICONS = {
     'coin': coin, 'gem': gem, 'pearl': pearl, 'crown': crown, 'flag': flag, 'whiteflag': lambda s: flag(s, (245, 245, 245), False),
     'skull': skull, 'party': heads, 'gear': cog, 'merit': merit,
     'dash': dash, 'flame': flame_icon, 'calm': calm_icon, 'auto': auto, 'manual': manual,
-    'graphics': monitor, 'audio': speaker, 'interface': window_ui, 'autobattle': robot, 'developer': dev_tools,
+    'graphics': monitor, 'audio': speaker, 'interface': window_ui, 'autobattle': robot, 'developer': dev_tools, 'keyboard': keyboard,
     # items
     'egg': egg, 'golden_egg': gold_egg, 'card': card, 'book': book, 'ship': ship, 'charm': charm, 'wood': logs,
     'cloth': cloth, 'ore': lambda s: rock(s, (140, 140, 155), (200, 210, 230)), 'shard': crystal, 'potion': bottle,

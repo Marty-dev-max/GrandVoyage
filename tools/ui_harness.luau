@@ -559,7 +559,7 @@ end
 local panels = {
 	{ "Inventory" }, { "Inventory", { select = "w", tab = "Detail" } }, { "Stats" }, { "Skills" }, { "Skills", { tab = "Loadout" } }, { "JobMaster" }, { "Refine" }, { "Shop" }, { "Tavern" }, { "Shipwright" },
 	{ "Map" }, { "BossBoard" }, { "Guild" }, { "Dungeon", { dungeonId = "CircusTent" } }, { "Party" },
-	{ "Stall", { sellerId = 2 } }, { "StallSetup" }, { "PearlShop" }, { "PearlShop", { tab = "Benefits" } }, { "PearlShop", { tab = "Boosts" } }, { "Pets" }, { "Quests" }, { "Quests", { tab = "Ach" } }, { "Quests", { tab = "Story" } }, { "MenuHub" }, { "Settings" },
+	{ "Stall", { sellerId = 2 } }, { "StallSetup" }, { "PearlShop" }, { "PearlShop", { tab = "Benefits" } }, { "PearlShop", { tab = "Boosts" } }, { "Pets" }, { "Quests" }, { "Quests", { tab = "Ach" } }, { "Quests", { tab = "Story" } }, { "MenuHub" }, { "Settings" }, { "Settings", { tab = "Hotkeys", cat = "Hotkeys" } }, { "AutoBattle" },
 }
 for _, p in panels do
 	step("CloseAll", UI.CloseAll)

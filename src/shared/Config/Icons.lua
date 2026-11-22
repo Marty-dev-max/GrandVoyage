@@ -79,6 +79,7 @@ return {
 	isl_Marmalade = "rbxassetid://79222622732807",
 	isl_Mikan = "rbxassetid://116217229556642",
 	juice = "rbxassetid://130492788780771",
+	keyboard = "rbxassetid://86048555571213",
 	knuckles = "rbxassetid://74336215480455",
 	manual = "rbxassetid://90180420076545",
 	map = "rbxassetid://93689079170259",

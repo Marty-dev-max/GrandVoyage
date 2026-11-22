@@ -138,10 +138,8 @@ function Heritage.Start()
 	player:GetAttributeChangedSignal("HeritageMode"):Connect(refreshChip)
 	refreshChip()
 
-	UserInputService.InputBegan:Connect(function(input, processed)
-		if not processed and input.KeyCode == Enum.KeyCode.V then
-			toggle()
-		end
+	require(script.Parent.Hotkeys).On("Race", function()
+		toggle()
 	end)
 
 	-- glide

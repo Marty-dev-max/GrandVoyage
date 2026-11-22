@@ -668,10 +668,14 @@ local function tick()
 	busy = false
 end
 
-local SKILL_KEYS = { Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four, Enum.KeyCode.Five, Enum.KeyCode.Six,
-	Enum.KeyCode.Seven, Enum.KeyCode.Eight, Enum.KeyCode.Nine, Enum.KeyCode.Zero, Enum.KeyCode.Minus, Enum.KeyCode.Equals }
+-- v0.25.44 (owner): skill keys are rebindable (Controllers/Hotkeys; defaults E R F Z X C, then 1-6)
+local Hotkeys = require(script.Parent.Hotkeys)
 local ITEM_KEYS = { Enum.KeyCode.F1, Enum.KeyCode.F2, Enum.KeyCode.F3, Enum.KeyCode.F4, Enum.KeyCode.F5, Enum.KeyCode.F6, Enum.KeyCode.F7, Enum.KeyCode.F8 }
-Combat.SKILL_KEY_LABELS = { "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "=" }
+Combat.SKILL_KEY_LABELS = setmetatable({}, {
+	__index = function(_, i)
+		return Hotkeys.Label("Skill" .. i)
+	end,
+})
 
 -- quick item slot i (F1-F8): use one of that item from the bag
 local lastItemUse = 0
@@ -769,26 +773,39 @@ function Combat.Start()
 			end
 			holding, holdPos = true, input.Position
 			Combat.ClickAt(input.Position)
-		elseif input.KeyCode == Enum.KeyCode.T then
-			Combat.ToggleAuto()
-		elseif input.KeyCode == Enum.KeyCode.Q then
-			Combat.Dash()
-		elseif input.KeyCode == Enum.KeyCode.Tab then
-			local r = root()
-			if r then
-				Combat.SetTarget(findNearestMob(r.Position, State.SearchRadius()))
-			end
 		else
-			-- skills: 1-6 on the main row, 7 8 9 0 - = on the second row; quick items: F1-F8
-			local idx = table.find(SKILL_KEYS, input.KeyCode)
-			local id = idx and State.profile and State.profile.skillBar[idx]
-			if id and id ~= "" then
-				Combat.CastSkill(id)
-			end
+			-- quick items: F1-F8 (skills, Dash, Auto, Tab target go through Hotkeys below)
 			local f = table.find(ITEM_KEYS, input.KeyCode)
 			if f then
 				Combat.UseQuickItem(f)
 			end
+		end
+	end)
+	local Interact = require(script.Parent.Interact)
+	for i = 1, GameConfig.SkillBarSize do
+		Hotkeys.On("Skill" .. i, function()
+			local key = Hotkeys.Key("Skill" .. i)
+			-- E still talks / opens what you stand by (a prompt card is up), and on your own ship E docks and F fires
+			-- the cannons (Sailing): those keys pass on there instead of casting
+			if State.build.active or (key == "E" and Interact.AnyShown()) or ((key == "E" or key == "F") and onShip(true)) then
+				return false
+			end
+			local id = State.profile and State.profile.skillBar[i]
+			if id and id ~= "" then
+				Combat.CastSkill(id)
+			end
+		end)
+	end
+	Hotkeys.On("Auto", function()
+		Combat.ToggleAuto()
+	end)
+	Hotkeys.On("Dash", function()
+		Combat.Dash()
+	end)
+	Hotkeys.On("Target", function()
+		local r = root()
+		if r then
+			Combat.SetTarget(findNearestMob(r.Position, State.SearchRadius()))
 		end
 	end)
 	-- Taps (not drags, not on buttons) select monsters on touch screens

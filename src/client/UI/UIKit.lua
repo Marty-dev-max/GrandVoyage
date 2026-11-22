@@ -609,7 +609,7 @@ local EMOJI_ICON = {
 	["🏆"] = "crown", ["📅"] = "scroll", ["🎁"] = "chest", ["📖"] = "book", ["🧑‍✈️"] = "party", ["🎓"] = "book",
 	["🛡️"] = "armor", ["💉"] = "medkit", ["🧭"] = "map", ["🎯"] = "slingshot", ["🍳"] = "boots",
 	-- v0.25.3 pixel pack additions
-	["💨"] = "dash", ["🔥"] = "flame", ["🌙"] = "calm", ["🖥️"] = "graphics", ["🔊"] = "audio", ["🤖"] = "autobattle",
+	["💨"] = "dash", ["🔥"] = "flame", ["🌙"] = "calm", ["🖥️"] = "graphics", ["🔊"] = "audio", ["🤖"] = "autobattle", ["⌨️"] = "keyboard",
 	["🛠️"] = "developer", ["🪟"] = "interface", ["💰"] = "coin", ["🧪"] = "potion", ["🏅"] = "merit", ["🗡️"] = "sword", ["🧢"] = "hat",
 	["🎩"] = "hat", ["🪝"] = "bait", ["🧱"] = "ore", ["🔩"] = "rivet", ["📡"] = "compass", ["🐚"] = "crabshell",
 }

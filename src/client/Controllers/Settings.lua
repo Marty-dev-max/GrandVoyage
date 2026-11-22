@@ -25,7 +25,8 @@ Settings.Values = {
 	damageNumbers = true,
 	rangeRings = true,
 	navGuide = true,
-	barExpanded = false, -- hotbar second row (skills 7-=, items F5-F8)
+	barExpanded = false, -- hotbar second row (skills 7-12, items F5-F8)
+	keys = "", -- rebound hotkeys (Controllers/Hotkeys), "Action=Key;..."
 }
 
 -- Per-preset knobs other systems read (VFX density, wind streaks, etc.)
@@ -135,6 +136,9 @@ function Settings.Load(saved)
 		end
 	end
 	Settings.Apply()
+	if Settings.OnLoad then
+		Settings.OnLoad()
+	end
 end
 
 function Settings.Start()

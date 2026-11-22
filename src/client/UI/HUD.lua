@@ -91,6 +91,7 @@ local function buildRing(parent, pos)
 	-- v0.24.12 (owner): the dark disc behind the ring is a soft fade now (no hard grey plate / thick outline)
 	local disc = New("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(12, 12, 22), BackgroundTransparency = 0.25, ZIndex = 3, Parent = frame })
 	disc:SetAttribute("PxKeep", true)
+	disc.Visible = false -- v0.25.30 (owner): no dark fade behind the portrait, it read as a box
 	UI.Corner(disc, RING_SIZE)
 	New("UIGradient", {
 		Rotation = 90,
@@ -304,7 +305,7 @@ local function buildStatus()
 	statusCard = card
 	buildRing(UI.Root, UDim2.fromOffset(14, 10))
 	local name = UI.Text(card, player.DisplayName, 24, T.Text, "Display", { Position = UDim2.fromOffset(70, 6), Size = UDim2.new(1, -80, 0, 28), TextWrapped = false, Visible = false })
-	local cls = UI.Text(card, "", 16, T.TextSoft, "Semi", { Position = UDim2.fromOffset(70, 7), Size = UDim2.new(1, -80, 0, 20), TextWrapped = false })
+	local cls = UI.Text(card, "", 18, T.TextSoft, "Bold", { Position = UDim2.fromOffset(70, 6), Size = UDim2.new(1, -80, 0, 22), TextWrapped = false })
 	local holder = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(70, 31), Size = UDim2.new(1, -82, 0, 46), Parent = card })
 	UI.List(holder, nil, 5)
 	bars = {
@@ -345,7 +346,8 @@ local function buildStatus()
 				Panels.Open("Party")
 			end)
 			b.Parent.LayoutOrder = 1
-			UI.Text(partyRow, "Team up: shared EXP + drops", 11, Color3.fromRGB(200, 210, 230), "Semi", { LayoutOrder = 2, Size = UDim2.fromOffset(250, 26), TextYAlignment = Enum.TextYAlignment.Center, TextWrapped = false })
+			HUD.partyWidth = 130 -- v0.25.30 (owner): just the PARTY button, no hint text
+			partyBar.Size = UDim2.fromOffset(HUD.partyWidth, 36)
 			return
 		end
 		for i, m in ipairs(members) do
@@ -362,9 +364,23 @@ local function buildStatus()
 			end
 		end
 	end
+	-- (members: one chip each, the strip fits them)
+	local function fitParty()
+		local n = 0
+		for _, c in ipairs(partyRow:GetChildren()) do
+			if c:IsA("TextButton") then
+				n += 1
+			end
+		end
+		if n > 0 then
+			HUD.partyWidth = 16 + n * 100
+			partyBar.Size = UDim2.fromOffset(HUD.partyWidth, 36)
+		end
+	end
 	State.Changed:Connect(function(kind)
 		if kind == "party" then
 			renderParty()
+			fitParty()
 		end
 	end)
 	-- PC layout (v0.25.29): the party strip sits right under the quest tracker / hunt card, wherever they end
@@ -373,7 +389,7 @@ local function buildStatus()
 			return
 		end
 		local tr = HUD.questFrame
-		local y = tr.Position.Y.Offset + (tr.Visible and tr.Size.Y.Offset + 8 or 44)
+		local y = tr.Position.Y.Offset + (tr.Visible and tr.Size.Y.Offset + 8 or 60) -- 60: under the 52 px scroll button
 		local hunt = UI.Root:FindFirstChild("HuntCard")
 		if hunt and hunt.Visible then
 			y = math.max(y, hunt.Position.Y.Offset + hunt.Size.Y.Offset + 8)
@@ -1266,7 +1282,14 @@ function HUD.Layout()
 	local topY = math.floor(inset / sc) + 4
 	-- v0.25.29 (owner reference): PC = quest + party top-left, the character card bottom-left beside the hotbar,
 	-- currencies top-right. Phones / small windows keep the card on top (thumbstick bottom-left, no room for both).
-	local bottomCard = not compact and not UI.IsMobile
+	local rowW = 1080
+	local okW, absW = pcall(function()
+		return barRows.main.AbsoluteSize.X
+	end)
+	if okW and absW and absW > 0 then
+		rowW = absW / sc
+	end
+	local bottomCard = not compact and not UI.IsMobile and canvas.X >= 536 + rowW + 24
 	HUD.bottomCard = bottomCard
 	if bottomCard then
 		statusCard.AnchorPoint = Vector2.new(0, 1)
@@ -1276,7 +1299,10 @@ function HUD.Layout()
 		buffRow.AnchorPoint = Vector2.new(0, 1)
 		buffRow.Position = UDim2.new(0, 170, 1, -146)
 		if HUD.hotbar then
-			HUD.hotbar.Position = UDim2.new(0, 536 + 450, 1, -12)
+			-- v0.25.30 (owner: the card and the hotbar overlapped): the bar starts right after the card
+			HUD.hotbar.AnchorPoint = Vector2.new(0, 1)
+			HUD.hotbar.Position = UDim2.new(0, 536, 1, -12)
+			HUD.hotbar:FindFirstChildOfClass("UIListLayout").HorizontalAlignment = Enum.HorizontalAlignment.Left
 		end
 	else
 		statusCard.AnchorPoint = Vector2.zero
@@ -1286,12 +1312,14 @@ function HUD.Layout()
 		buffRow.AnchorPoint = Vector2.zero
 		buffRow.Position = UDim2.fromOffset(compact and 356 or 426, topY + 176)
 		if HUD.hotbar then
+			HUD.hotbar.AnchorPoint = Vector2.new(0.5, 1)
 			HUD.hotbar.Position = UDim2.new(0.5, 0, 1, -12)
+			HUD.hotbar:FindFirstChildOfClass("UIListLayout").HorizontalAlignment = Enum.HorizontalAlignment.Center
 		end
 	end
 	if HUD.partyBar then
 		HUD.partyBar.Position = UDim2.fromOffset(16, topY + 176)
-		HUD.partyBar.Size = UDim2.fromOffset(compact and 330 or 400, 36)
+		HUD.partyBar.Size = UDim2.fromOffset(HUD.partyWidth or 130, 36)
 	end
 	-- target frame: narrower on small screens so it clears the status card
 	targetFrame.Size = UDim2.fromOffset(compact and 300 or 380, 70)
@@ -1349,6 +1377,13 @@ function HUD.Start()
 	buildTarget()
 	buildLoot()
 	HUD.Layout()
+	-- the hotbar's width is only known after it rendered once (the bottom card needs it): lay out again then,
+	-- and whenever it changes (slots added, ammo button)
+	pcall(function()
+		barRows.main:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+			task.defer(HUD.Layout)
+		end)
+	end)
 	pcall(function()
 		GuiService:GetPropertyChangedSignal("TopbarInset"):Connect(HUD.Layout)
 	end)

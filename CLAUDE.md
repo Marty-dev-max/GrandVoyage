@@ -451,6 +451,9 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     ("🛍️" -> shop). HUD layout (PC, `HUD.bottomCard`): framed character card bottom-left (class • faction header, no
     big name) beside the hotbar (`HUD.hotbar` shifted right), quest tracker top-left with the party strip following
     the tracker/hunt card, framed currency pills top-right; phones / compact keep the old top-left card.
+    v0.25.30: hotbar left-anchored at x 536 beside the card; bottom card only when canvas.X >= 536 + measured hotbar
+    width + 24 (re-laid out on its AbsoluteSize change; pcall: the Lune harness has no AbsoluteSize); party strip =
+    PARTY button only (HUD.partyWidth), 60 px under the collapsed quest button; no dark disc behind the portrait.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

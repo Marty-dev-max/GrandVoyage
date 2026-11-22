@@ -100,6 +100,26 @@ function Audio.Play(name, opts)
 	return s
 end
 
+-- a looping sound fixed to a part in the world (v0.25.34: the hum of a spawned Cursed Fruit); destroyed with the part
+function Audio.Attach(name, parent, range)
+	local def = Sounds[name]
+	local id = def and source(def)
+	if not id or id == "" then
+		return nil
+	end
+	local s = Instance.new("Sound")
+	s.SoundId = id
+	s.Looped = true
+	s.Volume = def.volume
+	s.SoundGroup = groups[def.group]
+	s.RollOffMode = Enum.RollOffMode.InverseTapered
+	s.RollOffMinDistance = 8
+	s.RollOffMaxDistance = range or 90
+	s.Parent = parent
+	s:Play()
+	return s
+end
+
 -- Underwater (v0.22.4): everything you hear in the world goes dull and heavy: an equalizer on the SFX, Ambience and
 -- Music groups cuts the highs and mids (UI clicks stay crisp). k = 0 (dry) .. 1 (fully submerged).
 local muffles = {}

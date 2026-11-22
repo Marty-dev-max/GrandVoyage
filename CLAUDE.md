@@ -475,6 +475,9 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     PointLight + soft sparks (no beam). Fruit Notifier holders get push "FruitSpawn" -> `Controllers/FruitAlert`
     (FruitTwinkle + narrator Narr_Fruit<IslandId> from tools/gen_voice_elevenlabs.py, TTS fallback with
     AudioTextToSpeech while the ids are empty: audio upload quota spent until 6 Dec 2026; "? FRUIT ?" marker).
+    v0.25.34: FruitAlert dresses every CursedFruit-tagged model for all players (looping `FruitHum` via
+    `Audio.Attach(name, part, range)`, spawn flash + double blink every ~2 s with Highlight/light/sparkles);
+    Dev "spawnfruit" passes the tester to FS.SpawnTreeFruit(tester) so they get the Notifier alert.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

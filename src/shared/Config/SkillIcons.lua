@@ -3,6 +3,7 @@ return {
 	Adrenaline = "rbxassetid://120256234957753",
 	BanquetKick = "rbxassetid://121540136903642",
 	Bash = "rbxassetid://72482882250110",
+	BatonFlurry = "rbxassetid://121989453956688",
 	BlazeShot = "rbxassetid://80700185807311",
 	BurstTonic = "rbxassetid://106354376483500",
 	CannonDrop = "rbxassetid://139189134354411",
@@ -54,4 +55,5 @@ return {
 	Tailwind = "rbxassetid://89793266620402",
 	ThunderCall = "rbxassetid://84647515360064",
 	TornadoCut = "rbxassetid://131030103418920",
+	TrickVault = "rbxassetid://127029004439504",
 }

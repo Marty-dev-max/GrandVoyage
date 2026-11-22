@@ -376,6 +376,9 @@ SKILLS = {
     # Navigator
     'ThunderCall': R('Navigator', lambda s: (smoke(s, 16, 8, 0.9, (200, 205, 220), (130, 135, 160)), bolt(s, 16, 20, 0.75))),
     'CycloneCall': R('Navigator', lambda s: (tornado(s, 16, 4, 28, (200, 240, 255)), sparkle(s, 25, 22, WHITE, 1))),
+    # v0.25.51: the base Navigator fights with a folding baton (storms above = Storm Caller job 2 later)
+    'BatonFlurry': R('Navigator', lambda s: (s.line([(6, 26), (24, 8)], (120, 110, 200), 3, True), s.line([(20, 12), (24, 8)], (235, 225, 255), 2, True), speed_lines(s, 14, 22, 28, 22, 3, WHITE, 3), sparkle(s, 26, 6, WHITE, 2))),
+    'TrickVault': R('Navigator', lambda s: (s.line([(9, 29), (15, 9)], (120, 110, 200), 3, True), s.arc(14, 18, 11, 200, 330, WHITE, 2, True), boot(s, 22, 20), sparkle(s, 6, 8, WHITE, 1))),
     'MirageVeil': R('Navigator', lambda s: (s.oval(16, 16, 11, 11, (120, 200, 255)), s.oval(13, 16, 9, 9, (190, 230, 255)), s.oval(10, 16, 6, 6, (240, 250, 255)))),
     'Tailwind': R('Navigator', lambda s: (s.poly([(8, 5), (8, 24), (24, 24)], (245, 240, 225)), s.line([(8, 4), (8, 28)], WOOD, 2), wind(s, (210, 245, 255)))),
     # Doctor

@@ -163,6 +163,26 @@ function DataService.Load(player, slot)
 	if useMemory then
 		memSlots[player.UserId][slot] = data
 	end
+	-- v0.25.51 (owner: Navigator was too strong): its storm skills became baton tricks (the storms return with the
+	-- Storm Caller second job); learned levels and hotbar slots follow the new ids
+	local RENAMED = { ThunderCall = "BatonFlurry", CycloneCall = "TrickVault" }
+	local bars = { data.skillBar }
+	for _, bar in pairs(data.classBars or {}) do
+		table.insert(bars, bar)
+	end
+	for old, new in pairs(RENAMED) do
+		if data.skills and data.skills[old] then
+			data.skills[new] = math.max(data.skills[new] or 0, data.skills[old])
+			data.skills[old] = nil
+		end
+		for _, bar in ipairs(bars) do
+			for i, id in ipairs(bar) do
+				if id == old then
+					bar[i] = new
+				end
+			end
+		end
+	end
 	-- v2: the old "Novice" (Cabin Boy) starter class became the Brawler; give old saves a pair of knuckles
 	if data.class == "Novice" then
 		data.class = "Brawler"

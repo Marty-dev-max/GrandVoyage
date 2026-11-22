@@ -48,7 +48,7 @@ Sails do nothing in the Doldrums; only oar benches work (at 40%).
 | Swordsman | Melee DPS / tank | Sword | — | Demon Cross, Tornado Cut, Flying Slash, Iron Body |
 | Sharpshooter | Ranged crits | Slingshot | Cannons +15% | Lead Pellet, Blaze Shot, Smoke Pellet, Eagle Eye |
 | Brawler Chef | Kick melee + support | Battle Boots | — | Hook Kick, Banquet Spin, Searing Leg, Hearty Meal |
-| Navigator | Weather magic + ship | Storm Baton | Ship speed +10% | Thunder Call, Cyclone Call, Mirage Veil, Tailwind |
+| Navigator | Baton tricks + ship (v0.25.51; storms = Storm Caller job 2) | Baton (melee) | Ship speed +10% | Baton Flurry, Trick Vault, Mirage Veil, Tailwind |
 | Doctor | Healer (medicinal powders) | Powder Pouch | — | Field Medicine, Adrenaline Shot, Burst Tonic |
 | Shipwright | Utility / merchant | Hammer | Refine +5%, 12-slot stall, cannons +5% | Hammer Smash, Cannonball Drop, Field Repair |
 

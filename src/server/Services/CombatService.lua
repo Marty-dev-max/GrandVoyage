@@ -25,7 +25,7 @@ local lastHurt = {}
 local AnimClips = require(Shared.Config.AnimClips)
 local AmmoCfg = require(Shared.Config.Ammo)
 -- ranged basic attacks: the shot flies this long after the release frame (matches VFX.Projectile durations)
-local SHOT_FLIGHT = { Slingshot = 0.18, StormBaton = 0.22, MedKit = 0.2 }
+local SHOT_FLIGHT = { Slingshot = 0.18, MedKit = 0.2 } -- (v0.25.51: the Navigator's baton is melee now)
 local combos = {} -- player -> { n, last }
 local WeaponInfo = require(Shared.Modules.WeaponInfo)
 local WeaponRange = WeaponInfo.Range
@@ -393,7 +393,7 @@ local function setup()
 			return false, "Too far away"
 		end
 		lastAttack[player] = now
-		local magic = wType == "StormBaton"
+		local magic = false -- (v0.25.51: the Navigator's baton hits with ATK, no more lightning ball)
 		R.WeaponService.Draw(player, wType)
 		local n, strike, speed = comboStep(player, wType)
 		-- slingshots fire the picked ammo (1 per shot; out of it -> free Pebble Shot)
@@ -512,6 +512,10 @@ local function setup()
 		if skill.fruit then
 			local el = FRUIT_ELEMENT[skill.fruit]
 			skillOpts = { element = el, dot = el == "fire" and { "burn", 0.2, 3 } or nil }
+		end
+		if skill.slow then
+			skillOpts = skillOpts or {}
+			skillOpts.slow = skill.slow -- dazed (Navigator Baton Flurry)
 		end
 		-- knockback (v0.24.12): damage skills shove on their LAST hit; power = the skill's multiplier (Heavy Attack 2.2+)
 		local knockPower = (skill.heavy and math.max(2.2, mult)) or mult

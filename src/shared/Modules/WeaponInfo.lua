@@ -8,7 +8,7 @@ local Formulas = require(ReplicatedStorage.Shared.Modules.Formulas)
 local ClassesCfg = require(ReplicatedStorage.Shared.Config.Classes)
 
 local W = {}
-W.Range = { Fists = 8, Knuckles = 9, Sword = 10, Shoes = 9, Hammer = 10, Slingshot = 48, StormBaton = 34, MedKit = 26 }
+W.Range = { Fists = 8, Knuckles = 9, Sword = 10, Shoes = 9, Hammer = 10, Slingshot = 48, StormBaton = 10, MedKit = 26 }
 
 -- the equipped weapon's type; bare hands = "Fists"
 function W.TypeOf(p)

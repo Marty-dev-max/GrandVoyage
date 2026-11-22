@@ -151,8 +151,8 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
   backfist; a skill can name its own clip with `anim` in Config/Classes, e.g. JabRush -> Brawler_Flurry). Hit sounds by
   attacker weapon (PunchHit/PunchHeavy/SliceHit/ShotHit/ZapHit/PowderPoof) in VFX fxSounds.Damage; impacts
   `VFX.ImpactSplit` (shockwave + split streaks) for fists/kicks/hammer/pellets, `VFX.SliceLine` for swords, `VFX.Charge`
-  before finishers. Navigator = weather: `VFX.StormCloud` (warm + cold puffs condense), basic attack throws a lightning
-  ball, ThunderCall / CycloneCall skill FX. Own crits: gradient "CRITICAL!" number on an impact star + `VFX.ImpactFrame()`.
+  before finishers. Navigator = weather (until v0.25.51; now baton melee, see below): `VFX.StormCloud` (warm + cold puffs
+  condense), ThunderCall / CycloneCall skill FX kept for the Storm Caller job 2. Own crits: gradient "CRITICAL!" number on an impact star + `VFX.ImpactFrame()`.
   Overhead mob bars are dressed like HUD bars (stroke, gloss, white flash, shake) in CreatureAnim.juiceBar.
 - Class switch auto-equips the best owned class weapon (PlayerService). Loadout drag uses UIDragDetector.
 - Card ladder (owner, v0.22.2): Common gray 1 star, Uncommon green 2, Rare blue 3, Epic purple 4, Mythic rainbow prismatic 5
@@ -557,6 +557,13 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     drag from the button = joystick dir, camera pitch = tilt), CastSkill(id, nil, aim) uses the last shown aim.
     docs/Plan-Job2.md: owner picks 22 Nov (Sea Cook A Ember Kicker / B Barrel Roller, Doctor B exploding apple,
     Shipwright A Ironclad / B Silent Chisel). Friend playtest = 29 Nov 2026.
+  * v0.25.51 (owner: Navigator too strong): base Navigator = melee folding baton (WeaponInfo StormBaton range 10, basic
+    attack physical, no SHOT_FLIGHT, VFX weaponFX.StormBaton = swing arc + ImpactSplit, PunchHit; Items line magic =
+    false, label "Baton"), skills BatonFlurry (Melee 3 hits, `slow` -> skillOpts.slow) + TrickVault (Dash) + MirageVeil
+    + Tailwind; build DEX/STR/AGI/VIT, role Trickster. ThunderCall/CycloneCall (+ their SkillFX/icons) are kept for the
+    Storm Caller job 2; DataService load renames saved ids (RENAMED map: skills + skillBar + classBars). Job 2 rule
+    (owner): every path keeps one class-identity skill (navigation / ship repair / healing / food) + its own combat
+    style. Classes.SecondJobs = the planned path ids. "Haki" is One Piece: any willpower system needs our own names.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

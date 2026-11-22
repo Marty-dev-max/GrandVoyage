@@ -93,18 +93,20 @@ local Classes = {
 	},
 	Navigator = {
 		name = "Navigator",
-		desc = "Weather magic with big area damage. Speeds up your ship.",
+		-- v0.25.51 (owner: too strong for a first job, storms from day one + a mid-range basic attack): a sailor who
+		-- fights up close with the folding baton and tricks; the storms come back with the Storm Caller second job
+		desc = "Reads the sea and wind. Fights up close with a folding baton and tricks. Speeds up your ship.",
 		tier = 1,
-		hpMod = 0.85,
-		spMod = 1.4,
+		hpMod = 0.95,
+		spMod = 1.15,
 		weapons = { "StormBaton" },
 		color = Color3.fromRGB(150, 90, 240), -- v0.25.37: the color of its type (Config/MonsterTypes)
-		mtype = "INT", role = "Stormcaller", build = { INT = 5, DEX = 3, VIT = 2 },
+		mtype = "INT", role = "Trickster", build = { DEX = 4, STR = 3, AGI = 2, VIT = 1 },
 		icon = "🧭",
 		passive = { shipSpeed = 0.1 },
 		skills = {
-			{ id = "ThunderCall", name = "Thunder Call", kind = "GroundAoE", sp = 22, cd = 6, range = 50, radius = 12, mult = 2.3, magic = true, maxLevel = 10, fx = "ThunderCall", desc = "Hot and cold air meet overhead: a storm cloud forms and lightning strikes." },
-			{ id = "CycloneCall", name = "Cyclone Call", kind = "AoE", sp = 20, cd = 8, range = 0, radius = 16, mult = 1.6, magic = true, maxLevel = 10, fx = "CycloneCall", desc = "Spin warm and cold air into a cyclone around you." },
+			{ id = "BatonFlurry", name = "Baton Flurry", kind = "Melee", sp = 10, cd = 4, range = 9, mult = 0.75, hits = 3, slow = 0.6, maxLevel = 10, fx = "Burst", desc = "Three quick raps with the folding baton. Dazed enemies slow down." },
+			{ id = "TrickVault", name = "Trick Vault", kind = "Dash", sp = 12, cd = 7, range = 18, mult = 1.6, maxLevel = 10, fx = "Burst", desc = "Plant the baton and vault forward, kicking through everything in your way." },
 			{ id = "MirageVeil", name = "Mirage Veil", kind = "Buff", sp = 20, cd = 30, duration = 15, buff = { flee = 40 }, maxLevel = 5, fx = "AuraBlue", desc = "FLEE up." },
 			{ id = "Tailwind", name = "Tailwind", kind = "ShipBuff", sp = 30, cd = 60, duration = 30, buff = { shipSpeed = 0.25 }, maxLevel = 5, fx = "Wind", desc = "Ship speed +25%." },
 		},
@@ -148,13 +150,14 @@ local Classes = {
 }
 
 -- Second jobs (Grand Current update)
-local SecondJobs = {
-	Swordsman = { "SwordMaster", "BountyHunter" },
-	Sniper = { "KingOfShots", "Gunslinger" },
-	Cook = { "SkyStepChef", "FlameDancer" },
-	Navigator = { "StormCaller", "Cartographer" },
+local SecondJobs = { -- planned paths (docs/Plan-Job2.md, owner picks 22 Nov 2026); shown in Skills -> Next
+	Brawler = { "IronChampion", "StormFist" },
+	Swordsman = { "BladeSaint", "TwinFang" },
+	Sniper = { "Deadeye", "TrickShooter" },
+	Cook = { "EmberKicker", "BarrelRoller" },
+	Navigator = { "StormCaller", "TideDancer" },
 	Doctor = { "MiracleDoctor", "Alchemist" },
-	Shipwright = { "MasterBuilder", "Ironclad" },
+	Shipwright = { "Ironclad", "SilentChisel" },
 }
 
 local skillById = {}

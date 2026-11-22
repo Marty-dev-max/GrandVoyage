@@ -901,20 +901,13 @@ local weaponFX = {
 			VFX.ImpactSplit(d.to, dir, c, am and am.id ~= "Pebble" and 3.6 or 2.8)
 		end)
 	end,
-	StormBaton = function(d)
-		-- weather: warm + cold air meet over the staff, condense into a little storm cloud, and it spits a ball of
-		-- lightning at the target
-		local origin = d.from + Vector3.new(0, 3.2, 0) + (d.to - d.from).Unit * 1.5
-		VFX.StormCloud(origin, 1.6, 0.6)
-		task.delay(0.12, function()
-			VFX.Projectile(origin, d.to, Color3.fromRGB(170, 215, 255), 1.1, 0.2, 1.5, Color3.fromRGB(255, 255, 160))
-			VFX.Beam(origin, origin:Lerp(d.to, 0.5) + Vector3.new(0, 1, 0), Color3.fromRGB(200, 225, 255), 0.6, 0.15)
-		end)
-		task.delay(0.32, function()
-			VFX.Beam(d.to + Vector3.new(0, 7, 0), d.to, Color3.fromRGB(200, 225, 255), 0.8, 0.2)
-			VFX.Impact(d.to, Color3.fromRGB(170, 215, 255), 4)
-			VFX.Sparks(d.to, Color3.fromRGB(255, 255, 180), 8, 8)
-		end)
+	StormBaton = function(d, n)
+		-- v0.25.51: the Navigator's folding baton is a melee weapon now: a quick swing arc + a crack on the hit
+		-- (the storm cloud + lightning ball moved to the Storm Caller second job)
+		local at, dir = hitPoint(d)
+		local c = Color3.fromRGB(190, 170, 255)
+		VFX.Slash(CFrame.lookAt(d.from, d.to) * CFrame.new(0, 0, -3) * CFrame.Angles(0, 0, (n or 1) % 2 == 0 and math.pi * 0.85 or 0), c, 6)
+		VFX.ImpactSplit(at, dir, c, (n or 1) >= 4 and 5.5 or 3.6)
 	end,
 	MedKit = function(d)
 		-- a pinch of medicinal powder: a glittering puff arcs over and bursts into a colored dust cloud
@@ -1623,7 +1616,7 @@ local fxSounds = {
 			return "PunchHit", d.pos, 0.8
 		end
 		local w = d.src and VFX.lastWeapon[d.src]
-		local snd = ({ Fists = "PunchHit", Knuckles = "PunchHit", Shoes = "PunchHit", Hammer = "PunchHeavy", Sword = "SliceHit", Slingshot = "ShotHit", StormBaton = "ZapHit", MedKit = "PowderPoof" })[w or ""]
+		local snd = ({ Fists = "PunchHit", Knuckles = "PunchHit", Shoes = "PunchHit", Hammer = "PunchHeavy", Sword = "SliceHit", Slingshot = "ShotHit", StormBaton = "PunchHit", MedKit = "PowderPoof" })[w or ""]
 		if d.kind == "pet" or d.kind == "cannon" then
 			snd = d.kind == "cannon" and "PunchHeavy" or "Hit"
 		end

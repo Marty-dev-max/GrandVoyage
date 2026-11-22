@@ -535,6 +535,8 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     flaps when flying/airborne. Preview: export_char.luau `cinder` mode (folded + spread, front + back).
     v0.25.45 (owner: looked like a butterfly, too big): GREAT_SPREAD = one tapered wing (scalloped trailing edge,
     single pointed tip), cell 0.38, top 2.5, folded 1.05 rad (GREAT_FOLD in HeritageAnim + export_char match).
+    v0.25.46 (owner: still too wide, "the old one was fine"): REVERTED to the original `wings(...)` Cinderwing wings;
+    greatWings + HeritageAnim "great" removed (export_char `cinder` mode left in, now a no-op). Do not bring them back.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

@@ -13,11 +13,8 @@ local Audio = require(script.Parent.Audio)
 
 local HA = {}
 local player = Players.LocalPlayer
-local KINDS = { Wing = "wing", WingTip = "wing", GreatWing = "great", GreatWingTip = "great", Tail = "tail", TailTip = "tail", Ear = "ear", Fin = "fin" }
-local BODY = { wing = "UpperTorso", great = "UpperTorso", tail = "LowerTorso", ear = "Head", fin = "Head" }
--- Cinderwing great wings (VoxelChar greatWings): built folded back by GREAT_FOLD around a shoulder hinge; here they
--- open like a bird's (unfold + flap) when flying or in the air
-local GREAT_FOLD = 1.05
+local KINDS = { Wing = "wing", WingTip = "wing", Tail = "tail", TailTip = "tail", Ear = "ear", Fin = "fin" }
+local BODY = { wing = "UpperTorso", tail = "LowerTorso", ear = "Head", fin = "Head" }
 local rigs = {} -- character -> { body, rig }
 local folder
 
@@ -52,12 +49,7 @@ local function build(char)
 	-- hinge points (in the host's space): wings at the spine, tail at its base, ears/fins where they sit
 	for _, pc in ipairs(rig.pieces) do
 		local r = pc.rel.Position
-		if pc.kind == "great" then
-			-- one hinge per side (the shoulder blade), the same point VoxelChar folded the wing around
-			pc.side = r.X >= 0 and 1 or -1
-			pc.hinge = Vector3.new(pc.side * 0.3, 0.6, pc.host.Size.Z / 2 + 0.22)
-			rig.great = true
-		elseif pc.kind == "wing" then
+		if pc.kind == "wing" then
 			pc.side = r.X >= 0 and 1 or -1
 			pc.hinge = Vector3.new(pc.side * 0.35, r.Y * 0.4, r.Z)
 		elseif pc.kind == "tail" then
@@ -101,16 +93,6 @@ local function pose(rig, t)
 	local parts, cfs = {}, {}
 	local beatRate = flying and 9 or (air and 7 or 1.6)
 	local beatAmp = flying and 0.75 or (air and 0.55 or 0.12)
-	if rig.great then
-		beatRate = flying and 4.2 or (air and 3.2 or 1.2) -- big wings beat slow and deep
-	end
-	-- great wings: open (unfold) toward a goal, eased so they spread and fold back smoothly
-	local dt = math.clamp(t - (rig.lastT or t), 0, 0.1)
-	rig.lastT = t
-	local openGoal = flying and GREAT_FOLD or (air and GREAT_FOLD * 0.8 or 0)
-	rig.open = (rig.open or 0) + (openGoal - (rig.open or 0)) * math.min(1, dt * 5)
-	local flapAmp = flying and 0.6 or (air and 0.4 or 0.03)
-	local flap = math.sin(t * beatRate + rig.phase) * flapAmp * (0.3 + 0.7 * rig.open / GREAT_FOLD)
 	local wingA = math.sin(t * beatRate + rig.phase) * beatAmp + (air and 0.15 or -0.05)
 	-- a whoosh on each down stroke (only when actually beating)
 	if beatAmp > 0.4 then
@@ -132,12 +114,7 @@ local function pose(rig, t)
 		local host = pc.host
 		if host.Parent then
 			local rot
-			if pc.kind == "great" then
-				-- unfold around the vertical axis, then beat up/down around the body's forward axis; at rest a slow
-				-- breathing shrug
-				local rest = rig.open < 0.05 and math.sin(t * 1.2 + rig.phase) * 0.04 or 0
-				rot = CFrame.Angles(0, 0, pc.side * (flap + rest)) * CFrame.Angles(0, pc.side * rig.open, 0)
-			elseif pc.kind == "wing" then
+			if pc.kind == "wing" then
 				rot = CFrame.Angles(0, -pc.side * wingA, pc.side * wingA * 0.35)
 			elseif pc.kind == "tail" then
 				rot = CFrame.Angles(math.abs(tailA) * 0.2, tailA, 0)

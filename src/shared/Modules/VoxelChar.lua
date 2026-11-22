@@ -812,53 +812,10 @@ local function buildAll(look, heritage, variant, mode, place, emit)
 			end
 		end
 	end
-	-- v0.25.44 (owner reference: huge dark wings from above the head down to the ankles, spread like a bird's):
-	-- Cinderwing's great wings. Built as a spread bird wing (leading edge rising to the wrist, long primaries hanging
-	-- down to ragged tips, lighter covert bands), then FOLDED back around a shoulder hinge so they stand behind the
-	-- body at rest. Client Controllers/HeritageAnim swings them open (GreatWing pieces) when flying.
-	-- Keep GREAT_HINGE / GREAT_FOLD in sync with HeritageAnim.
-	-- v0.25.45 (owner: looked like a butterfly, a bit too big): one tapered bird wing with a scalloped trailing edge and
-	-- a single pointed tip, smaller, and folded tighter along the back at rest
-	local GREAT_SPREAD = {
-		"...XXX......", ".XXXXXXX....", "XXXXXXXXXX..", "XXXXXXXXXXXX", ".XXXXXXXXXXX", ".XXXXXXXXXX.",
-		"..XXXXXXXXX.", "..X.XXXXXX..", "....X.XXXX..", "......XXX...", "......XX....", ".......X....",
-	}
-	local function greatWings(c1, c2)
-		if not ut then
-			return
-		end
-		local cell, topY = 0.38, 2.5
-		local back = ut.Z / 2 + 0.22
-		for _, sx in ipairs({ -1, 1 }) do
-			local hinge = Vector3.new(sx * 0.3, 0.6, back)
-			local fold = CFrame.new(hinge) * CFrame.Angles(0, -sx * 1.05, 0) * CFrame.new(-hinge)
-			for r, rowStr in ipairs(GREAT_SPREAD) do
-				local y = topY - (r - 1) * cell
-				local band = (r == 3 or r == 7) -- covert rows a shade lighter: reads as layered feathers
-				local i = 1
-				while i <= #rowStr do
-					if string.sub(rowStr, i, i) == "X" then
-						local j = i
-						while j + 1 <= #rowStr and string.sub(rowStr, j + 1, j + 1) == "X" do
-							j += 1
-						end
-						local len = j - i + 1
-						local xMid = 0.3 + (i - 1 + len / 2) * cell
-						block("UpperTorso", Vector3.new(len * cell, cell, 0.22), fold * CFrame.new(sx * xMid, y, back), band and c2 or c1, "GreatWing")
-						-- the outer feather of each row (and the ragged bottom tips) in the edge color
-						block("UpperTorso", Vector3.new(cell, cell, 0.26), fold * CFrame.new(sx * (0.3 + (j - 0.5) * cell), y, back), c2, "GreatWingTip")
-						i = j + 1
-					else
-						i += 1
-					end
-				end
-			end
-		end
-	end
 	if heritage == "Skyborn" then
 		wings(Looks.FromHex(var.wing or "F8F8FF") or WHITE, Looks.FromHex(var.tip or "BEE6FF") or WHITE, var.shape == "angel", "Wing", var.shape)
 	elseif heritage == "Cinderwing" and ut then
-		greatWings(Color3.fromRGB(30, 26, 40), Color3.fromRGB(70, 62, 92))
+		wings(Color3.fromRGB(26, 22, 28), Color3.fromRGB(62, 54, 70), true, "Wing")
 		-- the flame on the back: neon blocks in a rising column (FLAME mode lights it, CALM mode dims it)
 		local lit = mode ~= "calm"
 		local flame = { { 0.9, 0.7, 0.25, Color3.fromRGB(255, 120, 30) }, { 0.7, 0.6, 0.8, Color3.fromRGB(255, 170, 40) }, { 0.5, 0.5, 1.25, Color3.fromRGB(255, 220, 90) }, { 0.3, 0.4, 1.6, Color3.fromRGB(255, 245, 190) } }

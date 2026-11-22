@@ -97,6 +97,47 @@ if mode == "styles" then
 		look.mouth = ((i - 1) % #Looks.Mouths) + 1
 		dump(VC.Preview(look, nil), roblox.Vector3.new((i - 1) * 4.2, 0, 4 * 9))
 	end
+elseif mode == "monsters" then
+	-- every humanoid monster (Config/MonsterLooks) with its accessories, like MF.VoxelMonster builds them
+	local ML = req(RS.Shared.Config.MonsterLooks)
+	local Acc = req(RS.Shared.Modules.Accessory)
+	local ids = {}
+	for id in ML.ById do
+		table.insert(ids, id)
+	end
+	table.sort(ids)
+	local row = tonumber(process.args[4]) -- optional: only that row of 8 (front renders hide the rows behind)
+	for i, id in ids do
+		if row and math.floor((i - 1) / 8) + 1 ~= row then
+			continue
+		end
+		print(i, id)
+		local e = ML.ById[id]
+		local race, variant = ML.Race(id)
+		local m = VC.Preview(ML.Look(id), race, variant, nil, { lite = true })
+		local list = table.clone(e.acc or {})
+		if e.held then
+			table.insert(list, e.held)
+		end
+		for _, a in list do
+			Acc.Build(a, function(limb)
+				if limb == "Head" then
+					local h = m:FindFirstChild("VoxelHead", true)
+					return h and h.CFrame, h and h.Size
+				end
+				local r = VC.Rest[limb]
+				return r and roblox.CFrame.new(r[2]), r and r[1]
+			end, function(size, cf, color)
+				local p = roblox.Instance.new("Part")
+				p.Size = size
+				p.CFrame = cf
+				p.Color = color
+				p.Transparency = 0
+				p.Parent = m
+			end)
+		end
+		dump(m, roblox.Vector3.new(((i - 1) % 8) * 6, 0, row and 0 or math.floor((i - 1) / 8) * 9))
+	end
 elseif mode == "races" then
 	-- every variant of the races with body parts (wings / fins / horns), seen from behind-left so backs show too
 	local r = rng(11)

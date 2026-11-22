@@ -34,7 +34,7 @@ mob("WildBoar", { name = "Wild Boar", level = 6, hp = 230, atk = 24, def = 8, ex
 	drops = { { "BoarTusk", 0.5, 1, 2 }, { "MeatOnBone", 0.3, 1, 2 } } })
 mob("MountainBandit", { name = "Mountain Bandit", level = 8, hp = 320, atk = 32, def = 10, exp = 75, jobExp = 50, beli = { 30, 60 },
 	style = { shape = "humanoid", color = Color3.fromRGB(120, 100, 80), scale = 1, hat = "bandana" }, aggro = true, aggroRadius = 14,
-	drops = { { "Sword_Plain", 0.03, 1, 1 }, { "SteelOre", 0.08, 1, 1 } } })
+	drops = { { "Sword_Plain", 0.03, 1, 1 }, { "SteelOre", 0.08, 1, 1 }, { "BeardDark", 0.01, 1, 1 } } })
 
 -- Conch Bay (10-20)
 mob("MarineRecruit", { name = "Rogue Marine Recruit", level = 12, hp = 520, atk = 42, def = 14, exp = 120, jobExp = 80, beli = { 40, 80 },
@@ -50,10 +50,10 @@ mob("MarineRifleman", { name = "Rogue Rifleman", level = 17, hp = 700, atk = 60,
 -- Marmalade Town (20-30)
 mob("ClownGrunt", { name = "Clown Pirate Grunt", level = 21, hp = 950, atk = 76, def = 20, exp = 260, jobExp = 180, beli = { 60, 120 },
 	style = { shape = "humanoid", color = Color3.fromRGB(255, 120, 120), scale = 1, hat = "clown" },
-	drops = { { "ClownPaint", 0.4, 1, 2 }, { "ClownNose", 0.01, 1, 1 } } })
+	drops = { { "ClownPaint", 0.4, 1, 2 }, { "ClownNose", 0.01, 1, 1 }, { "ClownWig", 0.008, 1, 1 } } })
 mob("CircusAcrobat", { name = "Circus Acrobat", level = 24, hp = 1050, atk = 88, def = 18, exp = 300, jobExp = 210, beli = { 70, 140 },
 	style = { shape = "humanoid", color = Color3.fromRGB(255, 200, 80), scale = 0.95, hat = "clown" }, aggro = true, moveSpeed = 20,
-	drops = { { "ClownPaint", 0.3, 1, 2 }, { "Shoes_Keen", 0.006, 1, 1 } } })
+	drops = { { "ClownPaint", 0.3, 1, 2 }, { "Shoes_Keen", 0.006, 1, 1 }, { "ClownWig", 0.008, 1, 1 } } })
 mob("CircusLion", { name = "Circus Lion", level = 27, hp = 1500, atk = 105, def = 26, exp = 420, jobExp = 290, beli = { 90, 160 },
 	style = { shape = "lion", color = Color3.fromRGB(240, 180, 80), scale = 1.5 }, aggro = true,
 	drops = { { "MeatOnBone", 0.5, 2, 3 }, { "TidecoreShard", 0.01, 1, 1 } } })
@@ -61,10 +61,10 @@ mob("CircusLion", { name = "Circus Lion", level = 27, hp = 1500, atk = 105, def 
 -- Honeyslope Village (30-40)
 mob("NightCatPirate", { name = "Night Cat Pirate", level = 31, hp = 1800, atk = 122, def = 30, exp = 520, jobExp = 360, beli = { 100, 200 },
 	style = { shape = "humanoid", color = Color3.fromRGB(70, 60, 80), scale = 1, hat = "cat" },
-	drops = { { "CatClaw", 0.4, 1, 2 }, { "Sword_Keen", 0.006, 1, 1 } } })
+	drops = { { "CatClaw", 0.4, 1, 2 }, { "Sword_Keen", 0.006, 1, 1 }, { "CatEars", 0.006, 1, 1 } } })
 mob("HypnoThug", { name = "Hypnotized Thug", level = 34, hp = 2100, atk = 140, def = 34, exp = 600, jobExp = 420, beli = { 110, 210 },
 	style = { shape = "humanoid", color = Color3.fromRGB(200, 120, 220), scale = 1.1 }, aggro = true,
-	drops = { { "TangerineJuice", 0.3, 1, 2 }, { "StormBaton_Keen", 0.006, 1, 1 } } })
+	drops = { { "TangerineJuice", 0.3, 1, 2 }, { "StormBaton_Keen", 0.006, 1, 1 }, { "HypnoGoggles", 0.006, 1, 1 } } })
 mob("ClawCat", { name = "Claw Cat Brawler", level = 37, hp = 2600, atk = 165, def = 38, exp = 760, jobExp = 530, beli = { 140, 260 },
 	style = { shape = "cat", color = Color3.fromRGB(90, 70, 110), scale = 1.3 }, aggro = true, moveSpeed = 22,
 	drops = { { "CatClaw", 0.5, 2, 3 }, { "TidecoreShard", 0.02, 1, 1 } } })
@@ -72,13 +72,13 @@ mob("ClawCat", { name = "Claw Cat Brawler", level = 37, hp = 2600, atk = 165, de
 -- Barracuda Bistro (40-50)
 mob("ArmadaRaider", { name = "Armada Raider", level = 41, hp = 3100, atk = 185, def = 44, exp = 900, jobExp = 630, beli = { 160, 300 },
 	style = { shape = "humanoid", color = Color3.fromRGB(150, 150, 160), scale = 1.1, hat = "helmet" },
-	drops = { { "ArmorRivet", 0.4, 1, 2 }, { "Hammer_Keen", 0.006, 1, 1 } } })
+	drops = { { "ArmorRivet", 0.4, 1, 2 }, { "Hammer_Keen", 0.006, 1, 1 }, { "IronHelmet", 0.006, 1, 1 } } })
 mob("StarvedPirate", { name = "Starved Pirate", level = 44, hp = 3300, atk = 200, def = 40, exp = 1000, jobExp = 700, beli = { 170, 320 },
 	style = { shape = "humanoid", color = Color3.fromRGB(180, 140, 110), scale = 0.95 }, aggro = true,
-	drops = { { "BigFeast", 0.15, 1, 1 }, { "MedKit_Keen", 0.006, 1, 1 } } })
+	drops = { { "BigFeast", 0.15, 1, 1 }, { "MedKit_Keen", 0.006, 1, 1 }, { "BeardBrown", 0.008, 1, 1 } } })
 mob("ArmoredGunner", { name = "Armored Gunner", level = 47, hp = 4000, atk = 225, def = 60, exp = 1200, jobExp = 850, beli = { 200, 380 },
 	style = { shape = "humanoid", color = Color3.fromRGB(110, 110, 120), scale = 1.3, hat = "helmet" }, attackRange = 32, aggro = true,
-	drops = { { "Gunpowder", 0.5, 1, 3 }, { "IronIngot", 0.3, 1, 2 }, { "CaptainCoat", 0.004, 1, 1 } } })
+	drops = { { "Gunpowder", 0.5, 1, 3 }, { "IronIngot", 0.3, 1, 2 }, { "CaptainCoat", 0.004, 1, 1 }, { "IronHelmet", 0.006, 1, 1 } } })
 
 -- Mikan Isles (50-60)
 mob("SharkfolkBrawler", { name = "Sharkfolk Brawler", level = 52, hp = 5200, atk = 260, def = 62, exp = 1500, jobExp = 1050, beli = { 240, 450 },
@@ -122,30 +122,30 @@ boss("BaySerpent", { name = "Bay Serpent", level = 12, hp = 4800, atk = 46, def 
 	drops = { { "LeviathanScale", 1, 1, 2 }, { "Sword_Keen", 0.15, 1, 1 }, { "SunHat", 0.2, 1, 1 } } })
 boss("AxeCaptain", { name = "Axe-Arm Captain", level = 22, hp = 22000, atk = 120, def = 40, exp = 4500, jobExp = 3000, beli = { 5000, 9000 },
 	style = { shape = "humanoid", color = Color3.fromRGB(240, 240, 250), scale = 2.2, hat = "marine" },
-	drops = { { "MarineCoat", 0.3, 1, 1 }, { "Hammer_Keen", 0.2, 1, 1 }, { "TidecoreShard", 0.5, 1, 2 } } })
+	drops = { { "MarineCoat", 0.3, 1, 1 }, { "Hammer_Keen", 0.2, 1, 1 }, { "TidecoreShard", 0.5, 1, 2 }, { "CapeNavy", 0.1, 1, 1 }, { "BeardBrown", 0.15, 1, 1 } } })
 boss("CaptainConfetti", { name = "Captain Confetti", level = 32, hp = 42000, atk = 190, def = 50, exp = 9000, jobExp = 6000, beli = { 9000, 15000 },
 	style = { shape = "humanoid", color = Color3.fromRGB(255, 80, 80), scale = 2.1, hat = "clown" },
-	drops = { { "ClownNose", 0.4, 1, 1 }, { "Shoes_Master", 0.05, 1, 1 }, { "TidecoreShard", 0.6, 1, 3 } } })
+	drops = { { "ClownNose", 0.4, 1, 1 }, { "Shoes_Master", 0.05, 1, 1 }, { "TidecoreShard", 0.6, 1, 3 }, { "ConfettiWig", 0.15, 1, 1 }, { "CapePurple", 0.1, 1, 1 } } })
 boss("SilentClaw", { name = "Silent Claw Captain", level = 42, hp = 70000, atk = 270, def = 64, exp = 16000, jobExp = 11000, beli = { 14000, 22000 },
 	style = { shape = "humanoid", color = Color3.fromRGB(60, 50, 70), scale = 2.2, hat = "cat" }, moveSpeed = 26,
-	drops = { { "Sword_Master", 0.05, 1, 1 }, { "TangerinePin", 0.3, 1, 1 }, { "TidecoreShard", 0.8, 2, 3 } } })
+	drops = { { "Sword_Master", 0.05, 1, 1 }, { "TangerinePin", 0.3, 1, 1 }, { "TidecoreShard", 0.8, 2, 3 }, { "GlowVisor", 0.12, 1, 1 }, { "CapeShadow", 0.1, 1, 1 } } })
 boss("ArmadaAdmiral", { name = "Iron Armada Admiral", level = 52, hp = 115000, atk = 360, def = 95, exp = 26000, jobExp = 18000, beli = { 22000, 35000 },
 	style = { shape = "humanoid", color = Color3.fromRGB(230, 190, 60), scale = 2.5, hat = "helmet" }, attackRange = 30,
-	drops = { { "CaptainCoat", 0.3, 1, 1 }, { "Hammer_Master", 0.06, 1, 1 }, { "PureTidecore", 0.05, 1, 1 } } })
+	drops = { { "CaptainCoat", 0.3, 1, 1 }, { "Hammer_Master", 0.06, 1, 1 }, { "PureTidecore", 0.05, 1, 1 }, { "AdmiralCrown", 0.08, 1, 1 }, { "CapeCrimson", 0.08, 1, 1 } } })
 boss("SawtoothOverlord", { name = "Sawtooth Overlord", level = 62, hp = 170000, atk = 450, def = 110, exp = 40000, jobExp = 28000, beli = { 30000, 50000 },
 	style = { shape = "fishman", color = Color3.fromRGB(90, 120, 210), scale = 2.6 },
-	drops = { { "SharkToothNecklace", 0.4, 1, 1 }, { "Sword_Grand", 0.01, 1, 1 }, { "PureTidecore", 0.1, 1, 1 } } })
+	drops = { { "SharkToothNecklace", 0.4, 1, 1 }, { "Sword_Grand", 0.01, 1, 1 }, { "PureTidecore", 0.1, 1, 1 }, { "CapeShadow", 0.08, 1, 1 } } })
 boss("MistCommodore", { name = "Mist Commodore", level = 72, hp = 260000, atk = 540, def = 130, exp = 60000, jobExp = 42000, beli = { 45000, 70000 },
 	style = { shape = "humanoid", color = Color3.fromRGB(235, 235, 245), scale = 2.4, hat = "marine" }, attackRange = 20,
-	drops = { { "StormBaton_Grand", 0.01, 1, 1 }, { "Slingshot_Grand", 0.01, 1, 1 }, { "PureTidecore", 0.15, 1, 2 }, { "TreasureWood", 0.2, 1, 1 } } })
+	drops = { { "StormBaton_Grand", 0.01, 1, 1 }, { "Slingshot_Grand", 0.01, 1, 1 }, { "PureTidecore", 0.15, 1, 2 }, { "TreasureWood", 0.2, 1, 1 }, { "CapeSlate", 0.08, 1, 1 }, { "BeardGrey", 0.1, 1, 1 } } })
 
 -- ===== Dungeon bosses =====
 boss("RingMaster", { name = "Circus Ringmaster", level = 30, hp = 30000, atk = 170, def = 45, exp = 6000, jobExp = 4000, beli = { 6000, 9000 },
 	style = { shape = "humanoid", color = Color3.fromRGB(200, 60, 160), scale = 2, hat = "clown" },
-	drops = { { "Shoes_Keen", 0.3, 1, 1 }, { "TidecoreShard", 0.6, 1, 2 } } })
+	drops = { { "Shoes_Keen", 0.3, 1, 1 }, { "TidecoreShard", 0.6, 1, 2 }, { "RingmasterHat", 0.15, 1, 1 }, { "CapeGold", 0.1, 1, 1 } } })
 boss("DepthsWarden", { name = "Depths Warden", level = 58, hp = 140000, atk = 420, def = 100, exp = 32000, jobExp = 22000, beli = { 25000, 38000 },
 	style = { shape = "fishman", color = Color3.fromRGB(40, 90, 150), scale = 2.6 },
-	drops = { { "SharkscaleMail", 0.3, 1, 1 }, { "PureTidecore", 0.15, 1, 1 } } })
+	drops = { { "SharkscaleMail", 0.3, 1, 1 }, { "PureTidecore", 0.15, 1, 1 }, { "CapeSlate", 0.08, 1, 1 } } })
 
 -- ===== Leviathans (Doldrums) =====
 mob("Leviathan", { name = "Leviathan", level = 99, hp = 60000, atk = 900, def = 200, exp = 9000, jobExp = 5000, beli = { 3000, 6000 },

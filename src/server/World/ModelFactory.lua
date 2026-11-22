@@ -75,8 +75,62 @@ local function hat(model, head, kind, s)
 	end
 end
 
+-- v0.25.32 (owner): humanoid monsters are voxel characters like the players: an R15 rig dressed by VoxelChar
+-- (Config/MonsterLooks) + their accessories (Config/Accessories, the same models players wear when they get them).
+-- One template per monster id is built (CreateHumanoidModelFromDescription yields) and cloned after that.
+local templates = {}
+function MF.VoxelMonster(def)
+	local MonsterLooks = require(ReplicatedStorage.Shared.Config.MonsterLooks)
+	local look = MonsterLooks.Look(def.id)
+	if not look then
+		return nil
+	end
+	if not templates[def.id] then
+		local VoxelChar = require(ReplicatedStorage.Shared.Modules.VoxelChar)
+		local Accessory = require(ReplicatedStorage.Shared.Modules.Accessory)
+		local e = MonsterLooks.ById[def.id]
+		local desc = Instance.new("HumanoidDescription")
+		desc.BodyTypeScale = 0
+		desc.ProportionScale = 0
+		local m = game:GetService("Players"):CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15)
+		local animate = m:FindFirstChild("Animate")
+		if animate then
+			animate:Destroy()
+		end
+		local race, variant = MonsterLooks.Race(def.id)
+		VoxelChar.Apply(m, look, race, variant, nil)
+		for _, id in ipairs(e.acc or {}) do
+			Accessory.Wear(m, id)
+		end
+		if e.held then
+			Accessory.Wear(m, e.held)
+		end
+		local hum = m:FindFirstChildOfClass("Humanoid")
+		hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+		hum.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
+		hum.BreakJointsOnDeath = false
+		local s = (def.style and def.style.scale) or 1
+		if math.abs(s - 1) > 0.01 then
+			m:ScaleTo(s)
+		end
+		m:SetAttribute("RealModel", true)
+		m:SetAttribute("R15Mob", true)
+		m:SetAttribute("AttackClip", e.attack or "Brawler_Hook")
+		templates[def.id] = m
+	end
+	local m = templates[def.id]:Clone()
+	m.Name = def.id
+	return m
+end
+
 -- Build a monster: Model + HumanoidRootPart + Humanoid
 function MF.Monster(def)
+	local okV, voxel = pcall(MF.VoxelMonster, def)
+	if okV and voxel then
+		return voxel
+	elseif not okV then
+		warn("[ModelFactory] voxel monster " .. tostring(def.id) .. " failed: " .. tostring(voxel))
+	end
 	local assets = ReplicatedStorage:FindFirstChild("Assets")
 	local custom = assets and assets:FindFirstChild("Monsters") and assets.Monsters:FindFirstChild(def.id)
 	if custom then

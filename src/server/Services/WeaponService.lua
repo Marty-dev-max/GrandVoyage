@@ -141,22 +141,9 @@ end
 -- v0.25.14 (owner): equipped headgear / armor / accessory show on the character as welded voxel blocks.
 -- Entries: { limb, size (x limb size), offset (x limb size), color }. The voxel head is "VoxelHead" (Head is hidden);
 -- hats sit above the hair (offsets > 0.5 of the head).
-local C = Color3.fromRGB
-local OUTFIT = {
-	Bandana = { { "Head", Vector3.new(1.32, 0.2, 1.32), Vector3.new(0, 0.22, 0), C(210, 50, 55) }, { "Head", Vector3.new(0.26, 0.26, 0.26), Vector3.new(0, 0.2, 0.7), C(190, 40, 45) }, { "Head", Vector3.new(0.12, 0.42, 0.08), Vector3.new(0.1, -0.05, 0.72), C(190, 40, 45) } },
-	SunHat = { { "Head", Vector3.new(1.9, 0.08, 1.9), Vector3.new(0, 0.62, 0), C(240, 234, 214) }, { "Head", Vector3.new(1.05, 0.32, 1.05), Vector3.new(0, 0.8, 0), C(240, 234, 214) }, { "Head", Vector3.new(1.08, 0.1, 1.08), Vector3.new(0, 0.7, 0), C(70, 150, 220) }, { "Head", Vector3.new(0.2, 0.2, 0.2), Vector3.new(0.45, 0.74, -0.42), C(255, 120, 170) } },
-	MarineCap = { { "Head", Vector3.new(1.3, 0.28, 1.3), Vector3.new(0, 0.68, 0), C(245, 245, 250) }, { "Head", Vector3.new(1.32, 0.1, 1.32), Vector3.new(0, 0.58, 0), C(40, 60, 130) }, { "Head", Vector3.new(0.9, 0.06, 0.45), Vector3.new(0, 0.56, -0.75), C(40, 60, 130) }, { "Head", Vector3.new(0.2, 0.14, 0.05), Vector3.new(0, 0.68, -0.66), C(255, 200, 60) } },
-	ClownNose = { { "Head", Vector3.new(0.22, 0.22, 0.22), Vector3.new(0, -0.05, -0.56), C(240, 40, 40) } },
-	SailorVest = { { "UpperTorso", Vector3.new(0.42, 1.02, 1.08), Vector3.new(-0.3, 0, 0), C(60, 110, 200) }, { "UpperTorso", Vector3.new(0.42, 1.02, 1.08), Vector3.new(0.3, 0, 0), C(60, 110, 200) }, { "UpperTorso", Vector3.new(1.06, 0.12, 1.1), Vector3.new(0, 0.46, 0), C(245, 245, 250) } },
-	MarineCoat = { { "UpperTorso", Vector3.new(1.08, 1.04, 1.1), Vector3.zero, C(240, 240, 245) }, { "UpperTorso", Vector3.new(0.12, 1.05, 0.06), Vector3.new(0, 0, -0.54), C(40, 60, 130) }, { "UpperTorso", Vector3.new(0.3, 0.08, 0.4), Vector3.new(0.42, 0.52, 0), C(255, 200, 60) }, { "UpperTorso", Vector3.new(0.3, 0.08, 0.4), Vector3.new(-0.42, 0.52, 0), C(255, 200, 60) }, { "LowerTorso", Vector3.new(1.0, 2.6, 0.12), Vector3.new(0, -0.9, 0.55), C(240, 240, 245) } },
-	CaptainCoat = { { "UpperTorso", Vector3.new(1.08, 1.04, 1.1), Vector3.zero, C(165, 38, 45) }, { "UpperTorso", Vector3.new(0.1, 1.05, 0.06), Vector3.new(-0.12, 0, -0.54), C(255, 200, 60) }, { "UpperTorso", Vector3.new(0.1, 1.05, 0.06), Vector3.new(0.12, 0, -0.54), C(255, 200, 60) }, { "UpperTorso", Vector3.new(0.32, 0.1, 0.42), Vector3.new(0.42, 0.52, 0), C(255, 200, 60) }, { "UpperTorso", Vector3.new(0.32, 0.1, 0.42), Vector3.new(-0.42, 0.52, 0), C(255, 200, 60) }, { "LowerTorso", Vector3.new(1.0, 2.8, 0.12), Vector3.new(0, -1.0, 0.55), C(150, 32, 40) } },
-	SharkscaleMail = { { "UpperTorso", Vector3.new(1.06, 1.03, 1.08), Vector3.zero, C(90, 120, 150) }, { "UpperTorso", Vector3.new(1.07, 0.1, 1.09), Vector3.new(0, 0.2, 0), C(60, 85, 110) }, { "UpperTorso", Vector3.new(1.07, 0.1, 1.09), Vector3.new(0, -0.15, 0), C(60, 85, 110) }, { "UpperTorso", Vector3.new(1.07, 0.1, 1.09), Vector3.new(0, -0.4, 0), C(130, 165, 195) } },
-	CompassCharm = { { "UpperTorso", Vector3.new(0.22, 0.22, 0.06), Vector3.new(0.25, 0.15, -0.56), C(255, 200, 60) } },
-	TangerinePin = { { "UpperTorso", Vector3.new(0.2, 0.2, 0.06), Vector3.new(-0.28, 0.25, -0.56), C(255, 150, 40) } },
-	SharkToothNecklace = { { "UpperTorso", Vector3.new(0.1, 0.16, 0.06), Vector3.new(-0.2, 0.38, -0.56), C(250, 248, 235) }, { "UpperTorso", Vector3.new(0.1, 0.2, 0.06), Vector3.new(0, 0.36, -0.56), C(250, 248, 235) }, { "UpperTorso", Vector3.new(0.1, 0.16, 0.06), Vector3.new(0.2, 0.38, -0.56), C(250, 248, 235) } },
-	SeastoneBracer = { { "RightLowerArm", Vector3.new(1.15, 0.45, 1.15), Vector3.zero, C(60, 70, 90) } },
-	SeastoneShackle = { { "RightLowerArm", Vector3.new(1.18, 0.5, 1.18), Vector3.zero, C(50, 58, 78) }, { "LeftLowerArm", Vector3.new(1.18, 0.5, 1.18), Vector3.zero, C(50, 58, 78) } },
-}
+-- worn gear models live in Config/Accessories (v0.25.32: shared with the monsters that drop them)
+local Accessory = require(ReplicatedStorage.Shared.Modules.Accessory)
+local OUTFIT = Accessory.Cfg
 
 local function wearOutfit(char, p)
 	local ids = {}
@@ -174,32 +161,7 @@ local function wearOutfit(char, p)
 	end
 	clear(char, "GVOutfit")
 	for _, id in ipairs(ids) do
-		local model = Instance.new("Model")
-		model.Name = "GVOutfit_" .. id
-		model:SetAttribute("GVOutfit", id)
-		for _, b in ipairs(OUTFIT[id]) do
-			local limb = (b[1] == "Head" and char:FindFirstChild("VoxelHead")) or char:FindFirstChild(b[1])
-			if limb then
-				local part = Instance.new("Part")
-				part.Name = "Outfit"
-				part.Size = limb.Size * b[2]
-				part.CFrame = limb.CFrame * CFrame.new(limb.Size * b[3])
-				part.Color = b[4]
-				part.Material = Enum.Material.SmoothPlastic
-				part.CanCollide = false
-				part.CanQuery = false
-				part.CanTouch = false
-				part.Massless = true
-				part.TopSurface = Enum.SurfaceType.Smooth
-				part.BottomSurface = Enum.SurfaceType.Smooth
-				part.Parent = model
-				local w = Instance.new("WeldConstraint")
-				w.Part0 = limb
-				w.Part1 = part
-				w.Parent = part
-			end
-		end
-		model.Parent = char
+		Accessory.Wear(char, id)
 	end
 	char:SetAttribute("OutfitKey", key)
 end

@@ -96,6 +96,26 @@ end
 
 -- opts: { zone = {center=Vector3, radius}, onDeath = fn(mob, killer), noRespawn = bool, parent = Instance, hpMult = n,
 --   def = a ready definition (ship crew scale theirs), model = a ready model already placed (ship crew figures) }
+-- Roblox's own R15 idle / walk animations (free for every game) for the voxel humanoid monsters
+local R15_LOOPS = { Idle = "rbxassetid://507766388", Walk = "rbxassetid://507777826" }
+local function r15Loop(hum, key, weight)
+	local animator = Anim.Animator(hum)
+	if not animator then
+		return nil
+	end
+	local a = Instance.new("Animation")
+	a.Name = "Mob" .. key
+	a.AnimationId = R15_LOOPS[key]
+	local ok, tr = pcall(animator.LoadAnimation, animator, a)
+	if not ok then
+		return nil
+	end
+	tr.Looped = true
+	tr.Priority = Enum.AnimationPriority.Core
+	tr:Play(0, weight)
+	return tr
+end
+
 function MS.Spawn(monsterId, position, opts)
 	opts = opts or {}
 	local def = opts.def or Monsters[monsterId]
@@ -157,8 +177,17 @@ function MS.Spawn(monsterId, position, opts)
 			if mob.dead or not model.Parent then
 				return
 			end
-			Anim.Play(hum, "Mon_Idle", { fade = 0 })
-			mob.walkTrack = Anim.Play(hum, "Mon_Walk", { fade = 0, weight = 0.01 })
+			if model:GetAttribute("R15Mob") then
+				-- voxel humanoids (v0.25.32): Roblox's default R15 idle / walk, a player clip to attack, Hurt when hit
+				r15Loop(hum, "Idle", 1)
+				mob.walkTrack = r15Loop(hum, "Walk", 0.01)
+				mob.walkRate = 14
+				mob.attackClip = model:GetAttribute("AttackClip")
+				mob.hitClip = "Hurt"
+			else
+				Anim.Play(hum, "Mon_Idle", { fade = 0 })
+				mob.walkTrack = Anim.Play(hum, "Mon_Walk", { fade = 0, weight = 0.01 })
+			end
 			mob.walkW = 0
 		end)
 	end
@@ -365,7 +394,7 @@ function MS.Damage(mob, amount, player, crit, kind)
 	Net.FX("Damage", { pos = mob.root.Position + Vector3.new(0, 3, 0), amount = amount, crit = crit, kind = kind, src = player and player.UserId or 0, model = mob.model }, mob.root.Position, 250)
 	if mob.walkTrack and os.clock() - (mob.hitAnimAt or 0) > 0.35 then
 		mob.hitAnimAt = os.clock()
-		Anim.Play(mob.hum, "Mon_Hit", { fade = 0.03 })
+		Anim.Play(mob.hum, mob.hitClip or "Mon_Hit", { fade = 0.03 })
 	end
 	updateBar(mob)
 	if mob.hp <= 0 then
@@ -1032,7 +1061,7 @@ local function step(mob, now)
 		if math.abs(w - mob.walkW) > 0.08 then
 			mob.walkW = w
 			mob.walkTrack:AdjustWeight(math.max(0.01, w), 0.2)
-			mob.walkTrack:AdjustSpeed(math.clamp(speed / 8, 0.6, 2))
+			mob.walkTrack:AdjustSpeed(math.clamp(speed / (mob.walkRate or 8), 0.6, 2))
 		end
 	end
 	local ok, troot = validTarget(mob, mob.target)
@@ -1081,12 +1110,13 @@ local function step(mob, now)
 			if now - mob.lastAttack >= def.attackSpeed then
 				mob.lastAttack = now
 				Net.FX("MobAttack", { model = mob.model, to = troot.Position, ranged = def.attackRange > 15, from = mob.root.Position }, mob.root.Position, 200)
+				local clip = mob.attackClip or "Mon_Attack"
 				if mob.walkTrack then
-					Anim.Play(mob.hum, "Mon_Attack", { fade = 0.05 })
+					Anim.Play(mob.hum, clip, { fade = 0.05 })
 				end
 				local target = mob.target
 				-- the hit lands on the attack clip's strike frame
-				task.delay(def.attackRange > 15 and 0.3 or Anim.Strike("Mon_Attack"), function()
+				task.delay(def.attackRange > 15 and 0.3 or Anim.Strike(clip), function()
 					if not mob.dead and target then
 						R.CombatService.MonsterHit(mob, target, 1)
 					end

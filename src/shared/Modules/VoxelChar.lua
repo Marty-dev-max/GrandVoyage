@@ -392,6 +392,7 @@ local function newBlock(size, color, name)
 end
 
 -- build every block of a look. place(partName) -> CFrame, Size of that body part; emit(block, partName, cframe)
+VC.Rest = REST -- limb rest poses (tools/export_char.luau dresses previews with Accessory.Build)
 local LITE = false -- set by VC.Preview(..., { lite = true }): fewer hair blocks (NPC crews)
 local function buildAll(look, heritage, variant, mode, place, emit)
 	look = Looks.Sanitize(look)

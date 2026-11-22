@@ -456,6 +456,15 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     PARTY button only (HUD.partyWidth), 60 px under the collapsed quest button; no dark disc behind the portrait.
   * v0.25.31 (owner): gem icons = `fgem` (gen_pixel_icons.py: wide brilliant cut, table/bezel/pavilion facets);
     mini_gem + `gem_heap` use it; packs = Pile / Chest / Trophy of Gems (Pearls.Products names + st_gems_* icons).
+  * v0.25.32 (owner): humanoid monsters = voxel characters like the players. `Config/MonsterLooks` (style names + hex
+    colors per monster id, `race`/`variant` = Tidekin bodies for the fish-folk, `acc` list, `held` weapon, `attack` = R15
+    player clip) -> `ModelFactory.VoxelMonster` (R15 rig from a normalized HumanoidDescription, VoxelChar.Apply,
+    Accessory.Wear, ScaleTo style.scale; one template per id, cloned; attrs RealModel/R15Mob/AttackClip), tried first by
+    MF.Monster. MonsterService plays Roblox's default R15 idle/walk (507766388 / 507777826) + AttackClip + Hurt for R15Mob.
+    Accessories = `Config/Accessories` (blocks { limb, size x limb, offset x limb, color, material }) built by
+    `Shared/Modules/Accessory` (Build/Wear) for players (WeaponService OUTFIT = Accessory.Cfg), monsters and previews:
+    an item whose id has an accessory shows when worn (new headgear/capes/beards in Items.lua, dropped by their monster).
+    Preview: `lune run tools/export_char.luau build/GrandVoyage.rbxlx out.json monsters [row]` + render_parts.py front|three.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

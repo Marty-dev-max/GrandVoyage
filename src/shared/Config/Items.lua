@@ -75,6 +75,26 @@ add("SharkToothNecklace", { name = "Shark Tooth Necklace", kind = "Accessory", s
 add("SeastoneBracer", { name = "Seastone Bracer", desc = "Marines only. PvP hits have a 20% chance to seal a fruit user's powers for 3 s. Fruit users cannot wear Seastone.", kind = "Accessory", slot = "accessory", vit = 2, reqLevel = 20, slots = 1, price = 12000, rarity = "Rare", faction = "Marine", seastone = { 0.2, 3 }, icon = "⛓️" })
 add("SeastoneShackle", { name = "Seastone Shackle Charm", desc = "Marines only. PvP hits have a 35% chance to seal a fruit user's powers for 4 s. Fruit users cannot wear Seastone.", kind = "Accessory", slot = "accessory", vit = 4, dex = 3, reqLevel = 45, slots = 1, price = 60000, rarity = "Epic", faction = "Marine", seastone = { 0.35, 4 }, icon = "⛓️" })
 
+-- v0.25.32 (owner): the humanoid monsters' signature pieces (models in Config/Accessories, the same blocks the monster
+-- wears): dropped by that monster, some sold in the General Store; worn on the character like every gear piece
+add("ClownWig", { name = "Clown Wig", kind = "Headgear", slot = "headgear", def = 3, dex = 3, reqLevel = 20, slots = 1, price = 7000, refinable = true, rarity = "Rare" })
+add("ConfettiWig", { name = "Confetti Wig", kind = "Headgear", slot = "headgear", def = 6, dex = 5, luk = 3, reqLevel = 30, slots = 1, price = 24000, refinable = true, rarity = "Epic" })
+add("CatEars", { name = "Night Cat Ears", kind = "Headgear", slot = "headgear", def = 3, agi = 5, reqLevel = 30, slots = 1, price = 14000, refinable = true, rarity = "Rare" })
+add("HypnoGoggles", { name = "Hypno Goggles", kind = "Headgear", slot = "headgear", def = 3, int = 5, reqLevel = 32, slots = 1, price = 15000, refinable = true, rarity = "Rare" })
+add("IronHelmet", { name = "Armada Helmet", kind = "Headgear", slot = "headgear", def = 10, vit = 3, reqLevel = 40, slots = 1, price = 22000, refinable = true, rarity = "Rare" })
+add("GlowVisor", { name = "Silent Visor", kind = "Headgear", slot = "headgear", def = 5, dex = 6, agi = 4, reqLevel = 40, slots = 1, price = 45000, refinable = true, rarity = "Epic" })
+add("RingmasterHat", { name = "Ringmaster's Top Hat", kind = "Headgear", slot = "headgear", def = 6, luk = 6, reqLevel = 28, slots = 1, price = 30000, refinable = true, rarity = "Epic" })
+add("AdmiralCrown", { name = "Armada Crown", kind = "Headgear", slot = "headgear", def = 12, str = 5, vit = 4, reqLevel = 50, slots = 1, price = 120000, refinable = true, rarity = "Legendary" })
+add("CapeNavy", { name = "Navy Captain's Cape", kind = "Accessory", slot = "accessory", vit = 4, reqLevel = 20, slots = 1, price = 20000, rarity = "Epic" })
+add("CapeGold", { name = "Ringmaster's Cape", kind = "Accessory", slot = "accessory", luk = 4, dex = 2, reqLevel = 28, slots = 1, price = 28000, rarity = "Epic" })
+add("CapePurple", { name = "Confetti Cape", kind = "Accessory", slot = "accessory", luk = 5, reqLevel = 30, slots = 1, price = 30000, rarity = "Epic" })
+add("CapeShadow", { name = "Shadow Cape", kind = "Accessory", slot = "accessory", agi = 6, reqLevel = 40, slots = 1, price = 50000, rarity = "Epic" })
+add("CapeCrimson", { name = "Admiral's Crimson Cape", kind = "Accessory", slot = "accessory", str = 6, vit = 3, reqLevel = 50, slots = 1, price = 110000, rarity = "Legendary" })
+add("CapeSlate", { name = "Mist Cape", kind = "Accessory", slot = "accessory", int = 5, vit = 5, reqLevel = 58, slots = 1, price = 150000, rarity = "Legendary" })
+add("BeardDark", { name = "Bandit Beard", kind = "Accessory", slot = "accessory", str = 2, reqLevel = 8, slots = 0, price = 1200, rarity = "Uncommon" })
+add("BeardBrown", { name = "Sea Dog Beard", kind = "Accessory", slot = "accessory", vit = 3, reqLevel = 20, slots = 1, price = 6000, rarity = "Uncommon" })
+add("BeardGrey", { name = "Commodore's Beard", kind = "Accessory", slot = "accessory", vit = 4, int = 3, reqLevel = 65, slots = 1, price = 90000, rarity = "Epic" })
+
 -- ===== Consumables =====
 add("MeatOnBone", { name = "Meat on the Bone", desc = "Restores 20% HP.", kind = "Consumable", heal = 0.2, price = 80, stack = true, cd = 1.5, rarity = "Common" })
 add("BigFeast", { name = "Pirate Feast", desc = "Restores 50% HP.", kind = "Consumable", heal = 0.5, price = 600, stack = true, cd = 3, rarity = "Uncommon" })
@@ -136,7 +156,7 @@ end
 -- General store stock
 local Shop = {
 	"MeatOnBone", "BigFeast", "TangerineJuice", "RepairKit", "SeaBait", "SteelOre", "Wood", "SailCloth",
-	"SailorVest", "Bandana", "CompassCharm", "SeastoneBracer",
+	"SailorVest", "Bandana", "CompassCharm", "SeastoneBracer", "BeardDark", "BeardBrown", "ClownWig",
 	"Ammo_Ember", "Ammo_Frost", "Ammo_Spark", "Ammo_Needle", "Ammo_Blast", "Ammo_Star",
 	"Knuckles_Plain", "Sword_Plain", "Slingshot_Plain", "Shoes_Plain", "StormBaton_Plain", "MedKit_Plain", "Hammer_Plain",
 }

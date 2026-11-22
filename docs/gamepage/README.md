@@ -32,12 +32,20 @@ Update log: press the MENU button in game.
 
 ## เช็คลิสต์ตั้งค่าก่อนให้เพื่อนเล่น
 
-1. **Avatar type = R15** (Game Settings → Avatar) ระบบตัวละคร voxel ต้องใช้ R15
-2. **Security → Enable Studio Access to API Services = เปิด** (ไม่เปิดเซฟไม่ได้ในการเทส Studio)
-3. **Devices:** Computer, Phone, Tablet เปิดหมด (มีโหมด Low สำหรับมือถืออัตโนมัติ)
+1. **Avatar type = R15** (อัปเดต 22 พ.ย.: Roblox ย้ายจาก Game Settings ไปหน้าต่าง **Avatar Settings** แล้ว)
+   Studio → แท็บ **Avatar** (หรือเมนู **File**) → **Avatar Settings** → ปุ่ม **⋮** (สามจุด) มุมบน → เลือก **R15**
+   → Save (ต้อง Publish เกมขึ้น Roblox ก่อนถึงจะกดได้) ระบบตัวละคร voxel ต้องใช้ R15
+2. **Enable Studio Access to API Services = เปิด**: Studio → **File → Experience Settings** (ชื่อเดิม Game Settings)
+   → แท็บ **Security** → เปิดสวิตช์ → **Save** (ไม่เปิด = เซฟข้อมูลไม่ได้ตอนเทสใน Studio; ต้องเป็นเจ้าของเกมถึงกดได้)
+3. **Devices:** Computer, Phone, Tablet เปิดหมด (มือถือเริ่มที่ Low แต่เปลี่ยนได้ใน Settings → Graphics)
 4. **Maturity questionnaire** ทำให้ครบ (มีการต่อสู้แบบการ์ตูน ไม่มีเลือด) ไม่งั้นเกมจะไม่ขึ้นค้นหา
-5. **Access:** ช่วงเทสกับเพื่อน ตั้งเป็น **Friends** หรือใช้ **Private Server ฟรี** (Monetization → Private Servers → Free)
-6. **Developer Products:** ใส่ ID ครบแล้วทุกตัว เปลี่ยนชื่อ 4 แพ็กสุ่มเป็น "Race Spin" ใน Creator Hub (แก้แค่ชื่อ)
-7. **ทดสอบซื้อจริง 1 ครั้งต่อสินค้า** ในเซิร์ฟเวอร์จริง (ไม่ใช่ Studio) ต้องได้ของครั้งเดียว
+5. **Access (ช่วงเทสกับเพื่อน):** Creator Hub → เกม → **Audience/Access** ตอนนี้ Roblox ใช้ **Playtest** กับ **Public**
+   - เทสเฉพาะเพื่อน: ตั้ง **Playtest** แล้วเพิ่มชื่อเพื่อนเป็น playtester (หรือ Public + เปิดสวิตช์ **Friends**)
+   - ชื่อเมนูอาจต่างนิดหน่อยตามเวอร์ชัน Creator Hub: ดูคำที่ใกล้เคียงที่สุด
+6. **Developer Products:** ใส่ ID ครบแล้วทุกตัว, เปลี่ยนชื่อแพ็กสุ่มเป็น "Race Spin" แล้ว ✅
+7. **ทดสอบการซื้อ:**
+   - ใน Studio (กด Play) = ซื้อจำลอง **ไม่เสีย Robux** ใช้เช็คว่าได้ของครั้งเดียวทุกสินค้า (ทำอันนี้ก่อน)
+   - ในเกมจริง (หลัง Publish) = **เสีย Robux จริง** ซื้อแค่อันถูกสุด 1–2 อันพอ เพื่อเช็คว่าเซิร์ฟเวอร์จริงให้ของ
+     (Roblox คืนส่วนแบ่งให้คนสร้างเกมบางส่วน แต่ไม่ครบ)
 8. เปิดเกมบนมือถือจริง 1 เครื่อง เดินจาก Daybreak ไปท่าเรือ แล้วล่องเรือไป Conch Bay ดูว่าลื่นไหม
 9. **Social links:** สร้างกลุ่ม Roblox / Discord ไว้รับบั๊กจากเพื่อน (ใส่ลิงก์ในหน้าเกมได้)

@@ -265,6 +265,7 @@ local function fruitModel(f, pos)
 	prompt.MaxActivationDistance = 10
 	prompt.RequiresLineOfSight = false
 	prompt.Parent = body
+	m:SetAttribute("SpawnedAt", workspace:GetServerTimeNow()) -- client FruitAlert: the map-wide beacon runs ~1 min from here
 	CollectionService:AddTag(m, "CursedFruit")
 	m.Parent = workspace
 	return m, prompt

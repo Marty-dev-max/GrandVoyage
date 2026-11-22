@@ -123,6 +123,8 @@ add("MusicSea", "Music", 0.3, "", { looped = true, id = "rbxassetid://1836603880
 -- so until then the client speaks the line with Roblox text-to-speech: Controllers/FruitAlert)
 add("FruitHum", "SFX", 0.5, "", { looped = true, id = "rbxassetid://9116396987" }) -- Pixie Dust Twinkles 3 (ProSoundEffects), loops at a spawned fruit
 add("FruitTwinkle", "SFX", 0.7, "", { id = "rbxassetid://9116396069" }) -- Magic Insect Dive Down Pixie Dust Twinkles 2 (ProSoundEffects)
+-- v0.25.50 (owner): sonar ping with the map-wide fruit beacon (Spaceship Sonar Various High Pitch Tones 1, ProSoundEffects)
+add("FruitSonar", "SFX", 0.6, PING, { id = "rbxassetid://9119435202" })
 add("Narr_FruitDaybreak", "SFX", 1, "")
 add("Narr_FruitConchBay", "SFX", 1, "")
 add("Narr_FruitMarmalade", "SFX", 1, "")

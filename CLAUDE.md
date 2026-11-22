@@ -545,6 +545,18 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     the Melee/Ranged path + FX up/down (|Y| <= 0.8), ship hits and Dash stay flat. Auto mode / touch slots cast on press.
     v0.25.49: the CAS key-up never arrived in the owner's Studio (aim line stuck): the aim loop also releases when
     `UserInputService:IsKeyDown` says the key is up. Do not rely on CAS End alone.
+  * v0.25.50 (owner): ShipService `SkillHit` / `SkillHitCircle` (skillHitList: an NPC ship you stand on is not "yours")
+    called from every damage skill kind in CombatService (shipLine / shipCircle, shipDmg = 0.8 x atk x mult x hits).
+    NpcLife: limbs split by side (arms |x| > 1, legs below HIP_Y), relaxed stance (arms out + soft elbows, feet apart,
+    weight shift, breath), any NPC ProximityPrompt trigger -> facing until 14 studs away. Interact prompt BIG 0.9.
+    WorldCull: EnvProp/EnvPart are cullable (Decor stays with Settings), Forts/Islets/RedLine/SeaFloor hide in 600-stud
+    chunks. Graphics buttons quarter width (phones could only reach Low). ShiftLock LOCK button DisplayOrder 30 at
+    (1,-20,1,-142), hidden while a window is open. FruitAlert `beacon`: SpawnedAt attr (FruitService) -> 60 s pillar +
+    AlwaysOnTop diamond + `FruitSonar` ping every 2 s (ProSoundEffects 9119435202, fallback electronicpingshort) +
+    square ground ripple. Touch hold-to-aim: HUD skill slot InputBegan -> `Combat.TouchAim` (startAim src = the touch:
+    drag from the button = joystick dir, camera pitch = tilt), CastSkill(id, nil, aim) uses the last shown aim.
+    docs/Plan-Job2.md: owner picks 22 Nov (Sea Cook A Ember Kicker / B Barrel Roller, Doctor B exploding apple,
+    Shipwright A Ironclad / B Silent Chisel). Friend playtest = 29 Nov 2026.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

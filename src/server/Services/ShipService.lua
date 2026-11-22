@@ -306,16 +306,29 @@ function Ship.InLine(from, to, width)
 end
 
 -- v0.25.17 (owner): skills fired from a deck hit hostile ships along their path (cannons are no longer the only option)
-function Ship.SkillHit(player, from, to, width, damage)
+-- v0.25.50 (owner: skills never hit NPC hulls): standing on an NPC ship (boarding) is not "your" ship, so it can be hit
+local function attackerShip(player)
 	local src = shipUnder(player)
+	return (src and not src.npc) and src or nil
+end
+local function skillHitList(player, list, damage)
+	local src = attackerShip(player)
 	local hit = false
-	for _, s in ipairs(Ship.InLine(from, to, width)) do
+	for _, s in ipairs(list) do
 		if s ~= src and (not src or hostile(src, s)) and (src or s.npc) then
 			Ship.DamageShip(s, damage, src, player)
 			hit = true
 		end
 	end
 	return hit
+end
+
+function Ship.SkillHitCircle(player, center, radius, damage)
+	return skillHitList(player, Ship.InCircle(center, radius), damage)
+end
+
+function Ship.SkillHit(player, from, to, width, damage)
+	return skillHitList(player, Ship.InLine(from, to, width), damage)
 end
 
 -- v0.25.42: the NPC ship a clicked part belongs to (basic attacks and targeted skills can smash hulls)

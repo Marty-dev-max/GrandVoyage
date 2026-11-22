@@ -23,7 +23,7 @@ end
 
 -- ===== prompts =====
 local shown = {} -- prompt -> billboard
-local BIG = 1.35
+local BIG = 0.9 -- v0.25.50 (owner: too big up close; was 1.35)
 
 local function buildPrompt(prompt, inputType)
 	local gui = player:FindFirstChildOfClass("PlayerGui")
@@ -51,7 +51,7 @@ local function buildPrompt(prompt, inputType)
 		actionText, objectText = "Manage", "Your stall"
 	end
 	-- v0.25.23 (owner: too small, off to the side): centered over the head, where the NPC's nameplate sits (hidden
-	-- while the card shows), 1.35x bigger
+	-- while the card shows); BIG scales the card
 	local plate = prompt.Parent:FindFirstChild("Nameplate")
 	plate = plate and plate:IsA("BillboardGui") and plate or nil
 	local bb = New("BillboardGui", { Name = "GVPrompt", AlwaysOnTop = true, Active = true, LightInfluence = 0, Size = UDim2.fromOffset(280 * BIG + 10, 64 * BIG + 10), StudsOffsetWorldSpace = plate and plate.StudsOffsetWorldSpace or Vector3.new(0, 3, 0), ResetOnSpawn = false, Adornee = prompt.Parent, Parent = gui })

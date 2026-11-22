@@ -79,6 +79,91 @@ local function mark(pos, life)
 	end)
 end
 
+-- v0.25.50 (owner: wanted to see WHERE from anywhere on the map + a sonar sound for about a minute): a tall pulsing
+-- light pillar over a fresh fruit, a diamond marker drawn on top of everything (any distance), and every 2 s a sonar
+-- ping (louder the closer you are) with a square ripple spreading on the ground. Runs BEACON seconds from the spawn.
+local BEACON = 60
+local function beacon(m, body, color)
+	local born = m:GetAttribute("SpawnedAt")
+	local left = born and BEACON - (workspace:GetServerTimeNow() - born) or 0
+	if left <= 0 then
+		return
+	end
+	local fx = workspace:FindFirstChild("ClientFX") or workspace
+	local function block(size, cf, transparency)
+		local p = Instance.new("Part")
+		p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.CastShadow = true, false, false, false, false
+		p.Material = Enum.Material.Neon
+		p.Color = color
+		p.Size = size
+		p.CFrame = cf
+		p.Transparency = transparency
+		p.Parent = fx
+		return p
+	end
+	local base = body.Position
+	local pillar = block(Vector3.new(3, 700, 3), CFrame.new(base + Vector3.new(0, 352, 0)), 0.45)
+	local anchor = block(Vector3.new(0.2, 0.2, 0.2), CFrame.new(base + Vector3.new(0, 40, 0)), 1)
+	local bb = Instance.new("BillboardGui")
+	bb.AlwaysOnTop = true
+	bb.LightInfluence = 0
+	bb.Size = UDim2.fromOffset(44, 44)
+	bb.Parent = anchor
+	local diamond = Instance.new("Frame")
+	diamond.AnchorPoint = Vector2.new(0.5, 0.5)
+	diamond.Position = UDim2.fromScale(0.5, 0.5)
+	diamond.Size = UDim2.fromOffset(22, 22)
+	diamond.Rotation = 45
+	diamond.BackgroundColor3 = color
+	diamond.Parent = bb
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = Color3.new(1, 1, 1)
+	stroke.Thickness = 3
+	stroke.Parent = diamond
+	local function ripple()
+		-- a square ring of 4 neon bars growing outward on the ground and fading (voxel sonar wave)
+		local bars = {}
+		for i = 1, 4 do
+			bars[i] = block(Vector3.new(1, 0.4, 1), CFrame.new(base), 0.2)
+		end
+		task.spawn(function()
+			local t0 = os.clock()
+			while os.clock() - t0 < 1.6 do
+				local k = (os.clock() - t0) / 1.6
+				local r = 4 + k * 60
+				for i, b in ipairs(bars) do
+					local a = (i - 1) * math.pi / 2
+					b.Size = Vector3.new(r * 2, 0.4, 1)
+					b.CFrame = CFrame.new(base + Vector3.new(0, 0.6, 0)) * CFrame.Angles(0, a, 0) * CFrame.new(0, 0, r)
+					b.Transparency = 0.2 + 0.8 * k
+				end
+				task.wait()
+			end
+			for _, b in ipairs(bars) do
+				b:Destroy()
+			end
+		end)
+	end
+	task.spawn(function()
+		local stop = os.clock() + left
+		while os.clock() < stop and m.Parent and body.Parent do
+			local cam = workspace.CurrentCamera
+			local d = cam and (cam.CFrame.Position - base).Magnitude or 0
+			Audio.Play("FruitSonar", { volume = math.clamp(1.2 - d / 3500, 0.3, 1) })
+			ripple()
+			pillar.Transparency = 0.15
+			TweenService:Create(pillar, TweenInfo.new(1.2), { Transparency = 0.6 }):Play()
+			diamond.Size = UDim2.fromOffset(34, 34)
+			TweenService:Create(diamond, TweenInfo.new(0.8), { Size = UDim2.fromOffset(22, 22) }):Play()
+			task.wait(2)
+		end
+		TweenService:Create(pillar, TweenInfo.new(1.5), { Transparency = 1 }):Play()
+		task.wait(1.6)
+		pillar:Destroy()
+		anchor:Destroy()
+	end)
+end
+
 -- every player near a spawned Cursed Fruit (v0.25.34, owner): it twinkles (looping hum), flashes when it appears
 -- and keeps blinking: a double flash of its light + glow + a burst of sparkles every couple of seconds
 local function dress(m)
@@ -119,6 +204,7 @@ local function dress(m)
 	-- the moment it appears: a big flash and burst
 	flash(1)
 	e:Emit(30)
+	beacon(m, body, color)
 	task.spawn(function()
 		while m.Parent and body.Parent do
 			task.wait(1.8 + math.random() * 0.6)

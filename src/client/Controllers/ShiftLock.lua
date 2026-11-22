@@ -51,15 +51,19 @@ function SL.Start()
 		local gui = Instance.new("ScreenGui")
 		gui.Name = "ShiftLockButton"
 		gui.ResetOnSpawn = false
+		-- v0.25.50 (owner: hidden behind the HUD on a phone): drawn above the HUD, just over the jump button, below
+		-- the menu tiles (it sat among them at -230)
+		gui.DisplayOrder = 30
 		gui.Parent = player:WaitForChild("PlayerGui")
-		local btn = UI.Button(gui, "LOCK", UI.Theme.Grey, UDim2.fromOffset(110, 40), function()
+		local btn = UI.Button(gui, "LOCK", UI.Theme.Grey, UDim2.fromOffset(96, 36), function()
 			apply(not on)
 		end)
 		btn.Parent.AnchorPoint = Vector2.new(1, 1)
-		btn.Parent.Position = UDim2.new(1, -24, 1, -230)
+		btn.Parent.Position = UDim2.new(1, -20, 1, -142)
 		task.spawn(function()
 			local was
 			while gui.Parent do
+				gui.Enabled = not UI.AnyOpen() -- drawn above the HUD, so it steps aside while a window is open
 				if was ~= on then
 					was = on
 					UI.SetButtonColor(btn, on and UI.Theme.Green or UI.Theme.Grey)

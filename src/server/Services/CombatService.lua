@@ -536,6 +536,14 @@ local function setup()
 			local y = math.clamp(data.dir.Unit.Y, -0.8, 0.8)
 			aim3 = aimDir * math.sqrt(1 - y * y) + Vector3.new(0, y, 0)
 		end
+		-- v0.25.50 (owner: skills did not hurt NPC hulls, only M1): every damage skill also hits hostile ships in its area
+		local shipDmg = math.floor((magic and d.matk or d.atk) * mult * (skill.hits or 1) * 0.8)
+		local function shipLine(from, to)
+			task.delay(strike, R.ShipService.SkillHit, player, from, to, 8, shipDmg)
+		end
+		local function shipCircle(center, radius)
+			task.delay(math.max(0.25, strike), R.ShipService.SkillHitCircle, player, center, radius, shipDmg)
+		end
 		if (kind == "Melee" or kind == "Ranged") and aimDir and not resolveTarget(player, data.target) then
 			-- manual mode, aimed at nothing in particular: the skill goes out along the aim and hits what is in its path
 			local range = skill.range or 10
@@ -544,11 +552,7 @@ local function setup()
 			do
 				local shipRange = math.max(range, 40)
 				fxData.to = root.Position + aim3 * shipRange
-				local dmg = math.floor((magic and d.matk or d.atk) * mult * (skill.hits or 1) * 0.8)
-				local from = root.Position
-				task.delay(strike, function()
-					R.ShipService.SkillHit(player, from, from + aimDir * shipRange, 8, dmg)
-				end)
+				shipLine(root.Position, root.Position + aimDir * shipRange)
 			end
 			local land = strike + (kind == "Ranged" and 0.2 or 0)
 			local seen = {}
@@ -572,6 +576,9 @@ local function setup()
 				return false, "Too far away"
 			end
 			fxData.to = target.pos
+			if target.kind ~= "ship" then
+				shipLine(root.Position, target.pos) -- a crewman on deck: the hull under him takes it too
+			end
 			local land = strike + (kind == "Ranged" and 0.2 or 0)
 			for i = 1, skill.hits or 1 do
 				hitLater(land + 0.09 * (i - 1), player, target, mult, magic, lastHitOpts(i == (skill.hits or 1)))
@@ -600,6 +607,7 @@ local function setup()
 			-- its physics); the hits below land along the path at the same speed
 			Net.Push(player, "SkillDash", { dir = dir, dist = dist, speed = 60 })
 			fxData.to = to
+			shipLine(from, from + dir * skill.range)
 			local seen = {}
 			for step = 0, dist, 4 do
 				for _, tt in ipairs(inRadiusTargets(player, from + dir * step, 6)) do
@@ -613,6 +621,7 @@ local function setup()
 		elseif kind == "AoE" then
 			fxData.to = root.Position
 			fxData.radius = skill.radius
+			shipCircle(root.Position, skill.radius or 10)
 			for _, t in ipairs(inRadiusTargets(player, root.Position, skill.radius)) do
 				hitLater(strike, player, t, mult, magic, lastHitOpts(true, root.Position))
 			end
@@ -627,6 +636,7 @@ local function setup()
 			end
 			fxData.to = pos
 			fxData.radius = skill.radius
+			shipCircle(pos, skill.radius or 10)
 			task.delay(math.max(0.25, strike), function()
 				for _, t in ipairs(inRadiusTargets(player, pos, skill.radius)) do
 					hitTarget(player, t, mult, magic, lastHitOpts(true, pos))

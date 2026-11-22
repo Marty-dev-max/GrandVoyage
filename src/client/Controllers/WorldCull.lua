@@ -3,6 +3,8 @@
 -- back as you come closer. Only untagged, anchored scenery is touched: NPCs, chests, docks, plots, spawns, prompts and
 -- anything else carrying a CollectionService tag (or inside a tagged model) always stays, so quests, markers and
 -- interactions keep working everywhere. The server is never affected (it is a local view change).
+-- v0.25.50: scenery tags (EnvProp/EnvPart) are culled too, and the sea-wide models (forts, islets, Red Line,
+-- sea floor) hide in 600-stud chunks.
 -- Distances follow the graphics preset (Settings.Knobs: cull), with a little hysteresis; work is spread over frames.
 local CollectionService = game:GetService("CollectionService")
 local RunService = game:GetService("RunService")
@@ -16,12 +18,21 @@ local CULL = { Low = 1150, Medium = 1500, High = 2100, Ultra = 2700 }
 local zones = {} -- { model, center, radius, hidden = bool, stash = { {part, parent} }, busy }
 WC.Stats = { hidden = 0 }
 
+-- v0.25.50 (owner: phones felt like the whole sea up to the Red Line was drawn): pure scenery tags may be culled too
+-- (trees, bushes, boulders, cliff slabs, decor props were all kept before, so far islands stayed mostly visible)
+local SCENERY = { EnvProp = true, EnvPart = true } -- (Decor stays: Settings hides/restores it per preset)
+-- big models spread over the whole sea are cut into square chunks that hide one by one
+local CHUNKED = { "Forts", "Islets", "RedLine", "SeaFloor" }
+local CHUNK = 600
+
 local function protected(inst, root)
-	-- tagged itself or inside a tagged model, or something the player interacts with
+	-- tagged itself or inside a tagged model (other than plain scenery), or something the player interacts with
 	local a = inst
 	while a and a ~= root do
-		if #CollectionService:GetTags(a) > 0 then
-			return true
+		for _, tag in ipairs(CollectionService:GetTags(a)) do
+			if not SCENERY[tag] then
+				return true
+			end
 		end
 		a = a.Parent
 	end
@@ -32,8 +43,8 @@ local function hide(z)
 	z.busy = true
 	z.stash = {}
 	local list = {}
-	for _, d in ipairs(z.model:GetDescendants()) do
-		if d:IsA("BasePart") and d.Anchored and not protected(d, z.model) then
+	for _, d in ipairs(z.parts or z.model:GetDescendants()) do
+		if d:IsA("BasePart") and d.Parent and d.Anchored and not protected(d, z.model) then
 			table.insert(list, d)
 		end
 	end
@@ -88,6 +99,25 @@ function WC.Start()
 			local ok, cf, size = pcall(m.GetBoundingBox, m)
 			if ok then
 				table.insert(zones, { model = m, center = Vector3.new(cf.Position.X, 0, cf.Position.Z), radius = math.max(size.X, size.Z) / 2, hidden = false })
+			end
+		end
+	end
+	for _, name in ipairs(CHUNKED) do
+		local m = world:FindFirstChild(name)
+		if m then
+			local cells = {}
+			for _, d in ipairs(m:GetDescendants()) do
+				if d:IsA("BasePart") then
+					local p = d.Position
+					local key = math.floor(p.X / CHUNK) .. ":" .. math.floor(p.Z / CHUNK)
+					local c = cells[key]
+					if not c then
+						c = { model = m, parts = {}, center = Vector3.new((math.floor(p.X / CHUNK) + 0.5) * CHUNK, 0, (math.floor(p.Z / CHUNK) + 0.5) * CHUNK), radius = CHUNK * 0.71, hidden = false }
+						cells[key] = c
+						table.insert(zones, c)
+					end
+					table.insert(c.parts, d)
+				end
 			end
 		end
 	end

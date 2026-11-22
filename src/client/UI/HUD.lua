@@ -818,7 +818,24 @@ local function buildSkillBar()
 		local parent = i <= 6 and main or second
 		local s = makeSlot(parent, Combat.SKILL_KEY_LABELS[i], i)
 		skillSlots[i] = s
+		-- v0.25.50 (owner): on touch, hold the skill button and drag to aim (manual mode), lift to cast
+		local touchAimed = false
+		s.slot.InputBegan:Connect(function(input)
+			if input.UserInputType ~= Enum.UserInputType.Touch then
+				return
+			end
+			touchAimed = false -- (a drag that ended off the button never got its Activated)
+			local p = State.profile
+			local id = p and p.skillBar[i]
+			if id and id ~= "" and Combat.AimableSkill(id) then
+				touchAimed = Combat.TouchAim(id, i, input)
+			end
+		end)
 		s.slot.Activated:Connect(function()
+			if touchAimed then
+				touchAimed = false -- the aim casts it when the finger lifts
+				return
+			end
 			local p = State.profile
 			local id = p and p.skillBar[i]
 			if id and id ~= "" then

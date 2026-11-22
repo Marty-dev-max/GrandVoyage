@@ -179,7 +179,7 @@ local function aimedTarget(dir, mob, range)
 	return best
 end
 
-function Combat.CastSkill(skillId, targetModel)
+function Combat.CastSkill(skillId, targetModel, aim)
 	local skill = ClassesCfg.SkillById[skillId]
 	if not skill then
 		return false
@@ -199,6 +199,9 @@ function Combat.CastSkill(skillId, targetModel)
 	if (not State.auto or onShip()) and not targetModel and (kind == "Melee" or kind == "Ranged" or kind == "GroundAoE" or kind == "Dash") then
 		-- manual mode: aim with the pointer / crosshair, turn that way, fire even with nothing there
 		local dir, pos, mob, dir3 = aimInfo()
+		if aim then
+			dir, pos, mob, dir3 = aim[1], aim[2], aim[3], aim[4] -- a touch aim (Combat.TouchAim)
+		end
 		local r = root()
 		if dir and r then
 			local aimed = kind ~= "GroundAoE" and aimedTarget(dir, mob, skill.range or 10) or nil
@@ -792,7 +795,30 @@ local function aimPart(name, color, parent)
 	p.Parent = parent
 	return p
 end
-local function startAim(id, slot)
+-- src (v0.25.50): where the aim comes from. nil = keyboard (pointer / crosshair aim, held while the key is down);
+-- a touch = the finger dragged away from the skill button steers it like a joystick, held until the finger lifts
+local function touchAim(skill, input, startPos)
+	local r = root()
+	local cam = workspace.CurrentCamera
+	if not r or not cam then
+		return nil
+	end
+	local drag = Vector2.new(input.Position.X, input.Position.Y) - startPos
+	if drag.Magnitude < 14 then
+		return aimInfo() -- barely moved: straight where the camera looks, like a tap
+	end
+	local cf = cam.CFrame
+	local right = Vector3.new(cf.RightVector.X, 0, cf.RightVector.Z).Unit
+	local fwd = Vector3.new(cf.LookVector.X, 0, cf.LookVector.Z).Unit
+	local dir = (right * drag.X - fwd * drag.Y).Unit -- screen down = toward the camera
+	local reach = skill.range or 20
+	local pos = r.Position + dir * reach * math.clamp(drag.Magnitude / 150, 0.15, 1) - Vector3.new(0, 2.5, 0)
+	-- tilt follows the camera's pitch (looking up aims up)
+	local y = math.clamp(cf.LookVector.Y + 0.25, -0.8, 0.8)
+	return dir, pos, nil, dir * math.sqrt(1 - y * y) + Vector3.new(0, y, 0)
+end
+
+local function startAim(id, slot, src)
 	local skill = ClassesCfg.SkillById[id]
 	if (State.cooldowns[id] or 0) > os.clock() then
 		return
@@ -807,22 +833,35 @@ local function startAim(id, slot)
 	hold.spot = aimPart("AimSpot", Color3.fromRGB(255, 150, 60), fx)
 	-- v0.25.49 (owner: the aim line stayed after letting go): the key-up event from ContextActionService did not arrive
 	-- in Studio, so the key's real state is checked every frame too (whichever sees the release first casts)
-	local keyName = Hotkeys.Key("Skill" .. slot)
+	local keyName = not src and Hotkeys.Key("Skill" .. slot)
 	local keyCode = keyName and Enum.KeyCode[keyName]
+	local startPos = src and Vector2.new(src.Position.X, src.Position.Y)
 	hold.conn = RunService.RenderStepped:Connect(function()
 		if holding ~= hold then
 			return
 		end
-		if not keyCode or not UserInputService:IsKeyDown(keyCode) then
+		local released
+		if src then
+			released = src.UserInputState == Enum.UserInputState.End or src.UserInputState == Enum.UserInputState.Cancel
+		else
+			released = not keyCode or not UserInputService:IsKeyDown(keyCode)
+		end
+		if released then
 			stopAim()
-			Combat.CastSkill(hold.id)
+			Combat.CastSkill(hold.id, nil, hold.aim) -- the aim shown last frame (a lifted finger has no pointer)
 			return
 		end
 		local r, h = root(), hum()
-		local dir, pos, _, dir3 = aimInfo()
+		local dir, pos, mob, dir3
+		if src then
+			dir, pos, mob, dir3 = touchAim(skill, src, startPos)
+		else
+			dir, pos, mob, dir3 = aimInfo()
+		end
 		if not r or not dir then
 			return
 		end
+		hold.aim = src and { dir, pos, mob, dir3 } or nil
 		-- face the aim (Shift Lock already turns the body with the camera)
 		if h and UserInputService.MouseBehavior ~= Enum.MouseBehavior.LockCenter then
 			h.AutoRotate = false
@@ -855,6 +894,23 @@ local function startAim(id, slot)
 	holding = hold
 end
 Combat.CancelAim = stopAim
+
+-- touch hotbar (HUD): true when this skill aims by holding (manual mode, a skill with a direction)
+function Combat.AimableSkill(id)
+	local skill = ClassesCfg.SkillById[id]
+	return skill ~= nil and AIM_KINDS[skill.kind] == true and (not State.auto or onShip())
+end
+
+-- touch hotbar: hold the skill button and drag to aim, lift to cast
+function Combat.TouchAim(id, slot, input)
+	if holding then
+		local held = holding.id
+		stopAim()
+		Combat.CastSkill(held)
+	end
+	startAim(id, slot, input)
+	return holding ~= nil
+end
 
 function Combat.Start()
 	Net.OnPush("SkillDash", skillDash)

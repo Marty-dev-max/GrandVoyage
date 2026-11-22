@@ -766,37 +766,55 @@ function Panels.Stats()
 		end
 		local left = p.statPoints - planCost(p)
 
-		local tbl = UI.Card(right, UDim2.new(1, -12, 0, 470), T.Panel)
+		-- v0.25.67 (owner: cramped header, LUK row hidden under the buttons, unclear colors): a points pill + a
+		-- Reset Stats button (opens the Store product) on top, column colors BASE white / BONUS green / NEXT COST yellow
+		local ROW0, ROWH, ROWGAP = 92, 48, 6
+		local tblH = ROW0 + 6 * (ROWH + ROWGAP) + 12 + 50 + 28
+		local tbl = UI.Card(right, UDim2.new(1, -12, 0, tblH), T.Panel)
 		UI.Pad(tbl, 14)
-		-- header: points left + reset plan
-		UI.Text(tbl, "POINTS LEFT", 16, T.TextSoft, "Display", { Size = UDim2.fromOffset(140, 30) })
-		UI.Text(tbl, tostring(left), 30, left > 0 and T.Gold or T.Text, "Number", { Position = UDim2.fromOffset(140, -2), Size = UDim2.fromOffset(90, 34) })
-		local _, rh = UI.Button(tbl, "Reset plan", T.Red, UDim2.fromOffset(150, 36), function()
+		local pill = New("Frame", { BackgroundColor3 = T.PanelDeep, BackgroundTransparency = 0.1, Size = UDim2.fromOffset(250, 48), Parent = tbl })
+		UI.Corner(pill, 10)
+		New("UIStroke", { Color = left > 0 and T.Gold or T.Grey, Thickness = 2, Transparency = 0.2, Parent = pill })
+		UI.Text(pill, "POINTS LEFT", 17, T.TextSoft, "Display", { Position = UDim2.fromOffset(16, 0), Size = UDim2.new(1, -110, 1, 0), TextYAlignment = Enum.TextYAlignment.Center })
+		UI.Text(pill, tostring(left), 30, left > 0 and T.Gold or T.Text, "Number", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 0), Size = UDim2.new(0, 90, 1, 0), TextXAlignment = Enum.TextXAlignment.Right, TextYAlignment = Enum.TextYAlignment.Center })
+		local resetBtn, rh = UI.Button(tbl, "Reset Stats", T.Red, UDim2.fromOffset(190, 46), function()
+			-- refunds every point you spent (Store benefit "ResetStats": the Robux prompt; Gems in the Store)
 			pend = {}
 			render()
+			req("StoreBuyRobux", { id = "ResetStats" })
 		end)
 		rh.AnchorPoint = Vector2.new(1, 0)
-		rh.Position = UDim2.new(1, 0, 0, -2)
-		-- column titles
-		local cols = { { "ATTRIBUTE", 0, 0.3 }, { "BASE", 0.3, 0.12 }, { "BONUS", 0.42, 0.12 }, { "NEXT COST", 0.54, 0.14 } }
+		rh.Position = UDim2.new(1, 0, 0, 0)
+		UI.Tooltip(resetBtn, function()
+			return "Reset Stats: get back every stat point you spent and plan your build again (also in the Store for Gems).", T.Red
+		end)
+		-- column titles, in the same color as their numbers
+		local cols = { { "ATTRIBUTE", 0, 0.32, T.TextSoft }, { "BASE", 0.32, 0.12, T.Text }, { "BONUS", 0.44, 0.12, T.Green }, { "NEXT COST", 0.56, 0.16, T.Gold } }
 		for _, c in ipairs(cols) do
-			UI.Text(tbl, c[1], 13, T.TextSoft, "Display", { Position = UDim2.new(c[2], 0, 0, 46), Size = UDim2.new(c[3], 0, 0, 18), TextXAlignment = c[2] == 0 and Enum.TextXAlignment.Left or Enum.TextXAlignment.Center })
+			UI.Text(tbl, c[1], 14, c[4], "Display", { Position = UDim2.new(c[2], c[2] == 0 and 12 or 0, 0, 62), Size = UDim2.new(c[3], 0, 0, 22), TextXAlignment = c[2] == 0 and Enum.TextXAlignment.Left or Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Center })
 		end
 		for i, s in ipairs(Formulas.StatNames) do
-			local y = 70 + (i - 1) * 56
-			local row = New("Frame", { BackgroundColor3 = i % 2 == 0 and T.PanelDeep or T.PanelTop, BackgroundTransparency = 0.3, Position = UDim2.fromOffset(0, y), Size = UDim2.new(1, 0, 0, 50), Parent = tbl })
+			local y = ROW0 + (i - 1) * (ROWH + ROWGAP)
+			local row = New("Frame", { BackgroundColor3 = i % 2 == 0 and T.PanelDeep or T.PanelTop, BackgroundTransparency = 0.3, Position = UDim2.fromOffset(0, y), Size = UDim2.new(1, 0, 0, ROWH), Parent = tbl })
 			UI.Corner(row, 10)
 			local base, n = p.stats[s], pend[s] or 0
 			local bonus = (d[s] or base) - base
-			UI.Text(row, s, 22, UI.StatColor[s] or T.Text, "Display", { Position = UDim2.fromOffset(12, 2), Size = UDim2.new(0.3, -12, 0, 26) })
-			UI.Text(row, desc[s], 11, T.TextSoft, "Semi", { Position = UDim2.fromOffset(12, 28), Size = UDim2.new(0.3, -12, 0, 14) })
-			UI.Text(row, tostring(base) .. (n > 0 and ('<font color="#7CFF9B"> +' .. n .. "</font>") or ""), 20, T.Text, "Number", { Position = UDim2.fromScale(0.3, 0), Size = UDim2.new(0.12, 0, 1, 0), TextXAlignment = Enum.TextXAlignment.Center })
-			UI.Text(row, bonus ~= 0 and ((bonus > 0 and "+" or "") .. bonus) or "0", 20, bonus > 0 and T.Green or T.TextSoft, "Number", { Position = UDim2.fromScale(0.42, 0), Size = UDim2.new(0.12, 0, 1, 0), TextXAlignment = Enum.TextXAlignment.Center })
+			local MID = Enum.TextYAlignment.Center
+			UI.Text(row, s, 22, UI.StatColor[s] or T.Text, "Display", { Position = UDim2.fromOffset(12, 4), Size = UDim2.new(0.32, -12, 0, 24), TextYAlignment = MID })
+			UI.Text(row, desc[s], 12, T.TextSoft, "Semi", { Position = UDim2.fromOffset(12, 29), Size = UDim2.new(0.32, -12, 0, 15), TextYAlignment = MID })
+			UI.Text(row, tostring(base) .. (n > 0 and ('<font color="#7CFF9B"> +' .. n .. "</font>") or ""), 22, T.Text, "Number", { Position = UDim2.fromScale(0.32, 0), Size = UDim2.new(0.12, 0, 1, 0), TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = MID })
+			local bl = UI.Text(row, bonus ~= 0 and ((bonus > 0 and "+" or "") .. bonus) or "0", 22, bonus < 0 and T.Red or T.Green, "Number", { Position = UDim2.fromScale(0.44, 0), Size = UDim2.new(0.12, 0, 1, 0), TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = MID })
+			if bonus == 0 then
+				bl.TextTransparency = 0.5 -- nothing adds to it yet: the same green, dimmed
+			end
 			local nextCost = Formulas.StatCost(base + n)
 			local maxed = base + n >= Formulas.MaxStat
-			UI.Text(row, maxed and "MAX" or tostring(nextCost), 20, (not maxed and nextCost <= left) and T.Gold or T.Red, "Number", { Position = UDim2.fromScale(0.54, 0), Size = UDim2.new(0.14, 0, 1, 0), TextXAlignment = Enum.TextXAlignment.Center })
+			local nl = UI.Text(row, maxed and "MAX" or tostring(nextCost), 22, maxed and T.TextSoft or T.Gold, "Number", { Position = UDim2.fromScale(0.56, 0), Size = UDim2.new(0.16, 0, 1, 0), TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = MID })
+			if not maxed and nextCost > left then
+				nl.TextTransparency = 0.5 -- not enough points left: dimmed
+			end
 			local function stepBtn(text, color, xOff, fn)
-				local _, h = UI.Button(row, text, color, UDim2.fromOffset(44, 40), fn)
+				local _, h = UI.Button(row, text, color, UDim2.fromOffset(44, 38), fn)
 				h.AnchorPoint = Vector2.new(1, 0.5)
 				h.Position = UDim2.new(1, xOff, 0.5, -2)
 			end
@@ -817,7 +835,7 @@ function Panels.Stats()
 		end
 		-- bottom row: Apply (half) + Auto upgrade toggle (half); both stay inside the frame on any width
 		local any = planCost(p) > 0
-		local foot = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.new(1, 0, 0, 48), Parent = tbl })
+		local foot = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, ROW0 + 6 * (ROWH + ROWGAP) + 6), Size = UDim2.new(1, 0, 0, 48), Parent = tbl })
 		UI.List(foot, Enum.FillDirection.Horizontal, 10, Enum.HorizontalAlignment.Center)
 		UI.Button(foot, any and "Apply" or "Plan with +", any and T.Green or T.Grey, UDim2.new(0.5, -5, 1, 0), function()
 			if not any then
@@ -844,7 +862,7 @@ function Panels.Stats()
 		-- combat numbers: the card grows with however many rows the grid needs at this width
 		-- v0.25.43: fixed 3 x 4 grid; the AutomaticSize card lost its frame after a re-render (Reset plan)
 		local cs = UI.Card(right, UDim2.new(1, -12, 0, 4 * 30 + 24), T.PanelDeep)
-		cs.Position = UDim2.fromOffset(0, 482)
+		cs.Position = UDim2.fromOffset(0, tblH + 12)
 		UI.Pad(cs, 12)
 		local grid = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Parent = cs })
 		New("UIGridLayout", { CellSize = UDim2.new(1 / 3, -12, 0, 26), CellPadding = UDim2.fromOffset(18, 4), Parent = grid })

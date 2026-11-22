@@ -1288,38 +1288,14 @@ function Panels.Skills(args)
 				end)
 			end
 		end
-		-- consumables in the bag
-		local items, seen = {}, {}
-		for _, e in ipairs(p.inventory or {}) do
-			local def = ItemDB.Get(e.id)
-			if def and def.kind == "Consumable" and not def.special and not seen[e.id] then
-				seen[e.id] = true
-				table.insert(items, def)
-			end
-		end
-		UI.Section(left, "🍖", "Quick items", T.Ocean, #items == 0 and "no food or potions in your bag" or "drag onto an F slot")
-		local ig = gridIn(left, #items)
-		for _, def in ipairs(items) do
-			local picked = sel and sel.kind == "item" and sel.id == def.id
-			local qty = 0
-			for _, e in ipairs(p.inventory) do
-				if e.id == def.id then
-					qty += e.qty or 1
-				end
-			end
-			tilePayload = { kind = "item", id = def.id }
-			tile(ig, UI.ItemIconId(def), def.name .. " x" .. qty, T.Ocean, picked, function()
-				sel = picked and nil or { kind = "item", id = def.id }
-				render()
-			end)
-		end
+		-- (v0.25.55: quick items are gone: F1 = HP potion, F2 = SP potion, picked with the gear on each hotbar slot)
 
 		-- the hotbar layout
-		local card = UI.Card(right, UDim2.new(1, -12, 0, 84 + 4 * (SL + 6) + 26), T.PanelDeep)
+		local card = UI.Card(right, UDim2.new(1, -12, 0, 84 + 2 * (SL + 6) + 50), T.PanelDeep)
 		card.LayoutOrder = 1
 		UI.Pad(card, 12)
 		UI.Text(card, "HOTBAR", 20, T.Gold, "Display", { Size = UDim2.new(1, 0, 0, 24) })
-		UI.Text(card, "Drag a skill or item onto a slot (or tap it, then a slot). Drag a slot off to empty it.", 13, T.TextSoft, "Semi", { Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 0, 18) })
+		UI.Text(card, "Drag a skill onto a slot (or tap it, then a slot). Drag a slot off to empty it.", 13, T.TextSoft, "Semi", { Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 0, 18) })
 		local Combat = require(script.Parent.Parent.Controllers.Combat)
 		local function slotRow(y, bar, from, to, keyFn, look)
 			local r = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, y), Size = UDim2.new(1, 0, 0, SL + 4), Parent = card })
@@ -1375,10 +1351,6 @@ function Panels.Skills(args)
 			local s = ClassesCfg.SkillById[p.skillBar[i] or ""]
 			return s and SkillLook.IconId(s), s and SkillLook.Color(s) or T.Panel
 		end
-		local function itemLook(i)
-			local def = p.itemBar and ItemDB.Get(p.itemBar[i] or "")
-			return def and UI.ItemIconId(def), def and T.Ocean or T.Panel
-		end
 		local rowH = SL + 6
 		UI.Text(card, "SKILLS", 14, T.Text, "Display", { Position = UDim2.fromOffset(0, 48), Size = UDim2.new(1, 0, 0, 16) })
 		slotRow(66, "skill", 1, 6, function(i)
@@ -1387,14 +1359,7 @@ function Panels.Skills(args)
 		slotRow(66 + rowH, "skill", 7, 12, function(i)
 			return Combat.SKILL_KEY_LABELS[i]
 		end, skillLook)
-		local iy = 66 + 2 * rowH + 6
-		UI.Text(card, "QUICK ITEMS", 14, T.Text, "Display", { Position = UDim2.fromOffset(0, iy), Size = UDim2.new(1, 0, 0, 16) })
-		slotRow(iy + 18, "item", 1, 4, function(i)
-			return "F" .. i
-		end, itemLook)
-		slotRow(iy + 18 + rowH, "item", 5, 8, function(i)
-			return "F" .. i
-		end, itemLook)
+		UI.Text(card, "F1 = HP potion, F2 = SP potion: pick them with the gear on each hotbar slot.", 13, T.TextSoft, "Semi", { Position = UDim2.fromOffset(0, 66 + 2 * rowH + 6), Size = UDim2.new(1, 0, 0, 18) })
 		-- drag and drop: same rules as tapping (place / move / swap), plus "drag a slot off the bar to empty it"
 		onDrop = function(payload, target)
 			local function listOf(bar)
@@ -2588,7 +2553,7 @@ end
 
 -- ===================== AUTO BATTLE (v0.25.44, owner: the gear next to the AUTO / MANUAL switch) =====================
 function Panels.AutoBattle()
-	local win = UI.Window("AutoBattle", "Auto Battle", UDim2.fromOffset(560, 330), T.Green, "autobattle")
+	local win = UI.Window("AutoBattle", "Auto Battle", UDim2.fromOffset(560, 250), T.Green, "autobattle")
 	local ab = GameConfig.AutoBattle
 	local function render()
 		clear(win.body)
@@ -2618,17 +2583,122 @@ function Panels.AutoBattle()
 			State.Fire("profile")
 			task.spawn(req, "SetAutoSettings", { autoRadius = v })
 		end, "how far Auto Battle looks for monsters (studs)")
-		local pct = p.settings.autoPotionPct or 35
-		stepper(80, "Eat below", pct .. "%", function(d)
-			local v = math.clamp(pct + d * 5, 0, 90)
-			p.settings.autoPotionPct = v
-			State.Fire("profile")
-			task.spawn(req, "SetAutoSettings", { autoPotionPct = v })
-		end, "HP % where Auto Battle eats food")
-		UI.Text(win.body, "Auto Battle never wanders more than " .. ab.LeashRadius .. " studs from where it started. Pick the skills it may use in Skills -> Loadout (green tick).", 14, T.TextSoft, "Semi", { Position = UDim2.fromOffset(4, 160), Size = UDim2.new(1, -8, 0, 44) })
+		-- (v0.25.55: "Eat below" moved to the gear on the F1 / F2 potion slots, Panels.Potion)
+		UI.Text(win.body, "Auto Battle never wanders more than " .. ab.LeashRadius .. " studs from where it started. Pick the skills it may use in Skills -> Loadout (green tick). Potions: the gear on the F1 / F2 slots.", 14, T.TextSoft, "Semi", { Position = UDim2.fromOffset(4, 80), Size = UDim2.new(1, -8, 0, 60) })
 	end
 	render()
 	onProfile(win, render)
+end
+
+-- ===================== POTION SLOT (v0.25.55, owner reference) =====================
+-- The gear on the F1 (HP) / F2 (SP) hotbar slot: pick Auto or one potion, and the HP / SP % it drinks below by itself
+-- (0 = off). Settings hpItem / spItem / hpPct / spPct (SetAutoSettings); Combat.PotionPick / autoPotion read them.
+function Panels.Potion(args)
+	local kind = args and args.kind == "sp" and "sp" or "hp"
+	local Combat = require(script.Parent.Parent.Controllers.Combat)
+	local label = kind == "hp" and "HP" or "SP"
+	local color = kind == "hp" and T.Red or T.Ocean
+	local win = UI.Window("Potion", label .. " potion", UDim2.fromOffset(500, 300), color, kind == "hp" and "meat_s" or "grog_s")
+	local potions = {}
+	for _, id in ipairs(ItemDB.Shop) do
+		if Combat.PotionPower(ItemDB.Get(id), kind) then
+			table.insert(potions, id)
+		end
+	end
+	local function render()
+		clear(win.body)
+		local p = State.profile
+		if not p then
+			return
+		end
+		p.settings = p.settings or {}
+		local pick = p.settings[kind .. "Item"] or "Auto"
+		local pct = p.settings[kind .. "Pct"] or Combat.POTION_PCT[kind]
+		UI.Text(win.body, "Choose the " .. label .. " potion to use", 15, T.Text, "Bold", { Size = UDim2.new(1, 0, 0, 24), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false })
+		local row = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 32), Size = UDim2.new(1, 0, 0, 92), Parent = win.body })
+		UI.List(row, Enum.FillDirection.Horizontal, 10, Enum.HorizontalAlignment.Center)
+		local _, byId = Combat.PotionsOwned(kind)
+		local function choose(id)
+			p.settings[kind .. "Item"] = id
+			State.Fire("profile")
+			task.spawn(req, "SetAutoSettings", { [kind .. "Item"] = id })
+			render()
+		end
+		for _, id in ipairs({ "Auto", table.unpack(potions) }) do
+			local on = pick == id
+			local b = New("TextButton", { Text = "", AutoButtonColor = false, BackgroundColor3 = on and Color3.fromRGB(255, 244, 214) or Color3.fromRGB(232, 222, 200), Size = UDim2.fromOffset(86, 86), Parent = row })
+			UI.Corner(b, 12)
+			UI.Stroke(b, on and T.Green or T.Edge, on and 4 or 2)
+			UI.Tactile(b)
+			if id == "Auto" then
+				UI.Text(b, "Auto", 18, T.Edge, "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center })
+			else
+				local def = ItemDB.Get(id)
+				New("ImageLabel", { BackgroundTransparency = 1, Image = UI.ItemIconId(def) or "", ScaleType = Enum.ScaleType.Fit, Position = UDim2.fromOffset(8, 4), Size = UDim2.new(1, -16, 1, -24), Parent = b })
+				local n = byId[id] and byId[id].qty or 0
+				local q = UI.Text(b, tostring(n), 15, n > 0 and Color3.new(1, 1, 1) or T.Red, "Number", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -2), Size = UDim2.new(1, 0, 0, 18), TextXAlignment = Enum.TextXAlignment.Center })
+				New("UIStroke", { Color = T.Edge, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual, Parent = q })
+				UI.Tooltip(b, function()
+					return "<b>" .. def.name .. "</b>\n" .. (def.desc or ""), color
+				end)
+			end
+			b.Activated:Connect(function()
+				choose(id)
+			end)
+		end
+		-- auto drink threshold: drag the knob (steps of 5%), all the way left = off
+		UI.Text(win.body, "Auto drink when " .. label, 14, T.Text, "Bold", { Position = UDim2.fromOffset(6, 136), Size = UDim2.new(0.62, 0, 0, 22), TextWrapped = false })
+		local valueText = UI.Text(win.body, "", 14, T.Gold, "Bold", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -6, 0, 136), Size = UDim2.new(0.36, 0, 0, 22), TextXAlignment = Enum.TextXAlignment.Right, TextWrapped = false })
+		local track = New("Frame", { BackgroundColor3 = T.PanelDeep, Position = UDim2.fromOffset(6, 168), Size = UDim2.new(1, -12, 0, 22), Active = true, Parent = win.body })
+		UI.Corner(track, 8)
+		UI.Stroke(track, T.Edge, 2)
+		local fill = New("Frame", { BackgroundColor3 = color, Size = UDim2.fromScale(0, 1), Parent = track })
+		UI.Corner(fill, 8)
+		for _, t in ipairs({ 0.25, 0.5, 0.75 }) do
+			New("Frame", { BackgroundColor3 = T.Edge, BackgroundTransparency = 0.3, BorderSizePixel = 0, Position = UDim2.new(t, -1, 0.2, 0), Size = UDim2.new(0, 2, 0.6, 0), Parent = track })
+		end
+		local knob = New("Frame", { BackgroundColor3 = T.Gold, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0, 0.5), Size = UDim2.fromOffset(16, 32), ZIndex = 3, Parent = track })
+		UI.Corner(knob, 4)
+		UI.Stroke(knob, T.Edge, 2)
+		local function show(v)
+			fill.Size = UDim2.fromScale(v / 100, 1)
+			knob.Position = UDim2.fromScale(v / 100, 0.5)
+			valueText.Text = v > 0 and ("Below " .. v .. "%") or "Off"
+		end
+		show(pct)
+		local dragging, value = false, pct
+		local function setFrom(x)
+			local k = math.clamp((x - track.AbsolutePosition.X) / math.max(1, track.AbsoluteSize.X), 0, 1)
+			value = math.clamp(math.floor(k * 20 + 0.5) * 5, 0, 95)
+			show(value)
+		end
+		track.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				dragging = true
+				setFrom(input.Position.X)
+			end
+		end)
+		local UIS = game:GetService("UserInputService")
+		local moved = UIS.InputChanged:Connect(function(input)
+			if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+				setFrom(input.Position.X)
+			end
+		end)
+		local ended = UIS.InputEnded:Connect(function(input)
+			if dragging and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+				dragging = false
+				p.settings[kind .. "Pct"] = value
+				State.Fire("profile")
+				task.spawn(req, "SetAutoSettings", { [kind .. "Pct"] = value })
+			end
+		end)
+		track.Destroying:Connect(function()
+			moved:Disconnect()
+			ended:Disconnect()
+		end)
+		UI.Text(win.body, "Drinks by itself in Auto Battle and in manual play. Auto = the smallest potion that fills the gap.", 13, T.TextSoft, "Semi", { Position = UDim2.fromOffset(6, 200), Size = UDim2.new(1, -12, 0, 36) })
+	end
+	render()
 end
 
 -- ===================== MARKET (buyer) =====================

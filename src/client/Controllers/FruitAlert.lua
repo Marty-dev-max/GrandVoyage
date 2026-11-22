@@ -9,6 +9,7 @@ local Net = require(ReplicatedStorage.Shared.Modules.Net)
 local Sounds = require(ReplicatedStorage.Shared.Config.Sounds)
 local Audio = require(script.Parent.Audio)
 local Tex = require(ReplicatedStorage.Shared.Config.Textures)
+local Icons = require(ReplicatedStorage.Shared.Config.Icons)
 local TweenService = game:GetService("TweenService")
 local UI = require(script.Parent.Parent.UI.UIKit)
 
@@ -80,7 +81,7 @@ local function mark(pos, life)
 end
 
 -- v0.25.50 (owner: wanted to see WHERE from anywhere on the map + a sonar sound for about a minute): a tall pulsing
--- light pillar over a fresh fruit, a diamond marker drawn on top of everything (any distance), and every 2 s a sonar
+-- light pillar over a fresh fruit, a marker drawn on top of everything (any distance; v0.25.55 = black "?" fruit), and every 2 s a sonar
 -- ping (louder the closer you are) with a square ripple spreading on the ground. Runs BEACON seconds from the spawn.
 local BEACON = 60
 local function beacon(m, body, color)
@@ -107,19 +108,27 @@ local function beacon(m, body, color)
 	local bb = Instance.new("BillboardGui")
 	bb.AlwaysOnTop = true
 	bb.LightInfluence = 0
-	bb.Size = UDim2.fromOffset(44, 44)
+	bb.Size = UDim2.fromOffset(64, 64)
 	bb.Parent = anchor
-	local diamond = Instance.new("Frame")
-	diamond.AnchorPoint = Vector2.new(0.5, 0.5)
-	diamond.Position = UDim2.fromScale(0.5, 0.5)
-	diamond.Size = UDim2.fromOffset(22, 22)
-	diamond.Rotation = 45
-	diamond.BackgroundColor3 = color
-	diamond.Parent = bb
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = Color3.new(1, 1, 1)
-	stroke.Thickness = 3
-	stroke.Parent = diamond
+	-- v0.25.55 (owner reference): a black fruit silhouette with a white "?" (pixel icon fruit_unknown) in a white aura
+	local aura = Instance.new("ImageLabel")
+	aura.BackgroundTransparency = 1
+	aura.Image = Tex.glow or ""
+	aura.ImageColor3 = Color3.new(1, 1, 1)
+	aura.ImageTransparency = 0.25
+	aura.AnchorPoint = Vector2.new(0.5, 0.5)
+	aura.Position = UDim2.fromScale(0.5, 0.5)
+	aura.Size = UDim2.fromScale(1, 1)
+	aura.Parent = bb
+	local fruitIcon = Instance.new("ImageLabel")
+	fruitIcon.BackgroundTransparency = 1
+	fruitIcon.Image = Icons.fruit_unknown or ""
+	fruitIcon.ResampleMode = Enum.ResamplerMode.Pixelated
+	fruitIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+	fruitIcon.Position = UDim2.fromScale(0.5, 0.5)
+	fruitIcon.Size = UDim2.fromOffset(34, 34)
+	fruitIcon.ZIndex = 2
+	fruitIcon.Parent = bb
 	local function ripple()
 		-- a square ring of 4 neon bars growing outward on the ground and fading (voxel sonar wave)
 		local bars = {}
@@ -153,8 +162,11 @@ local function beacon(m, body, color)
 			ripple()
 			pillar.Transparency = 0.15
 			TweenService:Create(pillar, TweenInfo.new(1.2), { Transparency = 0.6 }):Play()
-			diamond.Size = UDim2.fromOffset(34, 34)
-			TweenService:Create(diamond, TweenInfo.new(0.8), { Size = UDim2.fromOffset(22, 22) }):Play()
+			fruitIcon.Size = UDim2.fromOffset(44, 44)
+			TweenService:Create(fruitIcon, TweenInfo.new(0.8), { Size = UDim2.fromOffset(34, 34) }):Play()
+			aura.ImageTransparency = 0
+			aura.Size = UDim2.fromScale(1.35, 1.35)
+			TweenService:Create(aura, TweenInfo.new(1.4), { ImageTransparency = 0.35, Size = UDim2.fromScale(1, 1) }):Play()
 			task.wait(2)
 		end
 		TweenService:Create(pillar, TweenInfo.new(1.5), { Transparency = 1 }):Play()

@@ -625,7 +625,7 @@ end
 
 -- icon name for an item definition (Config/Items)
 local ITEM_ICON = {
-	MeatOnBone = "meat", BigFeast = "meat", TangerineJuice = "juice", RepairKit = "repairkit", RefineGuard = "charm",
+	MeatOnBone = "meat_s", RoastShank = "meat_m", BigFeast = "meat_l", TangerineJuice = "grog_s", SeaGrog = "grog_m", CaptainsKeg = "grog_l", RepairKit = "repairkit", RefineGuard = "charm",
 	CaptainsLog = "book", SeaEgg = "egg", GoldenEgg = "golden_egg", SeaBait = "bait", Wood = "wood", TreasureWood = "wood",
 	SailCloth = "cloth", SteelOre = "ore", TidecoreShard = "shard", PureTidecore = "shard",
 	TreasureMap = "map", WantedPoster = "poster", MarineBadge = "charm", CompassCharm = "charm",

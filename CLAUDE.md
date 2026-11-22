@@ -103,7 +103,8 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
 - Hits land on the strike frame: CombatService picks the combo step (sent as `combo` in the BasicAttack FX so every client
   plays the same clip) and applies damage with `hitLater(strike [+ shot flight])`; skills use their clip's strike too.
   Never apply melee damage at request time again (monsters died before the fist arrived).
-- Hotbar: `p.skillBar` = 12 fixed slots (keys 1-6, 7 8 9 0 - =), `p.itemBar` = 8 quick items (F1-F8), "" = empty slot;
+- Hotbar: `p.skillBar` = 12 fixed slots (keys 1-6, 7 8 9 0 - =), `p.itemBar` = 8 quick items (F1-F8; UNUSED since
+  v0.25.55: F1 = HP potion, F2 = SP potion, see below), "" = empty slot;
   server helpers `PS.BarAdd` / `PS.BarRemoveIf` keep slot positions; each class keeps its own bar (`p.classBars`).
   Set up in Skills -> Loadout (tap skill/item, then slot; tap two slots to swap; green tick = Auto Battle may use it;
   per-player Auto Battle search range `settings.autoRadius`, read with `State.SearchRadius()`).
@@ -579,6 +580,13 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     until 2026-12-06 21:47Z -> `upload_sfx.py --user 1527424396 --only RewardRare,RewardLegend,ShipCreakLoop` then).
     Sailing: no ShipCreak on sail changes; `creak` = Audio.Attach("ShipCreakLoop") on your ship root while aboard,
     volume eased to 0.55 x clamp(speed*0.6 + |yaw rate|*1.6) (licensed rope creak 9118714001 until ours is uploaded).
+  * v0.25.55 (owner reference): hotbar potion slots F1 HP / F2 SP (HUD itemSlots with `kind`, gear -> `Panels.Potion`
+    {kind}: Auto or a potion tile + drag slider 0-95% step 5, 0 = off). settings.hpItem/spItem ("Auto" | consumable
+    with heal/healSp) + hpPct/spPct (defaults 50/30, Combat.POTION_PCT), validated in SetAutoSettings. Combat
+    PotionsOwned / PotionPick (Auto = smallest that fills the gap, else biggest) / UsePotion; autoPotion runs in EVERY
+    mode (tick), never while Downed. Old autoPotionPct + Loadout quick items removed. Items RoastShank (HP M), SeaGrog
+    (SP M), CaptainsKeg (SP L) in the General Store; pixel icons meat_s/m/l, grog_s/m/l (barrel tankards, owner
+    reference), fruit_unknown (FruitAlert beacon marker + white glow aura, replaces the blue diamond).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

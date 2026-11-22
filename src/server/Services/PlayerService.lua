@@ -868,8 +868,18 @@ local function setupHandlers()
 			end
 			p.autoSkills = a
 		end
-		if tonumber(data.autoPotionPct) then
-			p.settings.autoPotionPct = math.clamp(math.floor(data.autoPotionPct), 0, 90)
+		-- v0.25.55: F1 HP / F2 SP potion slots: which item ("Auto" or a consumable of that kind) + auto drink below %
+		for _, kind in ipairs({ "hp", "sp" }) do
+			local item = data[kind .. "Item"]
+			if type(item) == "string" then
+				local def = ItemDB.Get(item)
+				if item == "Auto" or (def and def.kind == "Consumable" and not def.special and (kind == "hp" and def.heal or def.healSp)) then
+					p.settings[kind .. "Item"] = item
+				end
+			end
+			if tonumber(data[kind .. "Pct"]) then
+				p.settings[kind .. "Pct"] = math.clamp(math.floor(data[kind .. "Pct"]), 0, 95)
+			end
 		end
 		-- v0.25.36: vanity per worn piece { id = itemId, show = bool } (only items that have an accessory model)
 		if type(data.gearVisible) == "table" and type(data.gearVisible.id) == "string" and Accessory.Has(data.gearVisible.id) then

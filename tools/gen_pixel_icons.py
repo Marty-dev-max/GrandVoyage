@@ -621,6 +621,7 @@ def merit(s):
 GLYPH = {  # 3x5 pixel font
     '2': ['###', '..#', '###', '#..', '###'], 'x': ['...', '#.#', '.#.', '#.#', '...'],
     '1': ['.#.', '##.', '.#.', '.#.', '###'], '0': ['###', '#.#', '#.#', '#.#', '###'], '3': ['###', '..#', '.##', '..#', '###'],
+    'S': ['###', '#..', '###', '..#', '###'], 'M': ['#.#', '###', '###', '#.#', '#.#'], 'L': ['#..', '#..', '#..', '#..', '###'],
 }
 
 
@@ -637,6 +638,67 @@ def badge(s, t, c=(220, 50, 60)):
     w = len(t) * 4 + 3
     s.rect(31 - w, 22, 31, 30, c)
     text(s, 33 - w, 24, t)
+
+
+# v0.25.55 (owner): potion sizes S / M / L carry a gold letter disc (reference: HP / SP potion picker)
+def size_disc(s, t, cx=26, cy=26):
+    s.oval(cx, cy, 5, 5, (255, 214, 90))
+    s.oval(cx, cy, 4, 4, (240, 170, 40))
+    text(s, cx - 1, cy - 2, t, (90, 40, 20))
+
+
+def meat_size(t):
+    def draw(s):
+        meat(s)
+        if t != 'S':
+            s.oval(12, 12, 3, 2, (255, 160, 120), True)  # a juicier roast for the bigger ones
+        if t == 'L':
+            s.oval(9, 22, 6, 4, (170, 70, 50))  # a second chunk on the platter
+            s.oval(8, 21, 3, 2, (225, 115, 85), True)
+        size_disc(s, t, 6, 26)
+    return draw
+
+
+# SP drinks = wooden barrel tankards with the drink splashing over the rim (owner reference)
+def tankard(liquid, t):
+    def draw(s):
+        x0, x1, y0, y1 = 7, 21, 12, 29
+        s.rect(x0, y0, x1, y1, (160, 105, 60))
+        for x in (10, 14, 18):  # staves
+            s.line([(x, y0 + 1), (x, y1 - 1)], (120, 75, 40), 1)
+        for y in (15, 25):  # iron hoops
+            s.rect(x0 - 1, y, x1 + 1, y + 1, (200, 170, 80))
+        s.arc(23, 20, 4, 280, 440, (130, 85, 45), 2, False)  # handle
+        lc = lerp(liquid, WHITE, 0.35)
+        s.oval(14, 11, 8, 3, liquid)  # brimming top
+        s.oval(10, 8, 3, 3, liquid)  # splash blobs over the rim
+        s.oval(17, 6, 3, 4, liquid)
+        s.oval(22, 9, 2, 2, liquid)
+        s.oval(16, 5, 1, 1, lc, True)
+        s.px(6, 5, lc)
+        s.px(24, 4, lc)
+        s.px(26, 8, lc)
+        s.px(12, 11, WHITE)
+        size_disc(s, t)
+    return draw
+
+
+# Cursed Fruit marker (owner reference): a black fruit silhouette with a white question mark and a white aura
+def fruit_unknown(s):
+    aura = (255, 255, 255)
+    ink = (22, 20, 28)
+    # white aura: a fat halo around the body + the stem
+    s.oval(16, 20, 13, 11, aura)
+    s.line([(16, 12), (15, 3)], aura, 5)
+    s.oval(21, 4, 4, 4, aura)
+    # black fruit + a thick stem that curls over to the right (owner reference)
+    s.oval(16, 20, 11, 9, ink)
+    s.line([(16, 12), (15, 3)], ink, 3)
+    s.arc(20, 4, 3, 170, 470, ink, 2, False)
+    q = WHITE
+    s.arc(16, 17, 4, 180, 400, q, 2, True)
+    s.line([(18, 20), (16, 22), (16, 24)], q, 2, True)
+    s.rect(15, 26, 17, 28, q, True)
 
 
 def round_arrow(s, cx, cy, r, c):
@@ -781,6 +843,9 @@ ICONS = {
     # items
     'egg': egg, 'golden_egg': gold_egg, 'card': card, 'book': book, 'ship': ship, 'charm': charm, 'wood': logs,
     'cloth': cloth, 'ore': lambda s: rock(s, (140, 140, 155), (200, 210, 230)), 'shard': crystal, 'potion': bottle,
+    'meat_s': meat_size('S'), 'meat_m': meat_size('M'), 'meat_l': meat_size('L'),
+    'grog_s': tankard((255, 170, 60), 'S'), 'grog_m': tankard((90, 220, 140), 'M'), 'grog_l': tankard((80, 170, 255), 'L'),
+    'fruit_unknown': fruit_unknown,
     'juice': cup, 'hat': tricorn, 'armor': vest, 'boots': lambda s: boot(s, 14, 16), 'meat': meat, 'bait': worm_hook,
     'repairkit': toolbox, 'medkit': pouch, 'staff': staff, 'slingshot': slingshot, 'knuckles': knuckles,
     'sword': lambda s: sword(s, 6, 26, 26, 6), 'hammer': hammer,

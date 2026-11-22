@@ -865,26 +865,30 @@ local function buildSkillBar()
 	-- a little gap between skills and items
 	New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(8, 4), LayoutOrder = 50, Parent = main })
 	New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(8, 4), LayoutOrder = 50, Parent = second })
+	-- v0.25.55 (owner reference): F1 = HP potion, F2 = SP potion. A gear on each slot opens the picker (which potion +
+	-- auto drink below %), the threshold sits above the slot
 	itemSlots = {}
-	for i = 1, GameConfig.ItemBarSize do
-		local s = makeSlot(i <= 4 and main or second, "F" .. i, 100 + i)
+	for i = 1, 2 do
+		local kind = i == 1 and "hp" or "sp"
+		local s = makeSlot(main, "F" .. i, 100 + i)
+		s.kind = kind
 		itemSlots[i] = s
+		s.pct = UI.Text(s.holder, "", 11, T.Gold, "Number", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 0, -1), Size = UDim2.new(1, 0, 0, 13), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false })
+		New("UIStroke", { Color = T.Edge, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual, Parent = s.pct })
+		local gear = New("ImageButton", { BackgroundColor3 = T.PanelDeep, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(1, -3, 0, 3), Size = UDim2.fromOffset(20, 20), ZIndex = 9, Parent = s.holder })
+		UI.Corner(gear, 10)
+		UI.Stroke(gear, T.Edge, 1.5)
+		UI.Icon(gear, "gear", 16, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), ZIndex = 10 })
+		gear.Activated:Connect(function()
+			Panels.Open("Potion", { kind = kind })
+		end)
 		s.slot.Activated:Connect(function()
-			local p = State.profile
-			local id = p and p.itemBar and p.itemBar[i]
-			if id and id ~= "" then
-				Combat.UseQuickItem(i)
-			else
-				Panels.Open("Skills", { tab = "Loadout" })
-			end
+			Combat.UsePotion(kind)
 		end)
 		UI.Tooltip(s.slot, function()
-			local p = State.profile
-			local def = p and p.itemBar and p.itemBar[i] and ItemDB.Get(p.itemBar[i])
-			if not def then
-				return "Empty quick slot: click to put a potion or food here", T.TextSoft
-			end
-			return "<b>" .. def.name .. "</b>  [F" .. i .. "]\n" .. (def.desc or ""), T.Ocean
+			local _, show = Combat.PotionPick(kind)
+			local def = ItemDB.Get(show or "")
+			return "<b>" .. (kind == "hp" and "HP potion" or "SP potion") .. "</b>  [F" .. i .. "]\n" .. (def and def.name or "") .. "\nGear: pick the potion and when it drinks by itself", kind == "hp" and T.Red or T.Ocean
 		end)
 	end
 	local eBtn, eh = UI.Button(main, "^", T.Ocean, UDim2.fromOffset(34, SLOT), function()
@@ -893,7 +897,7 @@ local function buildSkillBar()
 	expandBtn = eBtn
 	eh.LayoutOrder = 200
 	UI.Tooltip(eBtn, function()
-		return HUD.barExpanded and "Hide the second row" or "Show 6 more skill slots and F5-F8", T.Ocean
+		return HUD.barExpanded and "Hide the second row" or "Show 6 more skill slots", T.Ocean
 	end)
 	New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(34, SLOT), LayoutOrder = 200, Parent = second })
 
@@ -1217,27 +1221,24 @@ local function refresh()
 		HUD.dashSlot.cd.Size = UDim2.new(1, 0, left > 0 and math.clamp(left / GameConfig.Dash.Cooldown, 0, 1) or 0, 0)
 		HUD.dashSlot.cdText.Text = left > 0 and string.format("%.1f", left) or ""
 	end
-	-- quick items: icon + how many are left in the bag
-	for i, s in ipairs(itemSlots or {}) do
-		local id = p and p.itemBar and p.itemBar[i]
-		local def = id and id ~= "" and ItemDB.Get(id) or nil
-		local qty = 0
-		if def then
-			for _, e in ipairs(p.inventory or {}) do
-				if e.id == id then
-					qty += e.qty or 1
-				end
-			end
-		end
+	-- potion slots (v0.25.55): the potion it would drink now, how many are left, the auto-drink threshold
+	for _, s in ipairs(itemSlots or {}) do
+		local _, show = Combat.PotionPick(s.kind)
+		local def = show and ItemDB.Get(show) or nil
+		local _, byId = Combat.PotionsOwned(s.kind)
+		local qty = def and byId[def.id] and byId[def.id].qty or 0
 		local img = def and UI.ItemIconId(def)
 		s.icon.Image = img or ""
 		s.icon.Visible = img ~= nil
-		s.icon.ImageTransparency = (def and qty == 0) and 0.6 or 0
+		s.icon.ImageTransparency = qty == 0 and 0.6 or 0
 		s.name.Text = (def and not img) and def.name or ""
-		s.count.Text = def and tostring(qty) or ""
+		s.count.Text = tostring(qty)
 		s.count.TextColor3 = qty > 0 and T.Text or T.Red
-		s.grad.Color = def and ColorSequence.new(T.Ocean:Lerp(Color3.new(1, 1, 1), 0.1), T.Ocean:Lerp(Color3.new(0, 0, 0), 0.5)) or ColorSequence.new(T.PanelTop, T.PanelDeep)
-		s.slot.BackgroundTransparency = def and 0 or 0.35
+		local pct = (p and p.settings and p.settings[s.kind .. "Pct"]) or Combat.POTION_PCT[s.kind]
+		s.pct.Text = pct > 0 and ("<" .. pct .. "%") or "OFF"
+		local c = s.kind == "hp" and T.Red or T.Ocean
+		s.grad.Color = ColorSequence.new(c:Lerp(Color3.new(1, 1, 1), 0.1), c:Lerp(Color3.new(0, 0, 0), 0.55))
+		s.slot.BackgroundTransparency = 0
 	end
 	-- ammo button: only for slingshot users
 	if HUD.ammo and p then

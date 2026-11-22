@@ -99,6 +99,10 @@ add("BeardGrey", { name = "Commodore's Beard", kind = "Accessory", slot = "acces
 add("MeatOnBone", { name = "Meat on the Bone", desc = "Restores 20% HP.", kind = "Consumable", heal = 0.2, price = 80, stack = true, cd = 1.5, rarity = "Common" })
 add("BigFeast", { name = "Pirate Feast", desc = "Restores 50% HP.", kind = "Consumable", heal = 0.5, price = 600, stack = true, cd = 3, rarity = "Uncommon" })
 add("TangerineJuice", { name = "Tangerine Juice", desc = "Restores 25% SP.", kind = "Consumable", healSp = 0.25, price = 150, stack = true, cd = 1.5, rarity = "Common" })
+-- v0.25.55 (owner): S / M / L sizes for the F1 HP and F2 SP slots (meat on the HP side, barrel tankards on the SP side)
+add("RoastShank", { name = "Roast Shank", desc = "Restores 35% HP.", kind = "Consumable", heal = 0.35, price = 260, stack = true, cd = 2, rarity = "Common" })
+add("SeaGrog", { name = "Sea Grog", desc = "Restores 45% SP.", kind = "Consumable", healSp = 0.45, price = 420, stack = true, cd = 2, rarity = "Uncommon" })
+add("CaptainsKeg", { name = "Captain's Keg", desc = "Restores 70% SP.", kind = "Consumable", healSp = 0.7, price = 1100, stack = true, cd = 3, rarity = "Uncommon" })
 add("RepairKit", { name = "Ship Repair Kit", desc = "Repairs 20% of your ship's HP.", kind = "Consumable", shipRepair = 0.2, price = 1200, stack = true, cd = 8, rarity = "Uncommon" })
 add("CaptainsLog", { name = "Captain's Log", desc = "+50% EXP for 30 minutes.", kind = "Consumable", expBoost = 1800, price = 2000, stack = true, cd = 1, rarity = "Rare" })
 add("RefineGuard", { name = "Willpower Charm", desc = "Prevents downgrade and breaking on a failed refine.", kind = "Consumable", price = 50000, stack = true, special = "RefineGuard", rarity = "Legendary" })
@@ -155,7 +159,7 @@ end
 
 -- General store stock
 local Shop = {
-	"MeatOnBone", "BigFeast", "TangerineJuice", "RepairKit", "SeaBait", "SteelOre", "Wood", "SailCloth",
+	"MeatOnBone", "RoastShank", "BigFeast", "TangerineJuice", "SeaGrog", "CaptainsKeg", "RepairKit", "SeaBait", "SteelOre", "Wood", "SailCloth",
 	"SailorVest", "Bandana", "CompassCharm", "SeastoneBracer", "BeardDark", "BeardBrown", "ClownWig",
 	"Ammo_Ember", "Ammo_Frost", "Ammo_Spark", "Ammo_Needle", "Ammo_Blast", "Ammo_Star",
 	"Knuckles_Plain", "Sword_Plain", "Slingshot_Plain", "Shoes_Plain", "StormBaton_Plain", "MedKit_Plain", "Hammer_Plain",

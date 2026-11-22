@@ -49,7 +49,6 @@ local function m1Swing()
 end
 local anchor -- where Auto Battle was started
 local busy = false
-local lastPotion = 0
 
 local function char()
 	return player.Character
@@ -623,29 +622,95 @@ function Combat.ToggleAuto()
 	Combat.SetAuto(not State.auto)
 end
 
+-- v0.25.55 (owner): F1 = HP potion, F2 = SP potion. Each uses the item picked in its gear popup (settings.hpItem /
+-- spItem; "Auto" = the smallest one you own that fills the gap, else the biggest) and drinks by itself below
+-- settings.hpPct / spPct (0 = off), in Auto Battle and manual play alike (the old "Eat below" only ran in Auto).
+local ItemDB = require(Shared.Modules.ItemDB)
+Combat.POTION_DEFAULT = { hp = "MeatOnBone", sp = "TangerineJuice" }
+Combat.POTION_PCT = { hp = 50, sp = 30 }
+local function potionPower(def, kind)
+	return def and def.kind == "Consumable" and not def.special and (kind == "hp" and def.heal or def.healSp) or nil
+end
+Combat.PotionPower = potionPower
+-- every potion of that kind in the bag: { id, power, qty }, weakest first
+function Combat.PotionsOwned(kind)
+	local p = State.profile
+	local byId, list = {}, {}
+	for _, e in ipairs(p and p.inventory or {}) do
+		local def = ItemDB.Get(e.id)
+		local power = potionPower(def, kind)
+		if power then
+			if not byId[e.id] then
+				byId[e.id] = { id = e.id, power = power, qty = 0 }
+				table.insert(list, byId[e.id])
+			end
+			byId[e.id].qty += e.qty or 1
+		end
+	end
+	table.sort(list, function(a, b)
+		return a.power < b.power
+	end)
+	return list, byId
+end
+local function missing(kind)
+	if kind == "hp" then
+		local h = hum()
+		return h and h.MaxHealth > 0 and 1 - h.Health / h.MaxHealth or 0
+	end
+	return 1 - (player:GetAttribute("SP") or 0) / math.max(1, player:GetAttribute("MaxSP") or 1)
+end
+-- the item a slot would use now (nil = none owned) + the item it shows
+function Combat.PotionPick(kind)
+	local s = State.profile and State.profile.settings or {}
+	local pref = s[kind .. "Item"] or "Auto"
+	local list, byId = Combat.PotionsOwned(kind)
+	if pref ~= "Auto" then
+		return byId[pref] and pref or nil, pref
+	end
+	if #list == 0 then
+		return nil, Combat.POTION_DEFAULT[kind]
+	end
+	local gap = missing(kind)
+	for _, it in ipairs(list) do
+		if it.power >= gap then
+			return it.id, it.id
+		end
+	end
+	return list[#list].id, list[#list].id
+end
+local lastDrink = { hp = 0, sp = 0 }
+function Combat.UsePotion(kind, auto)
+	local id = Combat.PotionPick(kind)
+	if not id then
+		if not auto then
+			UI.Toast(kind == "hp" and "No HP potions in your bag" or "No SP potions in your bag", "bad")
+		end
+		return
+	end
+	if os.clock() - lastDrink[kind] < 0.4 then
+		return
+	end
+	lastDrink[kind] = os.clock()
+	task.spawn(function()
+		local res = Net.Request("UseItem", { id = id })
+		if not res.ok and res.msg and not auto and res.msg ~= "On cooldown" then
+			UI.Toast(tostring(res.msg), "bad")
+		end
+	end)
+end
+
 local function autoPotion()
 	local h = hum()
 	local p = State.profile
-	if not h or not p or h.Health <= 0 then
+	local c = player.Character
+	if not h or not p or h.Health <= 0 or (c and c:GetAttribute("Downed")) then
 		return
 	end
-	if h.Health / h.MaxHealth * 100 < (p.settings.autoPotionPct or 35) and os.clock() - lastPotion > 2 then
-		for _, e in ipairs(p.inventory) do
-			if e.id == "MeatOnBone" or e.id == "BigFeast" then
-				lastPotion = os.clock()
-				task.spawn(Net.Request, "UseItem", { uid = e.uid })
-				return
-			end
-		end
-	end
-	local sp, max = player:GetAttribute("SP") or 0, player:GetAttribute("MaxSP") or 1
-	if sp / max < 0.2 and os.clock() - lastPotion > 2 then
-		for _, e in ipairs(p.inventory) do
-			if e.id == "TangerineJuice" then
-				lastPotion = os.clock()
-				task.spawn(Net.Request, "UseItem", { uid = e.uid })
-				return
-			end
+	local s = p.settings or {}
+	for _, kind in ipairs({ "hp", "sp" }) do
+		local pct = s[kind .. "Pct"] or Combat.POTION_PCT[kind]
+		if pct > 0 and (1 - missing(kind)) * 100 < pct and os.clock() - lastDrink[kind] > 1.5 then
+			Combat.UsePotion(kind, true)
 		end
 	end
 end
@@ -657,8 +722,8 @@ local function tick()
 	busy = true
 	local r = root()
 	if r and not player:GetAttribute("Vending") and not State.build.active then
+		autoPotion()
 		if State.auto then
-			autoPotion()
 			if not onShip() then
 				if anchor and (r.Position - anchor).Magnitude > GameConfig.AutoBattle.LeashRadius then
 					Combat.SetTarget(nil)
@@ -687,29 +752,16 @@ end
 
 -- v0.25.44 (owner): skill keys are rebindable (Controllers/Hotkeys; defaults E R F Z X C, then 1-6)
 local Hotkeys = require(script.Parent.Hotkeys)
-local ITEM_KEYS = { Enum.KeyCode.F1, Enum.KeyCode.F2, Enum.KeyCode.F3, Enum.KeyCode.F4, Enum.KeyCode.F5, Enum.KeyCode.F6, Enum.KeyCode.F7, Enum.KeyCode.F8 }
+local ITEM_KEYS = { Enum.KeyCode.F1, Enum.KeyCode.F2 } -- v0.25.55: F1 = HP potion, F2 = SP potion
 Combat.SKILL_KEY_LABELS = setmetatable({}, {
 	__index = function(_, i)
 		return Hotkeys.Label("Skill" .. i)
 	end,
 })
 
--- quick item slot i (F1-F8): use one of that item from the bag
-local lastItemUse = 0
+-- quick slot i: F1 = HP potion, F2 = SP potion (v0.25.55)
 function Combat.UseQuickItem(i)
-	local p = State.profile
-	local id = p and p.itemBar and p.itemBar[i]
-	if not id or id == "" or os.clock() - lastItemUse < 0.25 then
-		return
-	end
-	lastItemUse = os.clock()
-	task.spawn(function()
-		local res = Net.Request("UseItem", { id = id })
-		if not res.ok and res.msg then
-			local UI = require(script.Parent.Parent.UI.UIKit)
-			UI.Toast(tostring(res.msg), "bad")
-		end
-	end)
+	Combat.UsePotion(i == 1 and "hp" or "sp")
 end
 
 -- dash skills (Fire Dash, Slick Slide...): the server says where, we slide there fast (CombatService CastSkill Dash)

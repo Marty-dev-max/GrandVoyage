@@ -44,6 +44,9 @@ local function dressBanner(part)
 	if not isl or not bb then
 		return
 	end
+	-- v0.25.25 (owner): no island name floating over the islands any more (the part stays: map cleanup finds
+	-- island folders by it)
+	bb.Enabled = false
 	local known = ChartsView.Known(id)
 	local labels = {}
 	for _, c in ipairs(bb:GetChildren()) do

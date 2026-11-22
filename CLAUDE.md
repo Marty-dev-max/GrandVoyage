@@ -417,6 +417,15 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     with orange groves, winding coast paths, shore boulders, decor circus ship + gangplank (our own look). The base's
     grass mounds under the town are removed (match by Size/Material/CFrame: Lune's bake has no default Part.Position
     or Shape). island_local.py handles ramps (tilted top faces). Render: ONLY=marm.
+  * v0.25.25 (owner): Flight lands on ANY ground contact unless Jump is held (the old vel.Y test kept you flying along
+    the ground when the camera looked up = "fly pose after landing"). ShiftLock offsets the CAMERA in its own space at
+    Camera+1 (Humanoid.CameraOffset is body space and wobbled with the one-frame-late body turn). Knockdown = ragdoll
+    (server swaps body Motor6Ds for BallSocketConstraints, client ChangeState(Physics) + limb collisions), HP creeps
+    back and you stand at Knockdown.StandAt (10%) after RecoverSeconds; no bleed-out. Low-HP red edge pulse in
+    init.client. Island name billboards disabled (ChartsView). Harbor faces the next island: `island.yardAngle`
+    (WorldBuilder.yardAngle) turns the shipyard group (with its own Shipwright NPC) and the east dock with
+    `turnGroup`; layouts/standardNPCs no longer place a Shipwright (Daybreak keeps its own). Conch Bay + Marmalade
+    drop the base's grass mounds; Marmalade's circus ship lies off the south shore (SHIP_Z) with a pier.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

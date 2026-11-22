@@ -89,7 +89,6 @@ local function standardNPCs(ctx)
 	npc(ctx, "Shop", "General Store", Color3.fromRGB(240, 170, 80), nil, -r * 0.2, -r * 0.75, { SubTitle = "Shop" })
 	npc(ctx, "Tavern", "Tavern Keeper", Color3.fromRGB(200, 90, 90), nil, -r * 0.6, -r * 0.4, { SubTitle = "Hire Crew" })
 	npc(ctx, "FastTravel", "Courier Gull Post", Color3.fromRGB(240, 240, 240), "marine", -r * 0.65, r * 0.35, { SubTitle = "Fast Travel" })
-	npc(ctx, "Shipwright", "Shipwright", Color3.fromRGB(90, 140, 200), "bandana", island.radius - 30, -45, { SubTitle = "Shipyard & Launch" })
 	npc(ctx, "Guide", Quests.Guide[island.id] or "Guide", Color3.fromRGB(255, 200, 90), "captain", r * 0.32, r * 0.05, { SubTitle = "📜 Quests" })
 	-- v0.25.21 (owner): Bounty Board and Guild Registrar only on the first and the last island
 	if island.id == "Daybreak" or island.id == "Epilogue" then
@@ -104,7 +103,39 @@ local function standardNPCs(ctx)
 end
 
 -- ===== Docks / shipyard =====
+-- turn a group of parts (and their CFrame / Vector3 attributes) around the island center by local angle a
+local function turnGroup(group, island, a)
+	if not a or a == 0 then
+		return
+	end
+	local Rg = CFrame.new(island.x, 0, 0) * CFrame.Angles(0, a, 0) * CFrame.new(-island.x, 0, 0)
+	local parts, targets = {}, {}
+	for _, o in ipairs(group:GetDescendants()) do
+		if o:IsA("BasePart") then
+			table.insert(parts, o)
+			table.insert(targets, Rg * o.CFrame)
+		end
+		for k, v in pairs(o:GetAttributes()) do
+			if typeof(v) == "CFrame" or typeof(v) == "Vector3" then
+				o:SetAttribute(k, Rg * v)
+			end
+		end
+	end
+	for i, part in ipairs(parts) do
+		part.CFrame = targets[i] -- targets first, then assign: welded NPC parts would otherwise move twice
+	end
+end
+
 local function buildDock(island, side)
+	-- v0.25.25: the east dock (side 1) turns with the shipyard toward the next island (they keep their spacing)
+	local group, prevParent
+	if side > 0 and island.yardAngle then
+		group = Instance.new("Model")
+		group.Name = "HarborDock"
+		group.Parent = Kit.parent
+		prevParent = Kit.parent
+		Kit.parent = group
+	end
 	local zc = island.z or 0
 	local x0 = island.x + side * (island.radius - 25)
 	local len = 90
@@ -143,6 +174,26 @@ local function buildDock(island, side)
 	Kit.CrateStack(Vector3.new(x0 + side * 14, dockY + 0.5, zc - 5))
 	Kit.Lamp(Vector3.new(tip.X - side * 3, dockY + 0.5, zc + 7))
 	sign(island.name, CFrame.new(x0 + side * 6, dockY + 10, zc - 10) * CFrame.Angles(0, side > 0 and -math.pi / 2 or math.pi / 2, 0), Vector2.new(18, 4))
+	if group then
+		turnGroup(group, island, island.yardAngle)
+		Kit.parent = prevParent
+	end
+end
+
+-- v0.25.25 (owner): the shipyard sits on the side that faces the NEXT island, so you launch toward where you are
+-- going instead of crossing the island (it used to be fixed at local east and often faced the Doldrums).
+-- Angle (local, before the island's own yaw) that turns the default spot toward the next island; nil = keep.
+local function yardAngle(island, worldZ)
+	local nxt = island.index and IslandsCfg.List[island.index + 1]
+	if not island.yaw or not nxt then
+		return island.yaw and 0 or nil
+	end
+	local wx, wz = nxt.x - island.x, (nxt.z or 0) - worldZ
+	local c, s = math.cos(island.yaw), math.sin(island.yaw)
+	local lx, lz = wx * c - wz * s, wx * s + wz * c -- world -> island-local (undo Angles(0, yaw))
+	local l = GameConfig.Ship.PlotSize.Z * G
+	local phi0 = math.atan2(-(70 + l / 2), island.radius + 40) -- the default spot (local east, a bit north)
+	return phi0 - math.atan2(lz, lx) -- Angles(0, a) turns an XZ angle phi into phi - a
 end
 
 local function buildShipyard(island)
@@ -152,6 +203,11 @@ local function buildShipyard(island)
 	local platformZ = -(70 + l / 2)
 	local count = 3
 	local totalW = count * w + (count - 1) * 10
+	local group = Instance.new("Model")
+	group.Name = "Shipyard"
+	group.Parent = Kit.parent
+	local prevParent = Kit.parent
+	Kit.parent = group
 	P(Vector3.new(totalW + 20, 2, l + 24), Color3.fromRGB(175, 125, 80), CFrame.new(baseX + totalW / 2 - 10, 4, platformZ), { material = M.WoodPlanks })
 	for i = 0, 6 do
 		Cyl(14, 2.4, Color3.fromRGB(110, 74, 46), Vector3.new(baseX - 8 + i * (totalW + 16) / 6, -3, platformZ + l / 2 + 10), { material = M.Wood })
@@ -177,6 +233,14 @@ local function buildShipyard(island)
 	end
 	sign("SHIPYARD", CFrame.new(baseX + totalW / 2, 27, platformZ + l / 2 + 2), Vector2.new(34, 7), Color3.fromRGB(255, 240, 180))
 	Kit.CrateStack(Vector3.new(baseX + totalW + 2, 5, platformZ + l / 2 - 4))
+	-- islands after the first: the Shipwright stands at the yard and the whole yard turns toward the next island
+	-- (Daybreak, hand-laid, keeps its own Shipwright and its east-facing yard)
+	local a = island.yardAngle
+	if a then
+		npc({ island = island, reserve = function() end }, "Shipwright", "Shipwright", Color3.fromRGB(90, 140, 200), "bandana", island.radius - 24, platformZ + l / 2 + 12, { SubTitle = "Shipyard & Launch" }, Vector2.new(island.radius + 30, platformZ))
+		turnGroup(group, island, a)
+	end
+	Kit.parent = prevParent
 end
 
 -- ===== Island base terrain =====
@@ -260,9 +324,10 @@ local function makeCtx(island, c, r, g)
 	if island.boss and not island.boss.atSea then
 		ctx.reserve(island.boss.offset.X, island.boss.offset.Y, 38)
 	end
-	ctx.reserve(r - 25, 0, 18) -- east dock
+	ctx.reserve((r - 25) * math.cos(island.yardAngle or 0), -(r - 25) * math.sin(island.yardAngle or 0), 18) -- east dock (turns with the yard)
 	ctx.reserve(-r + 25, 0, 18) -- west dock
-	ctx.reserve(r + 20, -110, 80) -- shipyard platform
+	local ya = island.yardAngle or 0 -- shipyard platform (turned toward the next island, buildShipyard)
+	ctx.reserve((r + 20) * math.cos(ya) - 110 * math.sin(ya), -(r + 20) * math.sin(ya) - 110 * math.cos(ya), 80)
 	ctx.reserve(r * 0.45, 20, 9) -- spawn point
 	return ctx
 end
@@ -505,6 +570,7 @@ local function buildIsland(island)
 	-- v0.25.11: islands spread north/south. The generic builder (and its many absolute coordinates) works at z 0, so
 	-- build there and move the finished island, including position attributes (dock LaunchCf / LandCf ...).
 	local dz = island.z or 0
+	island.yardAngle = yardAngle(island, dz)
 	island.z = nil
 	-- build unturned: swap the turned config offsets for the local ones while the island is laid out
 	local lo = island.localOffsets
@@ -909,7 +975,7 @@ end
 -- away and rebuilt from code at server start (so the owner's published place updates through Rojo too).
 -- Hand-built content made in Studio goes in workspace.Handmade (never touched by rebuilds). Kit props placed there
 -- (tagged EnvProp/EnvPart) are dressed with the stylized meshes like the generated ones.
-WB.WORLD_VERSION = 20 -- v20 (v0.25.24): Marmalade Town hand-laid (World/Marmalade); v19 (v0.25.23): Conch Bay street spawns keep their houses; v18 (v0.25.22): Conch Bay terraced (quay, two terraces, garrison plateau, tapered towers); v17 (v0.25.21): islands turned to face the previous one, Conch Bay stairs; v16 (v0.25.20): Daybreak spawn by Rowan, Conch Bay hand-laid (World/ConchBay); v15 (v0.25.11): islands spread north/south, wider sea, islets; v14 (v0.25.6): Daybreak spawn by the campfire; v13: voxel NPCs; v12: Voxelize pass
+WB.WORLD_VERSION = 21 -- v21 (v0.25.25): shipyards face the next island, circus ship offshore; v20 (v0.25.24): Marmalade Town hand-laid (World/Marmalade); v19 (v0.25.23): Conch Bay street spawns keep their houses; v18 (v0.25.22): Conch Bay terraced (quay, two terraces, garrison plateau, tapered towers); v17 (v0.25.21): islands turned to face the previous one, Conch Bay stairs; v16 (v0.25.20): Daybreak spawn by Rowan, Conch Bay hand-laid (World/ConchBay); v15 (v0.25.11): islands spread north/south, wider sea, islets; v14 (v0.25.6): Daybreak spawn by the campfire; v13: voxel NPCs; v12: Voxelize pass
 
 -- Old copies of the map can hide anywhere in Workspace: a renamed or regrouped World, an island dragged into
 -- Handmade, single NPCs / chests / docks pasted from an old bake. They draw on top of the new islands and register

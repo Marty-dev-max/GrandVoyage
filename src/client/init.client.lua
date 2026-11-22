@@ -65,11 +65,50 @@ local settingsLoaded = false
 local lastLevel
 -- v0.25.14 knockdown overlay: red vignette, DOWNED + bleed-out countdown, GIVE UP button
 local downedGui
+local R15_LIMBS = { "Head", "UpperTorso", "LowerTorso", "LeftUpperArm", "LeftLowerArm", "LeftHand", "RightUpperArm", "RightLowerArm", "RightHand", "LeftUpperLeg", "LeftLowerLeg", "LeftFoot", "RightUpperLeg", "RightLowerLeg", "RightFoot" }
+-- v0.25.25 (owner): downed = a real ragdoll. The server swapped the joints for ball sockets; this client owns the
+-- body's physics, so it puts the humanoid in the Physics state and lets the limbs collide (else they sink).
+local function setRagdoll(on)
+	local char = game:GetService("Players").LocalPlayer.Character
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	if not hum then
+		return
+	end
+	if on then
+		hum:ChangeState(Enum.HumanoidStateType.Physics)
+		task.spawn(function()
+			while char.Parent and char:GetAttribute("Downed") and hum.Health > 0 do
+				for _, n in ipairs(R15_LIMBS) do
+					local p = char:FindFirstChild(n)
+					if p and p:IsA("BasePart") then
+						p.CanCollide = true
+					end
+				end
+				local root = char:FindFirstChild("HumanoidRootPart")
+				if root then
+					root.CanCollide = false
+				end
+				if hum:GetState() ~= Enum.HumanoidStateType.Physics then
+					hum:ChangeState(Enum.HumanoidStateType.Physics)
+				end
+				task.wait()
+			end
+		end)
+	elseif hum.Health > 0 then
+		local root = char:FindFirstChild("HumanoidRootPart")
+		if root then
+			root.CanCollide = true
+		end
+		hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+	end
+end
+
 local function showDowned(d)
 	if downedGui then
 		downedGui:Destroy()
 		downedGui = nil
 	end
+	setRagdoll(d.downed == true)
 	if not d.downed then
 		return
 	end
@@ -101,12 +140,54 @@ local function showDowned(d)
 	task.spawn(function()
 		while gui.Parent do
 			local left = math.max(0, math.ceil((d.seconds or 25) - (os.clock() - t0)))
-			sub.Text = "An ally can hold REVIVE on you. Bleeding out in " .. left .. "s"
+			sub.Text = "Getting up in " .. left .. "s. An ally can hold REVIVE on you."
 			vig.BackgroundTransparency = 0.62 + 0.1 * math.sin(os.clock() * 4)
 			task.wait(0.1)
 		end
 	end)
 end
+
+-- v0.25.25 (owner): low HP = red edges pulsing, faster and stronger the lower it goes (the DOWNED screen has its own)
+task.spawn(function()
+	local Players = game:GetService("Players")
+	local pg = Players.LocalPlayer:WaitForChild("PlayerGui")
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "LowHp"
+	gui.IgnoreGuiInset = true
+	gui.ResetOnSpawn = false
+	gui.DisplayOrder = 29
+	gui.Enabled = false
+	gui.Parent = pg
+	local edges = {}
+	-- four edge strips fading inward (gradient transparency 0 at the screen edge -> 1 inside)
+	for _, e in ipairs({ { UDim2.fromScale(1, 0.22), UDim2.fromScale(0, 0), 90 }, { UDim2.fromScale(1, 0.22), UDim2.fromScale(0, 0.78), -90 }, { UDim2.fromScale(0.16, 1), UDim2.fromScale(0, 0), 0 }, { UDim2.fromScale(0.16, 1), UDim2.fromScale(0.84, 0), 180 } }) do
+		local f = Instance.new("Frame")
+		f.BorderSizePixel = 0
+		f.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+		f.Size, f.Position = e[1], e[2]
+		local g = Instance.new("UIGradient")
+		g.Rotation = e[3]
+		g.Transparency = NumberSequence.new(0, 1)
+		g.Parent = f
+		f.Parent = gui
+		table.insert(edges, f)
+	end
+	while true do
+		local char = Players.LocalPlayer.Character
+		local hum = char and char:FindFirstChildOfClass("Humanoid")
+		local k = hum and hum.MaxHealth > 0 and hum.Health > 0 and not char:GetAttribute("Downed") and hum.Health / hum.MaxHealth or 1
+		local low = k < 0.3
+		gui.Enabled = low
+		if low then
+			local depth = 1 - k / 0.3 -- 0 at 30% HP, 1 at 0
+			local pulse = 0.5 + 0.5 * math.sin(os.clock() * (4 + depth * 6))
+			for _, f in ipairs(edges) do
+				f.BackgroundTransparency = 0.75 - depth * 0.35 - pulse * 0.2
+			end
+		end
+		task.wait(0.03)
+	end
+end)
 
 local handlers = {
 	Downed = showDowned,

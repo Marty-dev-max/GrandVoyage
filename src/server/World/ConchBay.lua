@@ -257,7 +257,8 @@ end
 local function cliffs(ctx)
 	L.Tiers(ctx, {
 		{ x = 0, z = -178, r = 62, h = 30, force = true, top = "trees", cap = { dz = -8, r = 40, h = 8 } },
-		{ x = -150, z = -150, r = 55, h = 26, force = true, top = "trees", cap = { dx = -8, dz = -6, r = 34, h = 8 } },
+		-- v0.25.25: NW lobe pulled in behind the garrison, the harbor dock + shipyard now turn to that side (next island)
+		{ x = -60, z = -205, r = 34, h = 26, force = true, top = "trees", cap = { dx = -4, dz = -6, r = 20, h = 8 } },
 		{ x = 150, z = -150, r = 55, h = 26, force = true, top = "trees", cap = { dx = 8, dz = -6, r = 34, h = 8 } },
 		{ x = -178, z = -92, r = 34, h = 18, force = true, top = "trees" },
 		{ x = 178, z = -92, r = 34, h = 18, force = true, top = "trees" },
@@ -265,7 +266,7 @@ local function cliffs(ctx)
 end
 
 -- NPCs on the quay in front of the first terrace wall; the guide meets you at the pier head
-local function npcs(ctx, api, r)
+local function npcs(ctx, api)
 	local Quests = require(game:GetService("ReplicatedStorage").Shared.Config.Quests)
 	local function put(role, title, color, hat, x, z, extra, face)
 		api.npc(ctx, role, title, color, hat, x, z, extra, face or Vector2.new(x, 260))
@@ -275,7 +276,6 @@ local function npcs(ctx, api, r)
 	put("Tavern", "Tavern Keeper", Color3.fromRGB(200, 90, 90), nil, -95, 182, { SubTitle = "Hire Crew" })
 	put("FastTravel", "Courier Gull Post", Color3.fromRGB(240, 240, 240), "marine", 95, 182, { SubTitle = "Fast Travel" })
 	put("Guide", Quests.Guide[ctx.island.id] or "Guide", Color3.fromRGB(255, 200, 90), "captain", 16, 224, { SubTitle = "📜 Quests" }, Vector2.new(0, 300))
-	put("Shipwright", "Shipwright", Color3.fromRGB(90, 140, 200), "bandana", r - 30, -40, { SubTitle = "Shipyard & Launch" }, Vector2.new(0, -40))
 end
 
 function CB.Build(island, api)
@@ -285,6 +285,13 @@ function CB.Build(island, api)
 	local c = Vector3.new(island.x, 0, 0)
 	local r = island.radius
 	api.base(island, c, r)
+	-- the base's random grass mounds turn into big cubes and blocked the west way to the harbor (v0.25.25): drop them
+	-- (matched by size + material: Lune's bake has no default Part.Position / Shape)
+	for _, o in ipairs(f:GetChildren()) do
+		if o:IsA("Part") and o.Material == M.Grass and o.Size.X >= 26 and o.Size.X == o.Size.Y and o.CFrame.Position.Y < 0 then
+			o:Destroy()
+		end
+	end
 	local ctx = api.makeCtx(island, c, r, GROUND)
 	ctx.foam = api.foam
 	local addRect = withRects(ctx)
@@ -308,7 +315,7 @@ function CB.Build(island, api)
 		end
 	end
 	-- 3. NPCs before anything that checks free ground
-	npcs(ctx, api, r)
+	npcs(ctx, api)
 	-- 4. the garrison, the waterfront, the houses
 	garrison(ctx)
 	waterfront(ctx)

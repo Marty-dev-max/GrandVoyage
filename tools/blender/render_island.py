@@ -312,6 +312,7 @@ if _os.environ.get("ONLY") == "marm":
     shot("aerial", (70, -440, 240), (0, 10, 10), lens=30)               # the concept's view from the harbor
     shot("boulevard", (8, -186, 14), (0, 110, 20), lens=26)            # street level off the ship, toward the hall
     shot("square", (40, 40, 16), (0, 108, 15), lens=26)                # the town hall square + clock tower
+    shot("ship", (70, -235, 34), (0, -302, 14), lens=30)               # the circus ship at anchor + pier
     raise SystemExit
 if _os.environ.get("ONLY") == "close":
     scene.render.resolution_x, scene.render.resolution_y = 1200, 800

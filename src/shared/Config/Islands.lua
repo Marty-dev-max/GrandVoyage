@@ -67,7 +67,7 @@ local Islands = {
 		-- acrobats on the east one, lions in the orange groves on the hill, Captain Confetti in the town hall square
 		spawns = {
 			{ offset = Vector2.new(-150, 70), radius = 16, monster = "ClownGrunt", count = 6 },
-			{ offset = Vector2.new(150, 70), radius = 16, monster = "CircusAcrobat", count = 5 },
+			{ offset = Vector2.new(152, 0), radius = 16, monster = "CircusAcrobat", count = 5 }, -- clear of the turned shipyard (v0.25.25)
 			{ offset = Vector2.new(0, -192), radius = 20, monster = "CircusLion", count = 4 },
 		},
 		boss = { id = "CaptainConfetti", offset = Vector2.new(0, -58), respawn = 30 * 60 },

@@ -35,6 +35,8 @@ local TOWN = { -122, 122, -112, 172 } -- paved town (x0, x1, z0, z1)
 local QUAY_Z = 200 -- seawall line
 local HALL = { -42, 42, -124, -88 } -- town hall terrace (the hill's lobes reach ~1.13 r, it stays clear)
 local HALL_UP = 3
+local SHIP_Z = 302 -- circus ship at anchor off the south shore (past the beach lobes)
+local SHIP_DECK = GROUND + 1.4
 
 local function slab(ctx, r, y0, y1, color, mat, opts)
 	opts = opts or {}
@@ -147,7 +149,7 @@ local function harbor(ctx)
 	slab(ctx, { TOWN[1], TOWN[2], TOWN[4], QUAY_Z }, 2, GROUND, PAVE, M.Cobblestone)
 	P(Vector3.new(TOWN[2] - TOWN[1] + 4, 10, 3), STONE, CFrame.new(ctx.c + Vector3.new(0, GROUND - 5.1, QUAY_Z + 1.5)), { material = M.Brick })
 	for x = TOWN[1] + 8, TOWN[2] - 8, 14 do
-		if math.abs(x - 28) < 6 then -- the gangplank lands here
+		if math.abs(x) < 7 then -- the pier starts here
 			continue
 		end
 		Cyl(1.6, 1.6, Color3.fromRGB(60, 60, 70), ctx.c + Vector3.new(x, GROUND + 0.8, QUAY_Z - 2), Kit.decor())
@@ -155,46 +157,86 @@ local function harbor(ctx)
 	Kit.CrateStack(ctx.c + Vector3.new(-70, GROUND, QUAY_Z - 8))
 	Kit.Barrel(ctx.c + Vector3.new(-62, GROUND + 0.5, QUAY_Z - 6))
 	Kit.CrateStack(ctx.c + Vector3.new(84, GROUND, QUAY_Z - 9))
-	-- the ship (decor, not a sailing ship): hull along x, deck at GROUND + 1.4
-	local sz = QUAY_Z + 22
-	local deckY = GROUND + 1.4
-	local purple, gold = Color3.fromRGB(120, 50, 120), GOLD
-	local function hull(y0, y1, len, wid, color)
-		P(Vector3.new(len, y1 - y0, wid), color, CFrame.new(ctx.c + Vector3.new(0, (y0 + y1) / 2, sz)), { material = M.WoodPlanks })
+	-- v0.25.25 (owner): Captain Confetti's circus ship lies at anchor OFF the island; a long pier on the boulevard
+	-- axis leads out to it. Decor only (not a sailing ship): hull along x, deck at SHIP_DECK.
+	local sx0, sz = 0, SHIP_Z
+	local deckY = SHIP_DECK
+	local purple, dark, wood = Color3.fromRGB(122, 48, 124), Color3.fromRGB(80, 30, 84), Color3.fromRGB(196, 140, 86)
+	local function at(x, y, z)
+		return CFrame.new(ctx.c + Vector3.new(sx0 + x, y, sz + z))
 	end
-	hull(-4, 0, 70, 16, purple:Lerp(Color3.new(0, 0, 0), 0.25))
-	hull(0, 4, 80, 21, purple)
-	hull(4, deckY - 1, 86, 24, purple)
-	hull(deckY - 1, deckY, 86, 24, Color3.fromRGB(196, 140, 86))
-	P(Vector3.new(86.4, 0.8, 24.4), gold, CFrame.new(ctx.c + Vector3.new(0, 4.4, sz)), Kit.decor())
-	-- bow (east): stepped point + gold star figurehead; stern castle (west)
-	for i = 1, 4 do
-		local w = 24 - i * 5
-		P(Vector3.new(4, deckY + 4 - i * 0.6, w), purple, CFrame.new(ctx.c + Vector3.new(43 + i * 4 - 2, (deckY + 4 - i * 0.6) / 2 - 2, sz)), { material = M.WoodPlanks })
+	-- stepped V-hull, one slice every 4 studs: half-width follows the profile, the deck line rises at bow and stern
+	local L = 92
+	for i = 0, L / 4 - 1 do
+		local x = -L / 2 + 2 + i * 4
+		local t = (x + L / 2) / L -- 0 stern .. 1 bow
+		local hw = 13 * math.clamp(math.min(t / 0.12, (1 - t) / 0.3), 0.25, 1)
+		local sheer = (t > 0.8 and (t - 0.8) * 22 or 0) + (t < 0.15 and (0.15 - t) * 16 or 0)
+		local top = deckY + sheer
+		P(Vector3.new(4.05, 4, hw * 1.1), dark, at(x, -4, 0), { material = M.WoodPlanks })
+		P(Vector3.new(4.05, 4, hw * 1.6), purple, at(x, 0, 0), { material = M.WoodPlanks })
+		P(Vector3.new(4.05, top - 2, hw * 2), purple, at(x, (top + 2) / 2, 0), { material = M.WoodPlanks })
+		P(Vector3.new(4.05, 0.6, hw * 2 - 1.4), wood, at(x, top + 0.3, 0), { material = M.WoodPlanks })
+		for _, side in ipairs({ -1, 1 }) do
+			P(Vector3.new(4.05, 0.7, 0.4), GOLD, at(x, 4.6, side * hw), Kit.decor()) -- gold stripe
+			if not (side < 0 and math.abs(x) <= 4) then -- the gangplank boards through a gap on the pier side
+				P(Vector3.new(4.05, 1.6, 0.6), purple, at(x, top + 1.1, side * (hw - 0.3)), { material = M.WoodPlanks }) -- bulwark
+			end
+			if i % 2 == 0 and t > 0.15 and t < 0.85 then
+				P(Vector3.new(1.4, 1.4, 0.3), Color3.fromRGB(40, 30, 40), at(x, 2.2, side * hw), Kit.decor({ collide = false })) -- porthole
+			end
+		end
 	end
+	-- stern castle with lit windows and lanterns
+	P(Vector3.new(16, 7, 23), purple, at(-36, deckY + 4, 0), { material = M.WoodPlanks })
+	P(Vector3.new(16.4, 0.6, 23.4), wood, at(-36, deckY + 7.8, 0), { material = M.WoodPlanks })
+	for i = -2, 2 do
+		P(Vector3.new(0.3, 2, 2.4), Color3.fromRGB(255, 220, 140), at(-44.1, deckY + 4.5, i * 4), Kit.decor({ material = M.Neon, collide = false }))
+	end
+	for _, side in ipairs({ -1, 1 }) do
+		P(Vector3.new(1.2, 1.6, 1.2), Color3.fromRGB(255, 200, 90), at(-44, deckY + 9.4, side * 10), Kit.decor({ material = M.Neon, collide = false }))
+	end
+	-- bowsprit + gold star figurehead
+	local bow = at(L / 2 + 4, deckY + 9, 0)
+	P(Vector3.new(16, 1, 1), Color3.fromRGB(120, 80, 50), bow * CFrame.Angles(0, 0, math.rad(18)), { material = M.Wood })
 	for k = 0, 4 do
 		local a = k / 5 * math.pi * 2
-		P(Vector3.new(1.2, 3.4, 1.2), gold, CFrame.new(ctx.c + Vector3.new(60, deckY + 2, sz)) * CFrame.Angles(a, 0, 0) * CFrame.new(0, 1.6, 0), Kit.decor())
+		P(Vector3.new(1.4, 3.6, 0.8), GOLD, at(L / 2 - 1, deckY + 4, 0) * CFrame.Angles(a, 0, 0) * CFrame.new(0, 1.7, 0), Kit.decor())
 	end
-	P(Vector3.new(18, 6, 24), purple, CFrame.new(ctx.c + Vector3.new(-34, deckY + 3, sz)), { material = M.WoodPlanks })
-	P(Vector3.new(17.6, 0.4, 23.6), Color3.fromRGB(196, 140, 86), CFrame.new(ctx.c + Vector3.new(-34, deckY + 6.2, sz)), { material = M.WoodPlanks })
-	for _, e in ipairs({ { 0, -11.8, 18, 0.6 }, { 0, 11.8, 18, 0.6 }, { -8.8, 0, 0.6, 24 } }) do
-		P(Vector3.new(e[3], 1.2, e[4]), gold, CFrame.new(ctx.c + Vector3.new(-34 + e[1], deckY + 7, sz + e[2])), Kit.decor())
+	-- the big top on deck, two masts with striped square sails, a crow's nest, pennants and bunting
+	Kit.CircusTent(ctx.c + Vector3.new(sx0 + 12, deckY + 0.6, sz), 0.55) -- toward the bow: the gangplank lands at x 0
+	for _, mx in ipairs({ -22, 28 }) do
+		P(Vector3.new(1.6, 36, 1.6), Color3.fromRGB(120, 80, 50), at(mx, deckY + 18, 0), { material = M.Wood })
+		P(Vector3.new(1, 1, 22), Color3.fromRGB(120, 80, 50), at(mx, deckY + 28, 0), { material = M.Wood })
+		P(Vector3.new(1, 1, 18), Color3.fromRGB(120, 80, 50), at(mx, deckY + 16, 0), { material = M.Wood })
+		for k = 0, 5 do
+			local z = -10 + k * 3.6 + 1.8
+			P(Vector3.new(0.4, 11.4, 3.6), k % 2 == 0 and Color3.fromRGB(225, 55, 60) or Color3.fromRGB(250, 246, 236), at(mx + 0.9, deckY + 22, z), { material = M.Fabric, collide = false })
+		end
+		P(Vector3.new(5, 1.6, 5), Color3.fromRGB(150, 100, 60), at(mx, deckY + 32, 0), { material = M.WoodPlanks })
+		P(Vector3.new(0.3, 2.4, 4), Color3.fromRGB(240, 196, 70), at(mx + 2, deckY + 37, 0), Kit.decor({ material = M.Fabric, collide = false }))
 	end
-	for i = -2, 2 do
-		P(Vector3.new(2, 2, 0.3), Color3.fromRGB(255, 220, 140), CFrame.new(ctx.c + Vector3.new(-34 + i * 3.4, deckY + 3.4, sz - 12.1)), Kit.decor({ material = M.Neon, collide = false }))
+	Kit.Bunting(ctx.c + Vector3.new(sx0 - 22, deckY + 30, sz), ctx.c + Vector3.new(sx0 + 28, deckY + 30, sz))
+	Kit.Bunting(ctx.c + Vector3.new(sx0 + 28, deckY + 30, sz), ctx.c + Vector3.new(sx0 + L / 2 + 10, deckY + 12, sz))
+	-- anchor chain into the water
+	P(Vector3.new(0.6, 10, 0.6), Color3.fromRGB(70, 70, 76), at(L / 2 - 8, 1, -12.5) * CFrame.Angles(0.3, 0, 0), Kit.decor({ material = M.Metal, collide = false }))
+	-- the pier: quay -> ship, on the boulevard axis, piles every 10 studs, lamps, then a gangplank up to the deck
+	local p0, p1 = QUAY_Z, sz - 16
+	for i = 0, math.floor((p1 - p0) / 5) - 1 do
+		P(Vector3.new(10, 1, 4.6), Color3.fromRGB(190, 135, 85):Lerp(Color3.fromRGB(160, 110, 70), i % 2), CFrame.new(ctx.c + Vector3.new(0, GROUND - 0.5, p0 + i * 5 + 2.5)), { material = M.WoodPlanks })
 	end
-	Kit.CircusTent(ctx.c + Vector3.new(4, deckY, sz), 0.58)
-	local masts = { -18, 24 }
-	for _, mx in ipairs(masts) do
-		Kit.Flag(ctx.c + Vector3.new(mx, deckY, sz), Color3.fromRGB(230, 60, 60), 26)
+	for z = p0 + 8, p1, 10 do
+		for _, px in ipairs({ -5, 5 }) do
+			Cyl(16, 1.6, Color3.fromRGB(120, 80, 50), ctx.c + Vector3.new(px, -1, z), { material = M.Wood })
+		end
 	end
-	Kit.Bunting(ctx.c + Vector3.new(-18, deckY + 25, sz), ctx.c + Vector3.new(24, deckY + 25, sz))
-	-- gangplank from the quay up onto the deck
-	local g0, g1 = ctx.c + Vector3.new(28, GROUND + 0.2, QUAY_Z - 3), ctx.c + Vector3.new(28, deckY + 0.2, sz - 10)
+	for z = p0 + 20, p1, 30 do
+		Kit.Lamp(ctx.c + Vector3.new(-4.4, GROUND - 0.05, z))
+	end
+	local g0, g1 = ctx.c + Vector3.new(0, GROUND + 0.1, p1 - 1), ctx.c + Vector3.new(0, deckY + 0.7, sz - 9)
 	local mid, len = (g0 + g1) / 2, (g1 - g0).Magnitude
 	P(Vector3.new(5, 0.6, len), Color3.fromRGB(186, 130, 80), CFrame.lookAt(mid, g1), { material = M.WoodPlanks })
-	ctx.reserve(28, QUAY_Z - 6, 6)
+	ctx.reserve(0, QUAY_Z - 6, 6)
 end
 
 -- winding dirt paths up both coasts (x = sx * (150 + 18 sin(z / 40))), orange trees and fences along them
@@ -258,7 +300,7 @@ local function shoreRocks(ctx)
 	end
 end
 
-local function npcs(ctx, api, r)
+local function npcs(ctx, api)
 	local Quests = require(ReplicatedStorage.Shared.Config.Quests)
 	local Dungeons = require(ReplicatedStorage.Shared.Config.Dungeons)
 	local function put(role, title, color, hat, x, z, extra, face)
@@ -271,9 +313,8 @@ local function npcs(ctx, api, r)
 	put("Guide", Quests.Guide[ctx.island.id] or "Guide", Color3.fromRGB(255, 200, 90), "captain", -14, 176, { SubTitle = "📜 Quests" }, Vector2.new(0, 150))
 	local d = Dungeons[ctx.island.dungeon]
 	if d then
-		put("Dungeon", d.name, Color3.fromRGB(200, 80, 160), "clown", 38, 192, { DungeonId = ctx.island.dungeon, SubTitle = "Dungeon Lv." .. d.minLevel .. "+" }, Vector2.new(38, 150))
+		put("Dungeon", d.name, Color3.fromRGB(200, 80, 160), "clown", 12, 192, { DungeonId = ctx.island.dungeon, SubTitle = "Dungeon Lv." .. d.minLevel .. "+" }, Vector2.new(12, 150))
 	end
-	put("Shipwright", "Shipwright", Color3.fromRGB(90, 140, 200), "bandana", r - 30, -40, { SubTitle = "Shipyard & Launch" }, Vector2.new(0, -40))
 end
 
 function MT.Build(island, api)
@@ -283,12 +324,15 @@ function MT.Build(island, api)
 	local c = Vector3.new(island.x, 0, 0)
 	local r = island.radius
 	api.base(island, c, r)
-	-- the base's "gentle hill" mounds poked up through the paving as green cubes: drop the ones under the town
+	-- the base's "gentle hill" mounds poked up through the paving as green cubes: drop them
 	for _, o in ipairs(f:GetChildren()) do
 		-- matched by size + material (Lune's bake has no default Part.Position / Shape)
-		if o:IsA("Part") and o.Material == M.Grass and o.Size.X >= 26 and o.Size.X == o.Size.Y and o.CFrame.Position.Y < 0 then
-			local x, z, rr = o.CFrame.Position.X - c.X, o.CFrame.Position.Z, o.Size.X / 2
-			if x + rr > TOWN[1] - 6 and x - rr < TOWN[2] + 6 and z + rr > TOWN[3] - 6 and z - rr < QUAY_Z then
+		local pos = o:IsA("Part") and o.CFrame.Position
+		if pos and o.Material == M.Grass and o.Size.X >= 26 and o.Size.X == o.Size.Y and pos.Y < 0 then
+			o:Destroy() -- all of them: out on the meadows they read as stray green boxes too
+		elseif pos and pos.Z > 150 and math.abs(pos.X - c.X) < 170 and Vector2.new(pos.X - c.X, pos.Z).Magnitude > 60 then
+			-- v0.25.25: the beach lobes (and their foam rings) off the harbor: open water for the circus ship
+			if (o.Material == M.Sand and o.Size.X == 14) or o.Name == "Foam" then
 				o:Destroy()
 			end
 		end
@@ -299,7 +343,7 @@ function MT.Build(island, api)
 	slab(ctx, TOWN, 2, GROUND, PAVE, M.Cobblestone, { name = "Town" })
 	hill(ctx)
 	-- 2. NPCs first (they reserve their spots), then the landmarks
-	npcs(ctx, api, r)
+	npcs(ctx, api)
 	townHall(ctx)
 	clockTower(ctx, 58, -106)
 	boulevard(ctx)

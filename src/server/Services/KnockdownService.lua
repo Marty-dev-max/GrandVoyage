@@ -1,5 +1,6 @@
--- Knockdown (v0.25.14, owner): lethal MONSTER damage does not kill at once. The player collapses (character
--- attribute Downed = time it happened) and bleeds out over Knockdown.BleedSeconds. A monster that attacks a downed
+-- Knockdown (v0.25.14, owner): lethal MONSTER damage does not kill at once. The player collapses into a ragdoll
+-- (character attribute Downed = time it happened; v0.25.25: HP creeps back and they get up by themselves at
+-- Knockdown.StandAt of max HP, Knockdown.RecoverSeconds after going down). A monster that attacks a downed
 -- player winds up an EXECUTE (red circle) and kills them when it lands. Another player hitting that monster during
 -- the wind-up interrupts it (the monster turns on them); any other player can hold the Revive prompt to bring the
 -- downed player back. Alone, nobody breaks the execute: you die. PvP kills keep the old rules (duels, bounties).
@@ -31,6 +32,41 @@ local function kill(player, text)
 	end
 end
 
+-- ragdoll: every body joint but the root swaps its Motor6D for a ball socket (the client puts the humanoid in the
+-- Physics state, it owns the character's physics). Undone by unragdoll.
+local function ragdoll(char, hum)
+	hum.RequiresNeck = false
+	hum.BreakJointsOnDeath = false
+	for _, m in ipairs(char:GetDescendants()) do
+		if m:IsA("Motor6D") and m.Name ~= "Root" and m.Name ~= "RootJoint" and m.Part0 and m.Part1 and m.Part0.Parent == char and m.Part1.Parent == char then
+			local a0, a1 = Instance.new("Attachment"), Instance.new("Attachment")
+			a0.Name, a1.Name = "RagA0", "RagA1"
+			a0.CFrame, a1.CFrame = m.C0, m.C1
+			a0.Parent, a1.Parent = m.Part0, m.Part1
+			local bs = Instance.new("BallSocketConstraint")
+			bs.Name = "RagSocket"
+			bs.Attachment0, bs.Attachment1 = a0, a1
+			bs.LimitsEnabled = true
+			bs.UpperAngle = 70
+			bs.TwistLimitsEnabled = true
+			bs.TwistLowerAngle, bs.TwistUpperAngle = -40, 40
+			bs.Parent = m.Part0
+			m.Enabled = false
+		end
+	end
+end
+
+local function unragdoll(char, hum)
+	for _, o in ipairs(char:GetDescendants()) do
+		if o:IsA("Motor6D") then
+			o.Enabled = true
+		elseif o.Name == "RagSocket" or o.Name == "RagA0" or o.Name == "RagA1" then
+			o:Destroy()
+		end
+	end
+	hum.RequiresNeck = true
+end
+
 local function standUp(player, hpRatio)
 	local char = player.Character
 	local hum = R.PlayerService.Humanoid(player)
@@ -39,8 +75,9 @@ local function standUp(player, hpRatio)
 		return
 	end
 	char:SetAttribute("Downed", nil)
+	unragdoll(char, hum)
 	hum.PlatformStand = false
-	hum.Health = math.max(1, hum.MaxHealth * hpRatio)
+	hum.Health = math.max(hum.Health, hum.MaxHealth * hpRatio)
 	root.CFrame = CFrame.new(root.Position + Vector3.new(0, 2.5, 0)) * CFrame.Angles(0, select(2, root.CFrame:ToEulerAnglesYXZ()), 0)
 	local prompt = root:FindFirstChild("RevivePrompt")
 	if prompt then
@@ -60,11 +97,10 @@ function KD.Down(player)
 	local stamp = os.clock()
 	char:SetAttribute("Downed", stamp)
 	hum.Health = 1
-	hum.PlatformStand = true -- collapses on the ground
-	root.CFrame = CFrame.new(root.Position) * CFrame.Angles(0, select(2, root.CFrame:ToEulerAnglesYXZ()), 0) * CFrame.Angles(math.rad(-85), 0, 0)
+	ragdoll(char, hum)
 	R.CombatService.ClearBuffs(player)
 	Net.FX("Miss", { pos = root.Position + Vector3.new(0, 3, 0), text = "DOWNED!" }, root.Position, 250)
-	Net.Push(player, "Downed", { downed = true, seconds = CFG.BleedSeconds })
+	Net.Push(player, "Downed", { downed = true, seconds = CFG.RecoverSeconds })
 	-- any other player can hold E / tap to revive
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.Name = "RevivePrompt"
@@ -81,9 +117,21 @@ function KD.Down(player)
 			R.PlayerService.Notify(helper, "You revived " .. player.DisplayName .. "!", "good")
 		end
 	end)
-	task.delay(CFG.BleedSeconds, function()
-		if char.Parent and char:GetAttribute("Downed") == stamp then
-			kill(player, "BLED OUT")
+	-- HP creeps back; at StandAt of max HP they get up on their own
+	task.spawn(function()
+		local goal = hum.MaxHealth * CFG.StandAt
+		local perTick = (goal - 1) / CFG.RecoverSeconds * 0.5
+		while char.Parent and char:GetAttribute("Downed") == stamp and hum.Health > 0 do
+			task.wait(0.5)
+			if char:GetAttribute("Downed") ~= stamp or hum.Health <= 0 then
+				return
+			end
+			hum.Health = math.min(goal, hum.Health + perTick)
+			if hum.Health >= goal - 0.01 then
+				standUp(player, CFG.StandAt)
+				R.PlayerService.Notify(player, "You got back up!", "good")
+				return
+			end
 		end
 	end)
 end

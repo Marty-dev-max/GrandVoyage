@@ -11,6 +11,7 @@ local UI = require(script.Parent.Parent.UI.UIKit)
 local SL = {}
 local player = Players.LocalPlayer
 local GameSettings = UserSettings():GetService("UserGameSettings")
+local SHOULDER = 1.75
 local on = false
 
 local function nativeLock()
@@ -30,7 +31,7 @@ local function apply(state)
 	local hum = char and char:FindFirstChildOfClass("Humanoid")
 	if hum then
 		hum.AutoRotate = true
-		hum.CameraOffset = on and Vector3.new(1.75, 0, 0) or Vector3.zero
+		hum.CameraOffset = Vector3.zero
 	end
 	if not on then
 		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
@@ -85,6 +86,14 @@ function SL.Start()
 		end
 		UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
 		GameSettings.RotationType = Enum.RotationType.CameraRelative
+		-- v0.25.25 (owner: still jerky): the shoulder offset goes on the CAMERA, in its own right-vector, like
+		-- Roblox's mouse lock. Humanoid.CameraOffset is in the body's space: the body turns one physics step after
+		-- the camera, so that offset swung the view every frame. The camera scripts rebuild the CFrame from the
+		-- focus each frame, so this never accumulates.
+		local cam = workspace.CurrentCamera
+		if cam and cam.CameraType == Enum.CameraType.Custom then
+			cam.CFrame = cam.CFrame * CFrame.new(SHOULDER, 0, 0)
+		end
 	end)
 end
 

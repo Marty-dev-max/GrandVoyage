@@ -3,7 +3,7 @@ return {
 	GameName = "LarpTales: Voxel Seas", -- player-facing name (v0.24.9, owner); code/files/DataStores keep the GrandVoyage names
 	LogoLines = { "LARPTALES", "VOXEL SEAS" },
 	-- bump on every change: shown bottom-right in game and printed in Output, so you can tell which code is running
-	Version = "0.25.24",
+	Version = "0.25.25",
 	SagaName = "Azure East Saga",
 	DataStoreName = "GV_Player_v1",
 	GuildStoreName = "GV_Guild_v1",
@@ -37,7 +37,8 @@ return {
 		HalfZ = 3800,
 	},
 	-- v0.25.14 (owner): lethal monster hits knock you down; monsters execute, allies interrupt or revive
-	Knockdown = { Enabled = true, BleedSeconds = 25, ExecuteWindup = 2.5, ReviveHold = 3, ReviveHp = 0.3 },
+	-- v0.25.25 (owner): downed = ragdoll; HP creeps back and you get up at StandAt (RecoverSeconds from 1 HP)
+	Knockdown = { Enabled = true, RecoverSeconds = 14, StandAt = 0.1, ExecuteWindup = 2.5, ReviveHold = 3, ReviveHp = 0.3 },
 	CalmBelt = {
 		SeaKingSpawnInterval = 4, -- seconds
 		MaxSeaKingsPerShip = 5,

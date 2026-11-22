@@ -21,6 +21,7 @@ local TAKEOFF_HOLD = 0.28
 
 local allowed = {} -- source -> true
 local flying = false
+local startedAt = 0
 local holdStart
 local att, lv, ao
 local roll = { t0 = 0, dur = 0.55, dir = 1, active = false }
@@ -75,6 +76,7 @@ local function start()
 		return
 	end
 	flying = true
+	startedAt = os.clock()
 	h.PlatformStand = true
 	att = Instance.new("Attachment")
 	att.Name = "FlightAtt"
@@ -127,12 +129,12 @@ function Flight.Start()
 
 	RunService.RenderStepped:Connect(function()
 		local c, h, r = char()
-		-- knocked down (KnockdownService): no flying; drop out of the sky limp, tumbling like a ragdoll
+		-- knocked down (KnockdownService): no flying; drop out of the sky as a tumbling ragdoll
 		if c and h and r and c:GetAttribute("Downed") then
 			holdStart = nil
 			if flying then
 				stop()
-				h.PlatformStand = true
+				h:ChangeState(Enum.HumanoidStateType.Physics) -- ragdoll (init.client keeps it there while downed)
 				r.AssemblyAngularVelocity = Vector3.new(5, 0, 3)
 			end
 			return
@@ -197,8 +199,11 @@ function Flight.Start()
 		params.FilterType = Enum.RaycastFilterType.Exclude
 		-- only real ground lands you: flying over a monster's (or boss's) body used to count as landing
 		params.FilterDescendantsInstances = { player.Character, workspace:FindFirstChild("Monsters") }
-		local hit = workspace:Raycast(r.Position, Vector3.new(0, -4, 0), params)
-		if (hit and up <= 0 and vel.Y <= 1) or r.Position.Y < GameConfig.SeaLevel + 1.5 then
+		-- v0.25.25 (owner: still flying after touching down, walking in the fly pose): land on ANY ground contact
+		-- unless Jump is held. The old `vel.Y <= 1` test failed whenever the camera looked a little up, so you
+		-- skimmed along the ground still in flight.
+		local hit = workspace:Raycast(r.Position, Vector3.new(0, -4.5, 0), params)
+		if (hit and not jumpHeld and os.clock() - startedAt > 0.6) or r.Position.Y < GameConfig.SeaLevel + 1.5 then
 			stop()
 		end
 	end)

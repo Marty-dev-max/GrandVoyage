@@ -60,11 +60,27 @@ def coin(s, cx=16, cy=16, r=11):
     s.px(cx - 5, cy - 6, WHITE)
 
 
+# v0.25.31 (owner: the gem looked squeezed): a wide brilliant cut with real facets. Crown = bright table between a
+# light left and a mid right bezel; pavilion = light / mid / dark thirds meeting at the culet; a hot highlight.
+def fgem(s, cx, cy, w, h, c, shine=True):
+    hw = w / 2.0
+    top, girdle, bot = cy - h * 0.42, cy - h * 0.12, cy + h * 0.58
+    lite, hot = lerp(c, WHITE, 0.35), lerp(c, WHITE, 0.7)
+    mid, dark = c, lerp(c, DARK, 0.4)
+    s.poly([(cx - hw, girdle), (cx - hw * 0.35, girdle), (cx, bot)], lerp(c, WHITE, 0.12))
+    s.poly([(cx - hw * 0.35, girdle), (cx + hw * 0.35, girdle), (cx, bot)], mid)
+    s.poly([(cx + hw * 0.35, girdle), (cx + hw, girdle), (cx, bot)], dark)
+    s.poly([(cx - hw, girdle), (cx - hw * 0.55, top), (cx - hw * 0.35, girdle)], lite)
+    s.poly([(cx - hw * 0.55, top), (cx + hw * 0.55, top), (cx + hw * 0.35, girdle), (cx - hw * 0.35, girdle)], hot)
+    s.poly([(cx + hw * 0.55, top), (cx + hw, girdle), (cx + hw * 0.35, girdle)], lerp(c, WHITE, 0.05))
+    if shine and w >= 10:
+        s.px(round(cx - hw * 0.3), round(top + 1), WHITE)
+        s.px(round(cx - hw * 0.3) + 1, round(top + 1), WHITE)
+
+
 def gem(s, c=(90, 210, 255)):
-    s.poly([(8, 12), (12, 6), (20, 6), (24, 12), (16, 27)], c)
-    s.poly([(8, 12), (24, 12), (16, 27)], lerp(c, DARK, 0.2))
-    s.poly([(12, 6), (16, 12), (20, 6)], lerp(c, WHITE, 0.45), True)
-    s.px(11, 9, WHITE)
+    fgem(s, 16, 15, 26, 22, c)
+    sparkle(s, 26, 6, WHITE, 2)
 
 
 def crown(s):
@@ -615,30 +631,64 @@ def st_drop(s):
 
 
 def mini_gem(s, x, y, c=(90, 210, 255), k=1.0):
-    s.poly([(x - 4 * k, y - 1 * k), (x - 2 * k, y - 4 * k), (x + 2 * k, y - 4 * k), (x + 4 * k, y - 1 * k), (x, y + 5 * k)], c)
-    s.poly([(x - 2 * k, y - 4 * k), (x, y - 1 * k), (x + 2 * k, y - 4 * k)], lerp(c, WHITE, 0.5), True)
+    fgem(s, x, y, 9 * k, 8 * k, c, shine=False)
 
 
+GEM_C = (90, 210, 255)
+GEM_COLS = ((90, 210, 255), (200, 110, 255), (90, 230, 160), (255, 120, 170))
+
+
+def gem_heap(s, x0, x1, y_base, h, seed=0):
+    """a mound of small faceted gems, back row first so the front ones overlap"""
+    s.poly([(x0, y_base), (x0 + (x1 - x0) * 0.25, y_base - h * 0.8), ((x0 + x1) / 2, y_base - h),
+            (x0 + (x1 - x0) * 0.75, y_base - h * 0.8), (x1, y_base)], lerp(GEM_C, DARK, 0.25))
+    rows = [(y_base - h * 0.75, 0.55), (y_base - h * 0.35, 0.85), (y_base, 1.0)]
+    i = seed
+    for y, span in rows:
+        n = max(2, int((x1 - x0) * span / 6))
+        for k in range(n):
+            x = (x0 + x1) / 2 + ((k + 0.5) / n - 0.5) * (x1 - x0) * span
+            fgem(s, x, y - 2, 7, 6, GEM_COLS[i % len(GEM_COLS)], shine=False)
+            i += 1
+
+
+# Pile of Gems (small pack): three big faceted gems stacked
 def st_gems_s(s):
-    sack(s, (170, 120, 200))
-    mini_gem(s, 16, 7, (90, 210, 255), 1.0)
-    sparkle(s, 25, 5, WHITE, 1)
+    fgem(s, 10, 22, 14, 12, (90, 210, 255))
+    fgem(s, 22, 22, 14, 12, (200, 110, 255))
+    fgem(s, 16, 12, 16, 14, (90, 230, 160))
+    sparkle(s, 26, 6, WHITE, 2)
+    sparkle(s, 5, 10, WHITE, 1)
 
 
+# Chest of Gems (medium): an open chest overflowing, gems spilling at its foot
 def st_gems_m(s):
-    chest(s)
-    for x, c in ((10, (90, 210, 255)), (16, (200, 110, 255)), (22, (90, 230, 160))):
-        mini_gem(s, x, 9, c, 1.0)
-    sparkle(s, 27, 4, WHITE, 2)
+    wood, wood_d = (176, 108, 58), (120, 70, 38)
+    s.poly([(5, 13), (8, 5), (24, 5), (27, 13)], wood_d)  # lid thrown back
+    s.rect(8, 6, 24, 7, GOLD)
+    s.rect(4, 17, 28, 28, wood)  # box
+    s.rect(4, 17, 28, 18, GOLD)
+    s.rect(4, 22, 28, 23, wood_d)
+    s.rect(14, 19, 18, 24, GOLD)  # lock plate
+    s.px(16, 21, DARK)
+    gem_heap(s, 5, 27, 18, 8, 1)
+    fgem(s, 6, 28, 7, 6, (255, 120, 170), shine=False)  # spilled
+    fgem(s, 26, 28, 7, 6, GEM_C, shine=False)
+    sparkle(s, 27, 3, WHITE, 2)
 
 
+# Trophy of Gems (big): a gold cup heaped with gems, handles, pedestal
 def st_gems_l(s):
-    s.poly([(2, 30), (8, 18), (16, 14), (24, 18), (30, 30)], (70, 170, 230))
-    for x, y, c, k in ((8, 22, (90, 210, 255), 1.1), (16, 17, (200, 110, 255), 1.4), (24, 22, (90, 230, 160), 1.1), (12, 27, (255, 120, 160), 1.0), (21, 27, (90, 210, 255), 1.0)):
-        mini_gem(s, x, y, c, k)
-    s.poly([(10, 9), (10, 3), (13, 6), (16, 1), (19, 6), (22, 3), (22, 9)], GOLD, True)
-    sparkle(s, 4, 6, WHITE, 2)
-    sparkle(s, 28, 8, WHITE, 2)
+    gold_d = lerp(GOLD, DARK, 0.35)
+    s.rect(11, 26, 21, 29, gold_d)  # pedestal
+    s.rect(13, 23, 19, 26, GOLD)  # stem
+    s.poly([(5, 13), (27, 13), (24, 20), (19, 23), (13, 23), (8, 20)], GOLD)  # bowl
+    s.rect(5, 13, 27, 14, lerp(GOLD, WHITE, 0.45))  # rim light
+    s.arc(5, 17, 3, 90, 270, gold_d, w=2)  # handles
+    s.arc(27, 17, 3, 270, 450, gold_d, w=2)
+    gem_heap(s, 6, 26, 13, 9, 2)
+    sparkle(s, 4, 5, WHITE, 2)
+    sparkle(s, 28, 4, WHITE, 2)
 
 
 def st_ticket(s):

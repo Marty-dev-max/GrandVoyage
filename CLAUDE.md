@@ -454,6 +454,8 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     v0.25.30: hotbar left-anchored at x 536 beside the card; bottom card only when canvas.X >= 536 + measured hotbar
     width + 24 (re-laid out on its AbsoluteSize change; pcall: the Lune harness has no AbsoluteSize); party strip =
     PARTY button only (HUD.partyWidth), 60 px under the collapsed quest button; no dark disc behind the portrait.
+  * v0.25.31 (owner): gem icons = `fgem` (gen_pixel_icons.py: wide brilliant cut, table/bezel/pavilion facets);
+    mini_gem + `gem_heap` use it; packs = Pile / Chest / Trophy of Gems (Pearls.Products names + st_gems_* icons).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

@@ -39,9 +39,9 @@ P.Shop = {
 -- Robux developer products (create them in the Creator Hub, then paste the ids). 0 = not on sale yet.
 -- Robux Pearls are BOUND: usable in the Pearl Shop, never tradable.
 P.Products = {
-	{ productId = 3732181648, pearls = 100, name = "Pouch of Gems", icon = "st_gems_s" },
+	{ productId = 3732181648, pearls = 100, name = "Pile of Gems", icon = "st_gems_s" },
 	{ productId = 3732181740, pearls = 550, name = "Chest of Gems", icon = "st_gems_m" },
-	{ productId = 3732181832, pearls = 1200, name = "Treasure of Gems", icon = "st_gems_l" },
+	{ productId = 3732181832, pearls = 1200, name = "Trophy of Gems", icon = "st_gems_l" },
 }
 
 P.LedgerStore = "GV_PearlLedger_v1"

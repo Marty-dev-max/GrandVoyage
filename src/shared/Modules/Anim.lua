@@ -107,8 +107,15 @@ function Anim.Track(humanoid, name)
 					if ok2 then
 						t2.Priority = tr.Priority
 						t2.Looped = tr.Looped
+						-- the old track must not live on untracked: once its asset finished loading it played
+						-- forever and nothing could stop it (owner: stuck in the fly pose after a flying dash)
+						local wasPlaying = tr.IsPlaying
+						tr:Stop(0)
 						list[name] = t2
 						Ids[name] = nil
+						if wasPlaying then
+							t2:Play(0.1)
+						end
 					end
 				end
 			end
@@ -137,6 +144,14 @@ function Anim.Stop(humanoid, name, fade)
 	-- no IsPlaying check: a track still loading reads false and then played on forever (fly pose after landing)
 	if tr then
 		tr:Stop(fade or 0.2)
+	end
+	-- and every other playing track of this clip (orphans from a reload): matched by the Animation's name
+	if animator then
+		for _, t in ipairs(animator:GetPlayingAnimationTracks()) do
+			if t ~= tr and t.Animation and t.Animation.Name == name then
+				t:Stop(fade or 0.2)
+			end
+		end
 	end
 end
 

@@ -14,11 +14,15 @@ local Audio = require(script.Parent.Parent.Controllers.Audio)
 local UI = {}
 UI.Rarity = Rarity
 
+-- v0.25.28 (owner reference "Pixel UI & Icons"): 16-bit fantasy RPG frames: deep indigo panels, a dark outer edge,
+-- a light lavender bevel line inside it, gold trim and rivets, glowing icon tiles, hue-shifted gradient bars
 UI.Theme = {
-	Panel = Color3.fromRGB(24, 22, 36),
-	PanelTop = Color3.fromRGB(42, 36, 66),
-	PanelDeep = Color3.fromRGB(12, 11, 19),
-	Edge = Color3.fromRGB(6, 5, 12),
+	Panel = Color3.fromRGB(40, 37, 82),
+	PanelTop = Color3.fromRGB(58, 54, 112),
+	PanelDeep = Color3.fromRGB(22, 20, 50),
+	Edge = Color3.fromRGB(10, 9, 26),
+	Bevel = Color3.fromRGB(122, 116, 200), -- inner light rim of frames
+	Trim = Color3.fromRGB(232, 190, 92), -- gold rivets / plaque trim
 	Accent = Color3.fromRGB(156, 84, 255),
 	AccentHot = Color3.fromRGB(230, 90, 255),
 	Text = Color3.fromRGB(255, 255, 255),
@@ -41,13 +45,18 @@ local T = UI.Theme
 
 -- v0.24.0 (owner): the whole game uses the pixel font Press Start 2P (Enum.Font.Arcade); UI/PixelUI scales fixed
 -- text sizes for it and squares every corner
+-- v0.25.28 (owner: the pixel font does not suit every text): pixel font for titles, labels, buttons and numbers;
+-- descriptions, dialog and long text ("Semi") use Builder Sans (Roblox's UI font) at its real size: easy to read
 local PIXEL_FONT = Font.fromEnum(Enum.Font.Arcade)
+local BODY_FONT = Font.new("rbxasset://fonts/families/BuilderSans.json", Enum.FontWeight.Bold)
 UI.Fonts = {
 	Display = PIXEL_FONT,
 	Bold = PIXEL_FONT,
-	Semi = PIXEL_FONT,
+	Semi = BODY_FONT,
+	Body = BODY_FONT,
 	Number = PIXEL_FONT,
 }
+UI.BodyFamily = BODY_FONT.Family
 local F = UI.Fonts
 
 UI.IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
@@ -156,13 +165,45 @@ function UI.Text(parent, text, size, color, kind, props)
 		Size = UDim2.new(1, 0, 0, size + 6),
 		Parent = parent,
 	})
-	UI.Stroke(t, T.Edge, math.max(1.2, size / 9), Enum.ApplyStrokeMode.Contextual)
+	if kind == "Semi" or kind == "Body" then
+		t.TextSize = math.floor(size * 0.95 + 0.5) -- Builder Sans reads at its own size (PixelUI leaves it alone)
+		t.LineHeight = 1.05
+		UI.Stroke(t, T.Edge, 1.2, Enum.ApplyStrokeMode.Contextual).Transparency = 0.35
+	else
+		UI.Stroke(t, T.Edge, math.max(1.2, size / 9), Enum.ApplyStrokeMode.Contextual)
+	end
 	if props then
 		for k, v in pairs(props) do
 			t[k] = v
 		end
 	end
 	return t
+end
+
+-- pixel-art "hue shifting": highlights drift warm and lighter, shadows drift cool and darker (never plain lerps to
+-- white / black), which is what makes the reference bars and icons look rich instead of flat
+function UI.Shade(c, k)
+	local h, sat, v = c:ToHSV()
+	if k > 0 then
+		return Color3.fromHSV((h - 0.035 * k) % 1, math.clamp(sat * (1 - 0.35 * k), 0, 1), math.clamp(v + (1 - v) * 0.6 * k + 0.12 * k, 0, 1))
+	end
+	k = -k
+	return Color3.fromHSV((h + 0.045 * k) % 1, math.clamp(sat * (1 + 0.15 * k), 0, 1), math.clamp(v * (1 - 0.5 * k), 0, 1))
+end
+function UI.RichFill(c)
+	return ColorSequence.new({
+		ColorSequenceKeypoint.new(0, UI.Shade(c, 0.75)),
+		ColorSequenceKeypoint.new(0.18, UI.Shade(c, 0.3)),
+		ColorSequenceKeypoint.new(0.55, c),
+		ColorSequenceKeypoint.new(1, UI.Shade(c, -0.55)),
+	})
+end
+
+-- two-tone pixel frame: dark outer edge (UIStroke) + light bevel line just inside (child frame)
+function UI.Bevel(frame, color, inset, transparency)
+	local b = New("Frame", { Name = "Bevel", BackgroundTransparency = 1, Position = UDim2.fromOffset(inset or 2, inset or 2), Size = UDim2.new(1, -(inset or 2) * 2, 1, -(inset or 2) * 2), ZIndex = frame.ZIndex, Parent = frame })
+	UI.Stroke(b, color or T.Bevel, 1.5).Transparency = transparency or 0.2
+	return b
 end
 
 -- ===== animated gradients (rarity shine / rainbow) =====
@@ -229,17 +270,31 @@ function UI.Shine(frame, phase)
 end
 
 -- Background + border styled by rarity tier
+-- v0.25.28 (owner reference "Pixel UI & Icons"): an item tile is a DARK slot tinted by its rarity, with a bright
+-- rarity rim and a soft aura of that color behind the icon, so the icon itself is what glows (no flat bright fills)
 function UI.RarityStyle(frame, rarityId, strong)
 	local tier = Rarity.Get(rarityId)
-	frame.BackgroundColor3 = Color3.new(1, 1, 1)
+	frame.BackgroundColor3 = tier.prismatic and Color3.fromRGB(110, 100, 170) or Color3.new(1, 1, 1)
 	local g = frame:FindFirstChild("RarityGradient") or New("UIGradient", { Name = "RarityGradient", Rotation = 90, Parent = frame })
-	g.Color = tier.prismatic and PRISM or ColorSequence.new(tier.top, tier.bottom)
+	g.Color = tier.prismatic and PRISM or ColorSequence.new(T.PanelTop:Lerp(tier.color, 0.38), T.PanelDeep:Lerp(tier.color, 0.12))
 	if tier.prismatic then
 		rainbows[g] = true
 	end
+	if not frame:FindFirstChild("RarityAura") then
+		local okT, texCfg = pcall(require, ReplicatedStorage.Shared.Config.Textures)
+		if okT and texCfg.glow then
+			New("ImageLabel", { Name = "RarityAura", BackgroundTransparency = 1, Image = texCfg.glow, ImageTransparency = 0.4, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.45), Size = UDim2.fromScale(1.05, 1.05), ZIndex = frame.ZIndex, Parent = frame })
+		end
+	end
+	local aura = frame:FindFirstChild("RarityAura")
+	if aura then
+		aura.ImageColor3 = tier.prismatic and Color3.fromRGB(255, 230, 255) or UI.Shade(tier.color, 0.25)
+		aura.ImageTransparency = tier.rank <= 1 and 0.7 or (0.55 - math.min(tier.rank, 5) * 0.05)
+	end
 	local s = frame:FindFirstChild("RarityStroke") or UI.Stroke(frame, tier.color, strong and 3.5 or 2.5)
 	s.Name = "RarityStroke"
-	s.Color = (tier.rainbow or tier.prismatic) and Color3.new(1, 1, 1) or tier.color:Lerp(Color3.new(0, 0, 0), 0.25)
+	s.Thickness = strong and 3.5 or 2.5
+	s.Color = (tier.rainbow or tier.prismatic) and Color3.new(1, 1, 1) or UI.Shade(tier.color, 0.15)
 	if tier.rainbow or tier.prismatic then
 		local sg = s:FindFirstChild("Rainbow") or New("UIGradient", { Name = "Rainbow", Color = RAINBOW, Parent = s })
 		rainbows[sg] = true
@@ -346,10 +401,6 @@ function UI.SetButtonColor(btn, c)
 	if shadow then
 		shadow.BackgroundColor3 = c:Lerp(Color3.new(0, 0, 0), 0.55)
 	end
-	local stroke = btn:FindFirstChildOfClass("UIStroke")
-	if stroke then
-		stroke.Color = c:Lerp(Color3.new(0, 0, 0), 0.6)
-	end
 end
 
 -- Glossy 3D button. Returns (button, holder)
@@ -370,12 +421,13 @@ function UI.Button(parent, text, color, size, onClick, props)
 	})
 	UI.Corner(btn, 14)
 	local grad = New("UIGradient", { Name = "Fill", Color = ColorSequence.new(color:Lerp(Color3.new(1, 1, 1), 0.28), color:Lerp(Color3.new(0, 0, 0), 0.12)), Rotation = 90, Parent = btn })
-	UI.Stroke(btn, color:Lerp(Color3.new(0, 0, 0), 0.6), 3)
+	UI.Stroke(btn, T.Edge, 3)
 	-- only one UIStroke per object renders, so the label outline uses the built-in text stroke
 	btn.TextStrokeColor3 = T.Edge
 	btn.TextStrokeTransparency = 0
-	local gloss = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.82, Size = UDim2.new(1, -10, 0.38, 0), Position = UDim2.fromOffset(5, 3), ZIndex = btn.ZIndex + 1, Parent = btn })
-	UI.Corner(gloss, 10)
+	-- pixel bevel: a bright line along the top, a dark lip along the bottom
+	New("Frame", { Name = "Gloss", BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.45, BorderSizePixel = 0, Size = UDim2.new(1, -4, 0, 2), Position = UDim2.fromOffset(2, 2), ZIndex = btn.ZIndex + 1, Parent = btn })
+	New("Frame", { Name = "Lip", BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.6, BorderSizePixel = 0, AnchorPoint = Vector2.new(0, 1), Size = UDim2.new(1, 0, 0, 4), Position = UDim2.fromScale(0, 1), ZIndex = btn.ZIndex + 1, Parent = btn })
 	New("UITextSizeConstraint", { MaxTextSize = 24, MinTextSize = 9, Parent = btn })
 	New("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 6), Parent = btn })
 	UI.Tactile(btn)
@@ -404,16 +456,22 @@ end
 
 -- start (optional): the ratio it starts at (progress bars pass 0 so they fill up instead of draining in red)
 function UI.Bar(parent, color, size, label, start)
-	local back = New("Frame", { BackgroundColor3 = T.PanelDeep, Size = size or UDim2.new(1, 0, 0, 16), Parent = parent })
+	local back = New("Frame", { BackgroundColor3 = T.PanelDeep:Lerp(Color3.new(0, 0, 0), 0.35), Size = size or UDim2.new(1, 0, 0, 16), Parent = parent })
 	UI.Corner(back, 8)
 	UI.Stroke(back, T.Edge, 2)
+	-- inner shadow along the top of the empty track
+	New("Frame", { BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.55, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 2), Parent = back })
 	local ghost = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.35, Size = UDim2.new(start or 1, 0, 1, 0), Parent = back })
 	UI.Corner(ghost, 8)
 	local fill = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), Size = UDim2.new(start or 1, 0, 1, 0), Parent = back })
 	UI.Corner(fill, 8)
-	local g = UI.Gradient(fill, color:Lerp(Color3.new(1, 1, 1), 0.35), color:Lerp(Color3.new(0, 0, 0), 0.15), 90)
-	local hi = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.75, Size = UDim2.new(1, -4, 0.35, 0), Position = UDim2.fromOffset(2, 1), Parent = fill })
+	local g = New("UIGradient", { Color = UI.RichFill(color), Rotation = 90, Parent = fill })
+	local hi = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.55, BorderSizePixel = 0, Size = UDim2.new(1, -4, 0, 2), Position = UDim2.fromOffset(2, 2), Parent = fill })
 	UI.Corner(hi, 6)
+	-- segment ticks (every 10%) give the bar its "gauge" detail
+	for i = 1, 9 do
+		New("Frame", { BackgroundColor3 = T.Edge, BackgroundTransparency = 0.7, BorderSizePixel = 0, Position = UDim2.new(i / 10, 0, 0, 3), Size = UDim2.new(0, 1, 1, -6), ZIndex = 2, Parent = back })
+	end
 	local txt = New("TextLabel", {
 		BackgroundTransparency = 1,
 		Size = UDim2.new(1, -8, 1, 0),
@@ -465,7 +523,7 @@ function UI.Bar(parent, color, size, label, start)
 		end
 	end
 	function bar:SetColor(c)
-		g.Color = ColorSequence.new(c:Lerp(Color3.new(1, 1, 1), 0.35), c:Lerp(Color3.new(0, 0, 0), 0.15))
+		g.Color = UI.RichFill(c)
 	end
 	return bar
 end
@@ -477,6 +535,7 @@ function UI.Card(parent, size, color)
 	local base = color or T.Panel
 	New("UIGradient", { Name = "CardGradient", Color = ColorSequence.new(base:Lerp(Color3.new(1, 1, 1), 0.08), base:Lerp(Color3.new(0, 0, 0), 0.25)), Rotation = 90, Parent = f })
 	UI.Stroke(f, T.Edge, 2.5)
+	UI.Bevel(f, T.Bevel, 2, 0.6)
 	return f
 end
 
@@ -613,11 +672,17 @@ end
 function UI.IconChip(parent, icon, color, size)
 	size = size or 34
 	color = color or T.Accent
+	-- v0.25.28: an icon tile like the reference sheet: dark tile tinted by the color, a rim in that color, and a soft
+	-- aura of the same color behind the icon (the "each item glows" look)
 	local chip = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), Size = UDim2.fromOffset(size, size), Parent = parent })
 	UI.Corner(chip, math.floor(size * 0.3))
-	UI.Gradient(chip, color:Lerp(Color3.new(1, 1, 1), 0.3), color:Lerp(Color3.new(0, 0, 0), 0.25), 90)
+	UI.Gradient(chip, T.PanelTop:Lerp(color, 0.35), T.PanelDeep:Lerp(color, 0.15), 90)
 	UI.Stroke(chip, T.Edge, 2.5)
-	New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.8, Size = UDim2.new(1, -6, 0.4, 0), Position = UDim2.fromOffset(3, 2), Parent = chip }, { New("UICorner", { CornerRadius = UDim.new(0, math.floor(size * 0.22)) }) })
+	UI.Bevel(chip, UI.Shade(color, 0.3), 2, 0.15)
+	local texOk, texCfg = pcall(require, ReplicatedStorage.Shared.Config.Textures)
+	if texOk and texCfg.glow then
+		New("ImageLabel", { Name = "Aura", BackgroundTransparency = 1, Image = texCfg.glow, ImageColor3 = UI.Shade(color, 0.35), ImageTransparency = 0.35, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(1.25, 1.25), ZIndex = chip.ZIndex, Parent = chip })
+	end
 	if UI.IconId(icon) then
 		-- rendered icons pop slightly out of the chip (Anime Vanguards style)
 		UI.Icon(chip, icon, math.floor(size * 1.12), { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.47), ZIndex = (chip.ZIndex or 1) + 1 })
@@ -1058,54 +1123,49 @@ function UI.Window(id, title, size, color, icon, opts)
 	UI.Corner(frame, 20)
 	New("UIGradient", { Color = ColorSequence.new(T.Panel:Lerp(Color3.new(1, 1, 1), 0.04), T.PanelDeep), Rotation = 90, Parent = frame })
 	UI.Stroke(frame, T.Edge, 4)
-	-- coloured rim light
+	-- v0.25.28 pixel-RPG frame: dark edge (stroke) + light bevel ring + a second ring in the window's color, gold
+	-- rivets in the corners, and the title on a plaque sitting on the top border (reference: "INVENTORY" panel)
 	local rim = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, -6, 1, -6), Position = UDim2.fromOffset(3, 3), Parent = frame, ZIndex = 20 })
 	UI.Corner(rim, 18)
-	UI.Stroke(rim, color, 2).Transparency = 0.35
-	-- Anime-Vanguards-style header: slanted accent tab on the left, red square close on the right
-	local header = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 62), Parent = frame, ZIndex = 21 })
-	local tab = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), Size = UDim2.new(0.62, 0, 0, 50), Position = UDim2.fromOffset(-10, -12), ZIndex = 22, Parent = header })
-	UI.Corner(tab, 10)
-	New("UIGradient", { Color = ColorSequence.new(color:Lerp(Color3.new(1, 1, 1), 0.15), color:Lerp(T.AccentHot, 0.35)), Rotation = 0, Parent = tab })
+	UI.Stroke(rim, T.Bevel, 2).Transparency = 0.1
+	local rim2 = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, -14, 1, -14), Position = UDim2.fromOffset(7, 7), Parent = rim, ZIndex = 20 })
+	UI.Stroke(rim2, color:Lerp(T.PanelDeep, 0.35), 1.5).Transparency = 0.25
+	for _, c in ipairs({ { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } }) do
+		local rv = New("Frame", { BackgroundColor3 = T.Trim, BorderSizePixel = 0, AnchorPoint = Vector2.new(c[1], c[2]), Position = UDim2.new(c[1], c[1] == 0 and 3 or -3, c[2], c[2] == 0 and 3 or -3), Size = UDim2.fromOffset(8, 8), ZIndex = 21, Parent = rim })
+		UI.Stroke(rv, T.Edge, 1.5)
+		New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.35, BorderSizePixel = 0, Size = UDim2.fromOffset(3, 3), Position = UDim2.fromOffset(1, 1), ZIndex = 22, Parent = rv })
+	end
+	local header = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 40), Parent = frame, ZIndex = 21 })
+	local tab = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, 2), Size = UDim2.fromOffset(0, 44), AutomaticSize = Enum.AutomaticSize.X, ZIndex = 22, Parent = header })
+	New("UIGradient", { Color = ColorSequence.new(T.PanelTop:Lerp(color, 0.25), T.PanelDeep), Rotation = 90, Parent = tab })
 	UI.Stroke(tab, T.Edge, 3)
-	local slant = New("Frame", { BackgroundColor3 = color:Lerp(T.AccentHot, 0.35), Size = UDim2.fromOffset(50, 50), Position = UDim2.new(1, -2, 0, 0), ZIndex = 22, Parent = tab })
-	New("UIGradient", { Rotation = 45, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.499, 0), NumberSequenceKeypoint.new(0.5, 1), NumberSequenceKeypoint.new(1, 1) }), Parent = slant })
-	UI.Shine(tab, 0)
+	UI.Bevel(tab, T.Trim, 2, 0.15)
+	New("UIPadding", { PaddingLeft = UDim.new(0, icon and 56 or 22), PaddingRight = UDim.new(0, 22), Parent = tab })
+	-- a strip of the window's color under the plaque title
+	New("Frame", { BackgroundColor3 = color, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -4), Size = UDim2.new(1, 0, 0, 3), ZIndex = 23, Parent = tab })
 	local titleLabel = New("TextLabel", {
 		BackgroundTransparency = 1,
-		Size = UDim2.new(1, -24, 1, 0),
-		Position = UDim2.fromOffset(24, 0),
+		AutomaticSize = Enum.AutomaticSize.X,
+		Size = UDim2.fromOffset(0, 40),
 		Text = string.upper(title),
 		FontFace = F.Display,
-		TextSize = 30,
+		TextSize = 24,
 		TextColor3 = Color3.new(1, 1, 1),
-		TextXAlignment = Enum.TextXAlignment.Left,
 		ZIndex = 23,
 		Parent = tab,
 	})
 	UI.Stroke(titleLabel, T.Edge, 3, Enum.ApplyStrokeMode.Contextual)
+	New("UIGradient", { Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(255, 226, 150)), Rotation = 90, Parent = titleLabel })
 	if icon then
-		-- icon chip pokes out of the left of the tab, title shifts right
-		local chip = UI.IconChip(tab, icon, color:Lerp(T.Gold, 0.35), 58)
+		local chip = UI.IconChip(tab, icon, color:Lerp(T.Gold, 0.25), 46)
 		chip.AnchorPoint = Vector2.new(0, 0.5)
-		chip.Position = UDim2.new(0, -4, 0.5, 2)
-		chip.Rotation = -6
+		chip.Position = UDim2.new(0, -50, 0.5, 0)
 		chip.ZIndex = 25
 		for _, d in ipairs(chip:GetDescendants()) do
 			if d:IsA("GuiObject") then
 				d.ZIndex = 26
 			end
 		end
-		titleLabel.Position = UDim2.fromOffset(66, 0)
-		titleLabel.Size = UDim2.new(1, -70, 1, 0)
-		-- big faded watermark of the same icon in the window corner (Anime Vanguards-style decoration)
-		local mark = New("TextLabel", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -10, 1, -6), Size = UDim2.fromOffset(190, 190), Text = icon, TextScaled = true, TextTransparency = 0.93, Rotation = -12, FontFace = F.Display, ZIndex = 20, Parent = frame })
-		local _ = mark
-	end
-	-- diagonal speed stripes across the tab
-	for k = 0, 2 do
-		local st = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.86, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(1, -70 - k * 22, 0.5, 0), Size = UDim2.fromOffset(8, 46), Rotation = 28, ZIndex = 22, Parent = tab })
-		local _ = st
 	end
 	tab.ClipsDescendants = false
 	-- X (and the full-screen button) live in one holder: we move the holder, never the buttons, because the hover
@@ -1128,6 +1188,7 @@ function UI.Window(id, title, size, color, icon, opts)
 	})
 	UI.Corner(close, 8)
 	UI.Stroke(close, T.Edge, 3)
+	UI.Bevel(close, Color3.fromRGB(255, 170, 170), 2, 0.2)
 	UI.Tactile(close)
 	-- v0.25.13 (owner: flat backgrounds): soft colored glows in two corners + floating pixel sparkles
 	local texCfg = require(ReplicatedStorage.Shared.Config.Textures)
@@ -1138,7 +1199,7 @@ function UI.Window(id, title, size, color, icon, opts)
 	end
 	UI.Sparkles(frame, color:Lerp(Color3.new(1, 1, 1), 0.6), 30, { float = true, z = 20, star = 0.4 })
 	UI.Sparkles(frame, T.Gold:Lerp(Color3.new(1, 1, 1), 0.4), 14, { float = true, z = 20, star = 0.6 })
-	local body = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(16, 58), Size = UDim2.new(1, -32, 1, -72), Parent = frame, ZIndex = 21 })
+	local body = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(16, 46), Size = UDim2.new(1, -32, 1, -60), Parent = frame, ZIndex = 21 })
 	local win = { frame = frame, body = body, id = id, header = header, resized = Instance.new("BindableEvent") }
 	local windowSize = size or UDim2.fromOffset(560, 520)
 	local restPos = UDim2.fromScale(0.5, 0.53)
@@ -1217,8 +1278,8 @@ function UI.Window(id, title, size, color, icon, opts)
 			slimTitle.Position = UDim2.fromOffset(left + (win.slimChip and 50 or 0), 0)
 			slimTitle.Size = UDim2.new(1, -(left + 180), 1, 0)
 			target = full and target or UI.FitSize(windowSize)
-			body.Position = full and UDim2.fromOffset(20, top + 10) or UDim2.fromOffset(16, 58)
-			body.Size = full and UDim2.new(1, -40, 1, -(top + 22)) or UDim2.new(1, -32, 1, -72)
+			body.Position = full and UDim2.fromOffset(20, top + 10) or UDim2.fromOffset(16, 46)
+			body.Size = full and UDim2.new(1, -40, 1, -(top + 22)) or UDim2.new(1, -32, 1, -60)
 			big.Size = full and UDim2.fromOffset(16, 13) or UDim2.fromOffset(22, 18)
 			big.Position = full and UDim2.new(0.5, -3, 0.5, 3) or UDim2.fromScale(0.5, 0.5)
 			back.Visible = full
@@ -1502,17 +1563,21 @@ function UI.Toggle(parent, label, value, onChange, desc)
 	if desc then
 		UI.Text(row, desc, 13, T.TextSoft, "Semi", { Position = UDim2.fromOffset(12, 28), Size = UDim2.new(1, -90, 0, 24) })
 	end
-	local track = New("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0), Size = UDim2.fromOffset(56, 28), BackgroundColor3 = value and T.Green or T.Pink, Parent = row })
+	-- v0.25.28: pixel switch (green track + cream knob when on, slate when off)
+	local ON, OFF = Color3.fromRGB(96, 196, 86), T.Grey
+	local track = New("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0), Size = UDim2.fromOffset(56, 28), BackgroundColor3 = value and ON or OFF, Parent = row })
 	UI.Corner(track, 14)
 	UI.Stroke(track, T.Edge, 2)
-	local knob = New("Frame", { Size = UDim2.fromOffset(22, 22), Position = value and UDim2.fromOffset(31, 3) or UDim2.fromOffset(3, 3), BackgroundColor3 = Color3.new(1, 1, 1), Parent = track })
+	New("Frame", { BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.55, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 3), Parent = track })
+	local knob = New("Frame", { Size = UDim2.fromOffset(22, 22), Position = value and UDim2.fromOffset(31, 3) or UDim2.fromOffset(3, 3), BackgroundColor3 = Color3.fromRGB(246, 234, 204), Parent = track })
 	UI.Corner(knob, 11)
+	UI.Stroke(knob, T.Edge, 2)
 	UI.Tactile(row)
 	row.Activated:Connect(function()
 		value = not value
 		Audio.Play("BlkToggle", { pitch = value and 1.1 or 0.9 })
 		Tween(knob, 0.15, { Position = value and UDim2.fromOffset(31, 3) or UDim2.fromOffset(3, 3) }, Enum.EasingStyle.Back)
-		Tween(track, 0.15, { BackgroundColor3 = value and T.Green or T.Pink })
+		Tween(track, 0.15, { BackgroundColor3 = value and ON or OFF })
 		onChange(value)
 	end)
 	return row

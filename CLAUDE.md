@@ -437,6 +437,14 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     island side (east / north / west, never the south front) nearest the next island, parallel to the island; docks
     stay at local +-x. NPC plates: holder anchored bottom-center (distance UIScale shrinks toward the head), far
     icon >= 0.65 scale and on the bottom row.
+  * v0.25.28 (owner): Anim's 3 s "asset did not load" swap stops the old track first, and Anim.Stop also stops every
+    playing track whose Animation.Name matches (orphans kept the fly pose forever). UI v2 = pixel-art fantasy RPG UI
+    (owner reference "Pixel UI & Icons"): indigo Theme + `T.Bevel` / `T.Trim`, `UI.Bevel(frame)` (light inner ring),
+    `UI.Shade(c, k)` hue-shifted light/dark + `UI.RichFill(c)` for bars, window = bevel rings + gold rivets + title
+    plaque centered on the top edge (AutomaticSize + UIPadding; the HTML snapshot renderer ignores both), buttons with
+    a top shine line + bottom lip, item tiles (`UI.RarityStyle`) = dark slot tinted by rarity + bright rim + glow
+    aura, menu tiles the same. Fonts: Display/Bold/Number = pixel, Semi/Body = Builder Sans Bold (PixelUI leaves
+    BuilderSans text alone). AUTO/MANUAL + UI.Toggle = sliding switches.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

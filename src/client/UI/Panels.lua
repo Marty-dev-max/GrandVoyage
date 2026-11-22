@@ -1,5 +1,6 @@
 -- Panels: every window (bag, stats, skills, job, refine, shop, tavern, shipyard, map, bosses,
 -- guild, dungeon, party, market, settings)
+local TexturesCfg = require(game:GetService("ReplicatedStorage").Shared.Config.Textures)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -142,7 +143,9 @@ local function itemTile(parent, entry, onClick, selected)
 	else
 		UI.Text(b, def.icon or kindIcon[def.kind] or "❔", 30, T.Text, "Display", { Size = UDim2.new(1, 0, 0.55, 0), Position = UDim2.fromOffset(0, 4), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 4 })
 	end
-	UI.Text(b, def.name, 12, T.Text, "Bold", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 3, 1, -3), Size = UDim2.new(1, -6, 0, 28), TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Bottom, ZIndex = 4 })
+	-- v0.25.28: item names in the readable body font, fitted to the tile (the pixel font ran over the edges)
+	local nm = UI.Text(b, def.name, 13, T.Text, "Semi", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 3, 1, -3), Size = UDim2.new(1, -6, 0, 26), TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Bottom, TextScaled = true, ZIndex = 4 })
+	New("UITextSizeConstraint", { MaxTextSize = 13, MinTextSize = 8, Parent = nm })
 	if (entry.qty or 1) > 1 then
 		UI.Text(b, "x" .. entry.qty, 14, T.Text, "Number", { Position = UDim2.new(1, -44, 0, 2), Size = UDim2.fromOffset(40, 16), TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 4 })
 	end
@@ -2557,8 +2560,11 @@ function Panels.MenuHub()
 		if not it.main then
 			local tile = New("TextButton", { Text = "", AutoButtonColor = false, BackgroundColor3 = Color3.new(1, 1, 1), LayoutOrder = i, Parent = grid })
 			UI.Corner(tile, 16)
-			UI.Gradient(tile, it[3]:Lerp(Color3.new(1, 1, 1), 0.25), it[3]:Lerp(Color3.new(0, 0, 0), 0.3), 90)
+			-- v0.25.28: dark slot tinted by the tile's color, colored rim, the icon glowing on an aura
+			UI.Gradient(tile, T.PanelTop:Lerp(it[3], 0.45), T.PanelDeep:Lerp(it[3], 0.18), 90)
 			UI.Stroke(tile, T.Edge, 3)
+			UI.Bevel(tile, UI.Shade(it[3], 0.2), 2, 0.1)
+			New("ImageLabel", { BackgroundTransparency = 1, Image = TexturesCfg.glow, ImageColor3 = UI.Shade(it[3], 0.3), ImageTransparency = 0.35, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, -6), Size = UDim2.fromOffset(120, 120), Parent = tile })
 			UI.Icon(tile, it[1], 88, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 6) })
 			UI.Text(tile, string.upper(it[5]), 22, Color3.new(1, 1, 1), "Display", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 0, 1, -10), Size = UDim2.new(1, 0, 0, 26), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false })
 			if it[4] then

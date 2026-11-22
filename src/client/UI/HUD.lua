@@ -28,7 +28,7 @@ local T = UI.Theme
 local New = UI.New
 local Classes = ClassesCfg.Classes
 
-local bars, money, bounty, pointsBtn, skillSlots, autoBtn, autoIcon, targetFrame, lootFeed, buffRow
+local bars, money, bounty, pointsBtn, skillSlots, autoBtn, targetFrame, lootFeed, buffRow
 local statusCard, menuFrame, menuScale, attackHolder
 
 local function glass(parent, size, pos, anchor)
@@ -435,16 +435,16 @@ Panels.MenuItems = MENU
 
 local function menuTile(parent, it)
 	local holder = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(74, 78), Parent = parent })
-	local shadow = New("Frame", { Name = "Shadow", BackgroundColor3 = it[3]:Lerp(Color3.new(0, 0, 0), 0.6), Size = UDim2.new(1, 0, 1, -4), Position = UDim2.fromOffset(0, 5), Parent = holder })
+	local shadow = New("Frame", { Name = "Shadow", BackgroundColor3 = T.Edge, Size = UDim2.new(1, 0, 1, -4), Position = UDim2.fromOffset(0, 5), Parent = holder })
 	UI.Corner(shadow, 14)
 	local tile = New("TextButton", { Text = "", AutoButtonColor = false, BackgroundColor3 = Color3.new(1, 1, 1), Size = UDim2.new(1, 0, 1, -4), Parent = holder })
 	UI.Corner(tile, 14)
-	New("UIGradient", { Name = "Fill", Color = ColorSequence.new(it[3]:Lerp(Color3.new(1, 1, 1), 0.3), it[3]:Lerp(Color3.new(0, 0, 0), 0.2)), Rotation = 90, Parent = tile })
+	-- v0.25.28 (owner reference "Pixel UI & Icons"): a dark slot tinted by the tile's color with a colored bevel, and
+	-- the icon glowing on an aura of that color (instead of a flat bright fill with stripes)
+	New("UIGradient", { Name = "Fill", Color = ColorSequence.new(T.PanelTop:Lerp(it[3], 0.45), T.PanelDeep:Lerp(it[3], 0.18)), Rotation = 90, Parent = tile })
 	UI.Stroke(tile, T.Edge, 3)
-	-- diagonal stripes give the tile some anime "card" texture
-	local stripes = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.88, Size = UDim2.new(0.5, 0, 1, 0), Position = UDim2.fromScale(0.5, 0), Parent = tile })
-	UI.Corner(stripes, 14)
-	New("UIGradient", { Rotation = 60, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.45, 1), NumberSequenceKeypoint.new(0.46, 0), NumberSequenceKeypoint.new(1, 0) }), Parent = stripes })
+	UI.Bevel(tile, UI.Shade(it[3], 0.2), 2, 0.1)
+	New("ImageLabel", { BackgroundTransparency = 1, Image = require(game:GetService("ReplicatedStorage").Shared.Config.Textures).glow, ImageColor3 = UI.Shade(it[3], 0.3), ImageTransparency = 0.35, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, 26), Size = UDim2.fromOffset(84, 84), Parent = tile })
 	-- v0.25.17 (owner): the tile background twinkles: floating pixel sparkles + a shine sweeping across
 	UI.Sparkles(tile, Color3.new(1, 1, 1), 7, { float = true, star = 0.55 })
 	UI.Shine(tile, math.random())
@@ -828,20 +828,28 @@ local function buildSkillBar()
 	New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(34, SLOT), LayoutOrder = 200, Parent = second })
 
 	-- v0.25.3 (owner): reads AUTO or MANUAL (not "AUTO ON"), with a pixel icon above the word
-	autoBtn = UI.Button(main, "MANUAL", T.Grey, UDim2.fromOffset(118, SLOT), function()
+	-- v0.25.28 (owner reference: a switch): dark plate, the word on the left, a sliding switch on the right
+	autoBtn = UI.Button(main, "MANUAL", T.PanelTop, UDim2.fromOffset(132, SLOT), function()
 		Combat.ToggleAuto()
 	end)
 	autoBtn.Parent.LayoutOrder = 220
-	autoIcon = UI.Icon(autoBtn, "manual", 26, { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, -4, 0.5, 0), ZIndex = autoBtn.ZIndex + 2 })
+	autoBtn.TextXAlignment = Enum.TextXAlignment.Left
 	local pad = autoBtn:FindFirstChildOfClass("UIPadding")
 	if pad then
-		pad.PaddingLeft = UDim.new(0, 24) -- icon left, word right (v0.25.6: the icon sat on the word)
+		pad.PaddingRight = UDim.new(0, 50)
 	end
+	local track = New("Frame", { Name = "SwitchTrack", AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 44, 0.5, 0), Size = UDim2.fromOffset(40, 22), BackgroundColor3 = T.Grey, ZIndex = autoBtn.ZIndex + 2, Parent = autoBtn })
+	UI.Stroke(track, T.Edge, 2)
+	New("Frame", { BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.55, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 3), ZIndex = autoBtn.ZIndex + 3, Parent = track })
+	local knob = New("Frame", { Name = "Knob", AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 2, 0.5, 0), Size = UDim2.fromOffset(16, 16), BackgroundColor3 = Color3.fromRGB(246, 234, 204), ZIndex = autoBtn.ZIndex + 4, Parent = track })
+	UI.Stroke(knob, T.Edge, 2)
+	New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Size = UDim2.fromOffset(5, 5), Position = UDim2.fromOffset(2, 2), ZIndex = autoBtn.ZIndex + 5, Parent = knob })
+	HUD.autoSwitch = { track = track, knob = knob }
 	UI.Tooltip(autoBtn, function()
 		return State.auto and "<b>AUTO</b>  [T]\nFights monsters within your search range (Skills -> Loadout), uses ticked skills and drinks potions. Tap for MANUAL."
 			or "<b>MANUAL</b>  [T]\nYou aim and attack yourself. Tap for AUTO.", T.Green
 	end)
-	New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(118, SLOT), LayoutOrder = 220, Parent = second })
+	New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(132, SLOT), LayoutOrder = 220, Parent = second })
 
 	-- ammo (slingshot classes): the loaded bullet, tap to pick another kind
 	local ammoHolder = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(SLOT, SLOT + 4), LayoutOrder = 210, Visible = false, Parent = main })
@@ -1165,10 +1173,13 @@ local function refresh()
 			picker = nil
 		end
 	end
-	UI.SetButtonColor(autoBtn, State.auto and T.Green or T.Grey)
 	autoBtn.Text = State.auto and "AUTO" or "MANUAL"
-	if autoIcon and autoIcon:IsA("ImageLabel") then
-		autoIcon.Image = UI.IconId(State.auto and "auto" or "manual") or ""
+	autoBtn.TextColor3 = State.auto and Color3.fromRGB(150, 255, 150) or Color3.fromRGB(225, 222, 245)
+	local sw = HUD.autoSwitch
+	if sw and sw.on ~= State.auto then
+		sw.on = State.auto
+		UI.Tween(sw.knob, 0.15, { Position = State.auto and UDim2.new(1, -18, 0.5, 0) or UDim2.new(0, 2, 0.5, 0) }, Enum.EasingStyle.Back)
+		UI.Tween(sw.track, 0.15, { BackgroundColor3 = State.auto and Color3.fromRGB(96, 196, 86) or T.Grey })
 	end
 	-- target
 	-- v0.25.6 (owner): the target bar only while fighting it (its HP moved in the last 6 s) or for bosses, not

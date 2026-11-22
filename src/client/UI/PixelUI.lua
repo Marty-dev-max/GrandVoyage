@@ -1,5 +1,5 @@
 -- PixelUI (v0.24.0, owner): the voxel / pixel-art pass over every GUI in the game.
---  * Font: Press Start 2P for everything (UIKit's UI.Fonts all point at it).
+--  * Font: Press Start 2P for titles, labels, buttons and numbers; body text in Builder Sans is left as it is.
 --  * Text: Press Start 2P is about twice as wide as the old rounded font, so fixed TextSizes are scaled by TEXT_SCALE
 --    once (attribute PxDone). TextScaled text fits itself.
 --  * Corners: every UICorner becomes square (blocky panels, buttons and chips); strokes get mitred (sharp) joins.
@@ -37,6 +37,10 @@ function PixelUI.Apply(obj)
 			return
 		end
 		obj:SetAttribute("PxDone", true)
+		-- v0.25.28: body text (descriptions, dialog: UIKit "Semi" = Builder Sans) keeps its readable font and size
+		if string.find(obj.FontFace.Family, "BuilderSans", 1, true) then
+			return
+		end
 		obj.FontFace = PixelUI.Font
 		if not obj.TextScaled then
 			local target = math.max(PixelUI.MIN_TEXT, math.floor(obj.TextSize * PixelUI.TEXT_SCALE + 0.5))

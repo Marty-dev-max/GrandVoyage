@@ -25,7 +25,7 @@ Settings.Values = {
 	damageNumbers = true,
 	rangeRings = true,
 	navGuide = true,
-	barExpanded = false, -- hotbar second row (skills 7-12, items F5-F8)
+	activeSet = 3, -- v0.25.71 (new players start on Basic: Heavy Attack is ready from Lv1): the skill set the hotbar shows (keys 1-6, Shared/Modules/SkillSets)
 	keys = "", -- rebound hotkeys (Controllers/Hotkeys), "Action=Key;..."
 }
 

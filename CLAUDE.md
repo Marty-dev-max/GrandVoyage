@@ -107,7 +107,8 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
 - Hits land on the strike frame: CombatService picks the combo step (sent as `combo` in the BasicAttack FX so every client
   plays the same clip) and applies damage with `hitLater(strike [+ shot flight])`; skills use their clip's strike too.
   Never apply melee damage at request time again (monsters died before the fist arrived).
-- Hotbar: `p.skillBar` = 12 fixed slots (keys 1-6, 7 8 9 0 - =), `p.itemBar` = 8 quick items (F1-F8; UNUSED since
+- Hotbar (SUPERSEDED v0.25.71 by skill sets, see the v0.25.71 note; p.skillBar is kept in saves but unused by the client):
+  `p.skillBar` = 12 fixed slots (keys 1-6, 7 8 9 0 - =), `p.itemBar` = 8 quick items (F1-F8; UNUSED since
   v0.25.55: F1 = HP potion, F2 = SP potion, see below), "" = empty slot;
   server helpers `PS.BarAdd` / `PS.BarRemoveIf` keep slot positions; each class keeps its own bar (`p.classBars`).
   Set up in Skills -> Loadout (tap skill/item, then slot; tap two slots to swap; green tick = Auto Battle may use it;
@@ -659,6 +660,14 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     CombatService kind "Roar" (skill.toki gates lv; no Skill FX, TokiRoar FX instead -> Controllers/TokiFX). Skills
     tab tier "Toki"; Stats left panel shows Power + Toki names in their color; Dev tab Toki buttons; Admin `toki`
     "Kind[:PlayerName]" / "none[:PlayerName]".
+  * v0.25.71 (owner): HOTBAR = SKILL SETS (`Shared/Modules/SkillSets`: Sets Class / Fruit / Basic / Armament /
+    Observation / Conqueror; Skills(p, n) -> { skill, ready } auto-filled from the class / fruit / Common / Toki skill
+    lists, max 6; Open(p, n); Id(p, n, i); Auto(p, n) = settings.autoSets[n] ~= false). Hotkeys Set1-6 = keys 1-6
+    (Combat.SetActiveSet; State.activeSet saved as Settings.Values.activeSet, default 3 = Basic), Skill1-6 = E R F Z X C
+    cast Combat.BarId(i). HUD: main row = set buttons (gold = active, dim = locked, green dot = Auto), row above =
+    the set's skills (always shown, no expand button). Auto Battle casts every ready skill of the Auto-on sets
+    (autoSkills ticks are no longer used). Skills window tab "Sets" (renderSets: USE + AUTO ON/OFF per set; the old
+    Loadout + drag-and-drop code is gone). Server SetAutoSettings `autoSets` (6 booleans). Set 3 becomes weapon arts in sea 2.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

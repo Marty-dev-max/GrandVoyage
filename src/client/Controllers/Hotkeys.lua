@@ -1,5 +1,5 @@
--- Hotkeys (v0.25.44, owner): every rebindable key in one place. Defaults: skills E R F Z X C on the main row and
--- 1-6 on the second row (manual mode plays like a normal action game), Stats on Y. Players rebind in
+-- Hotkeys (v0.25.44, owner): every rebindable key in one place. Defaults (v0.25.71): 1-6 pick the skill set,
+-- E R F Z X C cast its skills (manual mode plays like a normal action game), Stats on Y. Players rebind in
 -- Settings -> Hotkeys; overrides are saved in Settings.Values.keys ("Action=KeyName;...").
 -- Keys go through ContextActionService at high priority: Roblox's camera sinks I / O (keyboard zoom), which made the
 -- Bag key dead when we listened to UserInputService. CAS also stays quiet while you type in a TextBox / the chat.
@@ -12,8 +12,9 @@ local Hotkeys = {}
 Hotkeys.Actions = {
 	{ "Skill1", "Skill 1", "E" }, { "Skill2", "Skill 2", "R" }, { "Skill3", "Skill 3", "F" },
 	{ "Skill4", "Skill 4", "Z" }, { "Skill5", "Skill 5", "X" }, { "Skill6", "Skill 6", "C" },
-	{ "Skill7", "Skill 7", "One" }, { "Skill8", "Skill 8", "Two" }, { "Skill9", "Skill 9", "Three" },
-	{ "Skill10", "Skill 10", "Four" }, { "Skill11", "Skill 11", "Five" }, { "Skill12", "Skill 12", "Six" },
+	-- v0.25.71 (owner): 1-6 pick the skill SET (Shared/Modules/SkillSets), E R F Z X C cast that set's skills
+	{ "Set1", "Set 1: Class", "One" }, { "Set2", "Set 2: Fruit", "Two" }, { "Set3", "Set 3: Basic", "Three" },
+	{ "Set4", "Set 4: Armament", "Four" }, { "Set5", "Set 5: Observation", "Five" }, { "Set6", "Set 6: Conqueror", "Six" },
 	{ "Dash", "Dash", "Q" }, { "Auto", "Auto / Manual", "T" }, { "Target", "Nearest target", "Tab" }, { "Race", "Race mode", "V" }, { "Sling", "Slingshot Launch (Bounce)", "U" },
 	{ "Inventory", "Bag", "I" }, { "Skills", "Skills", "K" }, { "Quests", "Quests", "J" }, { "Map", "Map", "M" },
 	{ "Pets", "Pets", "N" }, { "PearlShop", "Store", "H" }, { "Stats", "Stats", "Y" }, { "Guild", "Guild", "G" },

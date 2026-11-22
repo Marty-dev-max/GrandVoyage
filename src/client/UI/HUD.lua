@@ -22,6 +22,7 @@ local Combat = require(script.Parent.Parent.Controllers.Combat)
 local Hotkeys = require(script.Parent.Parent.Controllers.Hotkeys)
 local Audio = require(script.Parent.Parent.Controllers.Audio)
 local Readability = require(script.Parent.Parent.Controllers.Readability)
+local SkillSets = require(Shared.Modules.SkillSets)
 
 local HUD = {}
 local player = Players.LocalPlayer
@@ -597,22 +598,21 @@ local function row(parent, order)
 	return r
 end
 
--- Hotbar (like the quick bars of big MMOs): main row = AUTO, skills 1-6, quick items F1-F4, expand toggle;
--- expanded row above = skills 7 8 9 0 - =, items F5-F8. Skills go in from the Skills window (Loadout tab).
-local itemSlots, barRows, expandBtn
-HUD.barExpanded = false
-local function setExpanded(on)
-	HUD.barExpanded = on
-	if barRows then
-		barRows.second.Visible = on
+-- Hotbar (v0.25.71, owner): main row = race mode, Dash, the 6 SET buttons (keys 1-6: Class / Fruit / Basic / three
+-- Toki), potions F1 F2, ammo, AUTO; the row above = E R F Z X C, the skills of the picked set (Shared/Modules/SkillSets).
+local itemSlots, barRows
+local setSlots = {}
+-- the icon a set button shows
+local SET_ICON = { Basic = "anchor", Armament = "armor", Observation = "compass", Conqueror = "crown" }
+local SET_LABEL = { Class = "CLASS", Fruit = "FRUIT", Basic = "BASIC", Armament = "ARM", Observation = "OBS", Conqueror = "CONQ" }
+local function setIcon(p, set)
+	if set.id == "Class" then
+		local c = p and ClassesCfg.Classes[p.class]
+		return c and c.icon or "sword"
+	elseif set.id == "Fruit" then
+		return p and p.fruit and ("fruit_" .. string.lower(p.fruit.id)) or "fruit_unknown"
 	end
-	if expandBtn then
-		expandBtn.Text = on and "v" or "^"
-	end
-	pcall(function()
-		local Settings = require(script.Parent.Parent.Controllers.Settings)
-		Settings.Set("barExpanded", on)
-	end)
+	return SET_ICON[set.id] or "skills"
 end
 
 -- a drawn bullet (round pellet with a shine): ammo has no rendered icons
@@ -743,7 +743,6 @@ local function buildSkillBar()
 	vlist.SortOrder = Enum.SortOrder.LayoutOrder
 	local second = row(bar, 1)
 	local main = row(bar, 2)
-	second.Visible = false
 	barRows = { main = main, second = second }
 	for _, r in ipairs({ second, main }) do
 		r:FindFirstChildOfClass("UIListLayout").SortOrder = Enum.SortOrder.LayoutOrder
@@ -813,10 +812,43 @@ local function buildSkillBar()
 		for i, s in ipairs(skillSlots) do
 			s.key.Text = Combat.SKILL_KEY_LABELS[i]
 		end
+		for n, s in ipairs(setSlots) do
+			s.key.Text = Hotkeys.Label("Set" .. n)
+		end
 	end)
+	-- the 6 set buttons on the main row
+	for n, set in ipairs(SkillSets.Sets) do
+		local s = makeSlot(main, Hotkeys.Label("Set" .. n), n)
+		setSlots[n] = s
+		s.set = set
+		s.name.Position = UDim2.new(0, 3, 1, -18)
+		s.name.Size = UDim2.new(1, -6, 0, 15)
+		s.name.TextSize = 10
+		s.name.ZIndex = 4
+		s.icon.Size = UDim2.fromOffset(SLOT - 26, SLOT - 26)
+		s.sp.TextXAlignment = Enum.TextXAlignment.Center
+		s.sp.AnchorPoint = Vector2.new(0.5, 1)
+		s.sp.Position = UDim2.new(0.5, 0, 1, -2)
+		s.sp.TextSize = 10
+		s.icon.Position = UDim2.fromScale(0.5, 0.42)
+		s.slot.Activated:Connect(function()
+			Combat.SetActiveSet(n)
+		end)
+		UI.Tooltip(s.slot, function()
+			local p = State.profile
+			local list = {}
+			for _, e in ipairs(SkillSets.Skills(p, n)) do
+				table.insert(list, (e.ready and "" or "(locked) ") .. e.skill.name)
+			end
+			local open = SkillSets.Open(p, n)
+			return "<b>Set " .. n .. ": " .. set.name .. "</b>  [" .. Hotkeys.Label("Set" .. n) .. "]\n"
+				.. (open and (#list > 0 and table.concat(list, " • ") or "No skills yet") or (set.id == "Fruit" and "Eat a Cursed Fruit to unlock" or "You do not have this Toki yet"))
+				.. "\nAuto Battle: " .. (SkillSets.Auto(p, n) and "uses this set" or "skips this set"), T.Gold
+		end)
+	end
+	-- the skills of the picked set on the row above (E R F Z X C)
 	for i = 1, GameConfig.SkillBarSize do
-		local parent = i <= 6 and main or second
-		local s = makeSlot(parent, Combat.SKILL_KEY_LABELS[i], i)
+		local s = makeSlot(second, Combat.SKILL_KEY_LABELS[i], i)
 		skillSlots[i] = s
 		-- v0.25.50 (owner): on touch, hold the skill button and drag to aim (manual mode), lift to cast
 		local touchAimed = false
@@ -825,8 +857,7 @@ local function buildSkillBar()
 				return
 			end
 			touchAimed = false -- (a drag that ended off the button never got its Activated)
-			local p = State.profile
-			local id = p and p.skillBar[i]
+			local id = Combat.BarId(i)
 			if id and id ~= "" and Combat.AimableSkill(id) then
 				touchAimed = Combat.TouchAim(id, i, input)
 			end
@@ -836,17 +867,18 @@ local function buildSkillBar()
 				touchAimed = false -- the aim casts it when the finger lifts
 				return
 			end
-			local p = State.profile
-			local id = p and p.skillBar[i]
+			local id = Combat.BarId(i)
+			local e = SkillSets.Skills(State.profile, Combat.ActiveSet())[i]
 			if id and id ~= "" then
 				Combat.CastSkill(id)
+			elseif e then
+				UI.Toast(e.skill.fruit and ("Needs Fruit Mastery " .. (e.skill.mastery or 1)) or (e.skill.name .. ": learn it in the Skills window"), "bad")
 			else
-				Panels.Open("Skills", { tab = "Loadout" })
+				Panels.Open("Skills", { tab = "Sets" })
 			end
 		end)
 		s.slot.MouseEnter:Connect(function()
-			local p = State.profile
-			local id = p and p.skillBar[i]
+			local id = Combat.BarId(i)
 			Readability.HoverSkill = (id and id ~= "") and id or nil
 		end)
 		s.slot.MouseLeave:Connect(function()
@@ -854,9 +886,10 @@ local function buildSkillBar()
 		end)
 		UI.Tooltip(s.slot, function()
 			local p = State.profile
-			local sk = p and p.skillBar[i] and ClassesCfg.SkillById[p.skillBar[i]]
+			local e = SkillSets.Skills(p, Combat.ActiveSet())[i]
+			local sk = e and e.skill
 			if not sk then
-				return "Empty slot: click to set up skills", T.TextSoft
+				return "Empty: this set has no skill here", T.TextSoft
 			end
 			local lvText = sk.fruit and ("Mastery " .. (p.fruit and p.fruit.mastery or 0)) or ("Lv." .. (p.skills[sk.id] or 0))
 			return string.format("<b>%s</b>  %s\n%s\nSP %d  •  Cooldown %ss", sk.name, lvText, sk.desc or "", sk.sp, sk.cd), skillColor(sk)
@@ -891,15 +924,10 @@ local function buildSkillBar()
 			return "<b>" .. (kind == "hp" and "HP potion" or "SP potion") .. "</b>  [F" .. i .. "]\n" .. (def and def.name or "") .. "\nGear: pick the potion and when it drinks by itself", kind == "hp" and T.Red or T.Ocean
 		end)
 	end
-	local eBtn, eh = UI.Button(main, "^", T.Ocean, UDim2.fromOffset(34, SLOT), function()
-		setExpanded(not HUD.barExpanded)
-	end)
-	expandBtn = eBtn
-	eh.LayoutOrder = 200
-	UI.Tooltip(eBtn, function()
-		return HUD.barExpanded and "Hide the second row" or "Show 6 more skill slots", T.Ocean
-	end)
-	New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(34, SLOT), LayoutOrder = 200, Parent = second })
+	-- the skill row stays lined up over the set buttons: spacers for the potion slots
+	for i = 1, 2 do
+		New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(SLOT, SLOT), LayoutOrder = 100 + i, Parent = second })
+	end
 
 	-- v0.25.3 (owner): reads AUTO or MANUAL (not "AUTO ON"), with a pixel icon above the word
 	-- v0.25.28 (owner reference: a switch): dark plate, the word on the left, a sliding switch on the right
@@ -1183,20 +1211,35 @@ local function refresh()
 			UI.Pop(b)
 		end
 	end
-	-- skill bar (12 fixed slots; "" = empty)
+	-- v0.25.71 set buttons: the picked one lit gold, locked ones dim, a green dot = Auto Battle uses it
 	local p = State.profile
-	if p and not HUD.expandSynced then
-		-- the saved hotbar layout arrives with the profile
-		HUD.expandSynced = true
-		local Settings = require(script.Parent.Parent.Controllers.Settings)
-		if (Settings.Values.barExpanded == true) ~= HUD.barExpanded then
-			setExpanded(Settings.Values.barExpanded == true)
+	local active = Combat.ActiveSet()
+	for n, s in ipairs(setSlots) do
+		local open = SkillSets.Open(p, n)
+		local icon = setIcon(p, s.set)
+		if s.lastIcon ~= icon then
+			s.lastIcon = icon
+			local img = UI.IconId(icon)
+			s.icon.Image = img or ""
+			s.icon.Visible = img ~= nil
+			s.name.Text = img and "" or s.set.name
 		end
+		s.icon.ImageTransparency = open and 0 or 0.65
+		s.sp.Text = SET_LABEL[s.set.id] or ""
+		s.sp.TextColor3 = n == active and T.Gold or T.TextSoft
+		local c = n == active and T.Gold or (open and T.PanelTop or T.PanelDeep)
+		s.grad.Color = n == active and ColorSequence.new(c:Lerp(Color3.new(1, 1, 1), 0.1), c:Lerp(Color3.new(0, 0, 0), 0.55)) or ColorSequence.new(c, T.PanelDeep)
+		s.stroke.Color = n == active and Color3.new(1, 1, 1) or T.Edge
+		s.stroke.Thickness = n == active and 4 or 3
+		s.auto.Visible = open and SkillSets.Auto(p, n)
 	end
+	-- the skills of the picked set (E R F Z X C)
 	local now = os.clock()
+	local setList = SkillSets.Skills(p, active)
 	for i, s in ipairs(skillSlots) do
-		local id = p and p.skillBar[i]
-		local skill = id and id ~= "" and ClassesCfg.SkillById[id] or nil
+		local entry = setList[i]
+		local id = entry and entry.skill.id
+		local skill = entry and entry.skill or nil
 		local iconId = skill and skillIconId(skill)
 		s.icon.Image = iconId or ""
 		s.icon.Visible = iconId ~= nil
@@ -1212,7 +1255,8 @@ local function refresh()
 		local left = skill and ((State.cooldowns[id] or 0) - now) or 0
 		s.cd.Size = UDim2.new(1, 0, skill and left > 0 and math.clamp(left / skill.cd, 0, 1) or 0, 0)
 		s.cdText.Text = (skill and left > 0) and string.format(left < 1 and "%.1f" or "%d", left) or ""
-		s.auto.Visible = skill ~= nil and p.autoSkills[id] == true
+		s.auto.Visible = false
+		s.icon.ImageTransparency = (entry and not entry.ready) and 0.65 or 0
 		s.stroke.Color = (skill and (player:GetAttribute("SP") or 0) < skill.sp) and T.Red or T.Edge
 	end
 	-- dash cooldown sweep

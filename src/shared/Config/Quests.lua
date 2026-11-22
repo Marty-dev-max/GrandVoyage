@@ -52,9 +52,9 @@ Q.Main = {
 	},
 	{
 		id = "T03", island = "Daybreak", title = "Show Some Technique",
-		dialog = { "Swinging wildly won't cut it. Use a skill! Press 1, or tap the first slot on your skill bar." },
+		dialog = { "Swinging wildly won't cut it. Use a skill! Press 3 for your Basic set, then E (or tap the first slot of the top row)." },
 		goal = { kind = "Skill", count = 2 }, text = "Use a skill",
-		hint = "Press 1-6 or tap a skill slot. Skills cost SP (blue bar).",
+		hint = "Keys 1-6 pick a skill set, E R F Z X C use its skills (or tap them). Skills cost SP (blue bar).",
 		at = { spawn = "ForestMonkey" }, reward = { beli = 100, exp = 40, job = 40 },
 	},
 	{

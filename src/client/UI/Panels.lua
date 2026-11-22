@@ -976,8 +976,7 @@ end
 -- ===================== SKILLS =====================
 -- ===================== SKILLS (full screen: skill tree + loadout) =====================
 -- Skills tab: tiers (Basic / class / Cursed Fruit / next job) as a grid of skill nodes, the picked skill's details on the
--- right with Learn. Loadout tab: tap a skill or an item, then a slot (tap two slots to swap): 12 skill slots
--- (keys 1-6, 7-=), 8 quick items (F1-F8), which skills Auto Battle may use, and the Auto Battle search range.
+-- right with Learn. Skill Sets tab (v0.25.71): the 6 hotbar sets (keys 1-6) with their skills and an Auto switch each.
 local SkillLook = require(script.Parent.SkillLook)
 local skillsView = { side = "Skills", tier = nil, pick = nil }
 
@@ -1038,113 +1037,11 @@ local function tierSkills(p, tier)
 	return out
 end
 
-local function setBar(p, bar)
-	p.skillBar = bar -- optimistic: the hotbar redraws right away
-	State.Fire("profile")
-	task.spawn(req, "SetSkillBar", { bar = bar })
-end
-local function setItemBar(p, bar)
-	p.itemBar = bar
-	State.Fire("profile")
-	task.spawn(req, "SetItemBar", { bar = bar })
-end
-local function padded(bar, n)
-	local out = {}
-	for i = 1, n do
-		out[i] = (bar and bar[i]) or ""
-	end
-	return out
-end
-
 function Panels.Skills(args)
 	if args and args.tab then
-		skillsView.side = args.tab
+		skillsView.side = args.tab == "Loadout" and "Sets" or args.tab
 	end
 	local win = UI.Window("Skills", "Skills", UDim2.fromOffset(1000, 620), T.Gold, "✨", { fullscreen = true })
-	-- drag and drop (Loadout): press a skill / item / slot, move, release over a slot. Dragging a slot off the bar
-	-- empties it. A press that does not move stays a tap (tap-then-tap still works, e.g. on phones).
-	local UIS = game:GetService("UserInputService")
-	local drag = nil
-	local dropTargets = {}
-	local onDrop -- set by the loadout: function(payload, target or nil)
-	local function inside(btn, pt)
-		local a, sz = btn.AbsolutePosition, btn.AbsoluteSize
-		return pt.X >= a.X and pt.X <= a.X + sz.X and pt.Y >= a.Y and pt.Y <= a.Y + sz.Y
-	end
-	-- v0.24.0: our own pointer tracking for every tile and slot (UIDragDetector swallowed taps and lost drops for the
-	-- owner). Press = candidate; moving > 10 px = drag (a ghost follows, the scrolling list freezes); release over a
-	-- slot = drop. A release without moving is a TAP and runs the tile's click (tap-then-tap placing still works).
-	local tapHandlers = setmetatable({}, { __mode = "k" })
-	local function draggable(btn, payload, img, color)
-		btn.InputBegan:Connect(function(input)
-			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-				local scroller = btn:FindFirstAncestorWhichIsA("ScrollingFrame")
-				drag = { payload = payload, start = Vector2.new(input.Position.X, input.Position.Y), img = img, color = color, btn = btn, scroller = scroller }
-			end
-		end)
-	end
-	local function onTap(btn, fn)
-		tapHandlers[btn] = fn
-	end
-	local conns = {}
-	table.insert(conns, UIS.InputChanged:Connect(function(input)
-		if not drag or (input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch) then
-			return
-		end
-		local pt = Vector2.new(input.Position.X, input.Position.Y)
-		local sc = UI.GetScale()
-		if not drag.ghost and drag.payload.kind ~= "none" and (pt - drag.start).Magnitude > 10 then
-			if drag.scroller then
-				drag.scroller.ScrollingEnabled = false
-			end
-			local g = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(64, 64), BackgroundColor3 = drag.color or T.Panel, BackgroundTransparency = 0.15, ZIndex = 90, Parent = UI.Root })
-			UI.Corner(g, 12)
-			UI.Stroke(g, T.Gold, 3)
-			if drag.img then
-				New("ImageLabel", { BackgroundTransparency = 1, Image = drag.img, Size = UDim2.fromScale(0.8, 0.8), Position = UDim2.fromScale(0.1, 0.1), ScaleType = Enum.ScaleType.Fit, ZIndex = 91, Parent = g })
-			end
-			drag.ghost = g
-		end
-		if drag.ghost then
-			-- InputObject positions leave out the top-bar inset (mouse and touch alike); our UI root does not
-			local inset = 0
-			pcall(function()
-				inset = game:GetService("GuiService"):GetGuiInset().Y
-			end)
-			drag.ghost.Position = UDim2.fromOffset(pt.X / sc, (pt.Y + inset) / sc)
-			drag.pt = Vector2.new(pt.X, pt.Y + inset)
-		end
-	end))
-	table.insert(conns, UIS.InputEnded:Connect(function(input)
-		if not drag or (input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch) then
-			return
-		end
-		local d = drag
-		drag = nil
-		if d.scroller then
-			d.scroller.ScrollingEnabled = true
-		end
-		if d.ghost then
-			d.ghost:Destroy()
-			local hit
-			for _, t in ipairs(dropTargets) do
-				if t.btn.Parent and inside(t.btn, d.pt or d.start) then
-					hit = t
-				end
-			end
-			if onDrop then
-				onDrop(d.payload, hit)
-			end
-		elseif d.btn and tapHandlers[d.btn] then
-			-- a press that did not move: the tap
-			tapHandlers[d.btn]()
-		end
-	end))
-	win.frame.Destroying:Connect(function()
-		for _, c in ipairs(conns) do
-			c:Disconnect()
-		end
-	end)
 	local side = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(0, 150, 1, 0), Parent = win.body })
 	UI.List(side, nil, 10)
 	local content = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(162, 0), Size = UDim2.new(1, -162, 1, 0), Parent = win.body })
@@ -1153,7 +1050,7 @@ function Panels.Skills(args)
 	local function sidebar()
 		clear(side)
 		UI.List(side, nil, 10)
-		for i, it in ipairs({ { "Skills", "✨", "Skill Tree" }, { "Loadout", "⚔️", "Loadout" } }) do
+		for i, it in ipairs({ { "Skills", "✨", "Skill Tree" }, { "Sets", "⚔️", "Skill Sets" } }) do
 			local on = skillsView.side == it[1]
 			local _, h = UI.Button(side, it[2] .. " " .. it[3], on and T.Gold or T.Grey, UDim2.new(1, -6, 0, 50), function()
 				skillsView.side = it[1]
@@ -1277,266 +1174,79 @@ function Panels.Skills(args)
 			end)
 		end
 		if lv > 0 then
-			local onBar = table.find(p.skillBar, sk.id) ~= nil
-			UI.Button(btns, onBar and "On hotbar ✓" or "Put on hotbar", onBar and T.Grey or T.Ocean, UDim2.new(0.5, -5, 0, 52), function()
-				if not onBar then
-					local bar = padded(p.skillBar, GameConfig.SkillBarSize)
-					for i = 1, #bar do
-						if bar[i] == "" then
-							bar[i] = sk.id
-							setBar(p, bar)
-							return
-						end
-					end
-					UI.Toast("Hotbar is full: rearrange it in Loadout", "bad")
-				end
-			end)
+			-- v0.25.71: skills are not placed by hand any more: every skill sits in its set (keys 1-6)
+			local where = sk.fruit and "Set 2 (Fruit)" or (sk.toki and "the Toki sets (4-6)" or (sk.class == "Common" and "Set 3 (Basic)" or "Set 1 (Class)"))
+			UI.Text(btns, "On the hotbar in " .. where, 14, T.TextSoft, "Semi", { Size = UDim2.new(0.5, -5, 0, 52), TextYAlignment = Enum.TextYAlignment.Center })
 		end
 	end
 
-	-- ---------- loadout ----------
-	local sel -- { kind = "skill"|"item", id } or { kind = "slot", bar = "skill"|"item", i }
-	local function renderLoadout(p)
-		dropTargets = {}
-		-- v0.24.0: on narrow windows (phones, shrunk window) everything stacks in one column: hotbar first, then the
-		-- skills; tiles and slots size themselves to the width so nothing slides under another panel
-		local okW, absW = pcall(function()
-			return content.AbsoluteSize.X
-		end)
-		local W = (okW and absW and absW > 0) and absW / math.max(0.01, UI.GetScale()) or 1000
-		local stacked = W < 760
-		local left, right
-		if stacked then
-			local col = UI.Scroll(content, UDim2.new(1, 0, 1, 0))
-			UI.List(col, nil, 10)
-			right = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, LayoutOrder = 1, Parent = col })
-			UI.List(right, nil, 10)
-			left = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, LayoutOrder = 2, Parent = col })
-			UI.List(left, nil, 8)
-		else
-			left = UI.Scroll(content, UDim2.new(0.55, -10, 1, 0))
-			UI.List(left, nil, 8)
-			right = UI.Scroll(content, UDim2.new(0.45, 0, 1, 0))
-			right.Position = UDim2.new(0.55, 0, 0, 0)
-			UI.List(right, nil, 10)
-		end
-		local leftW = stacked and W - 12 or W * 0.55 - 10
-		local colW = stacked and W - 12 or W * 0.45
-		-- slot size follows the column width so 6 slots always fit inside the card
-		local SL = math.clamp(math.floor((colW - 44 - 5 * 6) / 6), 34, 56)
-		local TILE = leftW < 440 and 76 or 96
-
-		local tilePayload
-		local function tileDrag(b, img, color)
-			if tilePayload then
-				draggable(b, tilePayload, img, color)
-			end
-		end
-		local function tile(parent, img, title, color, picked, onClick, extra)
-			local holder = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(TILE, TILE + 32), Parent = parent })
-			local b = New("TextButton", { Text = "", AutoButtonColor = false, Size = UDim2.fromOffset(TILE, TILE), BackgroundColor3 = Color3.new(1, 1, 1), Parent = holder })
-			UI.Corner(b, 14)
-			New("UIGradient", { Color = ColorSequence.new(color:Lerp(Color3.new(1, 1, 1), 0.2), color:Lerp(Color3.new(0, 0, 0), 0.4)), Rotation = 90, Parent = b })
-			UI.Stroke(b, picked and T.Gold or T.Edge, picked and 5 or 3)
-			if img then
-				New("ImageLabel", { BackgroundTransparency = 1, Image = img, Size = UDim2.fromScale(0.8, 0.8), Position = UDim2.fromScale(0.1, 0.06), ScaleType = Enum.ScaleType.Fit, Parent = b })
-			end
-			UI.Text(holder, title, 13, T.Text, "Bold", { Position = UDim2.fromOffset(0, TILE + 2), Size = UDim2.new(1, 0, 0, 30), TextXAlignment = Enum.TextXAlignment.Center })
-			UI.Tactile(b)
-			onTap(b, onClick)
-			tileDrag(b, img, color)
-			if extra then
-				extra(b)
-			end
-			return holder
-		end
-		local function gridIn(parent, n)
-			local perRow = math.max(1, math.floor((leftW - 8 + 10) / (TILE + 10)))
-			local rows = math.max(1, math.ceil(n / perRow))
-			local g = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, -8, 0, rows * (TILE + 40)), Parent = parent })
-			New("UIGridLayout", { CellSize = UDim2.fromOffset(TILE, TILE + 32), CellPadding = UDim2.fromOffset(10, 8), Parent = g })
-			return g
-		end
-
-		-- skills you can put on the bar now
-		local attack, support = {}, {}
-		local function consider(s)
-			local usable = (s.toki and type(p.toki) == "table" and p.toki[s.toki] ~= nil) or (s.fruit and (p.fruit and p.fruit.id == s.fruit and p.fruit.mastery >= (s.mastery or 1))) or ((p.skills[s.id] or 0) > 0)
-			if usable then
-				table.insert(SkillLook.IsSupport(s) and support or attack, s)
-			end
-		end
-		for _, s in ipairs(Classes.Common.skills) do
-			consider(s)
-		end
-		for _, s in ipairs(Classes[p.class] and Classes[p.class].skills or {}) do
-			consider(s)
-		end
-		local fruit = p.fruit and FruitsCfg.ById[p.fruit.id]
-		for _, s in ipairs(fruit and fruit.skills or {}) do
-			consider(s)
-		end
-		for _, s in ipairs(require(Shared.Config.Toki).Skills) do
-			consider(s)
-		end
-		for _, group in ipairs({ { "⚔️", "Attack skills", attack, T.Red }, { "✨", "Support skills", support, T.Green } }) do
-			UI.Section(left, group[1], group[2], group[4], "drag onto a slot")
-			local g = gridIn(left, #group[3])
-			for _, s in ipairs(group[3]) do
-				local picked = sel and sel.kind == "skill" and sel.id == s.id
-				tilePayload = { kind = "skill", id = s.id }
-				tile(g, SkillLook.IconId(s), s.name, SkillLook.Color(s), picked, function()
-					sel = picked and nil or { kind = "skill", id = s.id }
-					render()
-				end, function(b)
-					-- auto toggle chip: may Auto Battle use this skill?
-					local on = p.autoSkills[s.id] == true
-					local chipBtn = New("TextButton", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 4, 0, -4), Size = UDim2.fromOffset(30, 30), BackgroundColor3 = on and T.Green or T.Grey, Text = on and "✓" or "✕", TextColor3 = Color3.new(1, 1, 1), FontFace = Font.fromEnum(Enum.Font.Arcade), TextSize = 18, AutoButtonColor = false, ZIndex = 4, Parent = b })
-					UI.Corner(chipBtn, 15)
-					UI.Stroke(chipBtn, T.Edge, 2)
-					chipBtn.Activated:Connect(function()
-						local a = table.clone(p.autoSkills)
-						a[s.id] = (not on) or nil
-						p.autoSkills = a
-						render()
-						task.spawn(req, "SetAutoSettings", { autoSkills = a })
-					end)
-					UI.Tooltip(chipBtn, function()
-						return on and "Auto Battle uses this skill (tap to stop)" or "Auto Battle skips this skill (tap to allow)", on and T.Green or T.Grey
-					end)
-				end)
-			end
-		end
-		-- (v0.25.55: quick items are gone: F1 = HP potion, F2 = SP potion, picked with the gear on each hotbar slot)
-
-		-- the hotbar layout
-		local card = UI.Card(right, UDim2.new(1, -12, 0, 84 + 2 * (SL + 6) + 50), T.PanelDeep)
-		card.LayoutOrder = 1
-		UI.Pad(card, 12)
-		UI.Text(card, "HOTBAR", 20, T.Gold, "Display", { Size = UDim2.new(1, 0, 0, 24) })
-		UI.Text(card, "Drag a skill onto a slot (or tap it, then a slot). Drag a slot off to empty it.", 13, T.TextSoft, "Semi", { Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 0, 18) })
+	-- ---------- skill sets (v0.25.71, owner) ----------
+	-- the 6 sets on the hotbar (keys 1-6 pick one, E R F Z X C cast its skills) and whether Auto Battle uses each
+	local function renderSets(p)
+		local SkillSets = require(Shared.Modules.SkillSets)
 		local Combat = require(script.Parent.Parent.Controllers.Combat)
-		local function slotRow(y, bar, from, to, keyFn, look)
-			local r = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, y), Size = UDim2.new(1, 0, 0, SL + 4), Parent = card })
-			UI.List(r, Enum.FillDirection.Horizontal, 6)
-			for i = from, to do
-				local picked = sel and sel.kind == "slot" and sel.bar == bar and sel.i == i
-				local b = New("TextButton", { Text = "", AutoButtonColor = false, Size = UDim2.fromOffset(SL, SL), BackgroundColor3 = Color3.new(1, 1, 1), Parent = r })
-				UI.Corner(b, 10)
-				local img, col = look(i)
-				New("UIGradient", { Color = ColorSequence.new(col:Lerp(Color3.new(1, 1, 1), 0.15), col:Lerp(Color3.new(0, 0, 0), 0.45)), Rotation = 90, Parent = b })
-				UI.Stroke(b, picked and T.Gold or T.Edge, picked and 4 or 2.5)
+		local Hotkeys = require(script.Parent.Parent.Controllers.Hotkeys)
+		local scroll = UI.Scroll(content, UDim2.fromScale(1, 1))
+		UI.List(scroll, nil, 10)
+		UI.Text(scroll, "Keys " .. Hotkeys.Label("Set1") .. "-" .. Hotkeys.Label("Set6") .. " pick a set; " .. Combat.SKILL_KEY_LABELS[1] .. " " .. Combat.SKILL_KEY_LABELS[2] .. " " .. Combat.SKILL_KEY_LABELS[3] .. " " .. Combat.SKILL_KEY_LABELS[4] .. " " .. Combat.SKILL_KEY_LABELS[5] .. " " .. Combat.SKILL_KEY_LABELS[6]
+			.. " cast its skills. AUTO uses every set that is switched on (only Fruit = farm Fruit Mastery).", 15, T.TextSoft, "Semi", { Size = UDim2.new(1, -8, 0, 40), LayoutOrder = 0 })
+		for n, set in ipairs(SkillSets.Sets) do
+			local open = SkillSets.Open(p, n)
+			local active = Combat.ActiveSet() == n
+			local card = UI.Card(scroll, UDim2.new(1, -8, 0, 132), active and T.PanelTop or T.PanelDeep)
+			card.LayoutOrder = n
+			if active then
+				UI.Stroke(card, T.Gold, 3)
+			end
+			local title = set.name
+			if set.id == "Class" and Classes[p.class] then
+				title = "Class: " .. Classes[p.class].name
+			elseif set.id == "Fruit" and p.fruit and FruitsCfg.ById[p.fruit.id] then
+				title = FruitsCfg.ById[p.fruit.id].name
+			end
+			UI.Text(card, Hotkeys.Label("Set" .. n) .. "  " .. title .. (open and "" or "  (locked)"), 18, open and T.Text or T.TextSoft, "Display", { Position = UDim2.fromOffset(14, 10), Size = UDim2.new(1, -290, 0, 24) })
+			-- its skills, left to right = E R F Z X C
+			local strip = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(14, 42), Size = UDim2.new(1, -28, 0, 80), Parent = card })
+			UI.List(strip, Enum.FillDirection.Horizontal, 8)
+			local list = SkillSets.Skills(p, n)
+			if #list == 0 then
+				UI.Text(strip, set.id == "Fruit" and "Eat a Cursed Fruit to fill this set." or (set.toki and "You do not have this Toki yet." or "No skills yet."), 14, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 30) })
+			end
+			for i, e in ipairs(list) do
+				local cell = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(72, 80), LayoutOrder = i, Parent = strip })
+				local c = SkillLook.Color(e.skill)
+				local ic = New("Frame", { BackgroundColor3 = c, Position = UDim2.fromOffset(10, 0), Size = UDim2.fromOffset(52, 52), Parent = cell })
+				UI.Corner(ic, 10)
+				UI.Stroke(ic, T.Edge, 2)
+				local img = SkillLook.IconId(e.skill)
 				if img then
-					New("ImageLabel", { BackgroundTransparency = 1, Image = img, Size = UDim2.fromScale(0.8, 0.8), Position = UDim2.fromScale(0.1, 0.1), ScaleType = Enum.ScaleType.Fit, Parent = b })
+					New("ImageLabel", { BackgroundTransparency = 1, Image = img, ImageTransparency = e.ready and 0 or 0.6, Size = UDim2.fromScale(1, 1), ScaleType = Enum.ScaleType.Fit, Parent = ic })
 				end
-				UI.Text(b, keyFn(i), 12, T.Gold, "Display", { Position = UDim2.fromOffset(4, 1), Size = UDim2.fromOffset(24, 14) })
-				UI.Tactile(b)
-				table.insert(dropTargets, { btn = b, bar = bar, i = i })
-				draggable(b, img and { kind = "slot", bar = bar, i = i } or { kind = "none" }, img, col)
-				onTap(b, function()
-					local list = bar == "skill" and padded(p.skillBar, GameConfig.SkillBarSize) or padded(p.itemBar, GameConfig.ItemBarSize)
-					local function commit()
-						sel = nil
-						if bar == "skill" then
-							setBar(p, list)
-						else
-							setItemBar(p, list)
-						end
-						render()
-					end
-					if sel then
-						Audio.Play(sel.kind == "slot" and "BlkSwap" or "BlkDrop")
-					end
-					if sel and sel.kind == (bar == "skill" and "skill" or "item") then
-						-- place it (a skill lives in one slot only: move it)
-						for k = 1, #list do
-							if list[k] == sel.id then
-								list[k] = ""
-							end
-						end
-						list[i] = sel.id
-						commit()
-					elseif sel and sel.kind == "slot" and sel.bar == bar then
-						list[i], list[sel.i] = list[sel.i], list[i]
-						commit()
-					else
-						sel = { kind = "slot", bar = bar, i = i }
-						render()
-					end
-				end)
+				UI.Text(ic, Combat.SKILL_KEY_LABELS[i], 11, T.Gold, "Display", { Position = UDim2.fromOffset(3, 2), Size = UDim2.fromOffset(20, 14), ZIndex = 3 })
+				UI.Text(cell, e.skill.name, 11, e.ready and T.Text or T.TextSoft, "Semi", { Position = UDim2.fromOffset(0, 54), Size = UDim2.new(1, 0, 0, 26), TextXAlignment = Enum.TextXAlignment.Center })
 			end
-		end
-		local function skillLook(i)
-			local s = ClassesCfg.SkillById[p.skillBar[i] or ""]
-			return s and SkillLook.IconId(s), s and SkillLook.Color(s) or T.Panel
-		end
-		local rowH = SL + 6
-		UI.Text(card, "SKILLS", 14, T.Text, "Display", { Position = UDim2.fromOffset(0, 48), Size = UDim2.new(1, 0, 0, 16) })
-		slotRow(66, "skill", 1, 6, function(i)
-			return Combat.SKILL_KEY_LABELS[i]
-		end, skillLook)
-		slotRow(66 + rowH, "skill", 7, 12, function(i)
-			return Combat.SKILL_KEY_LABELS[i]
-		end, skillLook)
-		UI.Text(card, "F1 = HP potion, F2 = SP potion: pick them with the gear on each hotbar slot.", 13, T.TextSoft, "Semi", { Position = UDim2.fromOffset(0, 66 + 2 * rowH + 6), Size = UDim2.new(1, 0, 0, 18) })
-		-- drag and drop: same rules as tapping (place / move / swap), plus "drag a slot off the bar to empty it"
-		onDrop = function(payload, target)
-			local function listOf(bar)
-				return bar == "skill" and padded(p.skillBar, GameConfig.SkillBarSize) or padded(p.itemBar, GameConfig.ItemBarSize)
-			end
-			local function save(bar, list)
-				if bar == "skill" then
-					setBar(p, list)
-				else
-					setItemBar(p, list)
-				end
-			end
-			sel = nil
-			if target then
-				Audio.Play(payload.kind == "slot" and "BlkSwap" or "BlkDrop")
-			end
-			if payload.kind == "slot" then
-				local list = listOf(payload.bar)
-				if not target then
-					list[payload.i] = ""
-				elseif target.bar == payload.bar then
-					list[payload.i], list[target.i] = list[target.i], list[payload.i]
-				else
-					render()
-					return
-				end
-				save(payload.bar, list)
-			elseif target and target.bar == payload.kind then
-				local list = listOf(target.bar)
-				for k = 1, #list do
-					if list[k] == payload.id then
-						list[k] = ""
-					end
-				end
-				list[target.i] = payload.id
-				save(target.bar, list)
-			end
-			render()
-		end
-
-		-- clear the picked slot
-		if sel and sel.kind == "slot" then
-			local _, h = UI.Button(card, "Clear slot", T.Red, UDim2.fromOffset(130, 40), function()
-				local isSkill = sel.bar == "skill"
-				local list = isSkill and padded(p.skillBar, GameConfig.SkillBarSize) or padded(p.itemBar, GameConfig.ItemBarSize)
-				list[sel.i] = ""
-				sel = nil
-				if isSkill then
-					setBar(p, list)
-				else
-					setItemBar(p, list)
-				end
+			-- use this set now / let Auto use it
+			local _, uh = UI.Button(card, active and "IN USE" or "USE", active and T.Grey or (open and T.Green or T.Grey), UDim2.fromOffset(110, 44), function()
+				Combat.SetActiveSet(n)
 				render()
 			end)
-			h.AnchorPoint = Vector2.new(1, 0)
-			h.Position = UDim2.new(1, 0, 0, 0)
+			uh.AnchorPoint = Vector2.new(1, 0)
+			uh.Position = UDim2.new(1, -144, 0, 12)
+			local auto = SkillSets.Auto(p, n)
+			local _, ah = UI.Button(card, auto and "AUTO ON" or "AUTO OFF", auto and T.Ocean or T.Grey, UDim2.fromOffset(126, 44), function()
+				p.settings = p.settings or {}
+				local a = {}
+				for k = 1, #SkillSets.Sets do
+					a[k] = SkillSets.Auto(p, k)
+				end
+				a[n] = not auto
+				p.settings.autoSets = a
+				State.Fire("profile")
+				task.spawn(req, "SetAutoSettings", { autoSets = a })
+			end)
+			ah.AnchorPoint = Vector2.new(1, 0)
+			ah.Position = UDim2.new(1, -8, 0, 12)
 		end
-
 	end
 
 	render = function()
@@ -1546,8 +1256,8 @@ function Panels.Skills(args)
 		if not p then
 			return
 		end
-		if skillsView.side == "Loadout" then
-			renderLoadout(p)
+		if skillsView.side == "Sets" then
+			renderSets(p)
 		else
 			renderTree(p)
 		end
@@ -2692,7 +2402,7 @@ function Panels.AutoBattle()
 			task.spawn(req, "SetAutoSettings", { autoRadius = v })
 		end, "how far Auto Battle looks for monsters (studs)")
 		-- (v0.25.55: "Eat below" moved to the gear on the F1 / F2 potion slots, Panels.Potion)
-		UI.Text(win.body, "Auto Battle never wanders more than " .. ab.LeashRadius .. " studs from where it started. Pick the skills it may use in Skills -> Loadout (green tick). Potions: the gear on the F1 / F2 slots.", 14, T.TextSoft, "Semi", { Position = UDim2.fromOffset(4, 80), Size = UDim2.new(1, -8, 0, 60) })
+		UI.Text(win.body, "Auto Battle never wanders more than " .. ab.LeashRadius .. " studs from where it started. Pick the skill sets it may use in Skills -> Skill Sets (AUTO ON / OFF). Potions: the gear on the F1 / F2 slots.", 14, T.TextSoft, "Semi", { Position = UDim2.fromOffset(4, 80), Size = UDim2.new(1, -8, 0, 60) })
 	end
 	render()
 	onProfile(win, render)

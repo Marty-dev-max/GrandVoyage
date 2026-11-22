@@ -874,6 +874,14 @@ local function setupHandlers()
 			end
 			p.autoSkills = a
 		end
+		-- v0.25.71: which skill sets (1-6, Shared/Modules/SkillSets) Auto Battle may use
+		if type(data.autoSets) == "table" then
+			local a = {}
+			for i = 1, 6 do
+				a[i] = data.autoSets[i] ~= false
+			end
+			p.settings.autoSets = a
+		end
 		-- v0.25.55: F1 HP / F2 SP potion slots: which item ("Auto" or a consumable of that kind) + auto drink below %
 		for _, kind in ipairs({ "hp", "sp" }) do
 			local item = data[kind .. "Item"]

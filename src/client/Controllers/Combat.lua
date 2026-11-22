@@ -12,6 +12,7 @@ local ClassesCfg = require(Shared.Config.Classes)
 local Reach = require(Shared.Modules.Reach)
 local Net = require(Shared.Modules.Net)
 local Anim = require(Shared.Modules.Anim)
+local SkillSets = require(Shared.Modules.SkillSets)
 local State = require(script.Parent.Parent.State)
 local UI = require(script.Parent.Parent.UI.UIKit)
 
@@ -470,14 +471,24 @@ local function engage(target, useSkills)
 	-- distance to the target's BODY (big bosses have their root high up in the middle)
 	local near = Reach.Closest(r.Position, target)
 	local dist = Reach.Gap(r.Position, target)
-	-- Auto skills
+	-- Auto skills: every ready skill of the sets ticked for Auto (v0.25.71, Shared/Modules/SkillSets)
 	if useSkills and State.profile then
-		for _, id in ipairs(State.profile.skillBar) do
-			if State.profile.autoSkills[id] then
+		local ids = {}
+		for n = 1, #SkillSets.Sets do
+			if SkillSets.Auto(State.profile, n) and SkillSets.Open(State.profile, n) then
+				for _, e in ipairs(SkillSets.Skills(State.profile, n)) do
+					if e.ready then
+						table.insert(ids, e.skill.id)
+					end
+				end
+			end
+		end
+		for _, id in ipairs(ids) do
+			do
 				local s = ClassesCfg.SkillById[id]
 				if s and (State.cooldowns[id] or 0) <= os.clock() and (player:GetAttribute("SP") or 0) >= s.sp then
 					local srange = s.range or 0
-					if s.kind == "AoE" then
+					if s.kind == "AoE" or s.kind == "Roar" then
 						srange = (s.radius or 10) - 2
 					end
 					if s.kind == "Buff" or s.kind == "PartyBuff" then
@@ -772,6 +783,45 @@ Combat.SKILL_KEY_LABELS = setmetatable({}, {
 	end,
 })
 
+-- v0.25.71 (owner): skill SETS. Keys 1-6 pick the set, E R F Z X C (Skill1-6) cast slot i of that set
+State.activeSet = 3 -- Basic until the saved choice arrives (Settings.OnLoad)
+function Combat.ActiveSet()
+	local p = State.profile
+	if p and not SkillSets.Open(p, State.activeSet) then
+		State.activeSet = 1 -- the fruit / Toki of that set is gone
+	end
+	return State.activeSet
+end
+function Combat.BarId(i)
+	return SkillSets.Id(State.profile, Combat.ActiveSet(), i)
+end
+local saveSetAt = 0
+function Combat.SetActiveSet(n)
+	local p = State.profile
+	local set = SkillSets.Sets[n]
+	if not p or not set then
+		return
+	end
+	if not SkillSets.Open(p, n) then
+		UI.Toast(set.id == "Fruit" and "Eat a Cursed Fruit to use this set" or (set.name .. ": you do not have it yet"), "bad")
+		return
+	end
+	if State.activeSet ~= n then
+		State.activeSet = n
+		require(script.Parent.Audio).Play("UIClick")
+		State.Fire("cooldown") -- the hotbar redraws
+	end
+	-- remember it (one save a few seconds after the last switch)
+	local Settings = require(script.Parent.Settings)
+	Settings.Values.activeSet = n
+	saveSetAt = os.clock() + 3
+	task.delay(3.1, function()
+		if os.clock() >= saveSetAt then
+			Settings.Set("activeSet", State.activeSet)
+		end
+	end)
+end
+
 -- quick slot i: F1 = HP potion, F2 = SP potion (v0.25.55)
 function Combat.UseQuickItem(i)
 	Combat.UsePotion(i == 1 and "hp" or "sp")
@@ -1049,7 +1099,7 @@ function Combat.Start()
 			if State.build.active or (key == "E" and Interact.AnyShown()) or ((key == "E" or key == "F") and atHelm()) then
 				return false
 			end
-			local id = State.profile and State.profile.skillBar[i]
+			local id = State.profile and Combat.BarId(i)
 			if id and id ~= "" then
 				local skill = ClassesCfg.SkillById[id]
 				if skill and AIM_KINDS[skill.kind] and (not State.auto or onShip()) then
@@ -1073,6 +1123,23 @@ function Combat.Start()
 				end
 			end
 		end)
+	end
+	for n = 1, #SkillSets.Sets do
+		Hotkeys.On("Set" .. n, function()
+			if State.build.active then
+				return false
+			end
+			Combat.SetActiveSet(n)
+		end)
+	end
+	local Settings = require(script.Parent.Settings)
+	local prevLoad = Settings.OnLoad
+	Settings.OnLoad = function()
+		if prevLoad then
+			prevLoad()
+		end
+		State.activeSet = math.clamp(math.floor(tonumber(Settings.Values.activeSet) or 3), 1, #SkillSets.Sets)
+		State.Fire("cooldown")
 	end
 	Hotkeys.On("Auto", function()
 		Combat.ToggleAuto()

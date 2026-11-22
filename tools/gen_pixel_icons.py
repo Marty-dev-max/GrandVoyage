@@ -712,28 +712,64 @@ def meat_size(t):
     return draw
 
 
-# SP drinks = wooden barrel tankards with the drink splashing over the rim (owner reference)
-def tankard(liquid, t):
-    def draw(s):
-        x0, x1, y0, y1 = 7, 21, 12, 29
-        s.rect(x0, y0, x1, y1, (160, 105, 60))
-        for x in (10, 14, 18):  # staves
-            s.line([(x, y0 + 1), (x, y1 - 1)], (120, 75, 40), 1)
-        for y in (15, 25):  # iron hoops
-            s.rect(x0 - 1, y, x1 + 1, y + 1, (200, 170, 80))
-        s.arc(23, 20, 4, 280, 440, (130, 85, 45), 2, False)  # handle
-        lc = lerp(liquid, WHITE, 0.35)
-        s.oval(14, 11, 8, 3, liquid)  # brimming top
-        s.oval(10, 8, 3, 3, liquid)  # splash blobs over the rim
-        s.oval(17, 6, 3, 4, liquid)
-        s.oval(22, 9, 2, 2, liquid)
-        s.oval(16, 5, 1, 1, lc, True)
-        s.px(6, 5, lc)
-        s.px(24, 4, lc)
-        s.px(26, 8, lc)
-        s.px(12, 11, WHITE)
-        size_disc(s, t)
-    return draw
+# SP drinks (v0.25.57, owner references): the sizes must read at a glance, not only by the letter.
+# S = a small barrel tankard with the drink splashing over, M = an upright barrel, L = a big keg on its side.
+OAK, OAK_HI, OAK_D = (170, 112, 62), (205, 150, 95), (118, 74, 40)
+HOOP, HOOP_HI = (88, 90, 104), (150, 154, 170)
+
+
+def grog_s(s):
+    liquid = (255, 170, 60)
+    x0, x1, y0, y1 = 9, 19, 16, 29
+    s.rect(x0, y0, x1, y1, OAK)
+    for x in (12, 16):
+        s.line([(x, y0 + 1), (x, y1 - 1)], OAK_D, 1)
+    for y in (18, 26):
+        s.rect(x0 - 1, y, x1 + 1, y + 1, (200, 170, 80))
+    s.arc(21, 23, 3, 280, 440, OAK_D, 2, False)
+    lc = lerp(liquid, WHITE, 0.35)
+    s.oval(14, 15, 6, 2, liquid)
+    s.oval(11, 12, 2, 2, liquid)
+    s.oval(16, 11, 2, 3, liquid)
+    s.px(15, 9, lc)
+    s.px(8, 9, lc)
+    s.px(20, 10, lc)
+
+
+def grog_m(s):
+    liquid = (90, 220, 140)
+    s.rect(8, 8, 22, 29, OAK)
+    s.rect(6, 11, 24, 26, OAK)  # the bulge
+    for x in (11, 15, 19):
+        s.line([(x, 9), (x, 28)], OAK_D, 1)
+    s.rect(9, 12, 10, 25, OAK_HI, True)
+    for y in (10, 18, 26):
+        s.rect(6 if y == 18 else 7, y, 24 if y == 18 else 23, y + 1, HOOP)
+        s.px(9, y, HOOP_HI, True)
+    s.oval(15, 8, 7, 2, OAK_HI)  # lid, drink brimming over it
+    s.oval(15, 7, 5, 2, liquid)
+    s.oval(19, 5, 2, 2, liquid)
+    s.px(12, 4, lerp(liquid, WHITE, 0.35))
+    s.line([(22, 8), (24, 14)], liquid, 1, True)  # a trickle down the side
+
+
+def grog_l(s):
+    liquid = (80, 170, 255)
+    s.rect(7, 6, 27, 28, OAK)  # body lying on its side
+    s.rect(9, 4, 25, 30, OAK)
+    for y in (10, 15, 20, 25):
+        s.line([(10, y), (27, y)], OAK_D, 1)
+    s.rect(11, 6, 26, 7, OAK_HI, True)
+    for x in (13, 22):  # iron hoops round the body
+        s.rect(x, 4, x + 1, 30, HOOP)
+        s.px(x, 7, HOOP_HI, True)
+    s.oval(7, 17, 6, 12, HOOP)  # the round end facing us
+    s.oval(7, 17, 5, 11, OAK_HI)
+    for y in (11, 15, 19, 23):
+        s.line([(3, y), (11, y)], OAK, 1, True)
+    s.oval(7, 22, 1, 1, (40, 30, 24), True)  # bung hole...
+    s.line([(6, 24), (4, 28)], liquid, 2, True)  # ...spilling the drink
+    s.oval(3, 29, 2, 1, liquid)
 
 
 # Cursed Fruit marker (owner reference): a black fruit silhouette with a white question mark and a white aura
@@ -897,7 +933,8 @@ ICONS = {
     'egg': egg, 'golden_egg': gold_egg, 'card': card, 'book': book, 'ship': ship, 'charm': charm, 'wood': logs,
     'cloth': cloth, 'ore': lambda s: rock(s, (140, 140, 155), (200, 210, 230)), 'shard': crystal, 'potion': bottle,
     'meat_s': meat_size('S'), 'meat_m': meat_size('M'), 'meat_l': meat_size('L'),
-    'grog_s': tankard((255, 170, 60), 'S'), 'grog_m': tankard((90, 220, 140), 'M'), 'grog_l': tankard((80, 170, 255), 'L'),
+    'grog_s': lambda s: (grog_s(s), size_disc(s, 'S')), 'grog_m': lambda s: (grog_m(s), size_disc(s, 'M')),
+    'grog_l': lambda s: (grog_l(s), size_disc(s, 'L')),
     'fruit_unknown': fruit_unknown,
     'juice': cup, 'hat': tricorn, 'armor': vest, 'boots': lambda s: boot(s, 14, 16), 'meat': meat, 'bait': worm_hook,
     'repairkit': toolbox, 'medkit': pouch, 'staff': staff, 'slingshot': slingshot, 'knuckles': knuckles,

@@ -5,6 +5,7 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 local Shared = ReplicatedStorage.Shared
 local GameConfig = require(Shared.Config.GameConfig)
 local ClassesCfg = require(Shared.Config.Classes)
@@ -24,6 +25,16 @@ end
 local lastAttack = 0
 -- M1 strings (GameConfig.M1, mirrors CombatService.m1Gap): quick inside a 4-hit string, end-lag after the finisher
 local m1 = { n = 0, at = 0 }
+
+-- turn the body to face a point; with Shift Lock on the camera owns the facing (snapping the body toward a target
+-- every swing while the humanoid turned it back to the camera shook the view: v0.25.26)
+local function turnTo(r, point)
+	if UserInputService.MouseBehavior == Enum.MouseBehavior.LockCenter then
+		return
+	end
+	r.CFrame = CFrame.lookAt(r.Position, point)
+end
+
 local function m1Ready(interval)
 	local M1 = GameConfig.M1
 	local inString = os.clock() - m1.at < M1.Reset
@@ -176,7 +187,7 @@ function Combat.CastSkill(skillId, targetModel)
 			local aimed = kind ~= "GroundAoE" and aimedTarget(dir, mob, skill.range or 10) or nil
 			local face = aimed and ((aimed.PrimaryPart.Position - r.Position) * Vector3.new(1, 0, 1)) or dir
 			if face.Magnitude > 0.1 then
-				r.CFrame = CFrame.lookAt(r.Position, r.Position + face.Unit)
+				turnTo(r, r.Position + face.Unit)
 			end
 			if kind == "GroundAoE" then
 				local off = pos - r.Position
@@ -366,7 +377,7 @@ function Combat.ManualAttack(screenPos)
 				end
 			end
 		end
-		r.CFrame = CFrame.lookAt(r.Position, r.Position + Vector3.new(dir.X, 0, dir.Z))
+		turnTo(r, r.Position + Vector3.new(dir.X, 0, dir.Z))
 		task.spawn(Net.Request, "Swing", { dir = dir })
 		return
 	end
@@ -382,7 +393,7 @@ function Combat.ManualAttack(screenPos)
 	local tpos = target.PrimaryPart.Position
 	local lookAt = Vector3.new(tpos.X, r.Position.Y, tpos.Z)
 	if (lookAt - r.Position).Magnitude > 0.5 then
-		r.CFrame = CFrame.lookAt(r.Position, lookAt)
+		turnTo(r, lookAt)
 	end
 	task.spawn(Net.Request, "Attack", { target = target })
 end
@@ -455,7 +466,7 @@ local function engage(target, useSkills)
 		m1Swing()
 		local look = Vector3.new(tpos.X, r.Position.Y, tpos.Z)
 		if (look - r.Position).Magnitude > 0.5 then
-			r.CFrame = CFrame.lookAt(r.Position, look)
+			turnTo(r, look)
 		end
 		task.spawn(Net.Request, "Attack", { target = target })
 	end
@@ -559,10 +570,23 @@ function Combat.Dash()
 	lv.PlaneVelocity = Vector2.new(dir.X, dir.Z) * cfg.Speed
 	lv.RelativeTo = Enum.ActuatorRelativeTo.World
 	lv.Parent = r
-	r.CFrame = CFrame.lookAt(r.Position, r.Position + dir)
+	turnTo(r, r.Position + dir)
+	-- v0.25.26 (owner): ghost trail right away (others see it from the Dash FX), a quick FOV kick, and a HARD STOP:
+	-- the burst ends dead instead of sliding out, which makes the dash read faster
+	local char = r.Parent
+	require(script.Parent.VFX).Afterimages(char, cfg.Duration + 0.02, 0.03)
+	local cam = workspace.CurrentCamera
+	local fov0 = cam.FieldOfView
+	TweenService:Create(cam, TweenInfo.new(cfg.Duration * 0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { FieldOfView = fov0 + 9 }):Play()
 	task.delay(cfg.Duration, function()
 		lv:Destroy()
 		att:Destroy()
+		if r.Parent then
+			local v = r.AssemblyLinearVelocity
+			r.AssemblyLinearVelocity = Vector3.new(0, math.min(v.Y, 0), 0)
+			require(script.Parent.VFX).Smoke(r.Position - Vector3.new(0, 2.6, 0), Color3.fromRGB(225, 220, 210), 4, 1.6)
+		end
+		TweenService:Create(cam, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { FieldOfView = fov0 }):Play()
 	end)
 	task.spawn(Net.Request, "Dash", { dir = dir })
 end
@@ -669,7 +693,7 @@ local function skillDash(d)
 	dir = dir.Unit
 	local speed = tonumber(d.speed) or 60
 	local dur = math.clamp((tonumber(d.dist) or 0) / speed, 0.05, 0.8)
-	r.CFrame = CFrame.lookAt(r.Position, r.Position + dir)
+	turnTo(r, r.Position + dir)
 	local att = Instance.new("Attachment")
 	att.Parent = r
 	local lv = Instance.new("LinearVelocity")

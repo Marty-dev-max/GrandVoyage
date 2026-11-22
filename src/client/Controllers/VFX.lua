@@ -4,6 +4,7 @@ local Debris = game:GetService("Debris")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Net = require(ReplicatedStorage.Shared.Modules.Net)
+local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
 local Audio = require(script.Parent.Audio)
 local Settings = require(script.Parent.Settings)
 local Voxels = require(script.Parent.Voxels)
@@ -283,6 +284,60 @@ function VFX.SpeedLines(from, to, c, count)
 	local host = part(Vector3.new(2.5, 2.5, 0.2), Color3.new(1, 1, 1), CFrame.lookAt(from, to), nil, nil, 1)
 	emit(from, { Texture = Tex.speedline, Color = ColorSequence.new(c or Color3.new(1, 1, 1)), Orientation = Enum.ParticleOrientation.VelocityParallel, EmissionDirection = Enum.NormalId.Front, Shape = Enum.ParticleEmitterShape.Box, Speed = NumberRange.new(dir.Magnitude * 3, dir.Magnitude * 4.5), SpreadAngle = Vector2.new(3, 3), Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.2, 2.4), NumberSequenceKeypoint.new(1, 0) }), Rotation = NumberRange.new(90), Squash = seq(2.2, 2.2), Transparency = seq(0.15, 1), Lifetime = NumberRange.new(0.15, 0.25) }, count or 8, 0.3, host)
 	Debris:AddItem(host, 0.6)
+end
+
+-- v0.25.26 (owner reference "clones trail"): dash afterimages. Every `every` seconds for `dur`, a still copy of the
+-- character's visible blocks is left behind, tinted toward `c`, and fades out; a short wind streak links the copies.
+-- One Heartbeat per ghost fades all its blocks (no tween per block).
+function VFX.Afterimages(char, dur, every, c)
+	if typeof(char) ~= "Instance" or not char:IsA("Model") then
+		return
+	end
+	c = c or Color3.fromRGB(110, 215, 255)
+	local root = char:FindFirstChild("HumanoidRootPart")
+	local t0, prev = os.clock(), root and root.Position
+	task.spawn(function()
+		local n = 0
+		while os.clock() - t0 < dur and char.Parent do
+			n += 1
+			local ghost = Instance.new("Model")
+			ghost.Name = "Afterimage"
+			local blocks = {}
+			for _, p in ipairs(char:GetDescendants()) do
+				if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" and p.Transparency < 0.9 and p.LocalTransparencyModifier < 0.9 and p.Size.Magnitude > 0.25 then
+					local g = p:IsA("Part") and Instance.new("Part") or p:Clone()
+					g:ClearAllChildren()
+					g.Size, g.CFrame = p.Size, p.CFrame
+					g.Anchored, g.CanCollide, g.CanQuery, g.CanTouch, g.CastShadow = true, false, false, false, false
+					g.Color = p.Color:Lerp(c, 0.6)
+					g.Material = Enum.Material.SmoothPlastic
+					g.Transparency = 0.3
+					g.Parent = ghost
+					table.insert(blocks, g)
+				end
+			end
+			ghost.Parent = fxFolder
+			local born = os.clock()
+			local life = 0.32
+			local conn
+			conn = game:GetService("RunService").Heartbeat:Connect(function()
+				local k = (os.clock() - born) / life
+				if k >= 1 then
+					conn:Disconnect()
+					ghost:Destroy()
+					return
+				end
+				for _, g in ipairs(blocks) do
+					g.Transparency = 0.3 + 0.7 * k
+				end
+			end)
+			if root and prev and (root.Position - prev).Magnitude > 1 then
+				VFX.SpeedLines(prev, root.Position, Color3.fromRGB(235, 248, 255), 4)
+			end
+			prev = root and root.Position
+			task.wait(every)
+		end
+	end)
 end
 
 -- punch / blunt impact: star + facing shockwave ring + "split" streaks bursting out radially (anime impact)
@@ -1028,8 +1083,12 @@ handlers.WeaponDraw = function(d)
 	end
 end
 handlers.Dash = function(d)
-	-- a dash: wind streaks along the path and a puff of dust where it started
-	VFX.SpeedLines(d.from, d.to, Color3.fromRGB(235, 245, 255), 12)
+	-- a dash: ghost trail (your own starts at once in Combat.Dash), wind streaks along the path, dust where it started
+	if d.char ~= game:GetService("Players").LocalPlayer.Character then
+		VFX.Afterimages(d.char, GameConfig.Dash.Duration + 0.02, 0.03)
+	end
+	VFX.SpeedLines(d.from, d.to, Color3.fromRGB(235, 245, 255), 18)
+	VFX.Smoke(d.to - Vector3.new(0, 2.4, 0), Color3.fromRGB(225, 220, 210), 4, 1.8)
 	VFX.Smoke(d.from - Vector3.new(0, 2.4, 0), Color3.fromRGB(225, 220, 210), 5, 2.2)
 	VFX.Ring(d.from - Vector3.new(0, 2.6, 0), 4, Color3.fromRGB(230, 240, 255), 0.3)
 end

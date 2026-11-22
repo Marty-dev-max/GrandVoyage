@@ -426,6 +426,11 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     (WorldBuilder.yardAngle) turns the shipyard group (with its own Shipwright NPC) and the east dock with
     `turnGroup`; layouts/standardNPCs no longer place a Shipwright (Daybreak keeps its own). Conch Bay + Marmalade
     drop the base's grass mounds; Marmalade's circus ship lies off the south shore (SHIP_Z) with a pier.
+  * v0.25.26 (owner: fly pose + shift-lock shake came back after a while): Swim forced the humanoid into Swimming and
+    nothing took it out on land (swim pose on land, swim turning vs Shift Lock): out of the water -> Freefall. Combat
+    `turnTo` skips body snaps toward targets while MouseBehavior is LockCenter. Dash: `VFX.Afterimages(char, dur,
+    every, color)` ghost copies of the visible blocks (own dash local + instant, others from the Dash FX `char`),
+    more wind streaks, Speed 120 / Duration 0.14, FOV kick, hard stop (horizontal velocity zeroed) + skid puff.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

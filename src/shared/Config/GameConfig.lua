@@ -3,7 +3,7 @@ return {
 	GameName = "LarpTales: Voxel Seas", -- player-facing name (v0.24.9, owner); code/files/DataStores keep the GrandVoyage names
 	LogoLines = { "LARPTALES", "VOXEL SEAS" },
 	-- bump on every change: shown bottom-right in game and printed in Output, so you can tell which code is running
-	Version = "0.25.25",
+	Version = "0.25.26",
 	SagaName = "Azure East Saga",
 	DataStoreName = "GV_Player_v1",
 	GuildStoreName = "GV_Guild_v1",
@@ -115,7 +115,7 @@ return {
 		LeashRadius = 160,
 	},
 	-- Dash (Q): a quick burst in the direction you move (or face); the server enforces the cooldown
-	Dash = { Cooldown = 2.5, Speed = 85, Duration = 0.18 },
+	Dash = { Cooldown = 2.5, Speed = 120, Duration = 0.14 }, -- v0.25.26: faster, shorter burst + hard stop (~same distance)
 	-- hotbar: 12 skill slots (keys 1-6, then 7 8 9 0 - =) and 8 quick item slots (F1-F8); empty slot = ""
 	SkillBarSize = 12,
 	ItemBarSize = 8,

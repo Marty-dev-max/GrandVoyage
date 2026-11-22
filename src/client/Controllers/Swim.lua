@@ -157,6 +157,12 @@ function Swim.Start()
 		end
 		sinkWarned = false
 		setSwimming(inWater, root, hum)
+		-- v0.25.26 (owner: the fly pose and the Shift Lock shake came back after a while): we force the humanoid into
+		-- Swimming in the sea, but nothing took it out again. Stuck in Swimming on land it walked in Roblox's swim
+		-- pose and its swim turning fought Shift Lock. Out of the water = Freefall, which lands normally.
+		if not swimming and hum:GetState() == Enum.HumanoidStateType.Swimming and not char:GetAttribute("Downed") then
+			hum:ChangeState(Enum.HumanoidStateType.Freefall)
+		end
 		if swimming then
 			local maxD = maxDepthHere(root, hum)
 			local rising = os.clock() < riseUntil or UserInputService:IsKeyDown(Enum.KeyCode.Space)

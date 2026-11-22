@@ -164,10 +164,10 @@ mob("FortCore", { name = "Giant Signal Conch", level = 80, hp = 60000, atk = 0, 
 --   INT = tactics: stuns / crowd control on hit
 --   (v0.25.38: PHY is gone; its two gunners keep their long range below: Rifleman = DEX, Armored Gunner = STR)
 local TYPE_OF = {
-	STR = { "ArmoredGunner", "WildBoar", "MountainBandit", "CircusLion", "ClawCat", "ArmadaRaider", "SharkfolkBrawler", "OctofolkBrute", "AxeCaptain", "ArmadaAdmiral", "Leviathan" },
-	AGI = { "MarineRecruit", "NightCatPirate", "SawfolkRaider", "MarineElite", "BountyHunter", "SilentClaw", "SawtoothOverlord" },
-	DEX = { "MarineRifleman", "ForestMonkey", "JungleTiger", "GuardWolf", "CircusAcrobat", "StarvedPirate", "BaySerpent" },
-	INT = { "ClownGrunt", "HypnoThug", "MistSoldier", "CaptainConfetti", "RingMaster", "DepthsWarden", "MistCommodore" },
+	STR = { "ArmoredGunner", "WildBoar", "MountainBandit", "CircusLion", "ArmadaRaider", "SharkfolkBrawler", "AxeCaptain", "ArmadaAdmiral", "Leviathan" },
+	AGI = { "MarineRecruit", "NightCatPirate", "SawfolkRaider", "MarineElite", "BountyHunter", "SilentClaw", "SawtoothOverlord", "ClawCat" },
+	DEX = { "MarineRifleman", "ForestMonkey", "JungleTiger", "GuardWolf", "CircusAcrobat", "StarvedPirate", "BaySerpent", "DepthsWarden" },
+	INT = { "ClownGrunt", "HypnoThug", "MistSoldier", "CaptainConfetti", "RingMaster", "MistCommodore", "OctofolkBrute" },
 }
 -- stars: 1 = plain animals, 2 = regular fighters, 3 = elites, 4 = bosses, 5 = the strongest bosses
 local STARS = {

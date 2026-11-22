@@ -537,6 +537,7 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     single pointed tip), cell 0.38, top 2.5, folded 1.05 rad (GREAT_FOLD in HeritageAnim + export_char match).
     v0.25.46 (owner: still too wide, "the old one was fine"): REVERTED to the original `wings(...)` Cinderwing wings;
     greatWings + HeritageAnim "great" removed (export_char `cinder` mode left in, now a no-op). Do not bring them back.
+    v0.25.47 (owner): monster types ClawCat AGI, OctofolkBrute INT, DepthsWarden DEX (Monsters TYPE_OF).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

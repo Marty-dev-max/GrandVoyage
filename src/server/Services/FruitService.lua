@@ -280,8 +280,8 @@ local function groundAt(x, z)
 	return hit and hit.Position.Y > 2 and hit.Position or nil
 end
 
--- tester = a player who gets the Fruit Notifier treatment without the boost (Dev tab "spawnfruit")
-function FS.SpawnTreeFruit(tester)
+-- (Dev tab "spawnfruit" too: since v0.25.61 the tester is told only if they hold the Fruit Notifier, like everyone)
+function FS.SpawnTreeFruit()
 	if spawned and spawned.Parent then
 		spawned:Destroy()
 	end
@@ -303,7 +303,9 @@ function FS.SpawnTreeFruit(tester)
 	-- Fruit Notifier holders (Store) learn the island + get a marker and the narrator (FruitAlert); never which fruit
 	-- v0.25.59 (owner): only Fruit Notifier holders are told (announce + FruitAlert); nobody else hears of it
 	for _, pl in ipairs(game:GetService("Players"):GetPlayers()) do
-		if pl == tester or (R.StoreService and R.StoreService.BoostActive(pl, "fruit")) then
+		-- v0.25.61 (owner: the chat told the island to players without the Notifier): the Dev "spawnfruit" tester no
+		-- longer counts as a holder; buy the Fruit Notifier to test the alert
+		if R.StoreService and R.StoreService.BoostActive(pl, "fruit") then
 			Net.Push(pl, "Announce", { text = "📡 A strange fruit has appeared on " .. island.name .. "!", rarity = "Epic" })
 			Net.Push(pl, "FruitSpawn", { knows = true, island = island.id, name = island.name, pos = m.PrimaryPart.Position, life = Fruits.Drops.TreeLifetime })
 		end

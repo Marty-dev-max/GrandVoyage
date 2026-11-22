@@ -229,7 +229,7 @@ function GW.Start()
 		elseif data.cmd == "mastery" then
 			R.FruitService.GainMastery(player, 5000)
 		elseif data.cmd == "spawnfruit" then
-			R.FruitService.SpawnTreeFruit(player) -- the tester hears the Fruit Notifier alert too
+			R.FruitService.SpawnTreeFruit() -- alert only if the tester holds the Fruit Notifier (v0.25.61)
 		elseif data.cmd == "models" then
 			local n = R.AssetService.Gallery(player)
 			local failed = {}

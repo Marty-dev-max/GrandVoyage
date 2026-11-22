@@ -3,6 +3,7 @@
 local TexturesCfg = require(game:GetService("ReplicatedStorage").Shared.Config.Textures)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local GameConfig = require(Shared.Config.GameConfig)
@@ -1506,66 +1507,254 @@ function Panels.Skills(args)
 end
 
 -- ===================== JOB CHANGE =====================
+-- v0.25.37 (owner reference: a hero-select screen), full screen: class emblems on a wheel at the left (pick one and
+-- the wheel turns it to the middle), your character in the middle holding that class's weapon with CHOOSE / SWITCH
+-- under it, the class name + its top three stats (rings, ranked 1-2-3) on the right, and its type disc (kanji in
+-- the middle, green half = types it beats, red half = types it is weak to) bottom right.
+local function roundCorner(f)
+	f:SetAttribute("PxKeep", true) -- PixelUI squares every corner; these are meant to be round
+	New("UICorner", { CornerRadius = UDim.new(0.5, 0), Parent = f })
+end
+
+local function typeDisc(parent, typeId, color, size)
+	local Types = require(Shared.Config.MonsterTypes)
+	local ty = Types[typeId]
+	local disc = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), Size = UDim2.fromOffset(size, size), Parent = parent })
+	roundCorner(disc)
+	-- top half green (beats), bottom half red (weak to): a hard stop in one gradient
+	local GREEN, RED = Color3.fromRGB(120, 200, 110), Color3.fromRGB(236, 112, 96)
+	New("UIGradient", { Rotation = 90, Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, GREEN), ColorSequenceKeypoint.new(0.495, GREEN), ColorSequenceKeypoint.new(0.505, RED), ColorSequenceKeypoint.new(1, RED) }), Parent = disc })
+	UI.Stroke(disc, T.Edge, 3)
+	local core = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.5, 0.5), BackgroundColor3 = Color3.fromRGB(250, 244, 230), ZIndex = 3, Parent = disc })
+	roundCorner(core)
+	UI.Stroke(core, T.Edge, 2.5)
+	if ty then
+		UI.Text(core, ty.kanji, math.floor(size * 0.22), color or ty.color, "Semi", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 4 })
+	end
+	-- the small badges: beaten types on the green half, the ones that beat it on the red half
+	local function badge(id, angle)
+		local t = Types[id]
+		local r = size * 0.37
+		local b = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, math.cos(math.rad(angle)) * r, 0.5, math.sin(math.rad(angle)) * r), Size = UDim2.fromOffset(size * 0.2, size * 0.2), BackgroundColor3 = t.color, ZIndex = 4, Parent = disc })
+		roundCorner(b)
+		UI.Stroke(b, Color3.new(1, 1, 1), 2)
+		UI.Text(b, t.kanji, math.floor(size * 0.1), Color3.new(1, 1, 1), "Semi", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 5 })
+		UI.Tooltip(b, function()
+			return t.name, t.color
+		end)
+	end
+	if ty then
+		for i, id in ipairs(ty.beats) do
+			badge(id, -90 + (i == 1 and -40 or 40))
+		end
+		for i, id in ipairs(Types.WeakTo(typeId)) do
+			badge(id, 90 + (i == 1 and 40 or -40))
+		end
+	end
+	return disc
+end
+
+-- a ring of square segments filled to `k` (0..1), the stat and its rank in the middle (reference: Power/Accel/Speed)
+local function statRing(parent, stat, rank, k, color, size)
+	local f = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(size, size + 22), Parent = parent })
+	local N = 18
+	for i = 1, N do
+		local a = math.rad(i / N * 360 - 90)
+		local on = i <= math.floor(k * N + 0.5)
+		local seg = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, math.cos(a) * size * 0.42, 0, size / 2 + math.sin(a) * size * 0.42), Size = UDim2.fromOffset(size * 0.13, size * 0.13), Rotation = math.deg(a), BackgroundColor3 = on and color or T.PanelDeep, BorderSizePixel = 0, Parent = f })
+		if on then
+			UI.Stroke(seg, UI.Shade(color, -0.35), 1)
+		end
+	end
+	UI.Text(f, tostring(rank), math.floor(size * 0.3), color, "Display", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, size / 2 - size * 0.06), Size = UDim2.fromOffset(size * 0.6, size * 0.34), TextXAlignment = Enum.TextXAlignment.Center })
+	UI.Text(f, stat, math.floor(size * 0.13), T.Text, "Display", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, size / 2 + size * 0.17), Size = UDim2.fromOffset(size * 0.6, size * 0.16), TextXAlignment = Enum.TextXAlignment.Center })
+	return f
+end
+
 function Panels.JobMaster()
-	local win = UI.Window("Job", "Job Master", UDim2.fromOffset(1000, 620), T.Green, "🎓")
-	local function render()
-		clear(win.body)
+	UI.FullPref.Job = true -- always full screen: no shrink button, only the X (owner)
+	local win = UI.Window("Job", "Job Master", UDim2.fromOffset(1180, 620), T.Green, "🎓", { fullscreen = true })
+	if win.maxBtn then
+		win.maxBtn.Visible = false
+	end
+	local list = ClassesCfg.FirstJobs
+	local n = #list
+	local sel = math.max(1, table.find(list, State.profile and State.profile.class or "") or 1)
+
+	-- owner: the background is the class's own color, a bright gradient (not dark)
+	local bg = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Position = UDim2.fromOffset(-24, -14), Size = UDim2.new(1, 48, 1, 28), ZIndex = 0, Parent = win.body })
+	local bgGrad = New("UIGradient", { Rotation = 115, Parent = bg })
+	local bgGlow = New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.glow, ImageColor3 = Color3.new(1, 1, 1), ImageTransparency = 0.55, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.48, 0.42), Size = UDim2.fromScale(0.9, 1.1), ZIndex = 0, Parent = bg })
+	local _ = bgGlow
+	-- left: the class wheel
+	local wheel = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(0.2, 0, 1, 0), ClipsDescendants = true, Parent = win.body })
+	-- middle: the character on a podium, the button under it
+	local mid = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromScale(0.2, 0), Size = UDim2.new(0.38, 0, 1, 0), Parent = win.body })
+	local aura = New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.glow, ImageTransparency = 0.35, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.45), Size = UDim2.fromScale(1.1, 0.9), Parent = mid })
+	local podium = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.71), Size = UDim2.new(0.6, 0, 0, 40), BackgroundColor3 = Color3.fromRGB(226, 232, 248), Parent = mid })
+	roundCorner(podium)
+	local podiumRim = New("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(1, 0.6), BackgroundColor3 = Color3.fromRGB(150, 160, 196), ZIndex = 0, Parent = podium })
+	roundCorner(podiumRim)
+	local stage = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0.76, 0), Parent = mid })
+	local _, refreshChar = UI.CharacterView(stage)
+	local btnHolder = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -6), Size = UDim2.fromOffset(260, 92), Parent = mid })
+	-- right: name, description, stat rings, then the type card
+	local right = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromScale(0.6, 0), Size = UDim2.new(0.4, 0, 1, 0), Parent = win.body })
+
+	local items = {}
+	local show
+	local function place(animate)
+		for i, it in ipairs(items) do
+			local k = ((i - sel + math.floor(n / 2)) % n) - math.floor(n / 2) -- -3..3, the picked one at 0
+			local a = math.abs(k)
+			local size = math.max(52, 124 - a * 26)
+			local goal = { Size = UDim2.fromOffset(size, size), Position = UDim2.new(0.5, 34 - a * a * 9, 0.5, k * 104) }
+			it.btn.ZIndex = 10 - a
+			if animate and a < math.floor(n / 2) then
+				TweenService:Create(it.btn, TweenInfo.new(0.32, Enum.EasingStyle.Back), goal):Play()
+			else
+				it.btn.Size, it.btn.Position = goal.Size, goal.Position
+			end
+			it.btn.BackgroundTransparency = a >= 3 and 0.6 or 0
+			it.ring.Thickness = a == 0 and 5 or 2.5
+			it.ring.Color = a == 0 and Color3.new(1, 1, 1) or T.Edge
+		end
+	end
+	for i, cid in ipairs(list) do
+		local c = Classes[cid]
+		local btn = New("TextButton", { Text = "", AutoButtonColor = false, AnchorPoint = Vector2.new(0.5, 0.5), BackgroundColor3 = c.color, Parent = wheel })
+		roundCorner(btn)
+		New("UIGradient", { Rotation = 90, Color = ColorSequence.new(UI.Shade(c.color, 0.25), UI.Shade(c.color, -0.3)), Parent = btn })
+		local ring = UI.Stroke(btn, T.Edge, 2.5)
+		UI.Icon(btn, c.icon, 40, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.58, 0.58), ZIndex = btn.ZIndex + 1 })
+		UI.Tooltip(btn, function()
+			return c.name, c.color
+		end)
+		btn.Activated:Connect(function()
+			if sel ~= i then
+				sel = i
+				Audio.Play("UIClick")
+				place(true)
+				show(true)
+			end
+		end)
+		items[i] = { btn = btn, ring = ring }
+	end
+	-- arrows + mouse wheel turn it too
+	for _, d in ipairs({ { "▲", -1, 0 }, { "▼", 1, 1 } }) do
+		local ab = UI.Button(wheel, d[1], T.PanelTop, UDim2.fromOffset(44, 36), function()
+			sel = ((sel - 1 + d[2]) % n) + 1
+			place(true)
+			show(true)
+		end)
+		ab.Parent.AnchorPoint = Vector2.new(0, d[3])
+		ab.Parent.Position = UDim2.new(0, 4, d[3], d[3] == 0 and 4 or -4)
+		ab.Parent.ZIndex = 20
+	end
+	pcall(function()
+		wheel.InputChanged:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseWheel then
+				sel = ((sel - 1 - (input.Position.Z > 0 and 1 or -1)) % n) + 1
+				place(true)
+				show(true)
+			end
+		end)
+	end)
+
+	local lastWeapon
+	show = function(animate)
 		local p = State.profile
 		if not p then
 			return
 		end
+		local cid = list[sel]
+		local c = Classes[cid]
+		local Types = require(Shared.Config.MonsterTypes)
+		local ty = Types[c.mtype or ""]
+		aura.ImageColor3 = c.color:Lerp(Color3.new(1, 1, 1), 0.6)
+		bgGrad.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, c.color:Lerp(Color3.new(1, 1, 1), 0.35)), ColorSequenceKeypoint.new(0.55, c.color), ColorSequenceKeypoint.new(1, c.color:Lerp(Color3.fromRGB(30, 26, 60), 0.35)) })
+		-- the statue holds this class's weapon
+		local w = c.weapons[1] or "Fists"
+		if w ~= lastWeapon then
+			lastWeapon = w
+			refreshChar(w)
+		end
+		-- button: CHOOSE the first time, SWITCH after that; your own class says CURRENT
+		clear(btnHolder)
 		local switches = p.classSwitches or 0
 		local cost = switches == 0 and 0 or p.baseLevel * GameConfig.ClassSwitchCostPerLevel
 		local locked = switches == 0 and p.jobLevel < GameConfig.JobChangeLevel
-		local info = locked and ("Reach Job Lv." .. GameConfig.JobChangeLevel .. " to switch (you are Job Lv." .. p.jobLevel .. ")")
-			or (cost == 0 and "Your first switch is free. Every class keeps its own progress." or ("Switching costs " .. COIN .. " " .. UI.Format(cost) .. ". Every class keeps its own progress."))
-		local head = UI.Section(win.body, "🎓", "Choose Your Class", T.Green, info)
-		head.Size = UDim2.new(1, 0, 0, 40)
-		local grid = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 48), Size = UDim2.new(1, 0, 1, -48), Parent = win.body })
-		New("UIGridLayout", { CellSize = UDim2.fromOffset(234, 244), CellPadding = UDim2.fromOffset(10, 10), Parent = grid })
-		for _, cid in ipairs(ClassesCfg.FirstJobs) do
-			local c = Classes[cid]
-			local current = cid == p.class
-			local saved = p.classProgress and p.classProgress[cid]
-			local card = UI.Card(grid, nil, c.color:Lerp(T.Panel, current and 0.35 or 0.6))
-			if current then
-				local st = card:FindFirstChildOfClass("UIStroke")
-				if st then
-					st.Color = T.Gold
-					st.Thickness = 4
-				end
+		local current = cid == p.class
+		local label = current and "CURRENT" or (locked and ("JOB LV." .. GameConfig.JobChangeLevel) or (switches == 0 and "CHOOSE" or "SWITCH"))
+		local b = UI.Button(btnHolder, label, (current or locked) and T.Grey or c.color, UDim2.new(1, 0, 0, 60), function()
+			if current or locked then
+				return
 			end
-			UI.Pad(card, 10)
-			UI.List(card, nil, 4)
-			local top = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 40), Parent = card })
-			UI.IconChip(top, c.icon, c.color, 38)
-			UI.Text(top, c.name, 20, T.Text, "Display", { Position = UDim2.fromOffset(46, 0), Size = UDim2.new(1, -46, 0, 22), TextWrapped = false })
-			local status = current and ("CURRENT  •  Job Lv." .. p.jobLevel) or (saved and ("Saved: Job Lv." .. saved.jobLevel) or ("Weapon: " .. c.weapons[1]))
-			UI.Text(top, status, 12, current and T.Gold or T.TextSoft, "Display", { Position = UDim2.fromOffset(46, 22), Size = UDim2.new(1, -46, 0, 16), TextWrapped = false })
-			UI.Text(card, c.desc or "", 13, T.Text, "Semi", { Size = UDim2.new(1, 0, 0, 52) })
-			local names = {}
-			for _, s in ipairs(c.skills) do
-				table.insert(names, s.name)
-			end
-			UI.Text(card, table.concat(names, " • "), 11, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 44) })
-			local label = current and "Current Class" or (locked and "🔒 Job Lv." .. GameConfig.JobChangeLevel or (saved and "Switch Back" or "Become " .. c.name))
-			local btn = UI.Button(card, label, current and T.Grey or (locked and T.Grey or c.color), UDim2.new(1, 0, 0, 40), function()
-				if current or locked then
-					return
+			local msg = (switches == 0 and "Choose " or "Switch to ") .. c.name .. "?" .. (cost > 0 and ("\nCost: " .. UI.Format(cost) .. " Doubloons") or "\nYour first switch is free.") .. "\nYour " .. Classes[p.class].name .. " progress is kept."
+			UI.Confirm(msg, function()
+				local res = req("ChangeJob", { class = cid })
+				if res.ok then
+					UI.Banner("Class Change!", c.name, c.color, "Legendary")
 				end
-				local msg = "Switch to " .. c.name .. "?" .. (cost > 0 and ("\nCost: " .. UI.Format(cost) .. " Doubloons") or "\nYour first switch is free.") .. "\nYour " .. Classes[p.class].name .. " progress is kept."
-				UI.Confirm(msg, function()
-					local res = req("ChangeJob", { class = cid })
-					if res.ok then
-						UI.Banner("Class Change!", c.name, c.color, "Legendary")
-					end
-				end, nil, "Switch", "Cancel")
-			end)
-			local _ = btn
+			end, nil, switches == 0 and "Choose" or "Switch", "Cancel")
+		end)
+		b.Parent.Position = UDim2.fromOffset(0, 0)
+		local saved = p.classProgress and p.classProgress[cid]
+		local note = current and ("Job Lv." .. p.jobLevel) or (locked and ("Reach Job Lv." .. GameConfig.JobChangeLevel .. " to switch")
+			or ((saved and ("Saved: Job Lv." .. saved.jobLevel .. "  •  ") or "") .. (cost == 0 and "Free" or (COIN .. " " .. UI.Format(cost)))))
+		UI.Text(btnHolder, note, 14, Color3.new(1, 1, 1), "Semi", { Position = UDim2.fromOffset(0, 64), Size = UDim2.new(1, 0, 0, 22), TextXAlignment = Enum.TextXAlignment.Center })
+
+		-- right side
+		clear(right)
+		local role = UI.Text(right, string.upper(c.role or ""), 30, Color3.new(1, 1, 1), "Display", { Position = UDim2.fromOffset(0, 0), Size = UDim2.new(1, 0, 0, 36), TextWrapped = false, TextScaled = true })
+		New("UITextSizeConstraint", { MaxTextSize = 30, Parent = role })
+		role.TextTransparency = 0.4
+		local nameL = UI.Text(right, c.name, 56, T.Text, "Display", { Position = UDim2.fromOffset(0, 34), Size = UDim2.new(1, 0, 0, 58), TextWrapped = false, TextScaled = true })
+		New("UITextSizeConstraint", { MaxTextSize = 56, Parent = nameL })
+		local descL = UI.Text(right, c.desc or "", 16, Color3.new(1, 1, 1), "Semi", { Position = UDim2.fromOffset(0, 100), Size = UDim2.new(1, 0, 0, 44) })
+		UI.Stroke(descL, UI.Shade(c.color, -0.5), 1.5, Enum.ApplyStrokeMode.Contextual)
+		-- top three stats of its build, ranked
+		local build = {}
+		for stat, wgt in pairs(c.build or {}) do
+			table.insert(build, { stat, wgt })
+		end
+		table.sort(build, function(x, y)
+			return x[2] > y[2] or (x[2] == y[2] and x[1] < y[1])
+		end)
+		local rings = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 150), Size = UDim2.new(1, 0, 0, 150), Parent = right })
+		UI.List(rings, Enum.FillDirection.Horizontal, 14)
+		for r = 1, math.min(3, #build) do
+			statRing(rings, build[r][1], r, build[r][2] / 5, UI.StatColor[build[r][1]] or c.color, r == 1 and 128 or 104)
+		end
+		-- the class card: type disc + weapon + skills
+		local card = UI.Card(right, UDim2.new(1, 0, 1, -316), T.PanelDeep)
+		card.Position = UDim2.fromOffset(0, 316)
+		local disc = typeDisc(card, c.mtype, c.color, 150)
+		disc.Position = UDim2.fromOffset(12, 12)
+		UI.Text(card, ty and (ty.kanji .. "  " .. string.upper(ty.name)) or "", 20, c.color, "Display", { Position = UDim2.fromOffset(176, 14), Size = UDim2.new(1, -186, 0, 26), TextWrapped = false })
+		local beats, weak = {}, {}
+		for _, id in ipairs(ty and ty.beats or {}) do
+			table.insert(beats, UI.Colored(Types[id].name, Types[id].color))
+		end
+		for _, id in ipairs(ty and Types.WeakTo(c.mtype) or {}) do
+			table.insert(weak, UI.Colored(Types[id].name, Types[id].color))
+		end
+		UI.Text(card, UI.Colored("STRONG VS ", Color3.fromRGB(120, 200, 110)) .. table.concat(beats, ", ") .. "\n" .. UI.Colored("WEAK TO ", Color3.fromRGB(236, 112, 96)) .. table.concat(weak, ", "), 14, T.Text, "Semi", { RichText = true, Position = UDim2.fromOffset(176, 44), Size = UDim2.new(1, -186, 0, 40) })
+		UI.Text(card, string.format("Deals +%d%% to the types it beats, %d%% less to the ones it is weak to.", math.floor((Types.Bonus - 1) * 100 + 0.5), math.floor((1 - Types.Penalty) * 100 + 0.5)), 12, T.TextSoft, "Semi", { Position = UDim2.fromOffset(176, 86), Size = UDim2.new(1, -186, 0, 30) })
+		local names = {}
+		for _, sk in ipairs(c.skills) do
+			table.insert(names, sk.name)
+		end
+		UI.Text(card, UI.Colored("Weapon: ", T.Gold) .. w .. "\n" .. UI.Colored("Skills: ", T.Gold) .. table.concat(names, " • "), 14, T.Text, "Semi", { RichText = true, Position = UDim2.fromOffset(176, 118), Size = UDim2.new(1, -186, 0, 60) })
+		if animate then
+			UI.Pop(nameL, 0.8)
 		end
 	end
-	render()
-	onProfile(win, render)
+	place(false)
+	show(false)
+	onProfile(win, function()
+		show(false)
+	end)
 end
 
 -- ===================== REFINE / CARDS =====================

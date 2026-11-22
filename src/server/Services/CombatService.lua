@@ -3,6 +3,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local ClassesCfg = require(Shared.Config.Classes)
+local MonsterTypes = require(Shared.Config.MonsterTypes)
 local Reach = require(ReplicatedStorage.Shared.Modules.Reach)
 local Formulas = require(Shared.Modules.Formulas)
 local Net = require(Shared.Modules.Net)
@@ -10,6 +11,12 @@ local GameConfig = require(Shared.Config.GameConfig)
 
 local Combat = {}
 local R
+-- v0.25.37: the player's class type (Config/Classes mtype) for the type matchups
+local function classType(player)
+	local p = R and R.DataService.Get(player)
+	local c = p and ClassesCfg.Classes[p.class]
+	return c and c.mtype
+end
 local buffs = {} -- player -> { {id, stats, expires} }
 local lastAttack = {}
 local skillCd = {} -- player -> { skillId -> time }
@@ -122,7 +129,8 @@ function Combat.MonsterHit(mob, player, mult)
 		return
 	end
 	local crit = mob.def.critChance and math.random() < mob.def.critChance
-	local dmg = Formulas.Damage(mob.def.atk, d.def, (mult or 1) * (crit and 1.5 or 1), mob.def.isBoss and 5 or 1)
+	local typeK = MonsterTypes.Mult(mob.def.mtype, classType(player))
+	local dmg = Formulas.Damage(mob.def.atk, d.def, (mult or 1) * typeK * (crit and 1.5 or 1), mob.def.isBoss and 5 or 1)
 	Combat.DamagePlayer(player, dmg, crit and { crit = true } or nil)
 	-- INT monsters can stun (the client freezes movement for a moment)
 	if mob.def.stunChance and math.random() < mob.def.stunChance and not R.KnockdownService.IsDowned(player) then
@@ -203,6 +211,7 @@ local function hitTarget(attacker, target, mult, magic, opts)
 		if mob.def.style and mob.def.style.shape == "fishman" then
 			bonus += d.dmgVsSeafolk
 		end
+		bonus *= MonsterTypes.Mult(classType(attacker), mob.def.mtype)
 		local mdef = opts.ignoreDef and 0 or (magic and mob.def.def * 0.5 or mob.def.def)
 		local dmg, isCrit = Formulas.Damage(atk, mdef, mult * bonus, magic and 0 or crit)
 		R.MonsterService.Damage(mob, dmg, attacker, isCrit, opts.element)

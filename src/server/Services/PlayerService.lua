@@ -49,21 +49,12 @@ end
 PS.TrimBar = trimBar
 
 -- ===== auto stat upgrade (Stats window toggle): spend points in the build that suits the class =====
-local STAT_BUILD = {
-	Brawler = { STR = 5, AGI = 3, VIT = 3, DEX = 1 },
-	Swordsman = { STR = 5, VIT = 3, AGI = 2, DEX = 1 },
-	Sniper = { DEX = 5, AGI = 3, LUK = 2 },
-	Cook = { AGI = 4, STR = 4, VIT = 2, LUK = 1 },
-	Navigator = { INT = 5, DEX = 3, VIT = 2 },
-	Doctor = { INT = 5, VIT = 3, DEX = 2 },
-	Shipwright = { STR = 4, VIT = 4, DEX = 2 },
-}
 function PS.AutoStats(player)
 	local p = PS.Profile(player)
 	if not p or not (p.settings and p.settings.autoStats) then
 		return
 	end
-	local build = STAT_BUILD[p.class] or { STR = 1, AGI = 1, VIT = 1, DEX = 1 }
+	local build = (Classes[p.class] and Classes[p.class].build) or { STR = 1, AGI = 1, VIT = 1, DEX = 1 } -- Config/Classes build
 	local spent = 0
 	for _ = 1, 400 do
 		-- the stat furthest behind its share of the build

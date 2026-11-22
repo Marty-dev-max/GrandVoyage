@@ -805,7 +805,19 @@ local function startAim(id, slot)
 	local hold = { id = id, slot = slot }
 	hold.line = aimPart("AimLine", Color3.fromRGB(255, 230, 120), fx)
 	hold.spot = aimPart("AimSpot", Color3.fromRGB(255, 150, 60), fx)
+	-- v0.25.49 (owner: the aim line stayed after letting go): the key-up event from ContextActionService did not arrive
+	-- in Studio, so the key's real state is checked every frame too (whichever sees the release first casts)
+	local keyName = Hotkeys.Key("Skill" .. slot)
+	local keyCode = keyName and Enum.KeyCode[keyName]
 	hold.conn = RunService.RenderStepped:Connect(function()
+		if holding ~= hold then
+			return
+		end
+		if not keyCode or not UserInputService:IsKeyDown(keyCode) then
+			stopAim()
+			Combat.CastSkill(hold.id)
+			return
+		end
 		local r, h = root(), hum()
 		local dir, pos, _, dir3 = aimInfo()
 		if not r or not dir then

@@ -543,6 +543,8 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     the screen center with Shift Lock), turns the body (AutoRotate off while aiming), casts on release. AimInfo's 4th
     return `dir3` aims at chest height above the pointed spot; CastSkill sends it as `dir`; CombatService `aim3` tilts
     the Melee/Ranged path + FX up/down (|Y| <= 0.8), ship hits and Dash stay flat. Auto mode / touch slots cast on press.
+    v0.25.49: the CAS key-up never arrived in the owner's Studio (aim line stuck): the aim loop also releases when
+    `UserInputService:IsKeyDown` says the key is up. Do not rely on CAS End alone.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

@@ -664,41 +664,40 @@ def bone(s, x0, y0, x1, y1, w=3):
 
 
 def meat_s(s):
-    bone(s, 11, 20, 5, 27)
-    s.oval(17, 13, 10, 10, ROAST)
-    s.oval(14, 10, 5, 4, ROAST_HI, True)
-    s.px(12, 8, WHITE)
-    s.px(22, 18, ROAST_D, True)
-    s.px(19, 21, ROAST_D, True)
+    # v0.25.58 (owner: sizes must differ like the drinks): a small piece, about half the slot
+    bone(s, 13, 21, 9, 26, 2)
+    s.oval(17, 17, 6, 6, ROAST)
+    s.oval(15, 15, 3, 2, ROAST_HI, True)
+    s.px(14, 13, WHITE)
+    s.px(20, 20, ROAST_D, True)
 
 
 def meat_m(s):
-    # three chunky drumsticks side by side, back to front, each a step lower (owner reference): a round roasted
-    # bulge on top narrowing to the pink cut end and a short bone with a small knuckle
-    for i, x in enumerate((24, 16, 8)):
-        y = i * 2
-        pts = [(x + 3, 6 + y, 4.5), (x + 2, 10 + y, 4.2), (x + 1, 14 + y, 3.6), (x, 17 + y, 3.0)]
+    # three drumsticks side by side, back to front, each a step lower (owner reference), about two thirds of the slot
+    for i, x in enumerate((21, 15, 9)):
+        y = 4 + i * 2
+        pts = [(x + 2, 6 + y, 3.4), (x + 1, 9 + y, 3.1), (x + 1, 12 + y, 2.7), (x, 14 + y, 2.2)]
         for cx, cy, r in pts:  # dark rim first so neighbours stay apart
             s.oval(cx, cy, round(r) + 1, round(r) + 1, ROAST_D)
         for cx, cy, r in pts:
             s.oval(cx, cy, round(r), round(r), ROAST)
-        s.oval(x + 2, 6 + y, 2, 3, ROAST_HI, True)
-        s.oval(x, 19 + y, 2, 2, FLESH)
-        s.line([(x - 1, 21 + y), (x - 2, 25 + y)], BONE, 2)
-        s.oval(x - 3, 26 + y, 1, 1, BONE)
-        s.oval(x - 1, 27 + y, 1, 1, BONE)
+        s.oval(x + 2, 6 + y, 1, 2, ROAST_HI, True)
+        s.oval(x, 16 + y, 2, 1, FLESH)
+        s.line([(x - 1, 17 + y), (x - 2, 20 + y)], BONE, 1)
+        s.oval(x - 2, 21 + y, 1, 1, BONE)
 
 
 def meat_l(s):
-    s.rect(10, 7, 26, 27, ROAST)
-    s.oval(26, 17, 4, 10, ROAST)
-    s.rect(11, 8, 25, 10, ROAST_HI, True)  # glaze shine along the top
-    for x in (15, 20, 24):  # glaze drips
-        s.line([(x, 10), (x, 13)], ROAST_D, 1, True)
-    s.oval(10, 17, 7, 10, FLESH)  # the cut face: marbled rings
-    s.oval(10, 17, 5, 8, FLESH_D)
-    s.oval(10, 17, 4, 6, FLESH)
-    s.oval(10, 17, 2, 3, FLESH_D)
+    # the full slot (v0.25.58): a big roast with the marbled cut face and the bone through its middle
+    s.rect(10, 5, 27, 29, ROAST)
+    s.oval(27, 17, 4, 12, ROAST)
+    s.rect(11, 6, 26, 8, ROAST_HI, True)  # glaze shine along the top
+    for x in (15, 20, 25):  # glaze drips
+        s.line([(x, 8), (x, 12)], ROAST_D, 1, True)
+    s.oval(10, 17, 8, 12, FLESH)  # the cut face: marbled rings
+    s.oval(10, 17, 6, 9, FLESH_D)
+    s.oval(10, 17, 4, 7, FLESH)
+    s.oval(10, 17, 2, 4, FLESH_D)
     s.oval(10, 17, 1, 1, BONE, True)
     bone(s, 9, 17, 2, 17)
 

@@ -590,7 +590,8 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     v0.25.56 (owner references): meat_s = round manga meat on the bone, meat_m = three drumsticks, meat_l = big roast
     with a marbled cut face (gen_pixel_icons meat_s/meat_m/meat_l + bone()).
     v0.25.57: SP icons sized by tier so they read without the letter: grog_s small tankard, grog_m upright barrel,
-    grog_l big keg on its side (owner references).
+    grog_l big keg on its side (owner references). v0.25.58: meat icons sized the same way (S half the slot, M two
+    thirds, L the full slot).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

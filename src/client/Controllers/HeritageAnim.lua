@@ -17,7 +17,7 @@ local KINDS = { Wing = "wing", WingTip = "wing", GreatWing = "great", GreatWingT
 local BODY = { wing = "UpperTorso", great = "UpperTorso", tail = "LowerTorso", ear = "Head", fin = "Head" }
 -- Cinderwing great wings (VoxelChar greatWings): built folded back by GREAT_FOLD around a shoulder hinge; here they
 -- open like a bird's (unfold + flap) when flying or in the air
-local GREAT_FOLD = 0.9
+local GREAT_FOLD = 1.05
 local rigs = {} -- character -> { body, rig }
 local folder
 

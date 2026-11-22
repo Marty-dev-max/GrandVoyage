@@ -817,22 +817,24 @@ local function buildAll(look, heritage, variant, mode, place, emit)
 	-- down to ragged tips, lighter covert bands), then FOLDED back around a shoulder hinge so they stand behind the
 	-- body at rest. Client Controllers/HeritageAnim swings them open (GreatWing pieces) when flying.
 	-- Keep GREAT_HINGE / GREAT_FOLD in sync with HeritageAnim.
+	-- v0.25.45 (owner: looked like a butterfly, a bit too big): one tapered bird wing with a scalloped trailing edge and
+	-- a single pointed tip, smaller, and folded tighter along the back at rest
 	local GREAT_SPREAD = {
-		".......XXX.", ".....XXXXXX", "...XXXXXXXX", ".XXXXXXXXXX", "XXXXXXXXXXX", "XXXXXXXXXXX", "XXXXXXXXXX.",
-		"XXXXXXXXXX.", ".XXXXXXXXX.", ".XXXXXXXX..", "..XXXXXXXX.", "..XXXXXXX..", "...XXXXXX..", "...XX.XXX..", "....X..X...",
+		"...XXX......", ".XXXXXXX....", "XXXXXXXXXX..", "XXXXXXXXXXXX", ".XXXXXXXXXXX", ".XXXXXXXXXX.",
+		"..XXXXXXXXX.", "..X.XXXXXX..", "....X.XXXX..", "......XXX...", "......XX....", ".......X....",
 	}
 	local function greatWings(c1, c2)
 		if not ut then
 			return
 		end
-		local cell, topY = 0.44, 3.1
+		local cell, topY = 0.38, 2.5
 		local back = ut.Z / 2 + 0.22
 		for _, sx in ipairs({ -1, 1 }) do
 			local hinge = Vector3.new(sx * 0.3, 0.6, back)
-			local fold = CFrame.new(hinge) * CFrame.Angles(0, -sx * 0.9, 0) * CFrame.new(-hinge)
+			local fold = CFrame.new(hinge) * CFrame.Angles(0, -sx * 1.05, 0) * CFrame.new(-hinge)
 			for r, rowStr in ipairs(GREAT_SPREAD) do
 				local y = topY - (r - 1) * cell
-				local band = (r == 4 or r == 8) -- covert rows a shade lighter: reads as layered feathers
+				local band = (r == 3 or r == 7) -- covert rows a shade lighter: reads as layered feathers
 				local i = 1
 				while i <= #rowStr do
 					if string.sub(rowStr, i, i) == "X" then

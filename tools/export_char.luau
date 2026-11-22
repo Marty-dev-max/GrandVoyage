@@ -188,7 +188,7 @@ elseif mode == "cinder" then
 					local rel = ut.CFrame:ToObjectSpace(p.CFrame)
 					local side = rel.Position.X >= 0 and 1 or -1
 					local hinge = roblox.CFrame.new(side * 0.3, 0.6, ut.Size.Z / 2 + 0.22)
-					p.CFrame = ut.CFrame * hinge * roblox.CFrame.Angles(0, 0, side * 0.35) * roblox.CFrame.Angles(0, side * 0.9, 0) * hinge:Inverse() * rel
+					p.CFrame = ut.CFrame * hinge * roblox.CFrame.Angles(0, 0, side * 0.35) * roblox.CFrame.Angles(0, side * 1.05, 0) * hinge:Inverse() * rel
 				end
 			end
 		end

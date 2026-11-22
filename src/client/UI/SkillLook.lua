@@ -18,6 +18,9 @@ function SkillLook.IconId(sk)
 	if sk.fruit then
 		return UI.IconId("fruit_" .. string.lower(sk.fruit))
 	end
+	if sk.toki then
+		return UI.IconId("crown") -- Toki skills (v0.25.70)
+	end
 	local k = sk.kind
 	if k == "Heal" or k == "PartyHeal" then
 		return UI.IconId(sk.id == "HeartyMeal" and "meat" or "potion")
@@ -41,6 +44,12 @@ function SkillLook.Color(sk)
 		return cls.color
 	end
 	local f = sk.fruit and FruitsCfg.ById[sk.fruit]
+	if sk.toki then
+		-- your own Toki color
+		local hex = game:GetService("Players").LocalPlayer:GetAttribute("TokiColor_" .. sk.toki)
+		local ok, c = pcall(Color3.fromHex, hex or "")
+		return ok and c or UI.Theme.Gold
+	end
 	return f and f.color or UI.Theme.Accent
 end
 

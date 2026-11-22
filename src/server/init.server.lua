@@ -27,6 +27,7 @@ local order = {
 	"QuestService",
 	"ChestService",
 	"FruitService",
+	"TokiService",
 	"PearlService",
 	"StoreService",
 	"PetService",

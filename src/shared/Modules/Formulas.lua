@@ -3,6 +3,7 @@ local Shared = script.Parent.Parent
 local GameConfig = require(Shared.Config.GameConfig)
 local Classes = require(Shared.Config.Classes).Classes
 local FruitsCfg = require(Shared.Config.Fruits)
+local TokiCfg = require(Shared.Config.Toki)
 local PetsCfg = require(Shared.Config.Pets)
 local ItemDB = require(Shared.Modules.ItemDB)
 
@@ -81,6 +82,46 @@ function F.EquipBonus(profile)
 	return b
 end
 
+-- v0.25.70 Toki attribute bonus: { STR = 3, ... } (Config/Toki Bonus; advanced forms = sea 3)
+function F.TokiStats(profile)
+	local out = {}
+	local t = profile.toki
+	if type(t) ~= "table" then
+		return out
+	end
+	local B = TokiCfg.Bonus
+	if t.Conqueror then
+		local adv = t.Conqueror.advanced
+		for _, k in ipairs(F.StatNames) do
+			out[k] = (out[k] or 0) + (adv and B.Conqueror.advancedAll or B.Conqueror.all)
+		end
+		if adv then
+			out.LUK += B.Conqueror.advancedLuk
+		end
+	end
+	for _, id in ipairs({ "Armament", "Observation" }) do
+		if t[id] then
+			local adv = t[id].advanced
+			for _, k in ipairs(TokiCfg.ById[id].stats) do
+				out[k] = (out[k] or 0) + (adv and B[id].advancedMain or B[id].main)
+			end
+			if adv then
+				out.LUK = (out.LUK or 0) + B[id].advancedLuk
+			end
+		end
+	end
+	return out
+end
+
+-- v0.25.70 Power: one number for how strong someone is (Conqueror Toki compares Powers, not levels). The same shape
+-- for players and monsters: level, the better attack, defense and HP.
+function F.Power(d, level)
+	return math.floor(level * 5 + math.max(d.atk or 0, d.matk or 0) + (d.def or 0) * 3 + (d.maxHp or 0) / 8)
+end
+function F.MonsterPower(def)
+	return math.floor(def.level * 5 + (def.atk or 0) + (def.def or 0) * 3 + (def.hp or 0) / 8)
+end
+
 -- v0.25.69: where each attribute's bonus comes from, for the Stats tooltip: { STR = { { "Gear", 2 }, { "Fruit", 3 } } }
 function F.StatSources(profile)
 	local out = {}
@@ -108,12 +149,14 @@ function F.StatSources(profile)
 			end
 		end
 	end
+	local toki = F.TokiStats(profile)
 	local fruitDef = profile.fruit and FruitsCfg.ById[profile.fruit.id]
 	local fruit = profile.fruit and FruitsCfg.StatsFor(profile.fruit.id, profile.fruit.mastery) or {}
 	for _, k in ipairs(F.StatNames) do
 		add(k, "Gear", gear[k])
 		add(k, "Cards", cards[k])
 		add(k, fruitDef and (fruitDef.name .. " (Mastery " .. (profile.fruit.mastery or 0) .. ")") or "Fruit", fruit[k])
+		add(k, "Toki", toki[k])
 	end
 	return out
 end
@@ -135,6 +178,11 @@ function F.Compute(profile, buffs)
 				end
 			end
 		end
+	end
+	-- Toki (v0.25.70): Conqueror = every attribute; Armament / Observation = their two
+	for stat, v in pairs(F.TokiStats(profile)) do
+		local k = string.lower(stat)
+		b[k] = (b[k] or 0) + v
 	end
 	-- Cursed Fruit attribute bonus (v0.25.69, grows with Fruit Mastery)
 	if profile.fruit then

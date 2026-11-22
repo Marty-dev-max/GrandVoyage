@@ -777,13 +777,16 @@ function Panels.Stats()
 	-- (nothing is spent until you press it). Below, the combat numbers those attributes give you.
 	local win = UI.Window("Stats", "Stats", UDim2.fromOffset(1100, 600), T.Purple, "📊", { fullscreen = true })
 	local charPanel = UI.Card(win.body, UDim2.new(0.38, -10, 1, 0), T.PanelDeep)
-	local stage = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 112), Size = UDim2.new(1, 0, 1, -138), Parent = charPanel })
+	local stage = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 134), Size = UDim2.new(1, 0, 1, -160), Parent = charPanel })
 	local refreshChar, setStageClass = classStage(charPanel, stage)
 	-- v0.25.43 (owner: the top looked empty): name centered, class on the 2nd line, levels on the 3rd, big and clear
 	local CENTER = Enum.TextXAlignment.Center
 	local nameLabel = UI.Text(charPanel, "", 30, T.Text, "Display", { Position = UDim2.fromOffset(14, 12), Size = UDim2.new(1, -28, 0, 36), TextXAlignment = CENTER })
 	local classLabel = UI.Text(charPanel, "", 22, T.Text, "Display", { Position = UDim2.fromOffset(14, 52), Size = UDim2.new(1, -28, 0, 26), TextXAlignment = CENTER })
 	local subLabel = UI.Text(charPanel, "", 19, T.TextSoft, "Display", { Position = UDim2.fromOffset(14, 82), Size = UDim2.new(1, -28, 0, 24), TextXAlignment = CENTER })
+	-- v0.25.70: Power (what Conqueror Toki compares) + your Toki in its own color
+	local powerLabel = UI.Text(charPanel, "", 17, T.Gold, "Display", { Position = UDim2.fromOffset(14, 110), Size = UDim2.new(1, -28, 0, 22), TextXAlignment = CENTER })
+	powerLabel.RichText = true
 	UI.Text(charPanel, "drag to turn", 12, T.TextSoft, "Semi", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -6), Size = UDim2.fromOffset(200, 16), TextXAlignment = Enum.TextXAlignment.Center })
 	-- scrolls when the window is short (small screens) instead of spilling out of the frame
 	local right = UI.Scroll(win.body, UDim2.new(0.62, 0, 1, 0))
@@ -818,6 +821,16 @@ function Panels.Stats()
 		classLabel.TextColor3 = Color3.new(1, 1, 1) -- on the class-colored backdrop (v0.25.68)
 		setStageClass(p.class)
 		subLabel.RichText = true
+		do
+			local parts = { UI.Colored("Power " .. Formulas.Power(d, p.baseLevel), T.Gold) }
+			for _, k in ipairs(require(Shared.Config.Toki).Kinds) do
+				local e = type(p.toki) == "table" and p.toki[k.id]
+				if e then
+					table.insert(parts, UI.Colored(k.name, require(Shared.Config.Toki).ColorOf(e)))
+				end
+			end
+			powerLabel.Text = table.concat(parts, "   ")
+		end
 		subLabel.Text = UI.Colored("Base Lv." .. p.baseLevel, Color3.new(1, 1, 1)) .. "     " .. UI.Colored("Job Lv." .. p.jobLevel, T.Gold)
 		if not drawn then
 			drawn = true
@@ -1001,7 +1014,13 @@ end
 -- the skills a tier tab shows: { skill, level, max, locked }
 local function tierSkills(p, tier)
 	local out = {}
-	if tier == "Fruit" then
+	if tier == "Toki" then
+		for _, s in ipairs(require(Shared.Config.Toki).Skills) do
+			if type(p.toki) == "table" and p.toki[s.toki] then
+				table.insert(out, { s, 1, 1, false })
+			end
+		end
+	elseif tier == "Fruit" then
 		local fruit = p.fruit and FruitsCfg.ById[p.fruit.id]
 		for _, s in ipairs(fruit and fruit.skills or {}) do
 			local open = p.fruit.mastery >= s.mastery
@@ -1157,6 +1176,9 @@ function Panels.Skills(args)
 		if p.fruit then
 			local f = FruitsCfg.ById[p.fruit.id]
 			table.insert(tiers, { "Fruit", f and f.icon or "🍎", f and f.name or "Fruit", f and f.color })
+		end
+		if type(p.toki) == "table" and next(p.toki) and (p.toki.Conqueror or p.toki.Armament or p.toki.Observation) then
+			table.insert(tiers, { "Toki", "👑", "Toki", T.Gold })
 		end
 		table.insert(tiers, { "Next", "🔒", "Job 2", T.Grey })
 		local valid = false
@@ -1339,7 +1361,7 @@ function Panels.Skills(args)
 		-- skills you can put on the bar now
 		local attack, support = {}, {}
 		local function consider(s)
-			local usable = s.fruit and (p.fruit and p.fruit.id == s.fruit and p.fruit.mastery >= (s.mastery or 1)) or ((p.skills[s.id] or 0) > 0)
+			local usable = (s.toki and type(p.toki) == "table" and p.toki[s.toki] ~= nil) or (s.fruit and (p.fruit and p.fruit.id == s.fruit and p.fruit.mastery >= (s.mastery or 1))) or ((p.skills[s.id] or 0) > 0)
 			if usable then
 				table.insert(SkillLook.IsSupport(s) and support or attack, s)
 			end
@@ -1352,6 +1374,9 @@ function Panels.Skills(args)
 		end
 		local fruit = p.fruit and FruitsCfg.ById[p.fruit.id]
 		for _, s in ipairs(fruit and fruit.skills or {}) do
+			consider(s)
+		end
+		for _, s in ipairs(require(Shared.Config.Toki).Skills) do
 			consider(s)
 		end
 		for _, group in ipairs({ { "⚔️", "Attack skills", attack, T.Red }, { "✨", "Support skills", support, T.Green } }) do
@@ -3123,6 +3148,7 @@ function Panels.Settings(args)
 			table.insert(fruitButtons, { "Remove Fruit", "removefruit" })
 			table.insert(fruitButtons, { "Spawn Tree Fruit", "spawnfruit" })
 			devGrid("Cursed Fruits", "🍎", T.Pink, fruitButtons)
+			devGrid("Toki", "👑", T.Gold, { { "Conqueror Toki", "toki", "Conqueror" }, { "Remove Toki", "toki", "none" } })
 			devGrid("Pets & World", "🐾", T.Green, { { "Eggs + Bait", "eggs" }, { "Pet +15 Lv", "petlevel" }, { "Reset Chests", "chestreset" }, { "Model Gallery", "models" }, { "Guild War", "gw_start" }, { "End War", "gw_end" } })
 			-- time of day preview (client only)
 			UI.Section(list, "🌅", "Time of Day", T.Gold)

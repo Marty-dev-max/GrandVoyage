@@ -651,6 +651,14 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     fruit `stats = { main, second }`, `Fruits.StatsFor(id, mastery)` (Main +1/10 Mastery max 10, Second +1/20 max 5)
     added in Formulas.Compute; `Formulas.StatSources(profile)` feeds the Stats BONUS tooltip. Toki (our "haki":
     Armament / Observation / Conqueror Toki, never the word Haki) spec: docs/Plan-Toki.md (not built yet).
+  * v0.25.70 Toki (docs/Plan-Toki.md): `Config/Toki` (Kinds, Colors, Bonus, Conqueror Calm/Cow, Skills class "Toki"
+    merged into SkillById, Unlock numbers for sea 2) + `Services/TokiService` (p.toki = { rolled, Conqueror = { color,
+    advanced } }; 0.1% roll on DataService.Loaded per slot, Grant/Remove, CanSlot, Roar; attrs Toki / TokiColor_<Kind>).
+    Formulas.TokiStats (Compute + StatSources), Formulas.Power(d, lvl) / MonsterPower(def) (PlayerService sets attr
+    Power); MonsterService findAggroTarget skips Conqueror players with Power x Calm above the mob's (cowedBy), MS.Cow.
+    CombatService kind "Roar" (skill.toki gates lv; no Skill FX, TokiRoar FX instead -> Controllers/TokiFX). Skills
+    tab tier "Toki"; Stats left panel shows Power + Toki names in their color; Dev tab Toki buttons; Admin `toki`
+    "Kind[:PlayerName]" / "none[:PlayerName]".
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

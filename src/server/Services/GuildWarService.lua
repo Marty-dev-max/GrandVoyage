@@ -207,6 +207,31 @@ function GW.Start()
 				end
 			end)
 			return true, "Race: " .. h.name
+		elseif data.cmd == "toki" then
+			-- v0.25.70: "Conqueror" / "none" on yourself, or "Conqueror:PlayerName" / "none:PlayerName" (beta top players)
+			local kind, who = string.match(tostring(data.value or ""), "^(%a+):?(.*)$")
+			local target = player
+			if who and who ~= "" then
+				target = nil
+				for _, pl in ipairs(Players:GetPlayers()) do
+					if string.lower(pl.Name) == string.lower(who) or string.lower(pl.DisplayName) == string.lower(who) then
+						target = pl
+					end
+				end
+				if not target then
+					return false, "No player " .. who .. " in this server"
+				end
+			end
+			if kind == "none" then
+				for _, k in ipairs({ "Conqueror", "Armament", "Observation" }) do
+					R.TokiService.Remove(target, k)
+				end
+				return true, "Toki removed from " .. target.Name
+			end
+			if not R.TokiService.Grant(target, kind, "dev") then
+				return false, "Unknown Toki or already has it"
+			end
+			return true, kind .. " Toki given to " .. target.Name
 		elseif data.cmd == "removefruit" then
 			if not R.FruitService.RemoveFruit(player) then
 				return false, "No fruit to remove"

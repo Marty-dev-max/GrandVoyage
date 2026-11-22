@@ -632,13 +632,19 @@ local function setup()
 			if skill.kind == "Buff" or skill.kind == "PartyBuff" then
 				lv = 1 -- fruit buffs do not scale with mastery (they would get absurd)
 			end
+		elseif skill and skill.toki then
+			-- v0.25.70 Toki skills: yours if you have that Toki
+			lv = R.TokiService.Has(p, skill.toki) and 1 or nil
+			if not lv then
+				return false, "You do not have the " .. skill.toki .. " Toki"
+			end
 		else
 			lv = skill and p.skills[skill.id]
 		end
 		if not lv then
 			return false, "Skill not learned"
 		end
-		if not skill.fruit and skill.class ~= p.class and skill.class ~= "Common" then
+		if not skill.fruit and not skill.toki and skill.class ~= p.class and skill.class ~= "Common" then
 			return false, "Switch to " .. (ClassesCfg.Classes[skill.class] and ClassesCfg.Classes[skill.class].name or "that class") .. " to use this skill"
 		end
 		local pumped = skill.fruit == "Bounce" and skill.id ~= "F_GearUp" and Combat.Pumped(player)
@@ -890,6 +896,12 @@ local function setup()
 				-- clients read this to charge faster / show the pumped moves (server time, GetServerTimeNow)
 				player:SetAttribute("PumpUntil", workspace:GetServerTimeNow() + skill.duration)
 			end
+		elseif kind == "Roar" then
+			local ok, why = R.TokiService.Roar(player, skill)
+			if not ok then
+				return false, why
+			end
+			fxData = nil -- the roar has its own FX (TokiRoar)
 		elseif kind == "ShipBuff" then
 			if not R.ShipService.AddShipBuff(player, skill.id, skill.buff.shipSpeed * (1 + 0.15 * (lv - 1)), skill.duration) then
 				return false, "You must be on a ship"
@@ -907,10 +919,12 @@ local function setup()
 			R.FruitService.OnCast(player)
 		end
 		lastAttack[player] = now
-		if not skill.fruit and kind ~= "ShipBuff" and kind ~= "ShipRepair" then
+		if not skill.fruit and not skill.toki and kind ~= "ShipBuff" and kind ~= "ShipRepair" then
 			R.WeaponService.Draw(player, weaponType(player))
 		end
-		Net.FX("Skill", fxData, root.Position, 350)
+		if fxData then
+			Net.FX("Skill", fxData, root.Position, 350)
+		end
 		return { ok = true, data = { cd = cd } }
 	end, 0.15)
 end

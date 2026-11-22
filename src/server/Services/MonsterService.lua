@@ -522,11 +522,35 @@ local function validTarget(mob, pl)
 	return true, root
 end
 
+-- v0.25.70 Conqueror Toki: monsters far weaker than you (by Power) do not dare to start a fight
+local TokiCfg = require(Shared.Config.Toki)
+local Formulas = require(Shared.Modules.Formulas)
+local function cowedBy(mob, pl)
+	local t = pl:GetAttribute("Toki")
+	if not t or not string.find(t, "Conqueror", 1, true) or mob.def.isBoss then
+		return false
+	end
+	mob.power = mob.power or Formulas.MonsterPower(mob.def)
+	return mob.power < (pl:GetAttribute("Power") or 0) * TokiCfg.Conqueror.Calm
+end
+-- Conqueror's Roar: frozen in fear for `seconds`, forgets its target
+function MS.Cow(mob, seconds)
+	if mob.dead or not mob.root then
+		return
+	end
+	mob.knockUntil = os.clock() + seconds
+	mob.target = nil
+	if mob.hum then
+		mob.hum:MoveTo(mob.root.Position)
+	end
+	Net.FX("Miss", { pos = mob.root.Position + Vector3.new(0, 4, 0), text = "COWED!" }, mob.root.Position, 200)
+end
+
 local function findAggroTarget(mob)
 	local best, bestD = nil, mob.def.aggroRadius or (mob.def.isBoss and 45 or 26)
 	for _, pl in ipairs(Players:GetPlayers()) do
 		local ok, root = validTarget(mob, pl)
-		if ok then
+		if ok and not cowedBy(mob, pl) then
 			local d = (root.Position - mob.root.Position).Magnitude
 			if d < bestD then
 				best, bestD = pl, d

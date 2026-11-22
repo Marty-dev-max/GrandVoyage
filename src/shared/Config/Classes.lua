@@ -177,6 +177,11 @@ for _, f in ipairs(Fruits.List) do
 	end
 end
 
+-- Toki skills (v0.25.70, Config/Toki, class = "Toki")
+for _, s in ipairs(require(script.Parent.Toki).Skills) do
+	skillById[s.id] = s
+end
+
 return {
 	Classes = Classes,
 	SecondJobs = SecondJobs,

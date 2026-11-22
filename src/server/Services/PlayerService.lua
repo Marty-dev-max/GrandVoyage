@@ -30,6 +30,9 @@ local function usableSkill(p, id)
 	if sk.fruit then
 		return R.FruitService.CanSlot(p, id) == true
 	end
+	if sk.toki then
+		return R.TokiService.CanSlot(p, id) == true
+	end
 	return (p.skills[id] or 0) > 0 and (sk.class == p.class or sk.class == "Common")
 end
 PS.UsableSkill = usableSkill
@@ -189,6 +192,8 @@ function PS.Recompute(player)
 			hum.WalkSpeed = d.moveSpeed
 		end
 	end
+	-- v0.25.70: Power (Formulas.Power) for nameplates / Stats / Conqueror Toki comparisons
+	player:SetAttribute("Power", Formulas.Power(d, profile.baseLevel))
 	local sp = player:GetAttribute("SP") or d.maxSp
 	player:SetAttribute("MaxSP", d.maxSp)
 	player:SetAttribute("SP", math.min(sp, d.maxSp))
@@ -269,6 +274,7 @@ local function sync(player)
 			chests = p.chests,
 			classProgress = p.classProgress,
 			fruit = p.fruit,
+			toki = p.toki,
 			pets = p.pets,
 			activePet = p.activePet,
 			perks = p.perks,
@@ -862,7 +868,7 @@ local function setupHandlers()
 		if type(data.autoSkills) == "table" then
 			local a = {}
 			for id, v in pairs(data.autoSkills) do
-				if type(id) == "string" and (p.skills[id] or R.FruitService.CanSlot(p, id)) and v == true then
+				if type(id) == "string" and (p.skills[id] or R.FruitService.CanSlot(p, id) or R.TokiService.CanSlot(p, id)) and v == true then
 					a[id] = true
 				end
 			end

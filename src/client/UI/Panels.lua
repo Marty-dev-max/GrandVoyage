@@ -371,8 +371,7 @@ function Panels.Inventory(args)
 		local head = New("Frame", { Size = UDim2.new(1, 0, 0.55, -10), ClipsDescendants = true, Parent = right })
 		UI.Corner(head, 12)
 		UI.RarityStyle(head, def.rarity, true)
-		local rays = New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.focuslines, ImageColor3 = tier.color:Lerp(Color3.new(1, 1, 1), 0.5), ImageTransparency = 0.45, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.45), Size = UDim2.fromScale(1.6, 1.6), ZIndex = 3, Parent = head })
-		New("UIAspectRatioConstraint", { Parent = rays })
+		-- v0.25.41 (owner): no sunburst behind the item, it just floats in its glow with the particles
 		local glow = New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.glow, ImageColor3 = tier.color:Lerp(Color3.new(1, 1, 1), 0.3), ImageTransparency = 0.15, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.45), Size = UDim2.fromScale(0.85, 0.85), ZIndex = 3, Parent = head })
 		UI.Sparkles(head, Color3.new(1, 1, 1), 14, { float = true, z = 4, star = 0.6 })
 		if def.kind == "Fruit" then
@@ -394,18 +393,14 @@ function Panels.Inventory(args)
 		big.Position = UDim2.fromScale(0.5, 0.43)
 		big.Size = UDim2.fromScale(0.72, 0.72)
 		New("UIAspectRatioConstraint", { Parent = big })
-		UI.Pop(big, 0.5)
-		if tier.rank >= 4 then
-			Audio.Play("Rarity" .. tier.id)
-		end
+		UI.Pop(big, 0.5) -- (v0.25.41, owner: no rarity jingle when an item opens in the preview)
 		local t0 = os.clock()
 		local conn
-		conn = RunService.RenderStepped:Connect(function(dt)
+		conn = RunService.RenderStepped:Connect(function()
 			if not head.Parent then
 				conn:Disconnect()
 				return
 			end
-			rays.Rotation = (rays.Rotation + dt * 18) % 360
 			big.Position = UDim2.new(0.5, 0, 0.43, math.sin((os.clock() - t0) * 2.2) * 5)
 		end)
 		local big2 = 21
@@ -1621,7 +1616,7 @@ function Panels.JobMaster()
 	-- the character stands in the sea lit by the class color (reference), drag to turn 360, wheel to zoom. The view
 	-- covers the whole window (the water must reach every edge) and puts the character in the middle column
 	local stage = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(-24, -14), Size = UDim2.new(1, 48, 1, 28), ZIndex = 1, Parent = win.body })
-	local _, refreshChar = UI.CharacterView(stage, nil, { water = true, zoom = true, shiftX = -0.11, onFrame = function(h)
+	local _, refreshChar = UI.CharacterView(stage, nil, { water = true, zoom = true, zoomStart = 1.5, shiftX = -0.11, shiftY = 0.07, onFrame = function(h)
 		water.Position = UDim2.fromScale(0, h)
 		water.Size = UDim2.fromScale(1, 1 - h)
 	end })
@@ -1743,9 +1738,18 @@ function Panels.JobMaster()
 		-- the class card: type disc + weapon + skills
 		local card = UI.Card(right, UDim2.new(1, 0, 1, -316), T.PanelDeep)
 		card.Position = UDim2.fromOffset(0, 316)
-		local disc = typeDisc(card, c.mtype, c.color, 150)
-		disc.Position = UDim2.fromOffset(12, 12)
-		UI.Text(card, ty and (ty.kanji .. "  " .. string.upper(ty.name)) or "", 20, c.color, "Display", { Position = UDim2.fromOffset(176, 14), Size = UDim2.new(1, -186, 0, 26), TextWrapped = false })
+		-- v0.25.41 (owner: empty space at the bottom): a bigger disc and bigger text, both centered in the card
+		local disc = typeDisc(card, c.mtype, c.color, 184)
+		disc.AnchorPoint = Vector2.new(0, 0.5)
+		disc.Position = UDim2.new(0, 14, 0.5, 0)
+		local col = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(212, 10), Size = UDim2.new(1, -224, 1, -20), Parent = card })
+		local lay = UI.List(col, nil, 10)
+		lay.VerticalAlignment = Enum.VerticalAlignment.Center
+		-- fixed line heights (no AutomaticSize: every line has a known box, nothing can overlap)
+		local function line(text, size, color, kind, order, lines)
+			return UI.Text(col, text, size, color, kind, { RichText = true, Size = UDim2.new(1, 0, 0, math.ceil(size * 1.25 * lines)), TextYAlignment = Enum.TextYAlignment.Top, LayoutOrder = order })
+		end
+		line(ty and (ty.kanji .. "  " .. string.upper(ty.name)) or "", 24, c.color, "Display", 1, 1)
 		local beats, weak = {}, {}
 		for _, id in ipairs(ty and ty.beats or {}) do
 			table.insert(beats, UI.Colored(Types[id].name, Types[id].color))
@@ -1753,13 +1757,13 @@ function Panels.JobMaster()
 		for _, id in ipairs(ty and Types.WeakTo(c.mtype) or {}) do
 			table.insert(weak, UI.Colored(Types[id].name, Types[id].color))
 		end
-		UI.Text(card, UI.Colored("STRONG VS ", Color3.fromRGB(120, 200, 110)) .. table.concat(beats, ", ") .. "\n" .. UI.Colored("WEAK TO ", Color3.fromRGB(236, 112, 96)) .. table.concat(weak, ", "), 14, T.Text, "Semi", { RichText = true, Position = UDim2.fromOffset(176, 44), Size = UDim2.new(1, -186, 0, 40) })
-		UI.Text(card, string.format("Deals +%d%% to the types it beats, %d%% less to the ones it is weak to.", math.floor((Types.Bonus - 1) * 100 + 0.5), math.floor((1 - Types.Penalty) * 100 + 0.5)), 12, T.TextSoft, "Semi", { Position = UDim2.fromOffset(176, 86), Size = UDim2.new(1, -186, 0, 30) })
+		line(UI.Colored("STRONG VS ", Color3.fromRGB(120, 200, 110)) .. table.concat(beats, ", ") .. "\n" .. UI.Colored("WEAK TO ", Color3.fromRGB(236, 112, 96)) .. table.concat(weak, ", "), 18, T.Text, "Semi", 2, 2)
+		line(string.format("Deals +%d%% to the type it beats, %d%% less to the one it is weak to.", math.floor((Types.Bonus - 1) * 100 + 0.5), math.floor((1 - Types.Penalty) * 100 + 0.5)), 15, T.TextSoft, "Semi", 3, 2)
 		local names = {}
 		for _, sk in ipairs(c.skills) do
 			table.insert(names, sk.name)
 		end
-		UI.Text(card, UI.Colored("Weapon: ", T.Gold) .. w .. "\n" .. UI.Colored("Skills: ", T.Gold) .. table.concat(names, " • "), 14, T.Text, "Semi", { RichText = true, Position = UDim2.fromOffset(176, 118), Size = UDim2.new(1, -186, 0, 60) })
+		line(UI.Colored("Weapon: ", T.Gold) .. w .. "\n" .. UI.Colored("Skills: ", T.Gold) .. table.concat(names, " • "), 17, T.Text, "Semi", 4, 3)
 		if animate then
 			UI.Pop(nameL, 0.8)
 		end
@@ -3539,12 +3543,10 @@ function Panels.PearlShop(args)
 		clear(panel)
 		UI.Pad(panel, 14)
 		UI.List(panel, nil, 10, Enum.HorizontalAlignment.Center)
-		-- frameless stage (owner reference): the item floats in a soft color glow with rays and twinkles
+		-- frameless stage (owner reference): the item floats in a soft color glow with twinkles (v0.25.41: no rays)
 		local stage = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0.42, 0), Parent = panel })
 		New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.glow, ImageColor3 = e.color:Lerp(Color3.new(1, 1, 1), 0.35), ImageTransparency = 0.25, AnchorPoint = Vector2.new(0.5, 0.5),
 			Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(1.15, 1.15), SizeConstraint = Enum.SizeConstraint.RelativeYY, Parent = stage })
-		New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.focuslines, ImageColor3 = e.color:Lerp(Color3.new(1, 1, 1), 0.6), ImageTransparency = 0.7, AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(1.3, 1.3), SizeConstraint = Enum.SizeConstraint.RelativeYY, Parent = stage })
 		UI.Sparkles(stage, Color3.new(1, 1, 1), 12, { star = 0.8 })
 		if e.egg then
 			UI.VoxelEgg(stage, e.egg, 150, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.9, 0.9), SizeConstraint = Enum.SizeConstraint.RelativeYY })

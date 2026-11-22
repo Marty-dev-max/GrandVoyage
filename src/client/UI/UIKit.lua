@@ -1047,7 +1047,7 @@ function UI.CharacterView(parent, props, opts)
 	vp.CurrentCamera = cam
 	local yaw = math.rad(-18) -- face the camera (it sits on the -Z side), turned a little for a 3/4 look
 	local model, mirror, mirrorPairs, feetY
-	local zoom, frameCF, frameExt = 1, nil, nil
+	local zoom, frameCF, frameExt = opts.zoomStart or 1, nil, nil
 	local function frameCam()
 		if not frameCF then
 			return
@@ -1059,7 +1059,8 @@ function UI.CharacterView(parent, props, opts)
 			aspect = vp.AbsoluteSize.X / math.max(1, vp.AbsoluteSize.Y)
 		end)
 		-- the camera looks along +Z, so screen right is world -X: shifting the aim right moves the statue left
-		local side = Vector3.new((opts.shiftX or 0) * 2 * dist * tan * aspect, 0, 0)
+		-- shiftY (> 0) lifts the statue: aim lower by that share of the view height
+		local side = Vector3.new((opts.shiftX or 0) * 2 * dist * tan * aspect, -(opts.shiftY or 0) * 2 * dist * tan, 0)
 		local target = frameCF.Position + side
 		cam.CFrame = CFrame.lookAt(target + Vector3.new(0, frameExt.Y * 0.04, -dist), target)
 		if opts.onFrame then
@@ -1210,15 +1211,21 @@ function UI.CharacterView(parent, props, opts)
 			mirror.Parent = world
 			local water = Instance.new("Model")
 			water.Name = "GVWater"
-			-- ripples where the feet touch the water (the water itself is drawn by the window behind the viewport)
+			-- ripples where the feet touch the water: rings of small white blocks (v0.25.41: a cylinder is a solid disc
+			-- that washed the legs white). The water itself is drawn by the window behind the viewport.
+			local RING_N = 22
 			for i = 1, 2 do
-				local ring = Instance.new("Part")
+				local ring = Instance.new("Model")
 				ring.Name = "Ripple"
-				ring.Anchored = true
-				ring.Shape = Enum.PartType.Cylinder
-				ring.Color = Color3.new(1, 1, 1)
-				ring.Material = Enum.Material.SmoothPlastic
 				ring:SetAttribute("Phase", (i - 1) * 0.5)
+				for _ = 1, RING_N do
+					local b = Instance.new("Part")
+					b.Anchored = true
+					b.Size = Vector3.new(0.35, 0.05, 0.35)
+					b.Color = Color3.new(1, 1, 1)
+					b.Material = Enum.Material.SmoothPlastic
+					b.Parent = ring
+				end
 				ring.Parent = water
 			end
 			water.Parent = world
@@ -1230,10 +1237,13 @@ function UI.CharacterView(parent, props, opts)
 				end
 				for _, r in ipairs(water:GetChildren()) do
 					local k = (os.clock() * 0.45 + r:GetAttribute("Phase")) % 1
-					local d = 2.5 + k * 6
-					r.Size = Vector3.new(0.05, d, d)
-					r.CFrame = CFrame.new(0, feetY + 0.01, 0) * CFrame.Angles(0, 0, math.pi / 2)
-					r.Transparency = 0.35 + k * 0.65
+					local rad = 1.2 + k * 3.2
+					local blocks = r:GetChildren()
+					for j, b in ipairs(blocks) do
+						local a = j / #blocks * math.pi * 2
+						b.CFrame = CFrame.new(math.cos(a) * rad, feetY + 0.02, math.sin(a) * rad) * CFrame.Angles(0, -a, 0)
+						b.Transparency = 0.3 + k * 0.7
+					end
 				end
 			end)
 		else
@@ -1249,7 +1259,7 @@ function UI.CharacterView(parent, props, opts)
 		pcall(function()
 			vp.InputChanged:Connect(function(input)
 				if input.UserInputType == Enum.UserInputType.MouseWheel then
-					zoom = math.clamp(zoom * (input.Position.Z > 0 and 0.9 or 1.1), 0.45, 1.35)
+					zoom = math.clamp(zoom * (input.Position.Z > 0 and 0.9 or 1.1), 0.45, (opts.zoomStart or 1) * 1.4)
 					frameCam()
 				end
 			end)

@@ -507,6 +507,9 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     + ripple rings, light/ambient tinted; shiftX moves the statue off-center, onFrame(horizon) reports the water line.
     v0.25.40 Job Master: the view spans the whole window behind the columns, the sea is a UI gradient frame from the
     horizon down (class color), CLASS_FX pixel particles per class on the backdrop; no wheel-scroll class cycling.
+    v0.25.41: CharacterView opts zoomStart / shiftY (Job Master 1.5 / 0.07 keeps the feet above the button), ripples
+    = rings of small blocks (a cylinder is a solid disc). Item previews (Bag, Store) have no focuslines rays and no
+    rarity jingle on open. Class card lines have fixed heights (the HTML renderer ignores AutomaticSize).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

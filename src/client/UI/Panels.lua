@@ -715,11 +715,14 @@ function Panels.Stats()
 	-- (nothing is spent until you press it). Below, the combat numbers those attributes give you.
 	local win = UI.Window("Stats", "Stats", UDim2.fromOffset(1100, 600), T.Purple, "📊", { fullscreen = true })
 	local charPanel = UI.Card(win.body, UDim2.new(0.38, -10, 1, 0), T.PanelDeep)
-	local stage = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 70), Size = UDim2.new(1, 0, 1, -96), Parent = charPanel })
+	local stage = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 112), Size = UDim2.new(1, 0, 1, -138), Parent = charPanel })
 	New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.glow, ImageColor3 = T.Purple:Lerp(Color3.new(1, 1, 1), 0.4), ImageTransparency = 0.6, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.55), Size = UDim2.fromScale(0.9, 0.9), Parent = stage })
 	local _, refreshChar = UI.CharacterView(stage)
-	local nameLabel = UI.Text(charPanel, "", 24, T.Text, "Display", { Position = UDim2.fromOffset(14, 10), Size = UDim2.new(1, -28, 0, 28) })
-	local subLabel = UI.Text(charPanel, "", 15, T.TextSoft, "Semi", { Position = UDim2.fromOffset(14, 40), Size = UDim2.new(1, -28, 0, 20) })
+	-- v0.25.43 (owner: the top looked empty): name centered, class on the 2nd line, levels on the 3rd, big and clear
+	local CENTER = Enum.TextXAlignment.Center
+	local nameLabel = UI.Text(charPanel, "", 30, T.Text, "Display", { Position = UDim2.fromOffset(14, 12), Size = UDim2.new(1, -28, 0, 36), TextXAlignment = CENTER })
+	local classLabel = UI.Text(charPanel, "", 22, T.Text, "Display", { Position = UDim2.fromOffset(14, 52), Size = UDim2.new(1, -28, 0, 26), TextXAlignment = CENTER })
+	local subLabel = UI.Text(charPanel, "", 19, T.TextSoft, "Display", { Position = UDim2.fromOffset(14, 82), Size = UDim2.new(1, -28, 0, 24), TextXAlignment = CENTER })
 	UI.Text(charPanel, "drag to turn", 12, T.TextSoft, "Semi", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -6), Size = UDim2.fromOffset(200, 16), TextXAlignment = Enum.TextXAlignment.Center })
 	-- scrolls when the window is short (small screens) instead of spilling out of the frame
 	local right = UI.Scroll(win.body, UDim2.new(0.62, 0, 1, 0))
@@ -750,9 +753,10 @@ function Panels.Stats()
 		-- the name wears the equipped title's tier color; levels in the EXP / JOB ring colors
 		local tdef = TitlesCfg.ById[p.title or ""]
 		nameLabel.TextColor3 = tdef and Rarity.Get(tdef.tier).color or T.Text
+		classLabel.Text = cls and cls.name or p.class
+		classLabel.TextColor3 = cls and cls.color or T.Text
 		subLabel.RichText = true
-		subLabel.Text = (cls and (cls.icon .. " " .. UI.Colored(cls.name, cls.color)) or p.class) .. "   •   " .. UI.Colored("Base Lv." .. p.baseLevel, T.Green)
-			.. "   " .. UI.Colored("Job Lv." .. p.jobLevel, cls and (cls.ringColor or cls.color) or T.Purple)
+		subLabel.Text = UI.Colored("Base Lv." .. p.baseLevel, T.Green) .. "     " .. UI.Colored("Job Lv." .. p.jobLevel, cls and (cls.ringColor or cls.color) or T.Purple)
 		if not drawn then
 			drawn = true
 			local wEntry = p.equipment.weapon and Formulas.FindItem(p, p.equipment.weapon)
@@ -766,7 +770,7 @@ function Panels.Stats()
 		-- header: points left + reset plan
 		UI.Text(tbl, "POINTS LEFT", 16, T.TextSoft, "Display", { Size = UDim2.fromOffset(140, 30) })
 		UI.Text(tbl, tostring(left), 30, left > 0 and T.Gold or T.Text, "Number", { Position = UDim2.fromOffset(140, -2), Size = UDim2.fromOffset(90, 34) })
-		local _, rh = UI.Button(tbl, "↺ Reset plan", T.Grey, UDim2.fromOffset(150, 36), function()
+		local _, rh = UI.Button(tbl, "Reset plan", T.Red, UDim2.fromOffset(150, 36), function()
 			pend = {}
 			render()
 		end)
@@ -824,7 +828,7 @@ function Panels.Stats()
 			end
 		end)
 		local autoOn = p.settings and p.settings.autoStats == true
-		local autoBtn = UI.Button(foot, (autoOn and "☑" or "☐") .. " Auto upgrade", autoOn and T.Ocean or T.Grey, UDim2.new(0.5, -5, 1, 0), function()
+		local autoBtn = UI.Button(foot, autoOn and "Auto upgrade: ON" or "Auto upgrade: OFF", autoOn and T.Ocean or T.Grey, UDim2.new(0.5, -5, 1, 0), function()
 			local v = not autoOn
 			p.settings = p.settings or {}
 			p.settings.autoStats = v
@@ -837,12 +841,12 @@ function Panels.Stats()
 
 		-- combat numbers
 		-- combat numbers: the card grows with however many rows the grid needs at this width
-		local cs = UI.Card(right, UDim2.new(1, -12, 0, 0), T.PanelDeep)
-		cs.AutomaticSize = Enum.AutomaticSize.Y
+		-- v0.25.43: fixed 3 x 4 grid; the AutomaticSize card lost its frame after a re-render (Reset plan)
+		local cs = UI.Card(right, UDim2.new(1, -12, 0, 4 * 30 + 24), T.PanelDeep)
 		cs.Position = UDim2.fromOffset(0, 482)
 		UI.Pad(cs, 12)
-		local grid = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, Parent = cs })
-		New("UIGridLayout", { CellSize = UDim2.fromOffset(250, 26), CellPadding = UDim2.fromOffset(18, 4), Parent = grid })
+		local grid = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Parent = cs })
+		New("UIGridLayout", { CellSize = UDim2.new(1 / 3, -12, 0, 26), CellPadding = UDim2.fromOffset(18, 4), Parent = grid })
 		for _, l in ipairs({
 			-- v0.25.8 (owner: too plain): each derived stat in its own color (same family as the attribute it comes from)
 			{ "HP", d.maxHp, T.Green }, { "SP", d.maxSp, T.Blue }, { "ATK", d.atk, UI.StatColor.STR }, { "MATK", d.matk, UI.StatColor.INT },
@@ -2217,6 +2221,7 @@ function Panels.Shop()
 	byRarity(items, function(x)
 		return x.def
 	end)
+	local buys = {} -- { button, cost }
 	for order, it in ipairs(items) do
 		local def, id = it.def, it.def.id
 		-- ammo comes in handfuls
@@ -2224,16 +2229,29 @@ function Panels.Shop()
 		if def.kind == "Ammo" then
 			q1, q2 = 20, 99
 		end
-		local buttons = { { "BUY", T.Red, function()
+		local buttons = { { "BUY", T.Green, function()
 			req("ShopBuy", { id = id, qty = q1 }, "Purchase")
 		end } }
 		if def.stack then
-			table.insert(buttons, { "x" .. q2, T.Ocean, function()
+			table.insert(buttons, { "x" .. q2, T.Green, function()
 				req("ShopBuy", { id = id, qty = q2 }, "Purchase")
 			end })
 		end
-		shopCard(grid, { def = def, order = order, qty = q1 > 1 and q1 or nil, price = COIN .. " " .. UI.Format(def.price * q1), buttons = buttons }) -- ammo: BUY = one handful (badge xN)
+		local _, _, btns = shopCard(grid, { def = def, order = order, qty = q1 > 1 and q1 or nil, price = COIN .. " " .. UI.Format(def.price * q1), buttons = buttons }) -- ammo: BUY = one handful (badge xN)
+		table.insert(buys, { btns[1], def.price * q1 })
+		if btns[2] then
+			table.insert(buys, { btns[2], def.price * q2 })
+		end
 	end
+	-- v0.25.43 (owner): buy buttons are green when you can afford them, red when you can't
+	local function recolor()
+		local have = State.profile and State.profile.beli or 0
+		for _, b in ipairs(buys) do
+			UI.SetButtonColor(b[1], have >= b[2] and T.Green or T.Red)
+		end
+	end
+	recolor()
+	onProfile(win, recolor)
 end
 
 -- ===================== TAVERN =====================
@@ -2626,7 +2644,7 @@ function Panels.Stall(args)
 		return ItemDB.Get(x.id)
 	end)
 	for order, it in ipairs(items) do
-		shopCard(grid, { def = ItemDB.Get(it.id), entry = it, order = order, qty = it.qty, price = CUR .. " " .. UI.Format(it.price), buttons = { { "BUY", T.Red, function()
+		shopCard(grid, { def = ItemDB.Get(it.id), entry = it, order = order, qty = it.qty, price = CUR .. " " .. UI.Format(it.price), buttons = { { "BUY", have >= it.price and T.Green or T.Red, function()
 			local r = req("StallBuy", { sellerId = args.sellerId, index = it.index, qty = 1 }, "Purchase")
 			if r.ok then
 				win:Destroy()
@@ -2639,15 +2657,78 @@ end
 -- ===================== MARKET (seller) =====================
 function Panels.StallSetup()
 	local win = UI.Window("StallSetup", "Your Stall", UDim2.fromOffset(820, 620), T.Orange, "🏪")
-	if State.stall.open then
-		UI.List(win.body, nil, 6)
-		UI.Text(win.body, State.stall.title, 26, T.Gold, "Display")
-		for _, it in ipairs(State.stall.items or {}) do
-			UI.Text(win.body, ItemDB.DisplayName(it) .. " x" .. it.qty .. "   " .. (it.currency == "pearls" and PearlsCfg.Icon or COIN) .. " " .. UI.Format(it.price), 17, T.Text, "Bold")
+	if State.stall and State.stall.open then
+		-- v0.25.43 (owner): manage an open stall (also from its counter): your listed items first (REMOVE takes one
+		-- back), then your bag (set a price, ADD lists it), CLOSE STALL at the bottom returns everything unsold
+		local body = win.body
+		local function alive()
+			return win.frame.Parent ~= nil
 		end
-		UI.Button(win.body, "Close Stall (returns unsold items)", T.Red, UDim2.fromOffset(340, 48), function()
-			req("StallClose")
-			win:Destroy()
+		local function render()
+			if not alive() then
+				return
+			end
+			local st = State.stall
+			if not st or not st.open then
+				win:Destroy()
+				return
+			end
+			clear(body)
+			local cur = st.currency == "pearls" and PearlsCfg.Icon or COIN
+			local listed = 0
+			for _, it in ipairs(st.items or {}) do
+				if it.qty > 0 then
+					listed += 1
+				end
+			end
+			UI.Text(body, st.title, 22, T.Gold, "Display", { Position = UDim2.fromOffset(0, 4), Size = UDim2.new(0.55, 0, 0, 30) })
+			UI.Text(body, listed .. " listed  •  ADD bag items to sell more", 14, T.TextSoft, "Semi", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 10), Size = UDim2.new(0.45, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Right })
+			local grid = shopGrid(body, UDim2.new(1, 0, 1, -104))
+			grid.Position = UDim2.fromOffset(0, 40)
+			local order = 0
+			for _, it in ipairs(st.items or {}) do
+				local def = ItemDB.Get(it.id)
+				if it.qty > 0 and def then
+					order += 1
+					local card = shopCard(grid, { def = def, entry = it, order = order, qty = it.qty, price = cur .. " " .. UI.Format(it.price), buttons = { { "REMOVE", T.Red, function()
+						req("StallRemove", { index = it.index })
+					end } } })
+					UI.Text(card, "ON SALE", 12, T.Green, "Display", { Position = UDim2.fromOffset(6, 4), Size = UDim2.fromOffset(80, 16), ZIndex = 5 })
+				end
+			end
+			local p = State.profile
+			local bag = {}
+			for i, e in ipairs(p.inventory) do
+				local def = ItemDB.Get(e.id)
+				if def and not equippedUid(e.uid) then
+					table.insert(bag, { e = e, def = def, i = i })
+				end
+			end
+			byRarity(bag, function(x)
+				return x.def
+			end)
+			for _, b in ipairs(bag) do
+				order += 1
+				local box
+				local _, bx = shopCard(grid, { def = b.def, entry = b.e, order = order, qty = b.e.qty or 1, priceBox = tostring(b.def.price or 100), buttons = { { "ADD", T.Green, function()
+					req("StallAdd", { uid = b.e.uid, price = tonumber(box.Text) or 0, qty = b.e.qty or 1 })
+				end } } })
+				box = bx
+			end
+			local _, h = UI.Button(body, "CLOSE STALL", T.Red, UDim2.new(1, 0, 0, 52), function()
+				req("StallClose")
+				win:Destroy()
+			end)
+			h.Position = UDim2.new(0, 0, 1, -54)
+		end
+		render()
+		local conn = State.Changed:Connect(function(k)
+			if k == "stall" or k == "profile" then
+				render()
+			end
+		end)
+		win.frame.Destroying:Connect(function()
+			conn:Disconnect()
 		end)
 		return
 	end

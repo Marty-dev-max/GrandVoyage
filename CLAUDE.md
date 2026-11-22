@@ -519,6 +519,11 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     = no volleys, no steering), helmsman dead = ship stops, no gunners = no volleys. Crew tagged `ShipCrew` (client
     `Combat.mobList`). Hulls: CombatService target kind "ship" (`ShipService.NpcShipOf`, SHIP_HIT 0.6 x atk), manual
     swings hit an NPC hull in reach, aimed skills hit ships from anywhere. Combat `onShip(true)` = your own ship only.
+  * v0.25.43 (owner): buy buttons green when affordable, red when not (Shop recolors on profile change). Stall booth:
+    posts behind the seller, awning slopes toward buyers. Interact hides a prompt card when the camera is > 45 studs
+    away and says "Manage" on your own `Stall_<UserId>`; the seller's trigger opens StallSetup = editor of the open stall
+    (`StallAdd` / `StallRemove`, sold/removed slots stay qty 0 so buyer indexes hold; MarketService checkItem / payFee /
+    escrow / giveBack shared with StallOpen). Stats header: name / class / levels centered; combat card fixed 3x4 grid.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

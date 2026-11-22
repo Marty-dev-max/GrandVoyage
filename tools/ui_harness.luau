@@ -569,6 +569,15 @@ for _, p in panels do
 		snapshot("panel_" .. p[1] .. ((p[2] and p[2].tab) and ("_" .. p[2].tab) or ""))
 	end
 end
+-- v0.25.43: an open stall's editor (listed items + bag + CLOSE STALL)
+step("CloseAll", UI.CloseAll)
+State.stall = { open = true, title = "Cheap Cards!", currency = "beli", items = { { index = 1, id = "SteelOre", qty = 5, price = 250 }, { index = 2, id = "PirateFeast", qty = 0, price = 900 } } }
+if step("Panel StallManage", function()
+	Panels.Open("StallSetup")
+end) then
+	snapshot("panel_StallManage")
+end
+State.stall = { open = false }
 -- v0.24.0 title menu: title, character slots, creator (+ color target / spin / buy spins)
 do
 	local Menu = mod("UI.Menu")

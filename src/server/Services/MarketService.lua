@@ -47,12 +47,13 @@ local function buildBooth(player, title)
 	local counter = P(model, Enum.PartType.Block, Vector3.new(7, 3, 2.5), Color3.fromRGB(190, 130, 80), base * CFrame.new(0, 1.5, -3), { material = Enum.Material.WoodPlanks, collide = true })
 	counter.Anchored = true
 	local colors = { Color3.fromRGB(255, 90, 80), Color3.fromRGB(255, 250, 240) }
+	-- v0.25.43 (owner: it was backwards): posts stand behind the seller, the awning slopes down toward the buyers
 	for i = 0, 5 do
-		local stripe = P(model, Enum.PartType.Block, Vector3.new(1.3, 0.3, 4), colors[i % 2 + 1], base * CFrame.new(-3.25 + i * 1.3, 7, -2) * CFrame.Angles(0.35, 0, 0), { material = Enum.Material.Fabric })
+		local stripe = P(model, Enum.PartType.Block, Vector3.new(1.3, 0.3, 5.8), colors[i % 2 + 1], base * CFrame.new(-3.25 + i * 1.3, 7.2, -1.9) * CFrame.Angles(-0.3, 0, 0), { material = Enum.Material.Fabric })
 		stripe.Anchored = true
 	end
 	for _, sx in ipairs({ -3.4, 3.4 }) do
-		local pole = P(model, Enum.PartType.Block, Vector3.new(0.4, 7, 0.4), Color3.fromRGB(120, 80, 50), base * CFrame.new(sx, 3.5, -3.8))
+		local pole = P(model, Enum.PartType.Block, Vector3.new(0.4, 8.2, 0.4), Color3.fromRGB(120, 80, 50), base * CFrame.new(sx, 4.1, 0.8))
 		pole.Anchored = true
 	end
 	for _, p in ipairs(model:GetDescendants()) do
@@ -69,14 +70,14 @@ local function buildBooth(player, title)
 	prompt.MaxActivationDistance = 12
 	prompt.Parent = counter
 	prompt.Triggered:Connect(function(buyer)
-		if buyer ~= player then
-			Net.Push(buyer, "OpenUI", { panel = "Stall", sellerId = player.UserId })
-		end
+		-- the seller manages their own stall here (add / take back items, close it)
+		Net.Push(buyer, "OpenUI", { panel = buyer == player and "StallSetup" or "Stall", sellerId = player.UserId })
 	end)
 	model.Parent = workspace
 	return model
 end
 
+local giveBack -- (below)
 function Market.CloseStall(player)
 	local stall = stalls[player]
 	if not stall then
@@ -86,14 +87,7 @@ function Market.CloseStall(player)
 	local p = R.DataService.Get(player)
 	if p then
 		for _, it in ipairs(stall.items) do
-			if it.qty > 0 then
-				local def = ItemDB.Get(it.entry.id)
-				if def and def.stack then
-					R.InventoryService.AddItem(player, it.entry.id, it.qty)
-				else
-					table.insert(p.inventory, it.entry)
-				end
-			end
+			giveBack(player, p, it)
 		end
 		R.PlayerService.MarkDirty(player)
 	end
@@ -112,6 +106,105 @@ function Market.CloseStall(player)
 	end
 end
 
+local function isDev(player)
+	return game:GetService("RunService"):IsStudio() or player.UserId == game.CreatorId
+end
+
+local function maxItemsOf(p)
+	local cls = Classes[p.class]
+	local n = (cls and cls.passive and cls.passive.stallSlots) and mcfg.ShipwrightStallItems or mcfg.MaxStallItems
+	if p.perks and p.perks.stallSlots then
+		n += 2 -- Bigger Stall (Pearl Shop)
+	end
+	return n
+end
+
+-- one listing request { uid, price, qty } -> { uid, qty, price } or nil, why
+local function checkItem(player, p, it, currency, used)
+	local entry = type(it) == "table" and Formulas.FindItem(p, it.uid)
+	local price = type(it) == "table" and math.floor(tonumber(it.price) or 0)
+	if not entry or used[entry.uid] or R.InventoryService.IsEquipped(p, entry.uid) then
+		return nil, "Invalid item"
+	end
+	if price < 1 or price > mcfg.MaxPrice then
+		return nil, "Invalid price"
+	end
+	if currency == "pearls" then
+		local def = ItemDB.Get(entry.id)
+		-- v0.25.42 (owner): the developer can list fresh items to test Gem stalls (no 24 h trade lock)
+		if R.PearlService.TradeLocked(entry) and not isDev(player) then
+			return nil, (def and def.name or "That item") .. " was obtained less than " .. PearlsCfg.Trade.LockHours .. "h ago"
+		end
+		local okPrice, lo, hi = R.PearlService.PriceOk(entry.id, price)
+		if not okPrice then
+			return nil, (def and def.name or "Item") .. ": Gem price must be " .. lo .. "-" .. hi
+		end
+	end
+	used[entry.uid] = true
+	return { uid = entry.uid, qty = math.clamp(math.floor(tonumber(it.qty) or 1), 1, entry.qty or 1), price = price }
+end
+
+-- Gem stalls burn a non-refundable listing fee
+local function payFee(player, items, currency)
+	if currency ~= "pearls" then
+		return true
+	end
+	local value = 0
+	for _, it in ipairs(items) do
+		value += it.price * it.qty
+	end
+	local fee = math.max(1, math.floor(value * PearlsCfg.Trade.ListingFeeRate))
+	if not R.PearlService.Spend(player, fee, "listing fee", false) then
+		return false, "Listing fee: " .. fee .. " Gems"
+	end
+	return true
+end
+
+-- move a checked item out of the bag into the stall's escrow
+local function escrow(player, p, it)
+	local entry = Formulas.FindItem(p, it.uid)
+	local def = ItemDB.Get(entry.id)
+	if def.stack then
+		R.InventoryService.RemoveUid(player, entry.uid, it.qty)
+		return { entry = { id = entry.id }, qty = it.qty, price = it.price }
+	end
+	for idx, e in ipairs(p.inventory) do
+		if e == entry then
+			table.remove(p.inventory, idx)
+			break
+		end
+	end
+	return { entry = entry, qty = 1, price = it.price }
+end
+
+-- give an escrowed stall item back to its seller
+giveBack = function(player, p, it)
+	if it.qty <= 0 then
+		return
+	end
+	local def = ItemDB.Get(it.entry.id)
+	if def and def.stack then
+		R.InventoryService.AddItem(player, it.entry.id, it.qty)
+	else
+		table.insert(p.inventory, it.entry)
+	end
+	it.qty = 0
+end
+
+local function liveCount(stall)
+	local n = 0
+	for _, it in ipairs(stall.items) do
+		if it.qty > 0 then
+			n += 1
+		end
+	end
+	return n
+end
+
+local function pushState(player, stall)
+	Net.Push(player, "StallState", { open = true, title = stall.title, items = listing(stall), currency = stall.currency })
+end
+
 function Market.Start()
 	Net.Handle("StallOpen", function(player, data)
 		if stalls[player] then
@@ -124,16 +217,11 @@ function Market.Start()
 			return false, "Get off your ship first"
 		end
 		local p = R.DataService.Get(player)
-		local cls = Classes[p.class]
-		local maxItems = (cls.passive and cls.passive.stallSlots) and mcfg.ShipwrightStallItems or mcfg.MaxStallItems
-		if p.perks and p.perks.stallSlots then
-			maxItems += 2 -- Bigger Stall (Pearl Shop)
-		end
+		local maxItems = maxItemsOf(p)
 		local currency = data.currency == "pearls" and "pearls" or "beli"
 		-- v0.25.42 (owner): the developer can open a Gem stall right away to test it (Studio or the place's creator,
 		-- the same rule as the Dev tab): no Lv / account-age gate, no 24 h trade lock on fresh items
-		local dev = game:GetService("RunService"):IsStudio() or player.UserId == game.CreatorId
-		if currency == "pearls" and not dev then
+		if currency == "pearls" and not isDev(player) then
 			local ok, why = R.PearlService.CanTrade(player)
 			if not ok then
 				return false, why
@@ -150,57 +238,20 @@ function Market.Start()
 		local items = {}
 		local used = {}
 		for i = 1, math.min(#data.items, maxItems) do
-			local it = data.items[i]
-			local entry = type(it) == "table" and Formulas.FindItem(p, it.uid)
-			local price = type(it) == "table" and math.floor(tonumber(it.price) or 0)
-			if not entry or used[entry.uid] or R.InventoryService.IsEquipped(p, entry.uid) then
-				return false, "Invalid item"
+			local it, why = checkItem(player, p, data.items[i], currency, used)
+			if not it then
+				return false, why
 			end
-			if price < 1 or price > mcfg.MaxPrice then
-				return false, "Invalid price"
-			end
-			if currency == "pearls" then
-				local def = ItemDB.Get(entry.id)
-				if R.PearlService.TradeLocked(entry) and not dev then
-					return false, (def and def.name or "That item") .. " was obtained less than " .. PearlsCfg.Trade.LockHours .. "h ago"
-				end
-				local okPrice, lo, hi = R.PearlService.PriceOk(entry.id, price)
-				if not okPrice then
-					return false, (def and def.name or "Item") .. ": Gem price must be " .. lo .. "-" .. hi
-				end
-			end
-			local qty = math.clamp(math.floor(tonumber(it.qty) or 1), 1, entry.qty or 1)
-			used[entry.uid] = true
-			table.insert(items, { uid = entry.uid, qty = qty, price = price })
+			table.insert(items, it)
 		end
-		-- Pearl stalls pay a non-refundable listing fee (burned)
-		if currency == "pearls" then
-			local value = 0
-			for _, it in ipairs(items) do
-				value += it.price * it.qty
-			end
-			local fee = math.max(1, math.floor(value * PearlsCfg.Trade.ListingFeeRate))
-			if not R.PearlService.Spend(player, fee, "listing fee", false) then
-				return false, "Listing fee: " .. fee .. " Gems"
-			end
+		local okFee, whyFee = payFee(player, items, currency)
+		if not okFee then
+			return false, whyFee
 		end
 		-- Move items into escrow
 		local stallItems = {}
 		for _, it in ipairs(items) do
-			local entry = Formulas.FindItem(p, it.uid)
-			local def = ItemDB.Get(entry.id)
-			if def.stack then
-				R.InventoryService.RemoveUid(player, entry.uid, it.qty)
-				table.insert(stallItems, { entry = { id = entry.id }, qty = it.qty, price = it.price })
-			else
-				for idx, e in ipairs(p.inventory) do
-					if e == entry then
-						table.remove(p.inventory, idx)
-						break
-					end
-				end
-				table.insert(stallItems, { entry = entry, qty = 1, price = it.price })
-			end
+			table.insert(stallItems, escrow(player, p, it))
 		end
 		local stall = { title = title, items = stallItems, currency = currency }
 		stalls[player] = stall
@@ -212,9 +263,55 @@ function Market.Start()
 			hum.JumpPower = 0
 		end
 		R.PlayerService.MarkDirty(player)
-		Net.Push(player, "StallState", { open = true, title = title, items = listing(stall), currency = currency })
+		pushState(player, stall)
 		return true, "Stall opened"
 	end, 2)
+
+	-- v0.25.43 (owner): edit an open stall: list one more item, or take one back (sold-out slots stay as qty 0 so a
+	-- buyer's open window keeps pointing at the right index)
+	Net.Handle("StallAdd", function(player, data)
+		local stall = stalls[player]
+		if not stall then
+			return false, "Your stall is closed"
+		end
+		local p = R.DataService.Get(player)
+		if liveCount(stall) >= maxItemsOf(p) then
+			return false, "Your stall is full (" .. maxItemsOf(p) .. " items)"
+		end
+		local used = {}
+		local it, why = checkItem(player, p, data, stall.currency, used)
+		if not it then
+			return false, why
+		end
+		local okFee, whyFee = payFee(player, { it }, stall.currency)
+		if not okFee then
+			return false, whyFee
+		end
+		table.insert(stall.items, escrow(player, p, it))
+		R.PlayerService.MarkDirty(player)
+		pushState(player, stall)
+		return true, "Added to your stall"
+	end, 0.4)
+
+	Net.Handle("StallRemove", function(player, data)
+		local stall = stalls[player]
+		local it = stall and stall.items[tonumber(data.index) or 0]
+		if not it or it.qty <= 0 then
+			return false, "Not in your stall"
+		end
+		local p = R.DataService.Get(player)
+		if not ItemDB.Get(it.entry.id).stack and #p.inventory >= GameConfig.InventorySlots then
+			return false, "Inventory full"
+		end
+		giveBack(player, p, it)
+		R.PlayerService.MarkDirty(player)
+		if liveCount(stall) == 0 then
+			Market.CloseStall(player)
+			return true, "Stall closed"
+		end
+		pushState(player, stall)
+		return true, "Taken back"
+	end, 0.4)
 
 	Net.Handle("StallClose", function(player)
 		Market.CloseStall(player)
@@ -279,7 +376,7 @@ function Market.Start()
 			R.PlayerService.AddBeli(seller, income)
 			R.PlayerService.Notify(seller, "Sold " .. def.name .. " x" .. qty .. " for 🪙" .. income, "good")
 		end
-		Net.Push(seller, "StallState", { open = true, title = stall.title, items = listing(stall) })
+		pushState(seller, stall)
 		local remaining = 0
 		for _, x in ipairs(stall.items) do
 			remaining += x.qty

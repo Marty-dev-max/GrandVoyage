@@ -46,6 +46,10 @@ local function buildPrompt(prompt, inputType)
 	end
 	local actionText = mine and "Get up" or prompt.ActionText
 	local objectText = mine and string.format("Will power %d%% (one try)", math.floor((prompt:GetAttribute("Will") or 0.1) * 100 + 0.5)) or prompt.ObjectText
+	-- v0.25.43 (owner): your own stall's counter opens the stall editor
+	if prompt:FindFirstAncestor("Stall_" .. player.UserId) then
+		actionText, objectText = "Manage", "Your stall"
+	end
 	-- v0.25.23 (owner: too small, off to the side): centered over the head, where the NPC's nameplate sits (hidden
 	-- while the card shows), 1.35x bigger
 	local plate = prompt.Parent:FindFirstChild("Nameplate")
@@ -106,6 +110,16 @@ local function buildPrompt(prompt, inputType)
 		key.Size = UDim2.fromOffset(40, 40)
 		key.Position = UDim2.fromOffset(25, 12)
 		tween(key, 0.2, { Size = UDim2.fromOffset(46, 46), Position = UDim2.fromOffset(22, 9) })
+	end))
+	-- v0.25.43 (owner): no card while the camera is zoomed far out (you are near, but looking from the sky)
+	local CAM_FAR = 45
+	table.insert(conns, game:GetService("RunService").RenderStepped:Connect(function()
+		local cam = workspace.CurrentCamera
+		local a = prompt.Parent
+		local pos = a and (a:IsA("BasePart") and a.Position or (a:IsA("Attachment") and a.WorldPosition))
+		if cam and pos then
+			bb.Enabled = (cam.CFrame.Position - pos).Magnitude < CAM_FAR
+		end
 	end))
 	shown[prompt] = { bb = bb, conns = conns, plate = plate }
 end

@@ -61,6 +61,7 @@ local panelForRole = {
 	Guild = "Guild",
 	Dungeon = "Dungeon",
 	Stall = "Stall",
+	StallSetup = "StallSetup",
 }
 
 local settingsLoaded = false

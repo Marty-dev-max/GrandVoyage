@@ -606,6 +606,10 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     ("FruitSpawn", since v0.25.33) and Combat ("SkillDash" since v0.24.15, "Knock" since v0.25.17) used the 2-arg form
     while Net only had the 1-arg one, so those handlers NEVER ran (Notifier showed nothing; dash skills never slid the
     caster; boss knocks never pushed). Store gem pill reads the live "Pearls" attribute (+ AttributeChanged).
+  * v0.25.64 (owner: deep meme "gigachad" narrator): tools/gen_voice_elevenlabs.py = Adam (premade; library voices
+    like "David - The Movie Trailer" return 402 on this plan) + ffmpeg DEEPEN (asetrate 0.86, atempo 1.08, bass, echo),
+    line "Yes. A Cursed Fruit has appeared... on X. Go get it." -> assets/sfx/Narr_Fruit*.wav (upload after 6 Dec with
+    the other queued sounds). Interim TTS in FruitAlert.speak: Pitch -6, Speed 0.9, same line.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

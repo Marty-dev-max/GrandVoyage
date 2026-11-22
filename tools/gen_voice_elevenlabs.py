@@ -7,19 +7,22 @@ Lines: one per island (Config/Islands ids) so the voice can say where a Cursed F
 import json, os, subprocess, sys, tempfile, urllib.request
 
 OUT = os.path.join(os.path.dirname(__file__), '..', 'assets', 'sfx')
-VOICE = 'JBFqnCBsd6RMkjVDRZzb'  # George: warm British storyteller
+# v0.25.64 (owner: "deep voice chad, meme-y, Gigachad"): Adam (premade, dominant + firm; the library trailer voices
+# need a paid plan) pitched ~2.5 semitones down, a touch slower, bass-boosted, with a short echo (DEEPEN below)
+VOICE = 'pNInz6obpgDQGcFmaJgB'  # Adam - Dominant, Firm (was George JBFqnCBsd6RMkjVDRZzb)
+DEEPEN = 'asetrate=44100*0.86,aresample=44100,atempo=1.08,bass=g=7:f=110,aecho=0.8:0.6:60:0.18,'
 API = f'https://api.elevenlabs.io/v1/text-to-speech/{VOICE}?output_format=mp3_44100_128'
 ISLANDS = {
     'Daybreak': 'Daybreak Island', 'ConchBay': 'Conch Bay', 'Marmalade': 'Marmalade Town', 'Honeyslope': 'Honeyslope Village',
     'Barracuda': 'Barracuda Bistro', 'Mikan': 'the Mikan Isles', 'Epilogue': 'Epilogue Town', 'FortWest': 'Fort Driftwood',
     'FortMid': 'Fort Tidebreak', 'FortEast': 'Fort Gullwatch',
 }
-LINES = {f'Narr_Fruit{k}': f'A Cursed Fruit has appeared... on {v}.' for k, v in ISLANDS.items()}
+LINES = {f'Narr_Fruit{k}': f'Yes. A Cursed Fruit has appeared... on {v}. Go get it.' for k, v in ISLANDS.items()}
 
 
 def gen(name, text):
     body = json.dumps({'text': text, 'model_id': 'eleven_multilingual_v2',
-                       'voice_settings': {'stability': 0.55, 'similarity_boost': 0.8, 'style': 0.35}}).encode()
+                       'voice_settings': {'stability': 0.45, 'similarity_boost': 0.85, 'style': 0.6}}).encode()
     req = urllib.request.Request(API, data=body, method='POST', headers={'Content-Type': 'application/json'})
     with urllib.request.urlopen(req, timeout=120) as r:
         mp3 = r.read()
@@ -28,7 +31,7 @@ def gen(name, text):
         src = f.name
     out = os.path.join(OUT, name + '.wav')
     subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', src, '-ac', '1', '-ar', '44100',
-                    '-af', 'silenceremove=start_periods=1:start_threshold=-50dB,loudnorm=I=-16:TP=-2', out], check=True)
+                    '-af', DEEPEN + 'silenceremove=start_periods=1:start_threshold=-50dB,loudnorm=I=-16:TP=-2', out], check=True)
     os.remove(src)
     return out
 

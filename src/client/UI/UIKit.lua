@@ -1024,7 +1024,10 @@ end
 
 -- Your own character in a ViewportFrame (Bag / Stats): a still copy of the avatar holding the weapon you have equipped
 -- (weaponType -> Assets.Weapons model in the right hand). Drag left/right to turn it. Returns the frame and refresh(weaponType).
-function UI.CharacterView(parent, props)
+-- opts (v0.25.39, Job Master): zoom = mouse wheel zooms; water = the statue stands in shallow water with its
+-- reflection and a ripple ring, lit in the color passed to refresh(weaponType, tint)
+function UI.CharacterView(parent, props, opts)
+	opts = opts or {}
 	local vp = New("ViewportFrame", {
 		BackgroundTransparency = 1,
 		Size = UDim2.fromScale(1, 1),
@@ -1042,10 +1045,22 @@ function UI.CharacterView(parent, props)
 	cam.Parent = vp
 	vp.CurrentCamera = cam
 	local yaw = math.rad(-18) -- face the camera (it sits on the -Z side), turned a little for a 3/4 look
-	local model
+	local model, mirror, feetY
+	local zoom, frameCF, frameExt = 1, nil, nil
+	local function frameCam()
+		if frameCF then
+			local dist = frameExt.Y * 0.62 / math.tan(math.rad(13)) * zoom
+			cam.CFrame = CFrame.lookAt(frameCF.Position + Vector3.new(0, frameExt.Y * 0.04, -dist), frameCF.Position)
+		end
+	end
 	local function place()
 		if model then
 			model:PivotTo(CFrame.Angles(0, yaw, 0))
+		end
+		if mirror and feetY then
+			-- the reflection: the statue turned upside down about its feet (left/right swap, nobody notices on blocks)
+			local f = CFrame.new(0, feetY, 0)
+			mirror:PivotTo(f * CFrame.Angles(0, 0, math.pi) * f:Inverse() * CFrame.Angles(0, -yaw, 0))
 		end
 	end
 	local lastType, watched, watchConns = nil, nil, {}
@@ -1082,8 +1097,11 @@ function UI.CharacterView(parent, props)
 			end
 		end)
 	end)
-	refresh = function(weaponType)
+	local lastTint
+	refresh = function(weaponType, tint)
 		lastType = weaponType
+		tint = tint or lastTint
+		lastTint = tint
 		if player.Character then
 			pcall(watch, player.Character)
 		end
@@ -1121,6 +1139,9 @@ function UI.CharacterView(parent, props)
 		if root then
 			copy.PrimaryPart = root
 		end
+		-- framed on the body alone (v0.25.39: weapons stick out differently, every class stood at another size)
+		frameCF, frameExt = copy:GetBoundingBox()
+		feetY = frameCF.Position.Y - frameExt.Y / 2
 		-- the statue holds its weapon the way WeaponService draws it in a fight
 		local A = CFrame.Angles
 		local HOLD = {
@@ -1142,10 +1163,79 @@ function UI.CharacterView(parent, props)
 		end
 		copy.Parent = world
 		model = copy
-		local cf, ext = copy:GetBoundingBox()
-		local dist = ext.Y * 0.62 / math.tan(math.rad(13))
-		cam.CFrame = CFrame.lookAt(cf.Position + Vector3.new(0, ext.Y * 0.04, -dist), cf.Position)
+		if mirror then
+			mirror:Destroy()
+			mirror = nil
+		end
+		local oldWater = world:FindFirstChild("GVWater")
+		if oldWater then
+			oldWater:Destroy()
+		end
+		if opts.water then
+			local c = tint or Color3.fromRGB(150, 120, 230)
+			vp.LightColor = c:Lerp(Color3.new(1, 1, 1), 0.45)
+			vp.Ambient = c:Lerp(Color3.fromRGB(180, 180, 200), 0.55)
+			mirror = copy:Clone()
+			for _, d in ipairs(mirror:GetDescendants()) do
+				if d:IsA("BasePart") then
+					d.Transparency = 1 - (1 - d.Transparency) * 0.45
+					d.Color = d.Color:Lerp(c, 0.35)
+				elseif d:IsA("Decal") then
+					d.Transparency = 1 - (1 - d.Transparency) * 0.45
+				end
+			end
+			mirror.Parent = world
+			local water = Instance.new("Model")
+			water.Name = "GVWater"
+			local plane = Instance.new("Part")
+			plane.Anchored = true
+			plane.Size = Vector3.new(80, 0.1, 80)
+			plane.CFrame = CFrame.new(0, feetY - 0.02, 0)
+			plane.Color = c:Lerp(Color3.new(1, 1, 1), 0.35)
+			plane.Transparency = 0.45
+			plane.Material = Enum.Material.SmoothPlastic
+			plane.Parent = water
+			-- ripples where the feet touch the water
+			for i = 1, 2 do
+				local ring = Instance.new("Part")
+				ring.Name = "Ripple"
+				ring.Anchored = true
+				ring.Shape = Enum.PartType.Cylinder
+				ring.Color = Color3.new(1, 1, 1)
+				ring.Material = Enum.Material.SmoothPlastic
+				ring:SetAttribute("Phase", (i - 1) * 0.5)
+				ring.Parent = water
+			end
+			water.Parent = world
+			local conn
+			conn = RunService.RenderStepped:Connect(function()
+				if not water.Parent then
+					conn:Disconnect()
+					return
+				end
+				for _, r in ipairs(water:GetChildren()) do
+					if r.Name == "Ripple" then
+						local k = (os.clock() * 0.45 + r:GetAttribute("Phase")) % 1
+						local d = 2.5 + k * 6
+						r.Size = Vector3.new(0.05, d, d)
+						r.CFrame = CFrame.new(0, feetY + 0.01 + k * 0.001, 0) * CFrame.Angles(0, 0, math.pi / 2)
+						r.Transparency = 0.35 + k * 0.65
+					end
+				end
+			end)
+		end
+		frameCam()
 		place()
+	end
+	if opts.zoom then
+		pcall(function()
+			vp.InputChanged:Connect(function(input)
+				if input.UserInputType == Enum.UserInputType.MouseWheel then
+					zoom = math.clamp(zoom * (input.Position.Z > 0 and 0.9 or 1.1), 0.45, 1.35)
+					frameCam()
+				end
+			end)
+		end)
 	end
 	-- drag to turn: press on the statue, then follow the pointer anywhere (works with touch too; the viewport is
 	-- Active so a drag does not also spin the camera). pcall: the headless UI harness has no input events.

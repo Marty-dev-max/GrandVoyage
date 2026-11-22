@@ -1515,6 +1515,12 @@ local function roundCorner(f)
 	f:SetAttribute("PxKeep", true) -- PixelUI squares every corner; these are meant to be round
 	New("UICorner", { CornerRadius = UDim.new(0.5, 0), Parent = f })
 end
+-- a stroke for a round piece: a mitred join fills the corners and draws a square box around the circle
+local function roundStroke(f, color, thick)
+	local st = UI.Stroke(f, color, thick)
+	st.LineJoinMode = Enum.LineJoinMode.Round
+	return st
+end
 
 local function typeDisc(parent, typeId, color, size)
 	local Types = require(Shared.Config.MonsterTypes)
@@ -1524,10 +1530,10 @@ local function typeDisc(parent, typeId, color, size)
 	-- top half green (beats), bottom half red (weak to): a hard stop in one gradient
 	local GREEN, RED = Color3.fromRGB(120, 200, 110), Color3.fromRGB(236, 112, 96)
 	New("UIGradient", { Rotation = 90, Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, GREEN), ColorSequenceKeypoint.new(0.495, GREEN), ColorSequenceKeypoint.new(0.505, RED), ColorSequenceKeypoint.new(1, RED) }), Parent = disc })
-	UI.Stroke(disc, T.Edge, 3)
+	roundStroke(disc, T.Edge, 3)
 	local core = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.5, 0.5), BackgroundColor3 = Color3.fromRGB(250, 244, 230), ZIndex = 3, Parent = disc })
 	roundCorner(core)
-	UI.Stroke(core, T.Edge, 2.5)
+	roundStroke(core, T.Edge, 2.5)
 	if ty then
 		UI.Text(core, ty.kanji, math.floor(size * 0.22), color or ty.color, "Semi", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 4 })
 	end
@@ -1537,7 +1543,7 @@ local function typeDisc(parent, typeId, color, size)
 		local r = size * 0.37
 		local b = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, math.cos(math.rad(angle)) * r, 0.5, math.sin(math.rad(angle)) * r), Size = UDim2.fromOffset(size * 0.2, size * 0.2), BackgroundColor3 = t.color, ZIndex = 4, Parent = disc })
 		roundCorner(b)
-		UI.Stroke(b, Color3.new(1, 1, 1), 2)
+		roundStroke(b, Color3.new(1, 1, 1), 2)
 		UI.Text(b, t.kanji, math.floor(size * 0.1), Color3.new(1, 1, 1), "Semi", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 5 })
 		UI.Tooltip(b, function()
 			return t.name, t.color
@@ -1567,7 +1573,7 @@ local function statRing(parent, stat, rank, k, color, size)
 		local on = i <= math.floor(k * N + 0.5)
 		local seg = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, math.cos(a) * size * 0.42, 0, size / 2 + math.sin(a) * size * 0.42), Size = UDim2.fromOffset(size * 0.13, size * 0.13), Rotation = math.deg(a), BackgroundColor3 = on and color or T.PanelDeep, BorderSizePixel = 0, Parent = f })
 		if on then
-			UI.Stroke(seg, UI.Shade(color, -0.35), 1)
+			roundStroke(seg, UI.Shade(color, -0.35), 1)
 		end
 	end
 	UI.Text(f, tostring(rank), math.floor(size * 0.3), color, "Display", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, size / 2 - size * 0.06), Size = UDim2.fromOffset(size * 0.6, size * 0.34), TextXAlignment = Enum.TextXAlignment.Center })
@@ -1595,12 +1601,10 @@ function Panels.JobMaster()
 	-- middle: the character on a podium, the button under it
 	local mid = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromScale(0.2, 0), Size = UDim2.new(0.38, 0, 1, 0), Parent = win.body })
 	local aura = New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.glow, ImageTransparency = 0.35, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.45), Size = UDim2.fromScale(1.1, 0.9), Parent = mid })
-	local podium = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.71), Size = UDim2.new(0.6, 0, 0, 40), BackgroundColor3 = Color3.fromRGB(226, 232, 248), Parent = mid })
-	roundCorner(podium)
-	local podiumRim = New("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(1, 0.6), BackgroundColor3 = Color3.fromRGB(150, 160, 196), ZIndex = 0, Parent = podium })
-	roundCorner(podiumRim)
 	local stage = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0.76, 0), Parent = mid })
-	local _, refreshChar = UI.CharacterView(stage)
+	-- the character stands in shallow water lit by the class color (reference), drag to turn 360, wheel to zoom
+	local _, refreshChar = UI.CharacterView(stage, nil, { water = true, zoom = true })
+	UI.Text(mid, "drag to turn  •  scroll to zoom", 12, Color3.new(1, 1, 1), "Semi", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.76, 4), Size = UDim2.fromOffset(260, 16), TextXAlignment = Enum.TextXAlignment.Center })
 	local btnHolder = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -6), Size = UDim2.fromOffset(260, 92), Parent = mid })
 	-- right: name, description, stat rings, then the type card
 	local right = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromScale(0.6, 0), Size = UDim2.new(0.4, 0, 1, 0), Parent = win.body })
@@ -1629,7 +1633,7 @@ function Panels.JobMaster()
 		local btn = New("TextButton", { Text = "", AutoButtonColor = false, AnchorPoint = Vector2.new(0.5, 0.5), BackgroundColor3 = c.color, Parent = wheel })
 		roundCorner(btn)
 		New("UIGradient", { Rotation = 90, Color = ColorSequence.new(UI.Shade(c.color, 0.25), UI.Shade(c.color, -0.3)), Parent = btn })
-		local ring = UI.Stroke(btn, T.Edge, 2.5)
+		local ring = roundStroke(btn, T.Edge, 2.5)
 		UI.Icon(btn, c.icon, 40, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.58, 0.58), ZIndex = btn.ZIndex + 1 })
 		UI.Tooltip(btn, function()
 			return c.name, c.color
@@ -1644,17 +1648,7 @@ function Panels.JobMaster()
 		end)
 		items[i] = { btn = btn, ring = ring }
 	end
-	-- arrows + mouse wheel turn it too
-	for _, d in ipairs({ { "▲", -1, 0 }, { "▼", 1, 1 } }) do
-		local ab = UI.Button(wheel, d[1], T.PanelTop, UDim2.fromOffset(44, 36), function()
-			sel = ((sel - 1 + d[2]) % n) + 1
-			place(true)
-			show(true)
-		end)
-		ab.Parent.AnchorPoint = Vector2.new(0, d[3])
-		ab.Parent.Position = UDim2.new(0, 4, d[3], d[3] == 0 and 4 or -4)
-		ab.Parent.ZIndex = 20
-	end
+	-- the mouse wheel over the class column turns it too (clicking an emblem is the main way)
 	pcall(function()
 		wheel.InputChanged:Connect(function(input)
 			if input.UserInputType == Enum.UserInputType.MouseWheel then
@@ -1679,9 +1673,9 @@ function Panels.JobMaster()
 		bgGrad.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, c.color:Lerp(Color3.new(1, 1, 1), 0.35)), ColorSequenceKeypoint.new(0.55, c.color), ColorSequenceKeypoint.new(1, c.color:Lerp(Color3.fromRGB(30, 26, 60), 0.35)) })
 		-- the statue holds this class's weapon
 		local w = c.weapons[1] or "Fists"
-		if w ~= lastWeapon then
-			lastWeapon = w
-			refreshChar(w)
+		if cid ~= lastWeapon then
+			lastWeapon = cid
+			refreshChar(w, c.color)
 		end
 		-- button: CHOOSE the first time, SWITCH after that; your own class says CURRENT
 		clear(btnHolder)

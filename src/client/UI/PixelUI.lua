@@ -61,7 +61,10 @@ function PixelUI.Apply(obj)
 			obj.CornerRadius = UDim.new(0, 0)
 		end
 	elseif obj:IsA("UIStroke") then
-		obj.LineJoinMode = Enum.LineJoinMode.Miter
+		-- (a mitred stroke fills the corners of a round frame: round pieces opt out with PxKeep)
+		if not keep(obj) then
+			obj.LineJoinMode = Enum.LineJoinMode.Miter
+		end
 	elseif obj:IsA("UIGradient") then
 		task.defer(watchGradient, obj) -- after the creator has set its parent and colors
 	elseif obj:IsA("UITextSizeConstraint") then

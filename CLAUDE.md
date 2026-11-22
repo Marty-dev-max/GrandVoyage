@@ -500,7 +500,10 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     `Mult(a, b)` = Bonus 1.2 / Penalty 0.85, used by CombatService both ways. Class colors follow their type (Navigator
     purple, Doctor magenta INT, Shipwright rust STR, Sharpshooter sky-blue DEX). Ex-PHY gunners: Rifleman DEX,
     Armored Gunner STR, both keep x2.5 range via Monsters LONG_RANGE.
-    Round UI pieces set attribute PxKeep (PixelUI squares every other UICorner).
+    Round UI pieces set attribute PxKeep (PixelUI squares every other UICorner) and use a Round stroke join (a Miter
+    join fills the corners = a square box around the circle; PixelUI skips PxKeep strokes). v0.25.39:
+    UI.CharacterView(parent, props, { water, zoom }) frames the BODY only (before the weapon), refresh(weapon, tint);
+    water = translucent plane + upside-down reflection about the feet + ripple rings, light/ambient tinted.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

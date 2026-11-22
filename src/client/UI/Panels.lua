@@ -225,17 +225,77 @@ function Panels.FruitChoice(uid, def)
 	end)
 end
 
+-- each class's particles drifting over the Job Master backdrop (pixel icons from Config/Icons)
+local CLASS_FX = {
+	Brawler = { icons = { "knuckles", "flame" } },
+	Swordsman = { icons = { "sword" } },
+	Sniper = { icons = { "slingshot" } },
+	Cook = { icons = { "meat", "flame" } },
+	Navigator = { icons = { "pt_cloud", "compass" }, bubble = true },
+	Doctor = { icons = { "potion" }, plus = true },
+	Shipwright = { icons = { "gear", "hammer" } },
+}
+
+-- v0.25.68 (owner): the Bag / Stats character stands in the class's sea like at the Job Master: a gradient in the
+-- class color, the shallow water below the horizon, the class particles drifting; the character keeps its own colors
+-- (no glow, no tint). Returns the CharacterView refresh and setClass(classId) for later class changes.
+local function classStage(panel, stage, opts)
+	panel.ClipsDescendants = true
+	local bg = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Size = UDim2.fromScale(1, 1), ZIndex = 0, Parent = panel })
+	local bgGrad = New("UIGradient", { Rotation = 115, Parent = bg })
+	local water = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Position = UDim2.fromScale(0, 0.6), Size = UDim2.fromScale(1, 0.4), ZIndex = 0, Parent = bg })
+	local waterGrad = New("UIGradient", { Rotation = 90, Parent = water })
+	New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.45, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 3), ZIndex = 0, Parent = water })
+	local cid0 = State.profile and State.profile.class
+	local c0 = Classes[cid0 or ""]
+	local o = { water = true, plainLight = true, tint = c0 and c0.color, onFrame = function(h)
+		-- the horizon in the stage's space -> the panel's space
+		local ok = pcall(function()
+			local y = stage.AbsolutePosition.Y + stage.AbsoluteSize.Y * h - panel.AbsolutePosition.Y
+			local k = math.clamp(y / math.max(1, panel.AbsoluteSize.Y), 0.2, 0.95)
+			water.Position = UDim2.fromScale(0, k)
+			water.Size = UDim2.fromScale(1, 1 - k)
+		end)
+		if not ok then
+			water.Position = UDim2.fromScale(0, h)
+			water.Size = UDim2.fromScale(1, 1 - h)
+		end
+	end }
+	for k, v in pairs(opts or {}) do
+		o[k] = v
+	end
+	local _, refresh = UI.CharacterView(stage, nil, o)
+	local fxLayer, shown
+	local function setClass(cid)
+		local c = Classes[cid or ""]
+		if not c or cid == shown then
+			return
+		end
+		shown = cid
+		-- a little deeper than the Job Master so the gear tiles and the text stay readable on it
+		bgGrad.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, c.color:Lerp(Color3.new(1, 1, 1), 0.2)), ColorSequenceKeypoint.new(0.55, c.color:Lerp(Color3.fromRGB(30, 26, 60), 0.2)), ColorSequenceKeypoint.new(1, c.color:Lerp(Color3.fromRGB(30, 26, 60), 0.55)) })
+		waterGrad.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, c.color:Lerp(Color3.new(1, 1, 1), 0.45)), ColorSequenceKeypoint.new(0.35, c.color:Lerp(Color3.new(1, 1, 1), 0.1)), ColorSequenceKeypoint.new(1, c.color:Lerp(Color3.fromRGB(24, 20, 52), 0.55)) })
+		if fxLayer then
+			fxLayer:Destroy()
+		end
+		local fx = CLASS_FX[cid] or {}
+		fxLayer = UI.Sparkles(bg, c.color:Lerp(Color3.new(1, 1, 1), 0.5), 16, { float = true, icons = fx.icons, iconFrac = 0.45, iconMin = 14, iconMax = 22, star = 0.5, plus = fx.plus, bubble = fx.bubble, color2 = Color3.new(1, 1, 1), z = 0 })
+	end
+	setClass(cid0)
+	return refresh, setClass
+end
+
 function Panels.Inventory(args)
 	local win = UI.Window("Inventory", "Inventory", UDim2.fromOffset(1180, 600), T.Ocean, "🎒", { fullscreen = true })
 	-- left: your character wearing your gear, with the equipment slots around it (tap a slot to inspect it)
 	local charPanel = UI.Card(win.body, UDim2.new(0.36, -10, 1, 0), T.PanelDeep)
 	local left = New("Frame", { BackgroundTransparency = 1, Position = UDim2.new(0.36, 0, 0, 0), Size = UDim2.new(0.38, -10, 1, 0), Parent = win.body })
-	local right = UI.Card(win.body, UDim2.new(0.26, 0, 1, 0))
+	-- v0.25.68 (owner: the stall button rode above the title bar on big screens): it sits under the detail card now
+	local right = UI.Card(win.body, UDim2.new(0.26, 0, 1, -60))
 	right.Position = UDim2.new(0.74, 0, 0, 0)
 	-- the statue fills the panel (behind the gear slots) so there is plenty of room to drag it round, even on phones
 	local stage = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 8), Size = UDim2.new(1, 0, 1, -90), Parent = charPanel })
-	New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.glow, ImageColor3 = T.Ocean:Lerp(Color3.new(1, 1, 1), 0.4), ImageTransparency = 0.6, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.55), Size = UDim2.fromScale(1.1, 0.9), Parent = stage })
-	local _, refreshChar = UI.CharacterView(stage)
+	local refreshChar, setStageClass = classStage(charPanel, stage)
 	UI.Text(charPanel, "drag to turn", 12, T.TextSoft, "Semi", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -6), Size = UDim2.fromOffset(200, 16), TextXAlignment = Enum.TextXAlignment.Center })
 	local slotCols = {}
 	for k, side in ipairs({ 0, 1 }) do
@@ -697,17 +757,18 @@ function Panels.Inventory(args)
 		end
 	end
 	onProfile(win, render)
-	-- v0.25.36 (owner): the stall is an icon (pixel market stall), its name shows on hover
-	local stallBtn, h = UI.Button(win.header, "", T.Orange, UDim2.fromOffset(48, 42), function()
+	onProfile(win, function()
+		setStageClass(State.profile and State.profile.class)
+	end)
+	-- the stall: a labelled button under the detail card (the market stall icon + OPEN STALL)
+	local stallBtn, h = UI.Button(win.body, "🏪 OPEN STALL", T.Orange, UDim2.new(0.26, 0, 0, 50), function()
 		Panels.StallSetup()
 	end)
-	UI.Icon(stallBtn, "stall", 34, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), ZIndex = stallBtn.ZIndex + 1 })
 	UI.Tooltip(stallBtn, function()
 		return "Open Stall: sell your items to other players", T.Orange
 	end)
-	h.AnchorPoint = Vector2.new(1, 0.5)
-	h.Position = UDim2.new(1, -128, 0.5, -2)
-	h.ZIndex = 30
+	h.AnchorPoint = Vector2.new(0, 1)
+	h.Position = UDim2.new(0.74, 0, 1, 0)
 end
 
 -- ===================== STATS =====================
@@ -717,8 +778,7 @@ function Panels.Stats()
 	local win = UI.Window("Stats", "Stats", UDim2.fromOffset(1100, 600), T.Purple, "📊", { fullscreen = true })
 	local charPanel = UI.Card(win.body, UDim2.new(0.38, -10, 1, 0), T.PanelDeep)
 	local stage = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 112), Size = UDim2.new(1, 0, 1, -138), Parent = charPanel })
-	New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.glow, ImageColor3 = T.Purple:Lerp(Color3.new(1, 1, 1), 0.4), ImageTransparency = 0.6, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.55), Size = UDim2.fromScale(0.9, 0.9), Parent = stage })
-	local _, refreshChar = UI.CharacterView(stage)
+	local refreshChar, setStageClass = classStage(charPanel, stage)
 	-- v0.25.43 (owner: the top looked empty): name centered, class on the 2nd line, levels on the 3rd, big and clear
 	local CENTER = Enum.TextXAlignment.Center
 	local nameLabel = UI.Text(charPanel, "", 30, T.Text, "Display", { Position = UDim2.fromOffset(14, 12), Size = UDim2.new(1, -28, 0, 36), TextXAlignment = CENTER })
@@ -755,9 +815,10 @@ function Panels.Stats()
 		local tdef = TitlesCfg.ById[p.title or ""]
 		nameLabel.TextColor3 = tdef and Rarity.Get(tdef.tier).color or T.Text
 		classLabel.Text = cls and cls.name or p.class
-		classLabel.TextColor3 = cls and cls.color or T.Text
+		classLabel.TextColor3 = Color3.new(1, 1, 1) -- on the class-colored backdrop (v0.25.68)
+		setStageClass(p.class)
 		subLabel.RichText = true
-		subLabel.Text = UI.Colored("Base Lv." .. p.baseLevel, T.Green) .. "     " .. UI.Colored("Job Lv." .. p.jobLevel, cls and (cls.ringColor or cls.color) or T.Purple)
+		subLabel.Text = UI.Colored("Base Lv." .. p.baseLevel, Color3.new(1, 1, 1)) .. "     " .. UI.Colored("Job Lv." .. p.jobLevel, T.Gold)
 		if not drawn then
 			drawn = true
 			local wEntry = p.equipment.weapon and Formulas.FindItem(p, p.equipment.weapon)
@@ -1530,17 +1591,6 @@ local function statRing(parent, stat, rank, k, color, size)
 	UI.Text(f, stat, math.floor(size * 0.13), T.Text, "Display", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, size / 2 + size * 0.17), Size = UDim2.fromOffset(size * 0.6, size * 0.16), TextXAlignment = Enum.TextXAlignment.Center })
 	return f
 end
-
--- each class's particles drifting over the Job Master backdrop (pixel icons from Config/Icons)
-local CLASS_FX = {
-	Brawler = { icons = { "knuckles", "flame" } },
-	Swordsman = { icons = { "sword" } },
-	Sniper = { icons = { "slingshot" } },
-	Cook = { icons = { "meat", "flame" } },
-	Navigator = { icons = { "pt_cloud", "compass" }, bubble = true },
-	Doctor = { icons = { "potion" }, plus = true },
-	Shipwright = { icons = { "gear", "hammer" } },
-}
 
 function Panels.JobMaster()
 	UI.FullPref.Job = true -- always full screen: no shrink button, only the X (owner)

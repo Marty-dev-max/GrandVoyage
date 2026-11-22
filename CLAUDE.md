@@ -638,6 +638,11 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     Slingshot.Busy()), server `Sling` request (grab/go/cancel, Fruits.Slingshot) + FX "Sling" for other clients' arms.
     Pose previews without Studio/Blender: `lune run tools/export_pose.luau build/GrandVoyage.rbxlx x.json Clip@t ...`
     + `python3 tools/render_pose.py x.json out.png` (FK on VC.Rest; VC.Preview blocks carry attribute Limb).
+  * v0.25.67-68 (owner): Stats table = points pill + "Reset Stats" (StoreBuyRobux ResetStats prompt), BASE white /
+    BONUS green / NEXT COST yellow, fixed row layout (ROW0/ROWH, the footer no longer covers LUK). Bag + Stats
+    character panels use Panels `classStage(panel, stage)` (Job Master look: class gradient, water below the horizon,
+    CLASS_FX sparkles; CharacterView opts `plainLight` = no tint on the character, `tint` = initial water tint;
+    returns refresh, setClass). Bag stall button = "🏪 OPEN STALL" under the detail card (EMOJI_ICON 🏪 = stall).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

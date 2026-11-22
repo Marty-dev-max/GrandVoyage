@@ -605,7 +605,7 @@ local EMOJI_ICON = {
 	["🗺️"] = "map", ["👑"] = "crown", ["📜"] = "scroll", ["🐾"] = "paw", ["💎"] = "gem", ["⚙️"] = "gear",
 	["🪙"] = "coin", ["☠"] = "skull", ["☠️"] = "skull", ["🏳"] = "whiteflag", ["🔨"] = "hammer", ["🃏"] = "card",
 	["🥚"] = "egg", ["🪺"] = "golden_egg", ["🪤"] = "bait", ["🧰"] = "chest", ["📘"] = "book", ["⛵"] = "ship",
-	["🧿"] = "charm", ["🍖"] = "meat", ["🪵"] = "wood", ["⚔️"] = "sword", ["👊"] = "knuckles", ["🛍️"] = "shop",
+	["🧿"] = "charm", ["🍖"] = "meat", ["🪵"] = "wood", ["⚔️"] = "sword", ["👊"] = "knuckles", ["🛍️"] = "shop", ["🏪"] = "stall",
 	["🏆"] = "crown", ["📅"] = "scroll", ["🎁"] = "chest", ["📖"] = "book", ["🧑‍✈️"] = "party", ["🎓"] = "book",
 	["🛡️"] = "armor", ["💉"] = "medkit", ["🧭"] = "map", ["🎯"] = "slingshot", ["🍳"] = "boots",
 	-- v0.25.3 pixel pack additions
@@ -1121,7 +1121,7 @@ function UI.CharacterView(parent, props, opts)
 			end
 		end)
 	end)
-	local lastTint
+	local lastTint = opts.tint
 	refresh = function(weaponType, tint)
 		lastType = weaponType
 		tint = tint or lastTint
@@ -1197,8 +1197,11 @@ function UI.CharacterView(parent, props, opts)
 		end
 		if opts.water then
 			local c = tint or Color3.fromRGB(150, 120, 230)
-			vp.LightColor = c:Lerp(Color3.new(1, 1, 1), 0.45)
-			vp.Ambient = c:Lerp(Color3.fromRGB(180, 180, 200), 0.55)
+			-- opts.plainLight (v0.25.68, Bag / Stats): the character keeps its own colors, only the water shows the tint
+			if not opts.plainLight then
+				vp.LightColor = c:Lerp(Color3.new(1, 1, 1), 0.45)
+				vp.Ambient = c:Lerp(Color3.fromRGB(180, 180, 200), 0.55)
+			end
 			mirror = copy:Clone()
 			mirrorPairs = {}
 			local src, dst = copy:GetDescendants(), mirror:GetDescendants() -- a clone keeps the same order

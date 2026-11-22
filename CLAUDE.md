@@ -673,6 +673,11 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     p.tokiColorPick[kind] + push "OpenPanel" TokiColor; uselessNow(it, to) refuses without that Toki / when owned.
     `Panels.TokiColor(args.kind)` = tabs per owned Toki, preview, color wheel + brightness + Toki.Colors swatches,
     SAVE -> TokiService "SetTokiColor" (#RRGGBB, needs the unlock); locked = Gems / R$ buy buttons. Stats 🎨 button.
+  * v0.25.73 (owner reference): Store = ONE scroll of sections (Gem Packs / Gem Shop / Benefits / Boosts) with
+    headers; top tabs tween CanvasPosition to `sectionY[tab]` and light up from the scroll position (syncTab). Cards
+    are built once per render: a click only re-highlights (rim) + redraws the detail panel (the old full re-render
+    jumped the scroll to the top); `relayout()` sizes cells from the scroll's real width (100-px probe for the UIScales)
+    on every AbsoluteSize change (first measure during the open tween gave 2 columns). Owned Toki colors: CHANGE COLOR.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

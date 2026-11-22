@@ -3590,7 +3590,7 @@ end
 
 -- v0.25.9 (owner reference): big item cards on the left, a large preview + description + big BUY buttons on the
 -- right, currency pill next to the tabs. One shape for every entry: { icon, name, desc, color, kind, ... }.
-local storePick = {}
+local storePick = nil -- the picked card (entry id), kept while the window is reopened
 function Panels.PearlShop(args)
 	if args and args.tab then
 		storeTab = args.tab
@@ -3598,28 +3598,52 @@ function Panels.PearlShop(args)
 	local win = UI.Window("PearlShop", "Store", UDim2.fromOffset(820, 580), T.Ocean, "🛍️", { fullscreen = true })
 	local body = win.body
 	local StoreCfg = require(ReplicatedStorage.Shared.Config.Store)
-	local TABS = { Gems = T.Ocean, Benefits = T.Purple, Boosts = T.Orange }
+	local TokiCfg = require(Shared.Config.Toki)
+	-- v0.25.73 (owner reference: one long store): every category in ONE scroll, a section title above each; the tabs
+	-- jump to their section and light up as you scroll past it. Picking a card only redraws the detail panel (the
+	-- whole grid used to rebuild = the scroll jumped back to the top), and the card size follows the scroll's real
+	-- width whenever it changes (it was measured once while the window was still opening = only 2 columns).
+	local TABS = { { "Gems", "💎", "GEMS", T.Ocean }, { "Benefits", "🎟️", "BENEFITS", T.Purple }, { "Boosts", "⚡", "BOOSTS", T.Orange } }
 	local render
 
-	local function entries(info, d)
-		local list = {}
-		if storeTab == "Gems" then
-			for i, prod in ipairs(d and d.products or {}) do
-				local cfg = PearlsCfg.Products[i] or {}
-				table.insert(list, { kind = "pack", id = "pack" .. prod.productId, icon = cfg.icon or "💎", name = cfg.name or prod.name, desc = PearlsCfg.Icon .. " " .. prod.pearls .. " Gems. Robux Gems are shop-only (not tradable).", prod = prod, color = T.Purple })
-			end
-			for _, it in ipairs(PearlsCfg.Shop) do
-				table.insert(list, { kind = "gemshop", id = it.id, icon = it.icon, name = it.name, desc = it.desc, it = it, owned = it.once and d and d.perks and d.perks[it.perk], color = T.Ocean,
-					egg = it.item and PetsCfg.Eggs[it.item] and it.item })
-			end
-		else
-			for _, it in ipairs(storeTab == "Boosts" and StoreCfg.Boosts or StoreCfg.Benefits) do
+	local info, d = { boosts = {}, tokens = {}, gems = 0 }, nil
+	local function fetch()
+		local res = Net.Request("StoreInfo")
+		if res.ok then
+			info = res.data
+		end
+		local pr = Net.Request("PearlInfo")
+		if pr.ok then
+			d = pr.data
+		end
+	end
+
+	-- the sections, top to bottom: { tab, title, icon, color, entries }
+	local function sections()
+		local p = State.profile
+		local packs, shop, benefits, boosts = {}, {}, {}, {}
+		for i, prod in ipairs(d and d.products or {}) do
+			local cfg = PearlsCfg.Products[i] or {}
+			table.insert(packs, { kind = "pack", id = "pack" .. prod.productId, icon = cfg.icon or "💎", name = cfg.name or prod.name, sub = "Gems", desc = PearlsCfg.Icon .. " " .. prod.pearls .. " Gems. Robux Gems are shop-only (not tradable).", prod = prod, color = T.Ocean })
+		end
+		for _, it in ipairs(PearlsCfg.Shop) do
+			table.insert(shop, { kind = "gemshop", id = it.id, icon = it.icon, name = it.name, sub = "Gem Shop", desc = it.desc, it = it, owned = it.once and d and d.perks and d.perks[it.perk], color = Color3.fromRGB(40, 170, 160),
+				egg = it.item and PetsCfg.Eggs[it.item] and it.item })
+		end
+		for _, pair in ipairs({ { StoreCfg.Benefits, benefits, T.Purple, "Benefit" }, { StoreCfg.Boosts, boosts, T.Orange, "Boost" } }) do
+			for _, it in ipairs(pair[1]) do
 				local active = it.boost and info.boosts and (info.boosts[it.boost] or 0) > os.time()
-				table.insert(list, { kind = "store", id = it.id, icon = it.icon, name = it.name, desc = it.desc, it = it, color = TABS[storeTab],
+				local owned = it.tokiColor and p and p.tokiColorPick and p.tokiColorPick[it.tokiColor]
+				table.insert(pair[2], { kind = "store", id = it.id, icon = it.icon, name = it.name, sub = pair[4], desc = it.desc, it = it, color = pair[3], owned = owned,
 					active = active and math.ceil(((info.boosts[it.boost] or 0) - os.time()) / 60), tokens = info.tokens and info.tokens[it.id] or 0 })
 			end
 		end
-		return list
+		return {
+			{ tab = "Gems", title = "Gem Packs", icon = "💎", color = T.Ocean, list = packs },
+			{ tab = "Gems", title = "Gem Shop", icon = "🥚", color = Color3.fromRGB(40, 170, 160), list = shop },
+			{ tab = "Benefits", title = "Benefits", icon = "🎟️", color = T.Purple, list = benefits },
+			{ tab = "Boosts", title = "Boosts", icon = "⚡", color = T.Orange, list = boosts },
+		}
 	end
 
 	local function bigButton(parent, text, color, onClick)
@@ -3642,10 +3666,16 @@ function Panels.PearlShop(args)
 		elseif not UI.VoxelIcon(stage, e.icon, 150, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.85, 0.85), SizeConstraint = Enum.SizeConstraint.RelativeYY }) then
 			UI.Icon(stage, e.icon, 150, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.75, 0.75), SizeConstraint = Enum.SizeConstraint.RelativeYY })
 		end
+		UI.Text(panel, e.sub, 13, e.color:Lerp(Color3.new(1, 1, 1), 0.45), "Display", { TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 16) })
 		UI.Text(panel, e.name, 24, T.Text, "Display", { TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 34) })
 		local status = e.active and ("ACTIVE: " .. e.active .. " min left (buying adds time)") or (e.owned and "Owned") or nil
 		UI.Text(panel, e.desc .. (status and ("\n\n" .. status) or ""), 15, status and T.Green or T.TextSoft, "Semi", { TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 84) })
-		if e.kind == "store" then
+		if e.kind == "store" and e.it.tokiColor and e.owned then
+			-- v0.25.73 (owner: "where do I change it again?"): bought once = change it here (or Stats -> palette)
+			bigButton(panel, "CHANGE COLOR", T.Gold, function()
+				Panels.TokiColor({ kind = e.it.tokiColor })
+			end)
+		elseif e.kind == "store" then
 			local it = e.it
 			bigButton(panel, "BUY  " .. PearlsCfg.Icon .. " " .. it.gems, T.Green, function()
 				buyFor(it, "gems", function(r)
@@ -3706,23 +3736,62 @@ function Panels.PearlShop(args)
 				end)
 			end
 		end
+		if d and (e.kind == "pack" or e.kind == "gemshop") then
+			UI.Text(panel, string.format("Tradable %s • Shop-only %s\nEarned today %d / %d", UI.Format(d.pearls), UI.Format(d.bound), d.earnedToday, d.cap)
+				.. (d.canTrade and "" or ("\n🔒 " .. (d.tradeWhy or ""))), 12, T.TextSoft, "Semi", { TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 54) })
+		end
 	end
 
-	-- server data is cached: clicking cards only redraws. Re-asking on every click hit the request throttle
-	-- ("Too fast") and the Gem packs vanished (owner, v0.25.12).
-	local info, d = { boosts = {}, tokens = {}, gems = 0 }, nil
-	local function fetch()
-		local res = Net.Request("StoreInfo")
-		if res.ok then
-			info = res.data
+	-- one card (reference style): a vivid gradient that darkens toward the bottom where the name sits, a bright rim,
+	-- a glow + drifting particles behind the item, a moving shine; ACTIVE / OWNED badge in the corner
+	local function card(parent, e, order)
+		local c = e.color
+		local f = New("TextButton", { Text = "", AutoButtonColor = false, BackgroundColor3 = Color3.new(1, 1, 1), LayoutOrder = order, Parent = parent })
+		UI.Corner(f, 12)
+		New("UIGradient", { Rotation = 90, Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, c:Lerp(Color3.new(1, 1, 1), 0.35)), ColorSequenceKeypoint.new(0.5, c), ColorSequenceKeypoint.new(1, c:Lerp(Color3.fromRGB(14, 10, 30), 0.65)) }), Parent = f })
+		local rim = UI.Stroke(f, c:Lerp(Color3.new(1, 1, 1), 0.55), 3)
+		New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.glow, ImageColor3 = Color3.new(1, 1, 1), ImageTransparency = 0.6, AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.36), Size = UDim2.fromScale(0.95, 0.95), SizeConstraint = Enum.SizeConstraint.RelativeXX, Parent = f })
+		UI.Sparkles(f, Color3.new(1, 1, 1), 5, { star = 0.8, float = true })
+		UI.Shine(f, order * 0.13)
+		if e.egg then
+			UI.VoxelEgg(f, e.egg, 90, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 6), Size = UDim2.fromScale(0.62, 0.62), SizeConstraint = Enum.SizeConstraint.RelativeXX })
+		else
+			UI.Icon(f, e.icon, 90, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), Size = UDim2.fromScale(0.58, 0.58), SizeConstraint = Enum.SizeConstraint.RelativeXX })
 		end
-		if storeTab == "Gems" then
-			local pr = Net.Request("PearlInfo")
-			if pr.ok then
-				d = pr.data
-			end
+		UI.Text(f, e.name, 15, T.Text, "Display", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 10, 1, -44), Size = UDim2.new(1, -20, 0, 34), TextYAlignment = Enum.TextYAlignment.Bottom })
+		UI.Text(f, e.sub, 11, Color3.new(1, 1, 1), "Semi", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 10, 1, -28), Size = UDim2.new(1, -20, 0, 14) }).TextTransparency = 0.3
+		local price = e.kind == "pack" and "R$" or e.kind == "gemshop" and (e.owned and "Owned" or (PearlsCfg.Icon .. " " .. e.it.price)) or (PearlsCfg.Icon .. " " .. e.it.gems)
+		if e.kind == "store" and e.owned then
+			price = "✓ Owned"
+		end
+		local priceLbl = UI.Text(f, e.active and "ACTIVE" or price, 14, (e.active or e.owned) and T.Green or T.Gold, "Display", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 10, 1, -6), Size = UDim2.new(1, -20, 0, 20), TextWrapped = false })
+		if e.kind == "pack" and e.prod.productId ~= 0 then
+			Prices.Apply(e.prod.productId, nil, function(r)
+				if r and priceLbl.Parent then
+					priceLbl.Text = "R$ " .. r
+				end
+			end)
+		end
+		return f, rim
+	end
+
+	local cards = {} -- id -> { frame, rim, color }
+	local scroll, panel, tabRefs, sectionY
+	local function highlight(id)
+		for cid, ref in pairs(cards) do
+			local on = cid == id
+			ref.rim.Color = on and T.Gold or ref.color:Lerp(Color3.new(1, 1, 1), 0.55)
+			ref.rim.Thickness = on and 5 or 3
 		end
 	end
+	local function showTab(tab)
+		for id, ref in pairs(tabRefs or {}) do
+			ref.line.Visible = id == tab
+			UI.SetButtonColor(ref.btn, id == tab and ref.color or T.Grey)
+		end
+	end
+
 	render = function(refetch)
 		if refetch ~= false then
 			fetch()
@@ -3730,19 +3799,31 @@ function Panels.PearlShop(args)
 		if not win.frame.Parent then
 			return
 		end
+		local keepY = scroll and scroll.CanvasPosition.Y or nil
 		clear(body)
-		-- top: tabs + currency pill
-		local top = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 46), Parent = body })
-		local tabs = UI.TabBar(top, { { "Gems", "💎", "GEMS", T.Ocean }, { "Benefits", "🎟️", "BENEFITS", T.Purple }, { "Boosts", "⚡", "BOOSTS", T.Orange } }, storeTab, function(tab)
-			storeTab = tab
-			render()
-		end, 42)
-		tabs.Size = UDim2.new(0.7, 0, 0, 48)
-		local pill = New("Frame", { BackgroundColor3 = T.OceanDark, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 2), Size = UDim2.fromOffset(190, 42), Parent = top })
+		cards = {}
+		-- top: category tabs (jump to their section) + the Gems pill
+		local top = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 50), Parent = body })
+		local tabBar = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(0.7, 0, 1, 0), Parent = top })
+		UI.List(tabBar, Enum.FillDirection.Horizontal, 8)
+		tabRefs = {}
+		for i, t in ipairs(TABS) do
+			local btn, h = UI.Button(tabBar, t[2] .. " " .. t[3], T.Grey, UDim2.fromOffset(170, 42), function()
+				storeTab = t[1]
+				showTab(t[1])
+				local y = sectionY and sectionY[t[1]]
+				if y and scroll then
+					game:GetService("TweenService"):Create(scroll, TweenInfo.new(0.35, Enum.EasingStyle.Quad), { CanvasPosition = Vector2.new(0, y) }):Play()
+				end
+			end)
+			h.LayoutOrder = i
+			local line = New("Frame", { BackgroundColor3 = T.Gold, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, 6), Size = UDim2.new(0.7, 0, 0, 4), Visible = false, ZIndex = btn.ZIndex + 2, Parent = h })
+			tabRefs[t[1]] = { btn = btn, line = line, color = t[4] }
+		end
+		local pill = New("Frame", { BackgroundColor3 = T.OceanDark, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 4), Size = UDim2.fromOffset(190, 42), Parent = top })
 		UI.Stroke(pill, T.Edge, 2.5)
 		UI.Icon(pill, "💎", 34, { Position = UDim2.fromOffset(6, 4) })
-		-- v0.25.63 (owner: the Gems went down late after a purchase): the live "Pearls" attribute (set by the server the
-		-- moment it spends), not the cached store data, which only refreshed on the next request
+		-- v0.25.63: the live "Pearls" attribute (set by the server the moment it spends)
 		local gemsText = UI.Text(pill, "", 20, T.Text, "Display", { Position = UDim2.fromOffset(46, 0), Size = UDim2.new(1, -52, 1, 0), TextXAlignment = Enum.TextXAlignment.Right, TextYAlignment = Enum.TextYAlignment.Center, TextWrapped = false })
 		local function showGems()
 			gemsText.Text = UI.Format(Players.LocalPlayer:GetAttribute("Pearls") or (d and (d.pearls + d.bound)) or info.gems or 0)
@@ -3752,76 +3833,98 @@ function Panels.PearlShop(args)
 		gemsText.Destroying:Connect(function()
 			gemConn:Disconnect()
 		end)
-		-- left: big cards; right: detail
-		local split = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 56), Size = UDim2.new(1, 0, 1, -56), Parent = body })
-		local grid = UI.Scroll(split, UDim2.new(0.62, -8, 1, 0))
-		local panel = UI.Card(split, UDim2.new(0.38, 0, 1, 0), TABS[storeTab]:Lerp(T.Panel, 0.75))
+		-- left: every section in one scroll; right: the detail of the picked card
+		local split = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 60), Size = UDim2.new(1, 0, 1, -60), Parent = body })
+		scroll = UI.Scroll(split, UDim2.new(0.62, -8, 1, 0))
+		scroll.AutomaticCanvasSize = Enum.AutomaticSize.None
+		panel = UI.Card(split, UDim2.new(0.38, 0, 1, 0), T.Panel)
 		panel.AnchorPoint = Vector2.new(1, 0)
 		panel.Position = UDim2.fromScale(1, 0)
-		local list = entries(info, d)
-		local okW, absW = pcall(function()
-			return grid.AbsoluteSize.X / math.max(0.01, UI.GetScale())
-		end)
-		local W = ((okW and absW and absW > 0) and absW or 500) - 12
-		local perRow = math.max(1, math.floor((W + 10) / 190))
-		local cellW = math.floor((W - (perRow - 1) * 10) / perRow)
-		UI.Pad(grid, 4)
-		New("UIGridLayout", { CellSize = UDim2.fromOffset(cellW, math.floor(cellW * 1.15)), CellPadding = UDim2.fromOffset(10, 10), SortOrder = Enum.SortOrder.LayoutOrder, Parent = grid })
-		local picked = storePick[storeTab]
-		local pickedEntry = list[1]
-		for _, e in ipairs(list) do
-			if e.id == picked then
-				pickedEntry = e
-			end
-		end
-		for i, e in ipairs(list) do
-			local on = e == pickedEntry
-			-- reference-style card: bright diagonal gradient, glow behind the item, twinkles, a moving shine
-			local card = UI.Card(grid, nil, e.color)
-			card.LayoutOrder = i
-			local cg = card:FindFirstChild("CardGradient")
-			cg.Color = ColorSequence.new(e.color:Lerp(Color3.new(1, 1, 1), on and 0.45 or 0.3), e.color:Lerp(Color3.new(0, 0, 0), on and 0.2 or 0.45))
-			cg.Rotation = 55
-			if on then
-				UI.Stroke(card, T.Gold, 4)
-			end
-			New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.glow, ImageColor3 = Color3.new(1, 1, 1), ImageTransparency = on and 0.45 or 0.65, AnchorPoint = Vector2.new(0.5, 0.5),
-				Position = UDim2.fromScale(0.5, 0.36), Size = UDim2.fromScale(0.95, 0.95), SizeConstraint = Enum.SizeConstraint.RelativeXX, Parent = card })
-			UI.Sparkles(card, Color3.new(1, 1, 1), on and 7 or 4, { star = 0.8 })
-			UI.Shine(card, i * 0.13)
-			if e.egg then
-				UI.VoxelEgg(card, e.egg, 90, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 6), Size = UDim2.fromScale(0.66, 0.66), SizeConstraint = Enum.SizeConstraint.RelativeXX })
-			else
-				UI.Icon(card, e.icon, 90, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), Size = UDim2.fromScale(0.62, 0.62), SizeConstraint = Enum.SizeConstraint.RelativeXX })
-			end
-			UI.Text(card, e.name, 15, T.Text, "Display", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 6, 1, -30), Size = UDim2.new(1, -12, 0, 34), TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Bottom })
-			local price = e.kind == "pack" and "R$" or e.kind == "gemshop" and (e.owned and "Owned" or (PearlsCfg.Icon .. " " .. e.it.price)) or (PearlsCfg.Icon .. " " .. e.it.gems)
-			local priceLbl = UI.Text(card, e.active and "ACTIVE" or price, 14, e.active and T.Green or T.Gold, "Display", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 6, 1, -6), Size = UDim2.new(1, -12, 0, 22), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false })
-			if e.kind == "pack" and e.prod.productId ~= 0 then
-				Prices.Apply(e.prod.productId, nil, function(r)
-					if r then
-						priceLbl.Text = "R$ " .. r
+		local secs = sections()
+		local blocks = {} -- { header, grid, layout, n }
+		local pickedEntry
+		for si, sec in ipairs(secs) do
+			if #sec.list > 0 then
+				local header = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, -12, 0, 46), Parent = scroll })
+				UI.Icon(header, sec.icon, 30, { Position = UDim2.fromOffset(4, 8) })
+				UI.Text(header, sec.title, 24, T.Text, "Display", { Position = UDim2.fromOffset(42, 6), Size = UDim2.new(1, -50, 0, 32), TextYAlignment = Enum.TextYAlignment.Center })
+				-- a glowing streak behind the title (reference)
+				local streak = New("Frame", { BackgroundColor3 = sec.color, BorderSizePixel = 0, Position = UDim2.fromOffset(36, 34), Size = UDim2.new(0.6, 0, 0, 4), Parent = header })
+				New("UIGradient", { Transparency = NumberSequence.new(0, 1), Parent = streak })
+				local grid = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, -12, 0, 10), Parent = scroll })
+				local layout = New("UIGridLayout", { CellSize = UDim2.fromOffset(180, 220), CellPadding = UDim2.fromOffset(10, 10), SortOrder = Enum.SortOrder.LayoutOrder, Parent = grid })
+				for i, e in ipairs(sec.list) do
+					local f, rim = card(grid, e, si * 100 + i)
+					cards[e.id] = { frame = f, rim = rim, color = e.color }
+					f.Activated:Connect(function()
+						storePick = e.id
+						storeTab = sec.tab
+						highlight(e.id)
+						detail(panel, e)
+					end)
+					if e.id == storePick then
+						pickedEntry = e
 					end
-				end)
+				end
+				table.insert(blocks, { tab = sec.tab, header = header, grid = grid, layout = layout, n = #sec.list })
 			end
-			local hit = New("TextButton", { Text = "", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = card.ZIndex + 3, Parent = card })
-			hit.Activated:Connect(function()
-				storePick[storeTab] = e.id
-				render(false)
+		end
+		-- size every section from the scroll's real width (again whenever it changes). A 100-px probe tells how much the
+		-- UIScales above (screen + full-screen window) magnify offsets
+		local probe = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(100, 1), Position = UDim2.fromOffset(0, -10), Parent = scroll })
+		local function relayout()
+			local W = 500
+			pcall(function()
+				local k = probe.AbsoluteSize.X / 100
+				if k > 0 and scroll.AbsoluteSize.X > 0 then
+					W = scroll.AbsoluteSize.X / k
+				end
 			end)
+			W -= 24
+			local perRow = math.max(2, math.floor((W + 10) / 190))
+			local cellW = math.floor((W - (perRow - 1) * 10) / perRow)
+			local cellH = math.floor(cellW * 1.2)
+			local y = 0
+			sectionY = {}
+			for _, b in ipairs(blocks) do
+				sectionY[b.tab] = sectionY[b.tab] or y
+				b.header.Position = UDim2.fromOffset(4, y)
+				y += 50
+				local rows = math.ceil(b.n / perRow)
+				b.layout.CellSize = UDim2.fromOffset(cellW, cellH)
+				b.grid.Position = UDim2.fromOffset(4, y)
+				b.grid.Size = UDim2.new(1, -12, 0, rows * (cellH + 10))
+				y += rows * (cellH + 10) + 12
+			end
+			scroll.CanvasSize = UDim2.fromOffset(0, y + 20)
 		end
+		relayout()
+		scroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(relayout)
+		-- the tab of the section you are looking at lights up
+		local function syncTab()
+			local cy = scroll.CanvasPosition.Y + 30
+			local cur = TABS[1][1]
+			for _, t in ipairs(TABS) do
+				if sectionY and sectionY[t[1]] and sectionY[t[1]] <= cy then
+					cur = t[1]
+				end
+			end
+			showTab(cur)
+		end
+		scroll:GetPropertyChangedSignal("CanvasPosition"):Connect(syncTab)
+		if keepY then
+			scroll.CanvasPosition = Vector2.new(0, keepY)
+		elseif args and args.tab and sectionY[args.tab] then
+			scroll.CanvasPosition = Vector2.new(0, sectionY[args.tab])
+		end
+		syncTab()
+		pickedEntry = pickedEntry or (secs[1].list[1] or secs[3].list[1])
 		if pickedEntry then
+			highlight(pickedEntry.id)
 			detail(panel, pickedEntry)
-		end
-		if d then
-			UI.Text(panel, string.format("Tradable %s • Shop-only %s\nEarned today %d / %d", UI.Format(d.pearls), UI.Format(d.bound), d.earnedToday, d.cap)
-				.. (d.canTrade and "" or ("\n🔒 " .. (d.tradeWhy or ""))), 12, T.TextSoft, "Semi", { TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 54) })
 		end
 	end
 	render()
-	win.resized.Event:Connect(function()
-		render(false)
-	end)
 end
 
 -- ===================== TOKI COLOR (v0.25.72, owner) =====================

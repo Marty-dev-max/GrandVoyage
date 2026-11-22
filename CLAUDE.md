@@ -598,6 +598,7 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     Sonar = ONE looped Audio.Attach("FruitSonar") on a Terrain attachment kept 30 studs out toward the fruit (pans
     with the camera), volume x facing ((look.dir+1)/2)^1.5 x distance x fade envelope, high-cut EQ. FruitSonar prefers
     FruitSonarLoop (ElevenLabs, assets/sfx, upload after 2026-12-06 with RewardRare/RewardLegend/ShipCreakLoop).
+    v0.25.60 (owner): beacon pillar / ripples / marker aura cycle a pastel rainbow (`prism(t)`), never the fruit's color.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

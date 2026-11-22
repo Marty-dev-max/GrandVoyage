@@ -86,7 +86,13 @@ end
 -- looping directional sonar and a square ripple on the ground every 2 s. Runs BEACON seconds from the spawn.
 -- v0.25.59: Fruit Notifier holders only (raised from the FruitSpawn push).
 local BEACON = 60
-local function beacon(m, body, color)
+-- v0.25.60 (owner: the beam's color told which fruit it was): pillar, ripples and the marker's aura cycle through a
+-- pastel rainbow (prismatic) instead of the fruit's own color
+local function prism(t)
+	return Color3.fromHSV((t * 0.18) % 1, 0.45, 1)
+end
+local function beacon(m, body)
+	local color = prism(os.clock())
 	local born = m:GetAttribute("SpawnedAt")
 	local left = born and BEACON - (workspace:GetServerTimeNow() - born) or 0
 	if left <= 0 then
@@ -174,7 +180,7 @@ local function beacon(m, body, color)
 	local endAt = born0 + left
 	local follow = RunService.RenderStepped:Connect(function()
 		local cam = workspace.CurrentCamera
-		if not cam or not sonar then
+		if not cam then
 			return
 		end
 		local cp = cam.CFrame.Position
@@ -186,8 +192,13 @@ local function beacon(m, body, color)
 		local facing = look.Magnitude > 0.01 and (look.Unit:Dot(dir) + 1) / 2 or 0.5 -- 1 = straight ahead, 0 = behind
 		local near = math.clamp(1.2 - dist / 3500, 0.35, 1)
 		local now = os.clock()
+		color = prism(now)
+		pillar.Color = color
+		aura.ImageColor3 = color
 		local env = math.clamp((now - born0) / 1.5, 0, 1) * math.clamp((endAt - now) / 2.5, 0, 1)
-		sonar.Volume = 0.9 * near * (0.3 + 0.7 * facing ^ 1.5) * env
+		if sonar then
+			sonar.Volume = 0.9 * near * (0.3 + 0.7 * facing ^ 1.5) * env
+		end
 	end)
 	task.spawn(function()
 		local stop = endAt
@@ -324,8 +335,7 @@ function FruitAlert.Start()
 					for _, fm in ipairs(CollectionService:GetTagged("CursedFruit")) do
 						local b = fm:FindFirstChild("Body")
 						if b and (b.Position - d.pos).Magnitude < 12 then
-							local light = b:FindFirstChildOfClass("PointLight")
-							beacon(fm, b, light and light.Color or Color3.fromRGB(255, 220, 120))
+							beacon(fm, b)
 							return
 						end
 					end

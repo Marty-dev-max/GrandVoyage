@@ -295,6 +295,7 @@ local profile = {
 	skillBar = { "OniSlash", "TornadoCut", "FlyingSlash", "IronBody", "FirstAid" },
 	autoSkills = { OniSlash = true, TornadoCut = true, F_FireFist = true },
 	fruit = { id = "Blaze", mastery = 27, exp = 40 },
+	toki = { rolled = true, Conqueror = { color = "#7A3CFF" } }, tokiColorPick = { Conqueror = true },
 	daily = { day = "20261116", bonusClaimed = false, list = { { id = "HuntLocal", kind = "Kill", target = "MarineRifleman", targetName = "Marine Rifleman", count = 30, progress = 30, claimed = false }, { id = "Skills", kind = "Skill", count = 40, progress = 12, claimed = false }, { id = "Sink", kind = "Sink", count = 3, progress = 3, claimed = true } } },
 	ach = { counters = { Kill = 640, Sink = 12, Refine = 9 }, done = { Hunter1 = true, Sink1 = true, Fruit1 = true, Pet1 = true, Level30 = true, Crabs = true }, claimed = { Hunter1 = true, Fruit1 = true } }, title = "Crabs",
 	pets = { { uid = "pet1", species = "Lantern", level = 22, exp = 300, stage = 2 }, { uid = "pet2", species = "Hermit", level = 9, exp = 40, stage = 1 } }, activePet = "pet1",
@@ -557,7 +558,7 @@ for _, d in UI.Root:GetDescendants() do
 end
 
 local panels = {
-	{ "Inventory" }, { "Inventory", { select = "w", tab = "Detail" } }, { "Stats" }, { "Skills" }, { "Skills", { tab = "Loadout" } }, { "JobMaster" }, { "Refine" }, { "Shop" }, { "Tavern" }, { "Shipwright" },
+	{ "Inventory" }, { "Inventory", { select = "w", tab = "Detail" } }, { "Stats" }, { "TokiColor" }, { "Skills" }, { "Skills", { tab = "Sets" } }, { "JobMaster" }, { "Refine" }, { "Shop" }, { "Tavern" }, { "Shipwright" },
 	{ "Map" }, { "BossBoard" }, { "Guild" }, { "Dungeon", { dungeonId = "CircusTent" } }, { "Party" },
 	{ "Stall", { sellerId = 2 } }, { "StallSetup" }, { "PearlShop" }, { "PearlShop", { tab = "Benefits" } }, { "PearlShop", { tab = "Boosts" } }, { "Pets" }, { "Quests" }, { "Quests", { tab = "Ach" } }, { "Quests", { tab = "Story" } }, { "MenuHub" }, { "Settings" }, { "Settings", { tab = "Hotkeys", cat = "Hotkeys" } }, { "AutoBattle" }, { "Potion", { kind = "hp" } }, { "Potion", { kind = "sp" } },
 }

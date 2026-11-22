@@ -282,6 +282,12 @@ local handlers = {
 	Toast = function(d)
 		UI.Toast(d.text, d.kind)
 	end,
+	-- the server opens a window for you (v0.25.72: the Toki color picker right after buying it)
+	OpenPanel = function(d)
+		if type(d.name) == "string" and d.name == "TokiColor" then
+			Panels.Open(d.name, d.args)
+		end
+	end,
 	Announce = function(d)
 		UI.Announce(d.text, d.rarity or (d.kind == "mvp" and "Legendary") or (d.kind == "boss" and "Mythic") or nil)
 	end,

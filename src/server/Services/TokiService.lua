@@ -124,6 +124,25 @@ function TS.Roar(player, skill)
 end
 
 function TS.Start()
+	-- v0.25.72: pick your own Toki color (bought in the Store: p.tokiColorPick[kind])
+	Net.Handle("SetTokiColor", function(player, data)
+		local p = R.DataService.Get(player)
+		local kind = type(data) == "table" and data.kind
+		local hex = type(data) == "table" and data.color
+		if not p or type(kind) ~= "string" or not TS.Has(p, kind) then
+			return false, "You do not have that Toki"
+		end
+		if not (p.tokiColorPick and p.tokiColorPick[kind]) then
+			return false, "Unlock the color choice in the Store first"
+		end
+		if type(hex) ~= "string" or not string.match(hex, "^#%x%x%x%x%x%x$") then
+			return false, "Bad color"
+		end
+		p.toki[kind].color = string.upper(hex)
+		TS.SetAttributes(player, p)
+		R.PlayerService.MarkDirty(player)
+		return true, (TokiCfg.ById[kind] and TokiCfg.ById[kind].name or kind) .. " color saved"
+	end, 0.5)
 	R.DataService.Loaded:Connect(function(player)
 		local p = R.DataService.Get(player)
 		if not p then

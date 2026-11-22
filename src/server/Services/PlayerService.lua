@@ -275,6 +275,7 @@ local function sync(player)
 			classProgress = p.classProgress,
 			fruit = p.fruit,
 			toki = p.toki,
+			tokiColorPick = p.tokiColorPick,
 			pets = p.pets,
 			activePet = p.activePet,
 			perks = p.perks,

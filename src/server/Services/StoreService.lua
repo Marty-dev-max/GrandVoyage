@@ -96,6 +96,12 @@ local function grant(to, it, fromName)
 			p.storeTokens.FruitRemover = (p.storeTokens.FruitRemover or 0) + 1
 			msg = "Fruit Remover saved: use it from the Store when you have a fruit"
 		end
+	elseif it.tokiColor then
+		-- v0.25.72: the color picker for that Toki is yours (Panels.TokiColor -> TokiService "SetTokiColor")
+		p.tokiColorPick = p.tokiColorPick or {}
+		p.tokiColorPick[it.tokiColor] = true
+		msg = it.name .. " unlocked: pick it in Stats (palette button)"
+		Net.Push(to, "OpenPanel", { name = "TokiColor", args = { kind = it.tokiColor } })
 	elseif it.id == "BossRespawn" then
 		local n = R.BossService.RespawnAllNow and R.BossService.RespawnAllNow() or 0
 		if n > 0 then
@@ -118,9 +124,19 @@ local function grant(to, it, fromName)
 end
 
 -- an item that would do nothing right now (v0.24.9: Boss Respawn with every boss alive wasted the purchase)
-local function uselessNow(it)
+local function uselessNow(it, to)
 	if it.id == "BossRespawn" and R.BossService.DownCount and R.BossService.DownCount() == 0 then
 		return "Every boss is already up: buy it when one is defeated"
+	end
+	-- a Toki color needs that Toki, and only once
+	if it.tokiColor and to then
+		local p = R.DataService.Get(to)
+		if not p or not R.TokiService.Has(p, it.tokiColor) then
+			return (to.DisplayName or "They") .. " does not have the " .. it.tokiColor .. " Toki"
+		end
+		if p.tokiColorPick and p.tokiColorPick[it.tokiColor] then
+			return "Already unlocked: pick the color in Stats"
+		end
 	end
 	return nil
 end
@@ -212,13 +228,13 @@ function Store.Start()
 		if not it or not it.gems then
 			return false, "Unknown item"
 		end
-		local why = uselessNow(it)
-		if why then
-			return false, why
-		end
 		local to = recipientOf(player, data.to)
 		if not to then
 			return false, "That player is not here"
+		end
+		local why = uselessNow(it, to)
+		if why then
+			return false, why
 		end
 		if not R.PearlService.Spend(player, it.gems, "store:" .. it.id .. (to ~= player and (":gift:" .. to.UserId) or ""), true) then
 			return false, "Not enough Gems"
@@ -238,13 +254,13 @@ function Store.Start()
 		if not it.productId or it.productId == 0 then
 			return false, "Robux purchase coming soon (use Gems)"
 		end
-		local why = uselessNow(it)
-		if why then
-			return false, why
-		end
 		local to = recipientOf(player, data.to)
 		if not to then
 			return false, "That player is not here"
+		end
+		local why = uselessNow(it, to)
+		if why then
+			return false, why
 		end
 		pendingGift[player] = to ~= player and { id = it.id, to = to, t = os.clock() } or nil
 		MarketplaceService:PromptProductPurchase(player, it.productId)

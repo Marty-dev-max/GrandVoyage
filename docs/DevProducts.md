@@ -60,3 +60,11 @@ a player's name before the Robux prompt, so no separate gift products are needed
 4. Game Settings → Security → keep "Allow HTTP Requests" as is; nothing else is needed (receipts are handled in
    `PearlService.processReceipt` → `StoreService.Receipt` / spin bank).
 5. Test in a live server with a test purchase: the item should arrive once, never twice.
+
+## Toki colors (v0.25.72, created by the owner 22 Nov 2026)
+
+| Store id | Name | Robux | Product id |
+|---|---|---|---|
+| TokiColorConqueror | Conqueror Toki Color | 129 | 3734898364 |
+| TokiColorArmament | Armament Toki Color | 79 | 3734897888 |
+| TokiColorObservation | Observation Toki Color | 79 | 3734898118 |

@@ -668,6 +668,11 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     the set's skills (always shown, no expand button). Auto Battle casts every ready skill of the Auto-on sets
     (autoSkills ticks are no longer used). Skills window tab "Sets" (renderSets: USE + AUTO ON/OFF per set; the old
     Loadout + drag-and-drop code is gone). Server SetAutoSettings `autoSets` (6 booleans). Set 3 becomes weapon arts in sea 2.
+  * v0.25.72 (owner): Toki colors in the Store (Benefits `tokiColor = kind`, products 3734898364 Conqueror 129 R$ /
+    3734897888 Armament 79 / 3734898118 Observation 79; Gems 320/200/200). StoreService grant sets
+    p.tokiColorPick[kind] + push "OpenPanel" TokiColor; uselessNow(it, to) refuses without that Toki / when owned.
+    `Panels.TokiColor(args.kind)` = tabs per owned Toki, preview, color wheel + brightness + Toki.Colors swatches,
+    SAVE -> TokiService "SetTokiColor" (#RRGGBB, needs the unlock); locked = Gems / R$ buy buttons. Stats 🎨 button.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

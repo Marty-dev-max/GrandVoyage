@@ -779,6 +779,16 @@ function Panels.Stats()
 	local charPanel = UI.Card(win.body, UDim2.new(0.38, -10, 1, 0), T.PanelDeep)
 	local stage = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 134), Size = UDim2.new(1, 0, 1, -160), Parent = charPanel })
 	local refreshChar, setStageClass = classStage(charPanel, stage)
+	-- v0.25.72: your Toki color (only shown when you have a Toki)
+	local tokiBtn, tokiHolder = UI.Button(charPanel, "🎨", T.Gold, UDim2.fromOffset(46, 46), function()
+		Panels.TokiColor()
+	end)
+	tokiHolder.AnchorPoint = Vector2.new(1, 0)
+	tokiHolder.Position = UDim2.new(1, -10, 0, 10)
+	tokiHolder.ZIndex = 6
+	UI.Tooltip(tokiBtn, function()
+		return "Toki color", T.Gold
+	end)
 	-- v0.25.43 (owner: the top looked empty): name centered, class on the 2nd line, levels on the 3rd, big and clear
 	local CENTER = Enum.TextXAlignment.Center
 	local nameLabel = UI.Text(charPanel, "", 30, T.Text, "Display", { Position = UDim2.fromOffset(14, 12), Size = UDim2.new(1, -28, 0, 36), TextXAlignment = CENTER })
@@ -814,6 +824,7 @@ function Panels.Stats()
 		end
 		local cls = Classes[p.class]
 		nameLabel.Text = player.DisplayName
+		tokiHolder.Visible = type(p.toki) == "table" and next(p.toki) ~= nil and (p.toki.Conqueror or p.toki.Armament or p.toki.Observation) ~= nil
 		-- the name wears the equipped title's tier color; levels in the EXP / JOB ring colors
 		local tdef = TitlesCfg.ById[p.title or ""]
 		nameLabel.TextColor3 = tdef and Rarity.Get(tdef.tier).color or T.Text
@@ -3811,6 +3822,185 @@ function Panels.PearlShop(args)
 	win.resized.Event:Connect(function()
 		render(false)
 	end)
+end
+
+-- ===================== TOKI COLOR (v0.25.72, owner) =====================
+-- Pick your own color for a Toki you have (color wheel + brightness + the Toki palette), once its Store unlock is bought
+-- (p.tokiColorPick[kind]; Gems or Robux right here). Saved with "SetTokiColor"; the Roar FX and the Stats label use it.
+local tokiColorKind
+function Panels.TokiColor(args)
+	local TokiCfg = require(Shared.Config.Toki)
+	local UIImages = require(Shared.Config.UIImages)
+	local UIS = game:GetService("UserInputService")
+	local GuiService = game:GetService("GuiService")
+	local win = UI.Window("TokiColor", "Toki Color", UDim2.fromOffset(640, 560), T.Gold, "👑")
+	if args and args.kind then
+		tokiColorKind = args.kind
+	end
+	local pending -- the color being tried (hex), before SAVE
+	local hsv = { 0, 0, 1 }
+	local conns = {}
+	win.frame.Destroying:Connect(function()
+		for _, c in ipairs(conns) do
+			c:Disconnect()
+		end
+	end)
+	local render
+	render = function()
+		for _, c in ipairs(conns) do
+			c:Disconnect()
+		end
+		table.clear(conns)
+		clear(win.body)
+		local p = State.profile
+		if not p then
+			return
+		end
+		local owned = {}
+		for _, k in ipairs(TokiCfg.Kinds) do
+			if type(p.toki) == "table" and p.toki[k.id] then
+				table.insert(owned, { k.id, k.icon, k.name, TokiCfg.ColorOf(p.toki[k.id]) })
+			end
+		end
+		if #owned == 0 then
+			UI.Text(win.body, "You have no Toki yet. Conqueror Toki is born with 1 in 1000 characters; Armament and Observation come in the second sea.", 16, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 60) })
+			return
+		end
+		local valid = false
+		for _, o in ipairs(owned) do
+			valid = valid or o[1] == tokiColorKind
+		end
+		if not valid then
+			tokiColorKind = owned[1][1]
+		end
+		local kind = tokiColorKind
+		UI.TabBar(win.body, owned, kind, function(id)
+			tokiColorKind = id
+			pending = nil
+			render()
+		end)
+		local unlocked = p.tokiColorPick and p.tokiColorPick[kind]
+		local current = p.toki[kind].color or TokiCfg.Colors[2]
+		local shown = pending or current
+		local col = TokiCfg.ColorOf({ color = shown })
+		-- left: the preview
+		local left = UI.Card(win.body, UDim2.new(0.38, -8, 1, -56), T.PanelDeep)
+		left.Position = UDim2.fromOffset(0, 50)
+		local sw = New("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 20), Size = UDim2.fromOffset(150, 150), BackgroundColor3 = col, Parent = left })
+		UI.Corner(sw, 18)
+		UI.Stroke(sw, Color3.new(1, 1, 1), 4)
+		UI.Icon(sw, "crown", 80, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5) })
+		UI.Text(left, TokiCfg.ById[kind].name, 18, col:Lerp(Color3.new(1, 1, 1), 0.35), "Display", { Position = UDim2.fromOffset(10, 184), Size = UDim2.new(1, -20, 0, 24), TextXAlignment = Enum.TextXAlignment.Center })
+		UI.Text(left, shown .. (pending and "  (not saved)" or ""), 14, T.TextSoft, "Semi", { Position = UDim2.fromOffset(10, 212), Size = UDim2.new(1, -20, 0, 20), TextXAlignment = Enum.TextXAlignment.Center })
+		if unlocked then
+			local _, sh = UI.Button(left, "SAVE", pending and T.Green or T.Grey, UDim2.new(1, -24, 0, 50), function()
+				if pending then
+					local res = req("SetTokiColor", { kind = kind, color = pending }, "Equip")
+					if res.ok then
+						pending = nil
+					end
+				end
+			end)
+			sh.AnchorPoint = Vector2.new(0.5, 1)
+			sh.Position = UDim2.new(0.5, 0, 1, -12)
+		else
+			-- locked: buy the color choice here (same Store item)
+			local it
+			for _, e in ipairs(require(Shared.Config.Store).Benefits) do
+				if e.tokiColor == kind then
+					it = e
+				end
+			end
+			UI.Text(left, "Random color. Unlock the color choice to pick your own, forever.", 13, T.TextSoft, "Semi", { Position = UDim2.fromOffset(12, 240), Size = UDim2.new(1, -24, 0, 40), TextXAlignment = Enum.TextXAlignment.Center })
+			if it then
+				local _, gh = UI.Button(left, PearlsCfg.Icon .. " " .. it.gems, T.Ocean, UDim2.new(1, -24, 0, 46), function()
+					req("StoreBuyGems", { id = it.id }, "Purchase")
+				end)
+				gh.AnchorPoint = Vector2.new(0.5, 1)
+				gh.Position = UDim2.new(0.5, 0, 1, -66)
+				local rb, rh = UI.Button(left, "R$ " .. it.robux, T.Green, UDim2.new(1, -24, 0, 46), function()
+					req("StoreBuyRobux", { id = it.id })
+				end)
+				rh.AnchorPoint = Vector2.new(0.5, 1)
+				rh.Position = UDim2.new(0.5, 0, 1, -12)
+				Prices.Apply(it.productId, it.robux, function(r)
+					if rb.Parent then
+						rb.Text = "R$ " .. r
+					end
+				end)
+			end
+		end
+		-- right: wheel + brightness + the Toki palette
+		local right = UI.Card(win.body, UDim2.new(0.62, 0, 1, -56), T.PanelDeep)
+		right.Position = UDim2.new(0.38, 0, 0, 50)
+		local wheel = New("ImageButton", { Image = UIImages.colorwheel or "", BackgroundTransparency = 1, AutoButtonColor = false, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 14), Size = UDim2.fromOffset(220, 220), ImageTransparency = unlocked and 0 or 0.7, Parent = right })
+		wheel:SetAttribute("PxKeep", true)
+		local slider = New("TextButton", { Text = "", AutoButtonColor = false, BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 246), Size = UDim2.fromOffset(240, 16), Parent = right })
+		New("UIGradient", { Color = ColorSequence.new(Color3.new(0, 0, 0), Color3.fromHSV(hsv[1], hsv[2], 1)), Parent = slider })
+		local presets = New("Frame", { BackgroundTransparency = 1, Position = UDim2.new(0, 14, 0, 276), Size = UDim2.new(1, -28, 0, 80), Parent = right })
+		New("UIGridLayout", { CellSize = UDim2.fromOffset(40, 34), CellPadding = UDim2.fromOffset(6, 6), Parent = presets })
+		local function try(hex)
+			if not unlocked then
+				UI.Toast("Unlock the color choice first", "bad")
+				return
+			end
+			pending = hex
+			render()
+		end
+		for _, hex in ipairs(TokiCfg.Colors) do
+			local b = New("TextButton", { Text = "", AutoButtonColor = false, BackgroundColor3 = TokiCfg.ColorOf({ color = hex }), Parent = presets })
+			UI.Stroke(b, hex == shown and Color3.new(1, 1, 1) or T.Edge, hex == shown and 3 or 2)
+			UI.Tactile(b, true)
+			b.Activated:Connect(function()
+				try(hex)
+			end)
+		end
+		local function screenPoint(input)
+			return Vector2.new(input.Position.X, input.Position.Y) + GuiService:GetGuiInset()
+		end
+		local drag
+		local function pick(input)
+			if drag == "wheel" then
+				local c = wheel.AbsolutePosition + wheel.AbsoluteSize / 2
+				local d = (screenPoint(input) - c) / (wheel.AbsoluteSize.X / 2)
+				hsv[1] = (math.atan2(-d.Y, d.X) / (2 * math.pi)) % 1
+				hsv[2] = math.min(1, d.Magnitude)
+				if hsv[3] < 0.08 then
+					hsv[3] = 1
+				end
+			elseif drag == "slider" then
+				hsv[3] = math.clamp((screenPoint(input).X - slider.AbsolutePosition.X) / math.max(1, slider.AbsoluteSize.X), 0, 1)
+			end
+			pending = "#" .. Color3.fromHSV(hsv[1], hsv[2], hsv[3]):ToHex():upper()
+		end
+		for _, o in ipairs({ { wheel, "wheel" }, { slider, "slider" } }) do
+			o[1].InputBegan:Connect(function(input)
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+					if not unlocked then
+						UI.Toast("Unlock the color choice first", "bad")
+						return
+					end
+					drag = o[2]
+					pick(input)
+				end
+			end)
+		end
+		table.insert(conns, UIS.InputChanged:Connect(function(input)
+			if drag and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+				pick(input)
+				sw.BackgroundColor3 = TokiCfg.ColorOf({ color = pending })
+			end
+		end))
+		table.insert(conns, UIS.InputEnded:Connect(function(input)
+			if drag and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+				drag = nil
+				render()
+			end
+		end))
+		UI.Text(right, unlocked and "Drag on the wheel, set the brightness, or tap a swatch. Then SAVE." or "Locked: buy the color choice (left).", 13, T.TextSoft, "Semi", { Position = UDim2.new(0, 14, 1, -40), Size = UDim2.new(1, -28, 0, 30), TextXAlignment = Enum.TextXAlignment.Center })
+	end
+	render()
+	onProfile(win, render)
 end
 
 function Panels.Open(name, args)

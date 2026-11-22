@@ -31,6 +31,7 @@ Hotkeys.Reserved = { W = true, A = true, S = true, D = true, Space = true, Escap
 Hotkeys.Changed = Instance.new("BindableEvent")
 local keyOf, actionOf, cached = {}, {}, nil
 local handlers = {} -- action -> fn() returning false to let the key pass on (e.g. E to a ProximityPrompt)
+local releases = {} -- action -> fn(cancelled) when the key goes up (hold-to-aim skills)
 
 local function decode(s)
 	local out = {}
@@ -53,10 +54,14 @@ local function bind()
 		table.insert(keys, Enum.KeyCode[k])
 	end
 	local function onKey(_, state, input)
+		local a = actionOf[input.KeyCode.Name]
 		if state ~= Enum.UserInputState.Begin then
+			-- End = key up; Cancel = the binding was interrupted (a TextBox took focus...)
+			if a and releases[a] and (state == Enum.UserInputState.End or state == Enum.UserInputState.Cancel) then
+				releases[a](state == Enum.UserInputState.Cancel)
+			end
 			return Enum.ContextActionResult.Pass
 		end
-		local a = actionOf[input.KeyCode.Name]
 		local fn = a and handlers[a]
 		if fn and fn() ~= false then
 			return Enum.ContextActionResult.Sink
@@ -100,6 +105,10 @@ end
 
 function Hotkeys.On(action, fn)
 	handlers[action] = fn
+end
+
+function Hotkeys.OnRelease(action, fn)
+	releases[action] = fn
 end
 
 -- give `action` the key `keyName`; whoever had it gets this action's old key (a swap)

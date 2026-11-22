@@ -147,7 +147,13 @@ local function aimInfo()
 		flat = Vector3.new(lv.X, 0, lv.Z)
 	end
 	local mob = hit and mobModel(hit.Instance)
-	return flat.Unit, pos, (mob and alive(mob)) and mob or nil
+	-- 3D aim (v0.25.48): toward chest height above the pointed spot, so pointing at flat ground aims level and pointing
+	-- up a hill / at the sky / down a cliff tilts the skill (the server clamps the tilt)
+	local h = hum()
+	local lift = hit and ((h and h.HipHeight or 2) + r.Size.Y / 2) or 0
+	local d3 = pos + Vector3.new(0, lift, 0) - r.Position
+	local dir3 = d3.Magnitude > 1 and d3.Unit or flat.Unit
+	return flat.Unit, pos, (mob and alive(mob)) and mob or nil, dir3
 end
 Combat.AimInfo = aimInfo
 
@@ -192,7 +198,7 @@ function Combat.CastSkill(skillId, targetModel)
 	-- on a ship skills always fire along the aim (v0.25.17: Auto mode needed a monster target, and at sea there are ships)
 	if (not State.auto or onShip()) and not targetModel and (kind == "Melee" or kind == "Ranged" or kind == "GroundAoE" or kind == "Dash") then
 		-- manual mode: aim with the pointer / crosshair, turn that way, fire even with nothing there
-		local dir, pos, mob = aimInfo()
+		local dir, pos, mob, dir3 = aimInfo()
 		local r = root()
 		if dir and r then
 			local aimed = kind ~= "GroundAoE" and aimedTarget(dir, mob, skill.range or 10) or nil
@@ -214,7 +220,7 @@ function Combat.CastSkill(skillId, targetModel)
 					Combat.SetTarget(aimed)
 				end
 			else
-				payload.dir = dir
+				payload.dir = dir3 or dir
 			end
 			State.cooldowns[skillId] = now + skill.cd
 			State.Fire("cooldown")
@@ -757,6 +763,87 @@ local function knocked(d)
 	end)
 end
 
+-- hold-to-aim (v0.25.48, owner): in manual mode a held skill key shows where the skill will go (a line that follows
+-- the pointer, or the screen center with Shift Lock, up and down too; a square on the ground for ground skills) and the
+-- character turns with it; letting go casts it there. Auto mode and skills without a direction cast on the press.
+local AIM_KINDS = { Melee = true, Ranged = true, GroundAoE = true, Dash = true }
+local holding -- { id, slot, conn, line, spot, rot }
+local function stopAim()
+	if not holding then
+		return
+	end
+	holding.conn:Disconnect()
+	holding.line:Destroy()
+	holding.spot:Destroy()
+	local h = hum()
+	if holding.rot and h then
+		h.AutoRotate = true
+	end
+	holding = nil
+end
+local function aimPart(name, color, parent)
+	local p = Instance.new("Part")
+	p.Name = name
+	p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.CastShadow = true, false, false, false, false
+	p.Material = Enum.Material.Neon
+	p.Color = color
+	p.Transparency = 0.45
+	p.Size = Vector3.new(1, 1, 1)
+	p.Parent = parent
+	return p
+end
+local function startAim(id, slot)
+	local skill = ClassesCfg.SkillById[id]
+	if (State.cooldowns[id] or 0) > os.clock() then
+		return
+	end
+	if (player:GetAttribute("SP") or 0) < skill.sp then
+		UI.Toast("Not enough SP", "bad")
+		return
+	end
+	local fx = workspace:FindFirstChild("ClientFX") or workspace
+	local hold = { id = id, slot = slot }
+	hold.line = aimPart("AimLine", Color3.fromRGB(255, 230, 120), fx)
+	hold.spot = aimPart("AimSpot", Color3.fromRGB(255, 150, 60), fx)
+	hold.conn = RunService.RenderStepped:Connect(function()
+		local r, h = root(), hum()
+		local dir, pos, _, dir3 = aimInfo()
+		if not r or not dir then
+			return
+		end
+		-- face the aim (Shift Lock already turns the body with the camera)
+		if h and UserInputService.MouseBehavior ~= Enum.MouseBehavior.LockCenter then
+			h.AutoRotate = false
+			hold.rot = true
+			turnTo(r, r.Position + dir)
+		end
+		local to
+		if skill.kind == "GroundAoE" then
+			local off = pos - r.Position
+			local range = skill.range or 40
+			to = off.Magnitude > range and r.Position + off.Unit * range or pos
+			local rad = skill.radius or 6
+			hold.spot.Size = Vector3.new(rad * 2, 0.2, rad * 2)
+			hold.spot.CFrame = CFrame.new(to) * CFrame.Angles(0, math.atan2(-dir.X, -dir.Z), 0)
+		else
+			-- same tilt clamp as the server (CombatService aim3)
+			local y = math.clamp(dir3.Y, -0.8, 0.8)
+			local d = dir * math.sqrt(1 - y * y) + Vector3.new(0, y, 0)
+			if skill.kind == "Dash" then
+				d = dir -- dashes stay on the ground
+			end
+			to = r.Position + d * (skill.range or 10)
+			hold.spot.Size = Vector3.new(1.2, 1.2, 1.2)
+			hold.spot.CFrame = CFrame.lookAt(to, to + d)
+		end
+		local len = (to - r.Position).Magnitude
+		hold.line.Size = Vector3.new(0.35, 0.35, math.max(0.1, len))
+		hold.line.CFrame = CFrame.lookAt(r.Position, to) * CFrame.new(0, 0, -len / 2)
+	end)
+	holding = hold
+end
+Combat.CancelAim = stopAim
+
 function Combat.Start()
 	Net.OnPush("SkillDash", skillDash)
 	Net.OnPush("Knock", knocked)
@@ -792,7 +879,26 @@ function Combat.Start()
 			end
 			local id = State.profile and State.profile.skillBar[i]
 			if id and id ~= "" then
-				Combat.CastSkill(id)
+				local skill = ClassesCfg.SkillById[id]
+				if skill and AIM_KINDS[skill.kind] and (not State.auto or onShip()) then
+					if holding then -- another skill key while aiming: the held one goes first
+						local held = holding.id
+						stopAim()
+						Combat.CastSkill(held)
+					end
+					startAim(id, i)
+				else
+					Combat.CastSkill(id)
+				end
+			end
+		end)
+		Hotkeys.OnRelease("Skill" .. i, function(cancelled)
+			if holding and holding.slot == i then
+				local id = holding.id
+				stopAim()
+				if not cancelled then
+					Combat.CastSkill(id)
+				end
 			end
 		end)
 	end

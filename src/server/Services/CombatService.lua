@@ -526,19 +526,24 @@ local function setup()
 		end
 
 		local aimDir = typeof(data.dir) == "Vector3" and Vector3.new(data.dir.X, 0, data.dir.Z) or nil
-		if aimDir and (aimDir.Magnitude < 0.5 or aimDir.Magnitude ~= aimDir.Magnitude) then
+		if aimDir and (aimDir.Magnitude < 0.5 or aimDir.Magnitude ~= aimDir.Magnitude or aimDir.Magnitude == math.huge) then
 			aimDir = nil
 		end
 		aimDir = aimDir and aimDir.Unit
+		-- v0.25.48 (owner: hold-to-aim follows the cursor up and down): the path may tilt, at most ~53 degrees
+		local aim3 = aimDir
+		if aimDir and data.dir.Y == data.dir.Y and math.abs(data.dir.Y) < math.huge then
+			local y = math.clamp(data.dir.Unit.Y, -0.8, 0.8)
+			aim3 = aimDir * math.sqrt(1 - y * y) + Vector3.new(0, y, 0)
+		end
 		if (kind == "Melee" or kind == "Ranged") and aimDir and not resolveTarget(player, data.target) then
 			-- manual mode, aimed at nothing in particular: the skill goes out along the aim and hits what is in its path
 			local range = skill.range or 10
 			root.CFrame = CFrame.lookAt(root.Position, root.Position + aimDir)
-			fxData.to = root.Position + aimDir * range
 			-- ships in the path take the hit too (at sea there are rarely monsters to aim at); v0.25.42: from anywhere
 			do
 				local shipRange = math.max(range, 40)
-				fxData.to = root.Position + aimDir * shipRange
+				fxData.to = root.Position + aim3 * shipRange
 				local dmg = math.floor((magic and d.matk or d.atk) * mult * (skill.hits or 1) * 0.8)
 				local from = root.Position
 				task.delay(strike, function()
@@ -548,7 +553,7 @@ local function setup()
 			local land = strike + (kind == "Ranged" and 0.2 or 0)
 			local seen = {}
 			for step = 2, range, 3 do
-				for _, tt in ipairs(inRadiusTargets(player, root.Position + aimDir * step, 4.5)) do
+				for _, tt in ipairs(inRadiusTargets(player, root.Position + aim3 * step, 4.5)) do
 					local key = tt.mob or tt.player
 					if key and not seen[key] then
 						seen[key] = true

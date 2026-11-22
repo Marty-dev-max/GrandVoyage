@@ -538,6 +538,11 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     v0.25.46 (owner: still too wide, "the old one was fine"): REVERTED to the original `wings(...)` Cinderwing wings;
     greatWings + HeritageAnim "great" removed (export_char `cinder` mode left in, now a no-op). Do not bring them back.
     v0.25.47 (owner): monster types ClawCat AGI, OctofolkBrute INT, DepthsWarden DEX (Monsters TYPE_OF).
+  * v0.25.48 (owner): hold-to-aim in manual mode (Combat startAim/stopAim, `Hotkeys.OnRelease(action, fn(cancelled))`):
+    a held Melee/Ranged/GroundAoE/Dash key shows an AimLine + AimSpot (ClientFX) following `Combat.AimInfo` (pointer, or
+    the screen center with Shift Lock), turns the body (AutoRotate off while aiming), casts on release. AimInfo's 4th
+    return `dir3` aims at chest height above the pointed spot; CastSkill sends it as `dir`; CombatService `aim3` tilts
+    the Melee/Ranged path + FX up/down (|Y| <= 0.8), ship hits and Dash stay flat. Auto mode / touch slots cast on press.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

@@ -600,7 +600,8 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     FruitSonarLoop (ElevenLabs, assets/sfx, upload after 2026-12-06 with RewardRare/RewardLegend/ShipCreakLoop).
     v0.25.60 (owner): beacon pillar / ripples / marker aura cycle a pastel rainbow (`prism(t)`), never the fruit's color.
     v0.25.61 (owner): FS.SpawnTreeFruit() has no tester bypass any more (Dev "spawnfruit" leaked the island in chat):
-    only BoostActive(pl, "fruit") players get the Announce + FruitSpawn push.
+    only BoostActive(pl, "fruit") players get the island Announce + FruitSpawn push; v0.25.62 (owner): everyone else
+    gets a chat Announce that a fruit appeared "somewhere in the sea" (no place, no FruitAlert).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

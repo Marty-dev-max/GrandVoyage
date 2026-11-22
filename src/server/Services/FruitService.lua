@@ -305,9 +305,12 @@ function FS.SpawnTreeFruit()
 	for _, pl in ipairs(game:GetService("Players"):GetPlayers()) do
 		-- v0.25.61 (owner: the chat told the island to players without the Notifier): the Dev "spawnfruit" tester no
 		-- longer counts as a holder; buy the Fruit Notifier to test the alert
+		-- v0.25.62 (owner): everyone reads in the chat THAT a fruit appeared; only holders learn where (+ FruitAlert)
 		if R.StoreService and R.StoreService.BoostActive(pl, "fruit") then
 			Net.Push(pl, "Announce", { text = "📡 A strange fruit has appeared on " .. island.name .. "!", rarity = "Epic" })
 			Net.Push(pl, "FruitSpawn", { knows = true, island = island.id, name = island.name, pos = m.PrimaryPart.Position, life = Fruits.Drops.TreeLifetime })
+		else
+			Net.Push(pl, "Announce", { text = "🍎 A strange fruit has appeared somewhere in the sea...", rarity = "Epic" })
 		end
 	end
 	prompt.Triggered:Connect(function(player)

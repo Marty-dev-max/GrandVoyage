@@ -564,6 +564,8 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     Storm Caller job 2; DataService load renames saved ids (RENAMED map: skills + skillBar + classBars). Job 2 rule
     (owner): every path keeps one class-identity skill (navigation / ship repair / healing / food) + its own combat
     style. Classes.SecondJobs = the planned path ids. "Haki" is One Piece: any willpower system needs our own names.
+    v0.25.52 (owner): Navigator stays INT: build INT/DEX/VIT, baton basic attack + BatonFlurry/TrickVault use MATK
+    (magic), Baton item line magic = true. Solo boss sim (22 Nov): bosses take 2.5-33 min solo and kill in ~20 s.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

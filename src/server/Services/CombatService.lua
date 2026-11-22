@@ -393,7 +393,8 @@ local function setup()
 			return false, "Too far away"
 		end
 		lastAttack[player] = now
-		local magic = false -- (v0.25.51: the Navigator's baton hits with ATK, no more lightning ball)
+		-- v0.25.52 (owner): the Navigator stays an INT class: its melee baton hits with MATK (no lightning ball since v0.25.51)
+		local magic = wType == "StormBaton"
 		R.WeaponService.Draw(player, wType)
 		local n, strike, speed = comboStep(player, wType)
 		-- slingshots fire the picked ammo (1 per shot; out of it -> free Pebble Shot)

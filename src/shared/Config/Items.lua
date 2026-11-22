@@ -26,7 +26,7 @@ local WeaponLines = {
 	Slingshot = { magic = false, label = "Slingshot", names = { "Twig Slingshot", "Brass Slingshot", "Falcon Sling", "Stardrop Sling", "Skybreaker" } },
 	-- Sea Cook and Brawler fight with their bare legs / fists (owner, v0.22.3): these lines are fighting styles, nothing is worn
 	Shoes = { magic = false, label = "Leg Style", names = { "Deckhand Leg", "Galley Leg", "Iron Leg", "Ember Leg", "Cloudstride Leg" } },
-	StormBaton = { magic = false, label = "Baton", names = { "Bamboo Staff", "Deckhand Baton", "Folding Baton", "Tide Baton", "Mariner's Rod" } }, -- v0.25.51: melee (storms = Storm Caller job 2)
+	StormBaton = { magic = true, label = "Baton", names = { "Bamboo Staff", "Deckhand Baton", "Folding Baton", "Tide Baton", "Mariner's Rod" } }, -- melee since v0.25.51, MATK (INT class) since v0.25.52
 	MedKit = { magic = true, label = "Powder Pouch", names = { "Herb Pouch", "Field Powders", "Surgeon's Dust", "Miracle Powder", "Panacea Pouch" } },
 	Knuckles = { magic = false, label = "Fist Style", names = { "Street Fists", "Iron Fists", "Sharktooth Fists", "Thunderclap Fists", "Titan Fists" } },
 	Hammer = { magic = false, label = "Hammer", names = { "Wooden Mallet", "Shipwright Hammer", "Keel Breaker", "Galley Maul", "Dockyard Titan" } },

@@ -81,6 +81,43 @@ function F.EquipBonus(profile)
 	return b
 end
 
+-- v0.25.69: where each attribute's bonus comes from, for the Stats tooltip: { STR = { { "Gear", 2 }, { "Fruit", 3 } } }
+function F.StatSources(profile)
+	local out = {}
+	local function add(stat, label, v)
+		if v and v ~= 0 then
+			out[stat] = out[stat] or {}
+			table.insert(out[stat], { label, v })
+		end
+	end
+	local gear, cards = {}, {}
+	for _, uid in pairs(profile.equipment or {}) do
+		local entry = F.FindItem(profile, uid)
+		local def = entry and ItemDB.Get(entry.id)
+		if def then
+			for _, k in ipairs(F.StatNames) do
+				gear[k] = (gear[k] or 0) + (def[string.lower(k)] or 0)
+			end
+			for _, cardId in ipairs(entry.cards or {}) do
+				local c = ItemDB.Cards[cardId]
+				local cb = {}
+				addBonus(cb, c and c.bonus)
+				for _, k in ipairs(F.StatNames) do
+					cards[k] = (cards[k] or 0) + (cb[string.lower(k)] or 0)
+				end
+			end
+		end
+	end
+	local fruitDef = profile.fruit and FruitsCfg.ById[profile.fruit.id]
+	local fruit = profile.fruit and FruitsCfg.StatsFor(profile.fruit.id, profile.fruit.mastery) or {}
+	for _, k in ipairs(F.StatNames) do
+		add(k, "Gear", gear[k])
+		add(k, "Cards", cards[k])
+		add(k, fruitDef and (fruitDef.name .. " (Mastery " .. (profile.fruit.mastery or 0) .. ")") or "Fruit", fruit[k])
+	end
+	return out
+end
+
 -- buffs: { atk=0.25, def=0.3, crit=20, flee=40, aspd=0.2 } (current buff totals)
 function F.Compute(profile, buffs)
 	buffs = buffs or {}
@@ -97,6 +134,13 @@ function F.Compute(profile, buffs)
 					b[k] = (b[k] or 0) + (v[pet.stage] or 0)
 				end
 			end
+		end
+	end
+	-- Cursed Fruit attribute bonus (v0.25.69, grows with Fruit Mastery)
+	if profile.fruit then
+		for stat, v in pairs(FruitsCfg.StatsFor(profile.fruit.id, profile.fruit.mastery)) do
+			local k = string.lower(stat)
+			b[k] = (b[k] or 0) + v
 		end
 	end
 	-- Cursed Fruit passive

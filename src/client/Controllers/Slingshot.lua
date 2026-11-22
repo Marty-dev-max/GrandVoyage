@@ -172,13 +172,21 @@ local function armsTo(c, to, hold)
 	return list
 end
 
+-- Pump Up running (v0.25.69): the launch becomes a straight rocket (server time PumpUntil, set by CombatService)
+local function pumped()
+	return workspace:GetServerTimeNow() < (player:GetAttribute("PumpUntil") or 0)
+end
+local function cooldown()
+	return CFG.Cooldown * (pumped() and CFG.PumpCooldownMult or 1)
+end
+
 local function grab()
 	local to = aimPoint()
 	if not to then
 		require(script.Parent.Parent.UI.UIKit).Toast("Nothing to grab there", "bad")
 		return
 	end
-	if os.clock() - lastGo < CFG.Cooldown then
+	if os.clock() - lastGo < cooldown() then
 		return
 	end
 	local h, r = hum(), root()
@@ -214,11 +222,13 @@ local function launch()
 	Anim.Stop(h, "Bounce_SlingGrab", 0.05)
 	Anim.Play(h, "Bounce_SlingFly", { fade = 0.08 })
 	local start = r.Position
-	local target = grabTo + Vector3.new(0, 3, 0)
+	local rocket = pumped()
+	-- pumped (owner): a straight rocket that ends above the spot (no slamming into it) and keeps going a little
+	local target = grabTo + Vector3.new(0, rocket and CFG.PumpLift or 3, 0)
 	local delta = target - start
 	local dist = delta.Magnitude
-	local T = math.clamp(dist / CFG.Speed, 0.25, 1.0)
-	local arc = math.clamp(dist * 0.12, 2, 12)
+	local T = rocket and math.clamp(dist / CFG.PumpSpeed, 0.12, 0.6) or math.clamp(dist / CFG.Speed, 0.25, 1.0)
+	local arc = rocket and 0 or math.clamp(dist * 0.12, 2, 12)
 	local flat = delta * Vector3.new(1, 0, 1)
 	if flat.Magnitude > 0.5 then
 		r.CFrame = CFrame.lookAt(r.Position, r.Position + flat.Unit)
@@ -235,8 +245,11 @@ local function launch()
 	h:ChangeState(Enum.HumanoidStateType.Freefall)
 	pcall(function()
 		local V = require(script.Parent.VFX)
-		V.Afterimages(c, T, 0.05)
-		V.Ring(start - Vector3.new(0, 2.6, 0), 6, Color3.new(1, 1, 1), 0.35)
+		V.Afterimages(c, T, rocket and 0.03 or 0.05)
+		V.Ring(start - Vector3.new(0, 2.6, 0), rocket and 10 or 6, Color3.new(1, 1, 1), 0.35)
+		if rocket then
+			FruitFX().AirBlast(start, target, 7)
+		end
 	end)
 	local wall = RaycastParams.new()
 	wall.FilterType = Enum.RaycastFilterType.Exclude
@@ -250,7 +263,11 @@ local function launch()
 		att:Destroy()
 		if r.Parent then
 			-- keep a little momentum so the landing does not feel like a wall
-			r.AssemblyLinearVelocity = (flat.Magnitude > 0.1 and flat.Unit * 18 or Vector3.zero) + Vector3.new(0, -6, 0)
+			if rocket then
+				r.AssemblyLinearVelocity = delta.Unit * 45 + Vector3.new(0, 10, 0)
+			else
+				r.AssemblyLinearVelocity = (flat.Magnitude > 0.1 and flat.Unit * 18 or Vector3.zero) + Vector3.new(0, -6, 0)
+			end
 		end
 		releaseArms(0.12)
 		stopAnims()
@@ -269,6 +286,12 @@ local function launch()
 			return done()
 		end
 		lv.VectorVelocity = v
+		if rocket and math.random() < 0.5 then
+			-- steam streaming off the rocketing body
+			pcall(function()
+				require(script.Parent.Voxels).Pixels(r.Position, { count = 4, colors = { Color3.fromRGB(255, 235, 235), Color3.new(1, 1, 1) }, size = 0.4, speed = 2, gravity = -6, life = 0.5, glow = 0.2, spread = 1.2 })
+			end)
+		end
 	end)
 end
 
@@ -374,7 +397,8 @@ function Sling.Start()
 			others[c] = nil
 			local r = c:FindFirstChild("HumanoidRootPart")
 			local dist = r and typeof(d.to) == "Vector3" and (d.to - r.Position).Magnitude or 30
-			task.delay(math.clamp(dist / CFG.Speed, 0.25, 1.0), function()
+			local t = d.pumped and math.clamp(dist / CFG.PumpSpeed, 0.12, 0.6) or math.clamp(dist / CFG.Speed, 0.25, 1.0)
+			task.delay(t, function()
 				for _, a in ipairs(list or {}) do
 					a.release(0.12)
 				end

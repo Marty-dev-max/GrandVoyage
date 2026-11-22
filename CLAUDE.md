@@ -643,6 +643,14 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     character panels use Panels `classStage(panel, stage)` (Job Master look: class gradient, water below the horizon,
     CLASS_FX sparkles; CharacterView opts `plainLight` = no tint on the character, `tint` = initial water tint;
     returns refresh, setClass). Bag stall button = "🏪 OPEN STALL" under the detail card (EMOJI_ICON 🏪 = stall).
+  * v0.25.69 (owner): Bounce PUMPED = Pump Up (F_GearUp) running (CombatService.Pumped / client Combat.Pumped via player
+    attr PumpUntil in server time): skill `pumped` table overrides fields (setmetatable over the skill), strikes /1.6
+    (fxData.speed -> CharAnim plays the clip faster), Ranged travel 0.06, cd x0.6, client charge 0.6 s; Pistol `line`
+    (hits along the path). FruitFX `AirBlast`, Gatling = many RubberArms (`seg` opt). Slingshot pumped = straight
+    rocket (Fruits.Slingshot PumpSpeed/PumpLift/PumpMult), server Sling "go" hits along the path. Fruit stat bonus:
+    fruit `stats = { main, second }`, `Fruits.StatsFor(id, mastery)` (Main +1/10 Mastery max 10, Second +1/20 max 5)
+    added in Formulas.Compute; `Formulas.StatSources(profile)` feeds the Stats BONUS tooltip. Toki (our "haki":
+    Armament / Observation / Conqueror Toki, never the word Haki) spec: docs/Plan-Toki.md (not built yet).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

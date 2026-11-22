@@ -155,9 +155,10 @@ function CharAnim.Start()
 			local sk = ClassesCfg.SkillById[d.skill or ""]
 			local k = sk and sk.kind or ""
 			local w = Clips.Weapons[weaponOf(d.char)] or {}
-			CharAnim.Stats.speed = 1
+			local spd = tonumber(d.speed) or 1 -- v0.25.69: pumped Bounce moves play faster (server strike / speed)
+			CharAnim.Stats.speed = spd
 			local heavy = sk and sk.heavy and Clips.HeavyFor(weaponOf(d.char))
-			action, actionAt = play((sk and sk.anim) or heavy or w[k] or Clips.SkillKinds[k] or "Skill_Cast"), os.clock()
+			action, actionAt = play((sk and sk.anim) or heavy or w[k] or Clips.SkillKinds[k] or "Skill_Cast", { speed = spd }), os.clock()
 		elseif kind == "Damage" then
 			if d.toPlayer and mine then
 				play("Hurt", { fade = 0.03 })

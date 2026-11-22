@@ -868,6 +868,21 @@ function Panels.Stats()
 			if bonus == 0 then
 				bl.TextTransparency = 0.5 -- nothing adds to it yet: the same green, dimmed
 			end
+			-- v0.25.69 (owner): hover the bonus to see where it comes from (gear, cards, fruit, later Toki)
+			UI.Tooltip(bl, function()
+				local lines, sum = { s .. " bonus" }, 0
+				for _, src in ipairs((Formulas.StatSources(p))[s] or {}) do
+					table.insert(lines, src[1] .. "  " .. (src[2] > 0 and "+" or "") .. src[2])
+					sum += src[2]
+				end
+				if bonus - sum ~= 0 then
+					table.insert(lines, "Other  " .. (bonus - sum > 0 and "+" or "") .. (bonus - sum))
+				end
+				if #lines == 1 then
+					table.insert(lines, "Nothing yet: gear, cards and a Cursed Fruit can add to it")
+				end
+				return table.concat(lines, "\n"), T.Green
+			end)
 			local nextCost = Formulas.StatCost(base + n)
 			local maxed = base + n >= Formulas.MaxStat
 			local nl = UI.Text(row, maxed and "MAX" or tostring(nextCost), 22, maxed and T.TextSoft or T.Gold, "Number", { Position = UDim2.fromScale(0.56, 0), Size = UDim2.new(0.16, 0, 1, 0), TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = MID })

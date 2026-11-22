@@ -464,7 +464,7 @@ local function rubberArm(o)
 		local dir = full.Unit
 		local side = dir:Cross(Vector3.yAxis)
 		side = side.Magnitude > 0.05 and side.Unit or Vector3.xAxis
-		local n = math.max(1, math.ceil(len))
+		local n = math.max(1, math.ceil(len / (o.seg or 1)))
 		for i = 1, math.max(n, #segs) do
 			if i <= n then
 				local s = seg(i)
@@ -497,11 +497,44 @@ local function boing(pos, size)
 	Voxels.Pixels(pos, { count = 18 + math.floor(size * 4), colors = { C.white, C.pink, C.lilac }, size = 0.35, speed = 10 + size * 2, gravity = 0, life = 0.4, glow = 0.6, spread = 1 })
 end
 
+-- Pump Up running (fxData.pumped, v0.25.69 owner): the moves are compressed air: a ring of air bursts off the elbow
+-- and rings fly down the path ahead of a fist that is there in a blink
+local AIR = Color3.fromRGB(235, 248, 255)
+local function airBlast(from, to, size)
+	local dir = to - from
+	if dir.Magnitude < 0.5 then
+		return
+	end
+	local V = vfx()
+	local n = math.clamp(math.floor(dir.Magnitude / 6), 2, 7)
+	for i = 0, n do
+		task.delay(i * 0.012, function()
+			V.Shockwave(from:Lerp(to, i / n), dir, AIR, size * (0.55 + 0.45 * i / n))
+		end)
+	end
+	V.SpeedLines(from, to, AIR, 10)
+	Voxels.Pixels(from, { count = 14, colors = { AIR, C.white, Color3.fromRGB(255, 215, 220) }, size = 0.35, speed = 8, gravity = -5, life = 0.5, glow = 0.2, spread = 1 })
+end
+FX.AirBlast = airBlast
+
 FX.F_StretchPistol = function(d)
 	local to = d.to or d.from
 	local base = elbow(d.char, "Right", d.from + Vector3.new(0, 1, 0))
 	local dir = to - base
 	if dir.Magnitude < 1 then
+		return
+	end
+	if d.pumped then
+		-- pumped: strike 0.05 + 0.06 of air travel (server)
+		hideArm(d.char, "Right", 0.38)
+		task.delay(0.05, airBlast, base, to, 5)
+		rubberArm({ char = d.char, side = "Right", from = d.from, to = to, delay = 0.05, tOut = 0.06, hold = 0.05, tBack = 0.13 })
+		task.delay(0.11, function()
+			local V = vfx()
+			V.ImpactSplit(to, dir, AIR, 6.5)
+			V.Shockwave(to, dir, C.pink, 8)
+			boing(to, 3)
+		end)
 		return
 	end
 	-- server: damage lands at strike 0.08 + 0.2 (Ranged)
@@ -512,38 +545,35 @@ FX.F_StretchPistol = function(d)
 		boing(to, 2)
 	end)
 end
+-- Bounce Gatling (owner v0.25.69: "many Stretch Pistols"): real stretching arms, both sides in turn, each one shooting
+-- out to a spot around the target and snapping back; pumped = twice as many, faster, each with a puff of air
 FX.F_BounceGatling = function(d)
 	local to = d.to or d.from
 	if (to - d.from).Magnitude < 1 then
 		return
 	end
-	hideArm(d.char, "Right", 0.7)
-	hideArm(d.char, "Left", 0.7)
-	local skin = skinOf(d.char)
-	-- dozens of afterimage arms: a long skin bar + a fist, each one fading in ~0.12 s
-	for k = 0, 21 do
-		task.delay(0.04 + k * 0.026, function()
-			local sideName = k % 2 == 0 and "Right" or "Left"
-			local base = elbow(d.char, sideName, d.from + Vector3.new(0, 1, 0))
-			local jitter = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5) * 3.4
-			local tip = to + jitter
-			local len = (tip - base).Magnitude
-			local cf = CFrame.lookAt(base, tip)
-			local bar = blk(Vector3.new(0.75, 0.75, len), skin, cf * CFrame.new(0, 0, -len / 2), false, 0.25)
-			local fist = blk(Vector3.new(1.3, 1.2, 1.2), skin, CFrame.lookAt(tip, tip + cf.LookVector), false, 0.15)
-			tw(bar, 0.13, { Transparency = 1 })
-			tw(fist, 0.13, { Transparency = 1, Size = Vector3.new(1.7, 1.6, 1.6) })
-			Debris:AddItem(bar, 0.15)
-			Debris:AddItem(fist, 0.15)
-			if k % 3 == 0 then
-				Voxels.Pixels(tip, { count = 6, colors = { C.white, C.pink }, size = 0.3, speed = 9, gravity = 0, life = 0.22, glow = 0.5, spread = 0.6 })
-			end
-		end)
+	local pumped = d.pumped
+	local arms = pumped and 24 or 16
+	local first, span = pumped and 0.025 or 0.04, pumped and 0.5 or 0.5
+	local hits, every = pumped and 12 or 8, pumped and 0.045 or 0.07
+	hideArm(d.char, "Right", first + span + 0.2)
+	hideArm(d.char, "Left", first + span + 0.2)
+	for k = 0, arms - 1 do
+		local sideName = k % 2 == 0 and "Right" or "Left"
+		local jitter = Vector3.new(math.random() - 0.5, (math.random() - 0.5) * 0.8, math.random() - 0.5) * 3.6
+		local at = first + k * span / arms
+		rubberArm({ char = d.char, side = sideName, from = d.from, to = to + jitter, delay = at, tOut = pumped and 0.035 or 0.05,
+			hold = 0.015, tBack = pumped and 0.045 or 0.065, thick = 0.75, seg = 1.4 })
+		if pumped and k % 3 == 0 then
+			task.delay(at, function()
+				airBlast(elbow(d.char, sideName, d.from), to + jitter, 2.5)
+			end)
+		end
 	end
-	-- one impact per server hit (8 hits, 0.07 s apart, from strike 0.04)
-	for i = 0, 7 do
-		task.delay(0.04 + i * 0.07, function()
-			vfx().ImpactSplit(to + Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5) * 2, to - d.from, C.pink, 2.6)
+	-- one impact per server hit
+	for i = 0, hits - 1 do
+		task.delay(first + (pumped and 0.035 or 0.05) + i * every, function()
+			vfx().ImpactSplit(to + Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5) * 2, to - d.from, pumped and AIR or C.pink, 2.6)
 		end)
 	end
 end
@@ -553,24 +583,31 @@ FX.F_RecoilCannon = function(d)
 	if dir.Magnitude < 1 then
 		return
 	end
-	hideArm(d.char, "Right", 0.75)
-	hideArm(d.char, "Left", 0.75)
+	local pumped = d.pumped
+	-- normal: strike 0.1 + 0.2 travel; pumped: 0.06 + 0.06
+	local strike, travel = pumped and 0.06 or 0.1, pumped and 0.06 or 0.2
+	hideArm(d.char, "Right", pumped and 0.5 or 0.75)
+	hideArm(d.char, "Left", pumped and 0.5 or 0.75)
 	local side = dir.Unit:Cross(Vector3.yAxis)
 	side = side.Magnitude > 0.05 and side.Unit or Vector3.xAxis
 	for _, s in ipairs({ { "Right", 1 }, { "Left", -1 } }) do
-		rubberArm({ char = d.char, side = s[1], from = d.from, to = to + side * s[2] * 1.1 + Vector3.new(0, 0.6, 0), delay = 0.1, tOut = 0.2, hold = 0.12, tBack = 0.28, palm = true, thick = 0.95 })
+		rubberArm({ char = d.char, side = s[1], from = d.from, to = to + side * s[2] * 1.1 + Vector3.new(0, 0.6, 0), delay = strike, tOut = travel,
+			hold = pumped and 0.1 or 0.12, tBack = pumped and 0.2 or 0.28, palm = true, thick = 0.95 })
 	end
 	-- the recoil: dust ring at your feet as you shove
-	task.delay(0.1, function()
-		vfx().Ring(ground(d.from) + Vector3.new(0, 0.3, 0), 6, C.white, 0.35)
+	task.delay(strike, function()
+		vfx().Ring(ground(d.from) + Vector3.new(0, 0.3, 0), pumped and 9 or 6, C.white, 0.35)
+		if pumped then
+			airBlast(d.from + Vector3.new(0, 1, 0), to, 11)
+		end
 	end)
-	task.delay(0.3, function()
+	task.delay(strike + travel, function()
 		local V = vfx()
-		V.Shockwave(to, dir, C.white, 13)
-		V.ImpactSplit(to, dir, C.pink, 8)
-		V.Ring(ground(to) + Vector3.new(0, 0.3, 0), 16, C.pink, 0.5)
-		Voxels.Blocks(to, { count = 16, colors = { C.pink, C.white, C.lilac }, size = { 0.3, 0.7 }, speed = 22, up = 8, neon = true, collide = false, life = 0.6, spread = 2 })
-		boing(to, 4)
+		V.Shockwave(to, dir, C.white, pumped and 18 or 13)
+		V.ImpactSplit(to, dir, pumped and AIR or C.pink, pumped and 10 or 8)
+		V.Ring(ground(to) + Vector3.new(0, 0.3, 0), pumped and 24 or 16, C.pink, 0.5)
+		Voxels.Blocks(to, { count = pumped and 24 or 16, colors = { C.pink, C.white, C.lilac }, size = { 0.3, 0.7 }, speed = pumped and 30 or 22, up = 8, neon = true, collide = false, life = 0.6, spread = 2 })
+		boing(to, pumped and 6 or 4)
 	end)
 end
 -- Balloon Body: a round voxel balloon grows around the torso (shirt color, lighter top) for the whole buff

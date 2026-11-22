@@ -8,21 +8,23 @@ local F = {}
 F.List = {
 	{
 		id = "Bounce", name = "Bounce Bounce no Mi", type = "Paramecia", rarity = "Secret", weight = 2,
+		stats = { "STR", "VIT" }, -- v0.25.69: main / second stat bonus, grows with Fruit Mastery (F.StatBonus)
 		color = Color3.fromRGB(175, 70, 215), swirl = Color3.fromRGB(255, 120, 190), icon = "🍇", -- v0.25.33: purple, pink inside
 		desc = "Your body turns to rubber: stretch, bounce, and shrug off blunt hits.",
 		-- v0.25.65 (owner, docs/Plan-Fruits-v2.md): Rubber Hide reflects gunshots (CombatService fruitBody), Slingshot
 		-- Launch = hold RMB to aim + hold LMB to grab, release to fling yourself
 		passive = { defPct = 0.15, maxHpPct = 0.1 }, passiveText = "Rubber Hide: bullets bounce back at the shooter • Slingshot Launch: hold right mouse to aim, hold left mouse to grab, let go to fling yourself (or hold U) • +15% DEF, +10% Max HP",
 		skills = {
-			{ id = "F_StretchPistol", name = "Stretch Pistol", kind = "Ranged", sp = 10, cd = 3, range = 32, mult = 2.3, charge = true, anim = "Bounce_Pistol", chargeAnim = "Bounce_Wind", mastery = 1, fx = "Burst", desc = "Hold to wind the arm back, release: a stretching long-range punch." },
-			{ id = "F_BounceGatling", name = "Bounce Gatling", kind = "Melee", sp = 18, cd = 6, range = 14, mult = 0.5, hits = 8, hitEvery = 0.07, anim = "Bounce_Gatling", mastery = 10, fx = "Burst", desc = "A storm of stretching rubber punches, too fast to see." },
-			{ id = "F_RecoilCannon", name = "Recoil Cannon", kind = "Ranged", sp = 24, cd = 9, range = 24, mult = 3.2, charge = true, anim = "Bounce_Cannon", chargeAnim = "Bounce_WindBoth", splash = 8, knockDist = 26, knockPower = 3, mastery = 25, fx = "Burst", desc = "Hold to stretch both arms far back, release: a two-palm blast that sends enemies flying." },
+			{ id = "F_StretchPistol", name = "Stretch Pistol", kind = "Ranged", sp = 10, cd = 3, range = 32, mult = 2.3, charge = true, anim = "Bounce_Pistol", chargeAnim = "Bounce_Wind", pumped = { line = 4.5, range = 40 }, mastery = 1, fx = "Burst", desc = "Hold to wind the arm back, release: a stretching long-range punch." },
+			{ id = "F_BounceGatling", name = "Bounce Gatling", kind = "Melee", sp = 18, cd = 6, range = 14, mult = 0.5, hits = 8, hitEvery = 0.07, pumped = { hits = 12, hitEvery = 0.045 }, anim = "Bounce_Gatling", mastery = 10, fx = "Burst", desc = "A storm of stretching rubber punches, too fast to see." },
+			{ id = "F_RecoilCannon", name = "Recoil Cannon", kind = "Ranged", sp = 24, cd = 9, range = 24, mult = 3.2, charge = true, anim = "Bounce_Cannon", chargeAnim = "Bounce_WindBoth", splash = 8, knockDist = 26, knockPower = 3, pumped = { splash = 12, knockDist = 34 }, mastery = 25, fx = "Burst", desc = "Hold to stretch both arms far back, release: a two-palm blast that sends enemies flying." },
 			{ id = "F_BalloonBody", name = "Balloon Body", kind = "Buff", sp = 20, cd = 25, duration = 12, buff = { def = 0.5 }, anim = "Bounce_Balloon", mastery = 35, fx = "AuraPink", desc = "Puff up like a balloon: DEF way up, and blunt blows and bullets from any side bounce back at the attacker." },
-			{ id = "F_GearUp", name = "Pump Up", kind = "Buff", sp = 35, cd = 45, duration = 18, buff = { atk = 0.35, aspd = 0.3 }, anim = "Bounce_PumpUp", mastery = 50, fx = "AuraFire", desc = "Pump your blood: steam pours off you, ATK and attack speed way up." },
+			{ id = "F_GearUp", name = "Pump Up", kind = "Buff", sp = 35, cd = 45, duration = 18, buff = { atk = 0.35, aspd = 0.3 }, anim = "Bounce_PumpUp", mastery = 50, fx = "AuraFire", desc = "Pump your blood: steam pours off you, ATK and attack speed way up, and every Bounce move turns into a blast of compressed air: faster, shorter cooldowns, and Slingshot Launch rockets you straight through enemies." },
 		},
 	},
 	{
 		id = "Blaze", name = "Blaze Blaze no Mi", type = "Logia", rarity = "Mythic", weight = 6,
+		stats = { "INT", "DEX" }, -- v0.25.69: main / second stat bonus, grows with Fruit Mastery (F.StatBonus)
 		color = Color3.fromRGB(255, 110, 40), swirl = Color3.fromRGB(255, 220, 80), icon = "🔥",
 		desc = "Become fire itself. Attacks often pass right through you.",
 		passive = { flee = 25, atkPct = 0.05 }, passiveText = "Flame Body (Logia): monsters without Toki pass right through you • Blaze Flight: hold Space • +25 FLEE, +5% ATK",
@@ -35,6 +37,7 @@ F.List = {
 	},
 	{
 		id = "Haze", name = "Haze Haze no Mi", type = "Logia", rarity = "Legendary", weight = 12,
+		stats = { "INT", "AGI" }, -- v0.25.69: main / second stat bonus, grows with Fruit Mastery (F.StatBonus)
 		color = Color3.fromRGB(200, 205, 215), swirl = Color3.fromRGB(120, 125, 140), icon = "💨",
 		desc = "Become smoke. Choke, blind and slip away.",
 		passive = { flee = 25 }, passiveText = "Smoke Body (Logia): monsters without Toki pass right through you • +25 FLEE",
@@ -48,6 +51,7 @@ F.List = {
 	{
 		-- v0.25.65 (owner): renamed; id stays "Ward" (saves)
 		id = "Ward", name = "Shield Shield no Mi", type = "Paramecia", rarity = "Epic", weight = 20,
+		stats = { "VIT", "INT" }, -- v0.25.69: main / second stat bonus, grows with Fruit Mastery (F.StatBonus)
 		color = Color3.fromRGB(120, 220, 255), swirl = Color3.fromRGB(230, 250, 255), icon = "🛡️",
 		desc = "Create unbreakable barriers to shield your crew.",
 		passive = { defPct = 0.12 }, passiveText = "Barrier Steps: hold Space to build stairs of barrier • +12% DEF",
@@ -60,6 +64,7 @@ F.List = {
 	},
 	{
 		id = "Split", name = "Split Split no Mi", type = "Paramecia", rarity = "Epic", weight = 25,
+		stats = { "AGI", "DEX" }, -- v0.25.69: main / second stat bonus, grows with Fruit Mastery (F.StatBonus)
 		color = Color3.fromRGB(110, 200, 120), swirl = Color3.fromRGB(240, 240, 120), icon = "✂️",
 		desc = "Split your body into pieces. Blades pass between them.",
 		passive = { flee = 12, maxHpPct = 0.05 }, passiveText = "Split Body: blades, claws and axes pass between your pieces • +12 FLEE, +5% Max HP",
@@ -72,6 +77,7 @@ F.List = {
 	},
 	{
 		id = "Slick", name = "Slick Slick no Mi", type = "Paramecia", rarity = "Rare", weight = 35,
+		stats = { "AGI", "LUK" }, -- v0.25.69: main / second stat bonus, grows with Fruit Mastery (F.StatBonus)
 		color = Color3.fromRGB(255, 225, 120), swirl = Color3.fromRGB(255, 255, 220), icon = "✨",
 		desc = "Your skin turns slippery: attacks slide right off.",
 		passive = { flee = 15 }, passiveText = "Slick Skate: hold Space to slide forward • +15 FLEE",
@@ -84,9 +90,29 @@ F.List = {
 	},
 }
 
+-- v0.25.69 (owner): every fruit adds to two attributes (the Bonus column of Stats), the main one up to +Main and the
+-- second up to +Second: +1 per MainPer / SecondPer levels of Fruit Mastery (rounded up, so Mastery 1 already gives +1).
+-- Damage still scales with max(ATK, MATK): the bonus only makes a fruit that suits your build stronger.
+F.StatBonus = { Main = 10, MainPer = 10, Second = 5, SecondPer = 20 }
+function F.StatsFor(fruitId, mastery)
+	local f = F.ById[fruitId or ""]
+	local out = {}
+	if not f or not f.stats then
+		return out
+	end
+	local m = math.max(0, mastery or 0)
+	local B = F.StatBonus
+	out[f.stats[1]] = math.min(B.Main, math.ceil(m / B.MainPer))
+	out[f.stats[2]] = (out[f.stats[2]] or 0) + math.min(B.Second, math.ceil(m / B.SecondPer))
+	return out
+end
+
 F.ById = {}
 for _, f in ipairs(F.List) do
 	F.ById[f.id] = f
+	if f.stats then
+		f.passiveText = f.passiveText .. " • +" .. f.stats[1] .. " / +" .. f.stats[2] .. " (grow with Mastery, up to +" .. F.StatBonus.Main .. " / +" .. F.StatBonus.Second .. ")"
+	end
 	for _, s in ipairs(f.skills) do
 		s.fruit = f.id
 		s.class = "Fruit"
@@ -109,7 +135,10 @@ F.Drops = {
 
 -- Slingshot Launch (Bounce passive, v0.25.66): hold right mouse to aim a spot, hold left mouse = both arms stretch out
 -- and grab it, let go = fling yourself there (Controllers/Slingshot; server CombatService "Sling" checks it)
-F.Slingshot = { Range = 70, MinDist = 8, Cooldown = 2.5, Speed = 95, GrabSeconds = 4 }
+F.Slingshot = { Range = 70, MinDist = 8, Cooldown = 2.5, Speed = 95, GrabSeconds = 4,
+	-- pumped (Pump Up running, v0.25.69): a straight rocket at PumpSpeed that ends PumpLift studs above the spot (so you
+	-- do not slam into it) and keeps flying a little; everything in the way takes PumpMult x your attack
+	PumpSpeed = 170, PumpLift = 5, PumpMult = 1.6, PumpCooldownMult = 0.5 }
 
 -- Fruit users sink: they last this long in the sea before the waves drag them ashore
 F.SinkSeconds = 1.5

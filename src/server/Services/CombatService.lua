@@ -54,6 +54,14 @@ end
 function Combat.ClearBuffs(player)
 	buffs[player] = nil
 	player:SetAttribute("Buffs", "")
+	player:SetAttribute("PumpUntil", nil)
+end
+
+-- v0.25.69 Bounce Pump Up (owner): while pumped every Bounce move is faster (skill `pumped` table overrides its fields)
+local PUMP_SPEED = 1.6 -- clips play this much faster, strikes land that much sooner
+local PUMP_CD = 0.6 -- cooldowns x0.6
+function Combat.Pumped(player)
+	return Combat.HasBuff(player, "F_GearUp")
 end
 
 local function syncBuffAttr(player)
@@ -564,7 +572,7 @@ local function setup()
 			if dist > cfg.Range + 8 or dist < cfg.MinDist * 0.5 then
 				return false, "Too far"
 			end
-			if now - st.last < cfg.Cooldown * 0.85 then
+			if now - st.last < cfg.Cooldown * (Combat.Pumped(player) and cfg.PumpCooldownMult or 1) * 0.85 then
 				return false, "Arms still stretched"
 			end
 			st.to, st.at = to, now
@@ -575,7 +583,26 @@ local function setup()
 				return false
 			end
 			st.last = now
-			Net.FX("Sling", { char = player.Character, to = st.to, phase = "go" }, root.Position, 350)
+			local pumped = Combat.Pumped(player)
+			Net.FX("Sling", { char = player.Character, to = st.to, phase = "go", pumped = pumped }, root.Position, 350)
+			if pumped then
+				-- v0.25.69 (owner): pumped, you rocket straight along the arms and ram whatever is in the way
+				local from, to = root.Position, st.to + Vector3.new(0, cfg.PumpLift, 0)
+				local path = to - from
+				local d = R.PlayerService.Derived(player)
+				local magic = d and d.matk > d.atk
+				local seen = {}
+				for step = 0, path.Magnitude + 6, 4 do
+					local at = from + path.Unit * math.min(step, path.Magnitude)
+					for _, tt in ipairs(inRadiusTargets(player, at, 6)) do
+						local key = tt.mob or tt.player
+						if key and not seen[key] then
+							seen[key] = true
+							hitLater(step / cfg.PumpSpeed, player, tt, cfg.PumpMult, magic, { element = "rubber", knock = 8, knockPower = 2.4, knockFrom = from })
+						end
+					end
+				end
+			end
 			st.to = nil
 			return true
 		elseif data.phase == "cancel" then
@@ -614,6 +641,11 @@ local function setup()
 		if not skill.fruit and skill.class ~= p.class and skill.class ~= "Common" then
 			return false, "Switch to " .. (ClassesCfg.Classes[skill.class] and ClassesCfg.Classes[skill.class].name or "that class") .. " to use this skill"
 		end
+		local pumped = skill.fruit == "Bounce" and skill.id ~= "F_GearUp" and Combat.Pumped(player)
+		if pumped and skill.pumped then
+			-- the pumped version of the move: its `pumped` fields win, the rest is the normal skill
+			skill = setmetatable(table.clone(skill.pumped), { __index = skill })
+		end
 		skillCd[player] = skillCd[player] or {}
 		local now = os.clock()
 		if skillCd[player][skill.id] and now < skillCd[player][skill.id] then
@@ -638,6 +670,13 @@ local function setup()
 		local kind = skill.kind
 		local fxData = { fx = skill.fx, from = root.Position, char = player.Character, skill = skill.id }
 		local strike = skillStrike(player, skill)
+		local travel = 0.2 -- a Ranged skill reaches its target this long after the strike frame
+		if pumped then
+			strike /= PUMP_SPEED
+			travel = 0.06 -- compressed air: there in a blink
+			fxData.pumped = true
+			fxData.speed = PUMP_SPEED
+		end
 		local skillOpts = nil
 		if skill.fruit then
 			local el = FRUIT_ELEMENT[skill.fruit]
@@ -688,7 +727,7 @@ local function setup()
 				fxData.to = root.Position + aim3 * shipRange
 				shipLine(root.Position, root.Position + aimDir * shipRange)
 			end
-			local land = strike + (kind == "Ranged" and 0.2 or 0)
+			local land = strike + (kind == "Ranged" and travel or 0)
 			local seen = {}
 			for step = 2, range, 3 do
 				for _, tt in ipairs(inRadiusTargets(player, root.Position + aim3 * step, skill.splash or 4.5)) do
@@ -713,7 +752,7 @@ local function setup()
 			if target.kind ~= "ship" then
 				shipLine(root.Position, target.pos) -- a crewman on deck: the hull under him takes it too
 			end
-			local land = strike + (kind == "Ranged" and 0.2 or 0)
+			local land = strike + (kind == "Ranged" and travel or 0)
 			for i = 1, skill.hits or 1 do
 				hitLater(land + (skill.hitEvery or 0.09) * (i - 1), player, target, mult, magic, lastHitOpts(i == (skill.hits or 1), root.Position))
 			end
@@ -722,6 +761,20 @@ local function setup()
 				for _, tt in ipairs(inRadiusTargets(player, target.pos, skill.splash)) do
 					if (tt.mob or tt.player) ~= (target.mob or target.player) then
 						hitLater(land + 0.03, player, tt, mult * 0.7, magic, lastHitOpts(true, root.Position))
+					end
+				end
+			end
+			if skill.line then
+				-- v0.25.69 pumped Stretch Pistol: the blast of air hits everything between you and the target too
+				local from, seen = root.Position, { [target.mob or target.player or 0] = true }
+				local path = target.pos - from
+				for step = 2, path.Magnitude, 3 do
+					for _, tt in ipairs(inRadiusTargets(player, from + path.Unit * step, skill.line)) do
+						local key = tt.mob or tt.player
+						if key and not seen[key] then
+							seen[key] = true
+							hitLater(strike + travel * step / path.Magnitude, player, tt, mult * 0.8, magic, lastHitOpts(true, from))
+						end
 					end
 				end
 			end
@@ -833,6 +886,10 @@ local function setup()
 			for _, m in ipairs(targets) do
 				Combat.AddBuff(m, skill.id, stats, skill.duration)
 			end
+			if skill.id == "F_GearUp" then
+				-- clients read this to charge faster / show the pumped moves (server time, GetServerTimeNow)
+				player:SetAttribute("PumpUntil", workspace:GetServerTimeNow() + skill.duration)
+			end
 		elseif kind == "ShipBuff" then
 			if not R.ShipService.AddShipBuff(player, skill.id, skill.buff.shipSpeed * (1 + 0.15 * (lv - 1)), skill.duration) then
 				return false, "You must be on a ship"
@@ -844,7 +901,8 @@ local function setup()
 		end
 
 		player:SetAttribute("SP", sp - skill.sp)
-		skillCd[player][skill.id] = now + skill.cd
+		local cd = skill.cd * (pumped and PUMP_CD or 1)
+		skillCd[player][skill.id] = now + cd
 		if skill.fruit then
 			R.FruitService.OnCast(player)
 		end
@@ -853,7 +911,7 @@ local function setup()
 			R.WeaponService.Draw(player, weaponType(player))
 		end
 		Net.FX("Skill", fxData, root.Position, 350)
-		return { ok = true, data = { cd = skill.cd } }
+		return { ok = true, data = { cd = cd } }
 	end, 0.15)
 end
 

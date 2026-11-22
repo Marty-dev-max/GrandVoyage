@@ -187,6 +187,14 @@ local function aimedTarget(dir, mob, range)
 	return best
 end
 
+-- v0.25.69: Bounce Pump Up running (server sets PumpUntil in server time): faster charges, shorter cooldowns
+function Combat.Pumped()
+	return workspace:GetServerTimeNow() < (player:GetAttribute("PumpUntil") or 0)
+end
+local function cdOf(skill)
+	return skill.cd * ((skill.fruit == "Bounce" and skill.id ~= "F_GearUp" and Combat.Pumped()) and 0.6 or 1)
+end
+
 -- charge (v0.25.65, docs/Plan-Fruits-v2.md): 0..1 for skills with `charge = true` (how long the key was held)
 function Combat.CastSkill(skillId, targetModel, aim, charge)
 	local skill = ClassesCfg.SkillById[skillId]
@@ -237,7 +245,7 @@ function Combat.CastSkill(skillId, targetModel, aim, charge)
 			else
 				payload.dir = dir3 or dir
 			end
-			State.cooldowns[skillId] = now + skill.cd
+			State.cooldowns[skillId] = now + cdOf(skill)
 			State.Fire("cooldown")
 			task.spawn(function()
 				local res = Net.Request("CastSkill", payload)
@@ -276,7 +284,7 @@ function Combat.CastSkill(skillId, targetModel, aim, charge)
 			return false
 		end
 	end
-	State.cooldowns[skillId] = now + skill.cd -- optimistic
+	State.cooldowns[skillId] = now + cdOf(skill) -- optimistic
 	State.Fire("cooldown")
 	task.spawn(function()
 		local res = Net.Request("CastSkill", payload)
@@ -836,6 +844,11 @@ end
 -- character turns with it; letting go casts it there. Auto mode and skills without a direction cast on the press.
 local AIM_KINDS = { Melee = true, Ranged = true, GroundAoE = true, Dash = true }
 local CHARGE_TIME = 1.2 -- seconds of holding for a full charge (server: CombatService CHARGE_BONUS)
+-- pumped Bounce moves charge twice as fast (v0.25.69)
+local function chargeTime(id)
+	local sk = ClassesCfg.SkillById[id]
+	return (sk and sk.fruit == "Bounce" and Combat.Pumped()) and CHARGE_TIME * 0.5 or CHARGE_TIME
+end
 local holding -- { id, slot, conn, line, spot, rot }
 local function stopAim()
 	if not holding then
@@ -905,9 +918,9 @@ local function startAim(id, slot, src)
 		local hand = c and c:FindFirstChild("RightHand")
 		local fdef = skill.fruit and require(Shared.Config.Fruits).ById[skill.fruit]
 		local col = fdef and fdef.color or Color3.fromRGB(255, 220, 140)
-		pcall(require(script.Parent.VFX).Charge, hand, col, CHARGE_TIME + 0.2)
+		pcall(require(script.Parent.VFX).Charge, hand, col, chargeTime(id) + 0.2)
 		if skill.chargeAnim == "Bounce_WindBoth" then -- both arms wind back: both hands gather power
-			pcall(require(script.Parent.VFX).Charge, c and c:FindFirstChild("LeftHand"), col, CHARGE_TIME + 0.2)
+			pcall(require(script.Parent.VFX).Charge, c and c:FindFirstChild("LeftHand"), col, chargeTime(id) + 0.2)
 		end
 		-- v0.25.66: the wind-up pose loops while the key is held (replicates: everyone sees the arm pulled back)
 		local h = hum()
@@ -936,7 +949,7 @@ local function startAim(id, slot, src)
 		if released then
 			stopAim()
 			-- the aim shown last frame (a lifted finger has no pointer) + how long it was charged
-			Combat.CastSkill(hold.id, nil, hold.aim, (os.clock() - hold.t0) / CHARGE_TIME)
+			Combat.CastSkill(hold.id, nil, hold.aim, (os.clock() - hold.t0) / chargeTime(hold.id))
 			return
 		end
 		local r, h = root(), hum()
@@ -1043,7 +1056,7 @@ function Combat.Start()
 					if holding then -- another skill key while aiming: the held one goes first
 						local held, t0 = holding.id, holding.t0
 						stopAim()
-						Combat.CastSkill(held, nil, nil, (os.clock() - t0) / CHARGE_TIME)
+						Combat.CastSkill(held, nil, nil, (os.clock() - t0) / chargeTime(held))
 					end
 					startAim(id, i)
 				else
@@ -1056,7 +1069,7 @@ function Combat.Start()
 				local id, t0 = holding.id, holding.t0
 				stopAim()
 				if not cancelled then
-					Combat.CastSkill(id, nil, nil, (os.clock() - t0) / CHARGE_TIME)
+					Combat.CastSkill(id, nil, nil, (os.clock() - t0) / chargeTime(id))
 				end
 			end
 		end)

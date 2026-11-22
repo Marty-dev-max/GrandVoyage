@@ -647,15 +647,68 @@ def size_disc(s, t, cx=26, cy=26):
     text(s, cx - 1, cy - 2, t, (90, 40, 20))
 
 
+# v0.25.56 (owner references): S = round manga meat on the bone, M = three roast drumsticks, L = a big roast with the
+# marbled cut face and the bone through its middle
+ROAST, ROAST_HI, ROAST_D = (165, 88, 45), (205, 130, 75), (110, 55, 30)
+FLESH, FLESH_D = (245, 190, 180), (205, 115, 110)
+BONE, BONE_D = (248, 244, 232), (205, 198, 182)
+
+
+def bone(s, x0, y0, x1, y1, w=3):
+    s.line([(x0, y0), (x1, y1)], BONE, w)
+    dx, dy = x1 - x0, y1 - y0
+    n = max(1, math.hypot(dx, dy))
+    px_, py_ = -dy / n * 2, dx / n * 2  # the knuckle's two knobs, across the bone
+    s.oval(round(x1 + px_), round(y1 + py_), 2, 2, BONE)
+    s.oval(round(x1 - px_), round(y1 - py_), 2, 2, BONE)
+
+
+def meat_s(s):
+    bone(s, 11, 20, 5, 27)
+    s.oval(17, 13, 10, 10, ROAST)
+    s.oval(14, 10, 5, 4, ROAST_HI, True)
+    s.px(12, 8, WHITE)
+    s.px(22, 18, ROAST_D, True)
+    s.px(19, 21, ROAST_D, True)
+
+
+def meat_m(s):
+    # three chunky drumsticks side by side, back to front, each a step lower (owner reference): a round roasted
+    # bulge on top narrowing to the pink cut end and a short bone with a small knuckle
+    for i, x in enumerate((24, 16, 8)):
+        y = i * 2
+        pts = [(x + 3, 6 + y, 4.5), (x + 2, 10 + y, 4.2), (x + 1, 14 + y, 3.6), (x, 17 + y, 3.0)]
+        for cx, cy, r in pts:  # dark rim first so neighbours stay apart
+            s.oval(cx, cy, round(r) + 1, round(r) + 1, ROAST_D)
+        for cx, cy, r in pts:
+            s.oval(cx, cy, round(r), round(r), ROAST)
+        s.oval(x + 2, 6 + y, 2, 3, ROAST_HI, True)
+        s.oval(x, 19 + y, 2, 2, FLESH)
+        s.line([(x - 1, 21 + y), (x - 2, 25 + y)], BONE, 2)
+        s.oval(x - 3, 26 + y, 1, 1, BONE)
+        s.oval(x - 1, 27 + y, 1, 1, BONE)
+
+
+def meat_l(s):
+    s.rect(10, 7, 26, 27, ROAST)
+    s.oval(26, 17, 4, 10, ROAST)
+    s.rect(11, 8, 25, 10, ROAST_HI, True)  # glaze shine along the top
+    for x in (15, 20, 24):  # glaze drips
+        s.line([(x, 10), (x, 13)], ROAST_D, 1, True)
+    s.oval(10, 17, 7, 10, FLESH)  # the cut face: marbled rings
+    s.oval(10, 17, 5, 8, FLESH_D)
+    s.oval(10, 17, 4, 6, FLESH)
+    s.oval(10, 17, 2, 3, FLESH_D)
+    s.oval(10, 17, 1, 1, BONE, True)
+    bone(s, 9, 17, 2, 17)
+
+
 def meat_size(t):
+    body = {'S': meat_s, 'M': meat_m, 'L': meat_l}[t]
+
     def draw(s):
-        meat(s)
-        if t != 'S':
-            s.oval(12, 12, 3, 2, (255, 160, 120), True)  # a juicier roast for the bigger ones
-        if t == 'L':
-            s.oval(9, 22, 6, 4, (170, 70, 50))  # a second chunk on the platter
-            s.oval(8, 21, 3, 2, (225, 115, 85), True)
-        size_disc(s, t, 6, 26)
+        body(s)
+        size_disc(s, t)
     return draw
 
 

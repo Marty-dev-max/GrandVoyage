@@ -587,6 +587,8 @@ Design numbers live in `docs/GDD.md`; setup and feature map in `README.md`.
     mode (tick), never while Downed. Old autoPotionPct + Loadout quick items removed. Items RoastShank (HP M), SeaGrog
     (SP M), CaptainsKeg (SP L) in the General Store; pixel icons meat_s/m/l, grog_s/m/l (barrel tankards, owner
     reference), fruit_unknown (FruitAlert beacon marker + white glow aura, replaces the blue diamond).
+    v0.25.56 (owner references): meat_s = round manga meat on the bone, meat_m = three drumsticks, meat_l = big roast
+    with a marbled cut face (gen_pixel_icons meat_s/meat_m/meat_l + bone()).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

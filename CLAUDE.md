@@ -772,6 +772,14 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     in tools/blender/voxel_pets.py; GLBs in assets/models3d, NOT uploaded yet (Config/Models still the old ids).
   * v0.25.86 (owner): hunts pay out inside ProgressService.Event (payHunt) and restart, no claim (HuntClaim kept for
     saves already full); Quest.lua HuntCard suggests the toughest unlocked island monster (NEW tag + START).
+  * v0.25.87: menu logo = `tools/gen_logo.py` (own bitmap font + ship's wheel) -> GameConfig.LogoImage, drawn on a
+    SurfaceGui board behind the character in Menu stepCamera (title screen only). Image upload WITHOUT an API key:
+    serve assets/ with `python -m http.server 8765 --bind 127.0.0.1`, then Studio MCP `upload_image` with
+    `http://127.0.0.1:8765/<path>.png` -> rbxassetid (Blender's python + PYTHONPATH %LOCALAPPDATA%\gv-pylib has PIL).
+  * v0.25.88: pixel icons toki_arm / toki_obs / toki_conq (HUD SET_ICON), fruit_ward / fruit_split redrawn.
+  * v0.25.89 (owner): `Controllers/Sprint` double-tap W (GameConfig.Sprint), WalkSpeed = player attr BaseSpeed
+    (PlayerService) x Mult; Swim restores to BaseSpeed. F_SlickSpin = 8 ticks (Slick_Spin clip 8 x 120 deg).
+    Slip Away buff: CombatService fruitBody ignores non-boss "blunt" monster blows ("SLIPPED OFF").
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

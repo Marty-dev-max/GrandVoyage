@@ -4,7 +4,7 @@ return {
 	LogoLines = { "LARPTALES", "VOXEL SEAS" },
 	LogoImage = 133908417032160, -- v0.25.87: pixel logo board floating behind the menu character (tools/gen_logo.py); nil = text logo
 	-- bump on every change: shown bottom-right in game and printed in Output, so you can tell which code is running
-	Version = "0.25.88",
+	Version = "0.25.89",
 	SagaName = "Azure East Saga",
 	DataStoreName = "GV_Player_v1",
 	GuildStoreName = "GV_Guild_v1",
@@ -120,6 +120,8 @@ return {
 	},
 	-- Dash (Q): a quick burst in the direction you move (or face); the server enforces the cooldown
 	Dash = { Cooldown = 2.5, Speed = 120, Duration = 0.14 }, -- v0.25.26: faster, shorter burst + hard stop (~same distance)
+	-- v0.25.89 (owner): double-tap W to run (Controllers/Sprint): WalkSpeed = BaseSpeed x Mult while W stays held
+	Sprint = { Mult = 1.55, TapWindow = 0.3, Fov = 6 },
 	-- hotbar: 12 skill slots (keys 1-6, then 7 8 9 0 - =) and 8 quick item slots (F1-F8); empty slot = ""
 	SkillBarSize = 6, -- v0.25.71: E R F Z X C = the 6 skills of the picked set (Shared/Modules/SkillSets)
 	ItemBarSize = 8,

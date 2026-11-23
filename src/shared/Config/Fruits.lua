@@ -87,8 +87,8 @@ F.List = {
 		skills = {
 			-- v0.25.84 phase 7 (docs/Plan-Fruits-v2.md): a longer charge also slides further (CombatService: range x 0.7..1.3)
 			{ id = "F_SlickSlide", name = "Slick Slide", kind = "Dash", sp = 10, cd = 5, range = 22, mult = 1.5, charge = true, anim = "Slick_SlidePunch", chargeAnim = "Slick_Crouch", mastery = 1, fx = "None", desc = "Hold to crouch down like a sprinter, release: slide forward on a streak of oil into a punch. The longer you hold, the further and harder." },
-			{ id = "F_SlipAway", name = "Slip Away", kind = "Buff", sp = 18, cd = 25, duration = 12, buff = { flee = 45 }, mastery = 10, fx = "None", desc = "Your whole body turns glossy with oil: blows slide right off (FLEE way up)." },
-			{ id = "F_SlickSpin", name = "Slick Spin", kind = "AoE", sp = 18, cd = 8, radius = 11, mult = 1.6, knockDist = 10, knockPower = 2, anim = "Slick_Spin", mastery = 25, fx = "None", desc = "Drop into a handstand and spin-kick once round on a ring of oil, sending everything around you sliding away." },
+			{ id = "F_SlipAway", name = "Slip Away", kind = "Buff", sp = 18, cd = 25, duration = 12, buff = { flee = 45 }, mastery = 10, fx = "None", desc = "Your whole body turns glossy with oil: blunt blows (fists, clubs, bites) slide right off you, and FLEE goes way up. Blades, bullets and bosses still hit." },
+			{ id = "F_SlickSpin", name = "Slick Spin", kind = "AoE", sp = 18, cd = 8, radius = 11, mult = 0.42, ticks = 8, tickEvery = 0.1, knockDist = 10, knockPower = 2, anim = "Slick_Spin", mastery = 25, fx = "None", desc = "Drop into a handstand and spin on a ring of oil: 8 fast kicks on everything around you, the last one sends them sliding away." },
 			{ id = "F_OilSlick", name = "Oil Slick", kind = "GroundAoE", sp = 26, cd = 12, range = 40, radius = 15, mult = 1.9, delay = 0.3, oil = 7, anim = "Slick_Pour", mastery = 50, fx = "None", desc = "Fling a wave of oil at the ground: the spot turns glossy for a while. Monsters on it are slowed and slip on their own blows." },
 		},
 	},

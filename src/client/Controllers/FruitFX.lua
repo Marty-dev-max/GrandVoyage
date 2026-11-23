@@ -2195,15 +2195,15 @@ FX.F_SlickSpin = function(d)
 	local conn
 	conn = RunService.RenderStepped:Connect(function()
 		local t = os.clock() - t0
-		local k = math.clamp((t - 0.08) / 0.4, 0, 1)
+		local k = math.clamp((t - 0.08) / 0.9, 0, 1)
 		local c = root and root.Parent and root.Position or at
 		for i, s in ipairs(streaks) do
-			local a = i / #streaks * math.pi * 2 + k * math.pi * 2.4
+			local a = i / #streaks * math.pi * 2 + k * math.pi * 6
 			local rr = 2 + k * 2.5
 			local p = Vector3.new(c.X, base.Y + 2.6 + (i % 3) * 0.6, c.Z) + Vector3.new(math.cos(a) * rr, 0, math.sin(a) * rr)
 			s.CFrame = CFrame.lookAt(p, p + Vector3.new(-math.sin(a), 0, math.cos(a)))
 		end
-		if t > 0.55 then
+		if t > 1.05 then
 			conn:Disconnect()
 			for _, s in ipairs(streaks) do
 				fade(s, 0, 0.15)

@@ -190,6 +190,7 @@ function PS.Recompute(player)
 		hum.Health = math.clamp(d.maxHp * ratio, 1, d.maxHp)
 		if not player:GetAttribute("Vending") then
 			hum.WalkSpeed = d.moveSpeed
+			player:SetAttribute("BaseSpeed", d.moveSpeed) -- Controllers/Sprint runs at a multiple of it
 		end
 	end
 	-- v0.25.70: Power (Formulas.Power) for nameplates / Stats / Conqueror Toki comparisons

@@ -115,7 +115,7 @@ local function setSwimming(on, root, hum)
 			float = nil
 		end
 		if normalSpeed then
-			hum.WalkSpeed = normalSpeed
+			hum.WalkSpeed = player:GetAttribute("BaseSpeed") or normalSpeed -- not a sprint speed caught on the way in
 		end
 		bar.Visible = false
 		depth = 0

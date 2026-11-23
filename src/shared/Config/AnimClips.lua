@@ -661,15 +661,16 @@ C.Slick_SlidePunch = { rig = "R15", priority = "Action", strike = 0.08, keys = {
 	{ t = 0.45, pose = with(SLICK_SLIDE, { UpperTorso = { -24, 8, 0 } }) },
 	{ t = 0.7 },
 } }
--- Slick Spin: drop into a handstand (Sea Cook's HANDSTAND) and spin ONE full turn, legs spread wide
+-- Slick Spin: drop into a handstand (Sea Cook's HANDSTAND) and spin, legs spread wide (v0.25.89, owner: as long as
+-- Tabletop Tempest: 8 x 120 degrees, one kick per tick)
 do
 	local keys = { { t = 0 }, { t = 0.1, pose = HANDSTAND } }
-	for i = 1, 3 do
+	for i = 1, 8 do
 		local h = table.clone(HANDSTAND)
 		h.LowerTorso = { 180, i * 120, 0, 0, 2.3, 0 }
-		table.insert(keys, { t = 0.1 + i * 0.11, pose = h })
+		table.insert(keys, { t = 0.1 + i * 0.1, pose = h })
 	end
-	table.insert(keys, { t = 0.62 })
+	table.insert(keys, { t = 1.1 })
 	C.Slick_Spin = { rig = "R15", priority = "Action", strike = 0.25, keys = keys }
 end
 -- Oil Slick: a low backhand sweep across the body that flings the oil out at the spot

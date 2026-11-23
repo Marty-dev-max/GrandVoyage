@@ -245,6 +245,12 @@ local function fruitBody(mob, player, mult)
 			end
 		end)
 		return true
+	elseif fruit == "Slick" and kind == "blunt" and not mob.def.isBoss and Combat.HasBuff(player, "F_SlipAway") then
+		-- v0.25.89 Slip Away: blunt blows slide off the oiled body (blades, bullets and bosses still land)
+		if at then
+			Net.FX("Miss", { pos = at, text = "SLIPPED OFF" }, at, 200)
+		end
+		return true
 	end
 	return false
 end

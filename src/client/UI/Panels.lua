@@ -3030,10 +3030,15 @@ local function rewardCard(parent, icon, amount, label, color)
 	return c
 end
 local function renderHunts(body, p, rerender, close)
+	-- v0.25.101 (the buttons fell below the frame): measure the visible height in this frame's own units with a 100-px
+	-- probe (UI.GetScale missed the full-screen window's UIScale)
+	local probe = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(100, 1), Parent = body })
 	local okH, absH = pcall(function()
-		return body.AbsoluteSize.Y / math.max(0.01, UI.GetScale())
+		local k = probe.AbsoluteSize.X / 100
+		return k > 0 and body.AbsoluteSize.Y / k or nil
 	end)
-	local H = math.max(380, ((okH and absH and absH > 0) and absH or 520) - 8)
+	probe:Destroy()
+	local H = math.max(360, ((okH and absH and absH > 0) and absH or 520) - 8)
 	local split = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, -12, 0, H), Parent = body })
 	local left = UI.Scroll(split, UDim2.new(0.42, -6, 1, 0))
 	UI.List(left, nil, 6)
@@ -3799,18 +3804,23 @@ function Panels.PearlShop(args)
 			Position = UDim2.fromScale(0.5, 0.36), Size = UDim2.fromScale(0.95, 0.95), SizeConstraint = Enum.SizeConstraint.RelativeXX, Parent = f })
 		UI.Sparkles(f, Color3.new(1, 1, 1), 5, { star = 0.8, float = true })
 		UI.Shine(f, order * 0.13)
+		-- v0.25.101 (owner: the item sat high with an empty gap above the name): icon + name + sub + price are one
+		-- centred column in the middle of the card
+		local col = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.new(1, -16, 1, -16), Parent = f })
+		UI.List(col, nil, 2, Enum.HorizontalAlignment.Center).VerticalAlignment = Enum.VerticalAlignment.Center
 		if e.egg then
-			UI.VoxelEgg(f, e.egg, 90, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 6), Size = UDim2.fromScale(0.62, 0.62), SizeConstraint = Enum.SizeConstraint.RelativeXX })
+			UI.VoxelEgg(col, e.egg, 90, { Size = UDim2.fromScale(0.66, 0.66), SizeConstraint = Enum.SizeConstraint.RelativeXX, LayoutOrder = 1 })
 		else
-			UI.Icon(f, e.icon, 90, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), Size = UDim2.fromScale(0.58, 0.58), SizeConstraint = Enum.SizeConstraint.RelativeXX })
+			UI.Icon(col, e.icon, 90, { Size = UDim2.fromScale(0.62, 0.62), SizeConstraint = Enum.SizeConstraint.RelativeXX, LayoutOrder = 1 })
 		end
-		UI.Text(f, e.name, 15, T.Text, "Display", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 10, 1, -44), Size = UDim2.new(1, -20, 0, 34), TextYAlignment = Enum.TextYAlignment.Bottom })
-		UI.Text(f, e.sub, 11, Color3.new(1, 1, 1), "Semi", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 10, 1, -28), Size = UDim2.new(1, -20, 0, 14) }).TextTransparency = 0.3
+		New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(1, 6), LayoutOrder = 2, Parent = col })
+		UI.Text(col, e.name, 15, T.Text, "Display", { Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextXAlignment = Enum.TextXAlignment.Center, LayoutOrder = 3 })
+		UI.Text(col, e.sub, 11, Color3.new(1, 1, 1), "Semi", { Size = UDim2.new(1, 0, 0, 14), TextXAlignment = Enum.TextXAlignment.Center, LayoutOrder = 4 }).TextTransparency = 0.3
 		local price = e.kind == "pack" and "R$" or e.kind == "gemshop" and (e.owned and "Owned" or (PearlsCfg.Icon .. " " .. e.it.price)) or (PearlsCfg.Icon .. " " .. e.it.gems)
 		if e.kind == "store" and e.owned then
-			price = "✓ Owned"
+			price = "Owned" -- (no ✓ in the pixel font)
 		end
-		local priceLbl = UI.Text(f, e.active and "ACTIVE" or price, 14, (e.active or e.owned) and T.Green or T.Gold, "Display", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 10, 1, -6), Size = UDim2.new(1, -20, 0, 20), TextWrapped = false })
+		local priceLbl = UI.Text(col, e.active and "ACTIVE" or price, 14, (e.active or e.owned) and T.Green or T.Gold, "Display", { Size = UDim2.new(1, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false, LayoutOrder = 5 })
 		if e.kind == "pack" and e.prod.productId ~= 0 then
 			Prices.Apply(e.prod.productId, nil, function(r)
 				if r and priceLbl.Parent then

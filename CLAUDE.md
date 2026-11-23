@@ -820,6 +820,10 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     the stage shrinks), store cards = one centred column; Toki Color benefits use toki_* icons; Bag egg tiles =
     UI.VoxelEgg; Pets empty state + Egg Odds cards; renderHunts measures height with a 100-px probe (UI.GetScale
     misses the full-screen window UIScale). UIListLayout without SortOrder sorts by Name: always pass LayoutOrder.
+  * v0.25.102 (owner): acc_SailorVest is hand-drawn (gen_pixel_icons `sailor_vest`; gen_acc_icons HAND skips it).
+    Cutlass guard + knuckle bow lie in the blade's plane (bow on the edge side, -z) in voxel_weapons sword() /
+    sword_sheathed(). Models can be uploaded through Studio MCP `open_cloud_invoke` POST /assets/v1/assets (files
+    fileContent .glb) once the owner approves the folder in Assistant Settings -> MCP Permissions.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

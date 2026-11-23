@@ -1243,6 +1243,24 @@ for _wt, _fn in (('Sword', w_sword), ('Slingshot', w_sling), ('Shoes', w_leg), (
         WEAPON_GRADE_ICONS['w_%s_%s' % (_wt, _g)] = _fn(_i + 1)
 
 
+def sailor_vest(s):
+    """acc_SailorVest (owner: the 3/4 projection read as a half blue/gray block): open blue vest over a striped shirt"""
+    blue, white, navy, gold = (60, 110, 200), (245, 245, 250), (36, 52, 110), (250, 200, 70)
+    s.poly([(8, 6), (24, 6), (26, 10), (26, 28), (6, 28), (6, 10)], white)
+    for y in (12, 16, 20, 24):
+        s.rect(6, y, 26, y + 1, navy)
+    s.poly([(9, 5), (13, 5), (16, 17), (16, 28), (6, 28), (6, 15), (8, 12)], lerp(blue, white, 0.12))
+    s.poly([(23, 5), (19, 5), (16, 17), (16, 28), (26, 28), (26, 15), (24, 12)], lerp(blue, (0, 0, 0), 0.12))
+    s.line([(13, 5), (16, 17)], white, 1)
+    s.line([(19, 5), (16, 17)], white, 1)
+    s.rect(6, 27, 26, 28, white)
+    s.line([(16, 17), (16, 27)], lerp(blue, (0, 0, 0), 0.35), 1)
+    for y in (19, 23):
+        s.px(17, y, gold, False)
+        s.px(18, y, gold, False)
+    s.rect(8, 20, 12, 22, lerp(blue, (0, 0, 0), 0.25))
+
+
 ICONS = {
     # HUD / menus
     'bag': backpack, 'shop': shopfront, 'stall': market_stall, 'pt_swirl': pt_swirl, 'pt_cloud': pt_cloud,
@@ -1275,7 +1293,7 @@ ICONS = {
     'ingot': ingot, 'gunpowder': powder_keg, 'scale': scale_icon, 'compass': compass, 'poster': poster,
 }
 ICONS.update(WEAPON_GRADE_ICONS)
-ICONS.update({'wood_gold': logs_gold, 'shard_pure': crystal_pure, 'badge': marine_badge})
+ICONS.update({'acc_SailorVest': sailor_vest, 'wood_gold': logs_gold, 'shard_pure': crystal_pure, 'badge': marine_badge})
 
 
 def render(name):

@@ -96,6 +96,9 @@ def draw(blocks):
     return img.resize((N * SCALE, N * SCALE), Image.NEAREST)
 
 
+HAND = {'SailorVest'}
+
+
 def main():
     data = json.load(open(sys.argv[1]))['acc']
     items = set(re.findall(r'add\("(\w+)"', open(os.path.join(ROOT, 'src', 'shared', 'Config', 'Items.lua')).read()))
@@ -104,6 +107,8 @@ def main():
     for acc_id, blocks in sorted(data.items()):
         if acc_id not in items:
             continue  # monster-only pieces (held weapons) are not items
+        if acc_id in HAND:
+            continue  # hand-drawn in gen_pixel_icons.py (owner: the projection read as a half blue/gray block)
         img = draw(blocks)
         if img:
             img.save(os.path.join(OUT, 'acc_' + acc_id + '.png'))

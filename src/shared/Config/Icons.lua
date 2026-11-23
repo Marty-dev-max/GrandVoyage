@@ -23,7 +23,7 @@ return {
 	acc_MarineCap = "rbxassetid://99100956697207",
 	acc_MarineCoat = "rbxassetid://96461448946092",
 	acc_RingmasterHat = "rbxassetid://124382973291158",
-	acc_SailorVest = "rbxassetid://83963376911601",
+	acc_SailorVest = "rbxassetid://89606944674138",
 	acc_SeastoneBracer = "rbxassetid://79751545336110",
 	acc_SeastoneShackle = "rbxassetid://81927986915012",
 	acc_SharkToothNecklace = "rbxassetid://75990154376775",

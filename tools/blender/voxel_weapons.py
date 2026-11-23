@@ -48,8 +48,9 @@ def sword():
         P.box((cx, y, cz + bend), (0.9, 0.6, w), STEEL, 0.015)
         P.box((cx, y, cz + bend - w), (0.7, 0.6, 0.7), EDGE, 0.0)  # bright cutting edge
     P.box((cx, 3.5, cz + 2.4), (0.8, 1.6, 1.0), EDGE, 0.0)  # tip
-    P.rbox((cx, 46, cz), (6.5, 1.2, 2.2), GOLD, r=1.0, n=0.02)  # guard
-    P.tube([(cx + 5.5, 46, cz - 1), (cx + 6, 50, cz - 2.5), (cx + 3, 56, cz - 3)], [0.8, 0.8, 0.8], GOLD)  # knuckle bow
+    # guard + knuckle bow in the blade's plane (owner v0.25.102: they stuck out sideways off the flat), bow on the edge side
+    P.rbox((cx, 46, cz), (2.2, 1.2, 5.5), GOLD, r=1.0, n=0.02)  # guard
+    P.tube([(cx, 46, cz - 4.5), (cx, 51, cz - 5.5), (cx, 56.5, cz - 2.2)], [0.8, 0.8, 0.8], GOLD)  # knuckle bow
     for i in range(8):
         P.box((cx, 48 + i, cz), (1.3, 0.5, 1.3), LEATHER if i % 2 else shade(LEATHER, 0.8), 0.02)
     P.ball((cx, 57.5, cz), 1.9, GOLD, 0.02)  # pommel
@@ -172,8 +173,8 @@ def sword_sheathed():
     P.rbox((cx, 25, cz), (1.6, 21, 3.0), DARKWOOD, r=1.0, n=0.02)
     P.box((cx, 4.5, cz), (1.9, 1.5, 3.2), BRASS, 0.02)
     P.box((cx, 45.5, cz), (1.9, 1.2, 3.2), BRASS, 0.02)
-    P.rbox((cx, 47.5, cz), (6.5, 1.2, 2.2), GOLD, r=1.0, n=0.02)  # guard
-    P.tube([(cx + 5.5, 47.5, cz - 1), (cx + 6, 51, cz - 2.5), (cx + 3, 57, cz - 3)], [0.8, 0.8, 0.8], GOLD)
+    P.rbox((cx, 47.5, cz), (2.2, 1.2, 5.5), GOLD, r=1.0, n=0.02)  # guard (in the blade's plane, see sword())
+    P.tube([(cx, 47.5, cz - 4.5), (cx, 52.5, cz - 5.5), (cx, 57.5, cz - 2.2)], [0.8, 0.8, 0.8], GOLD)
     for i in range(8):
         P.box((cx, 49 + i, cz), (1.3, 0.5, 1.3), LEATHER if i % 2 else shade(LEATHER, 0.8), 0.02)
     P.ball((cx, 58.5, cz), 1.9, GOLD, 0.02)

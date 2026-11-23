@@ -27,8 +27,9 @@ local function build(npc)
 	folder.Name = "PowerBoards"
 	folder.Parent = workspace
 	-- to the NPC's right, facing the same way it looks; feet are 2.6 below the root
-	local base = root.CFrame * CFrame.new(7.5, -2.6, 0.5)
-	local W, H = 9, 11
+	local base = root.CFrame * CFrame.new(9.5, -2.6, 0.5)
+	-- big enough that 0.5-stud rows read from the plaza (v0.25.118: 9x11 at 60 px/stud was unreadable)
+	local W, H, PPS = 13, 16, 22
 	local function part(size, cf, color, mat)
 		local p = Instance.new("Part")
 		p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch = true, true, false, false
@@ -47,21 +48,22 @@ local function build(npc)
 	sg.Name = "PowerBoard"
 	sg.Face = Enum.NormalId.Front
 	sg.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-	sg.PixelsPerStud = 60
+	sg.PixelsPerStud = PPS
 	sg.LightInfluence = 0.15
 	sg.MaxDistance = 120
 	sg.Adornee = board
+	sg:SetAttribute("PxKeep", true) -- PixelUI would shrink + refit the text
 	sg.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
-	local px = Vector2.new(W * 60, H * 60)
+	local px = Vector2.new(W * PPS, H * PPS)
 	local frame = Instance.new("Frame")
 	frame.Size = UDim2.fromScale(1, 1)
 	frame.BackgroundColor3 = Color3.fromRGB(26, 22, 34)
 	frame.BorderSizePixel = 0
 	frame.Parent = sg
-	local function label(parent, text, size, color, pos, sz, align)
+	local function label(parent, text, size, color, pos, sz, align, font)
 		local t = Instance.new("TextLabel")
 		t.BackgroundTransparency = 1
-		t.Font = Enum.Font.Arcade
+		t.Font = font or Enum.Font.Arcade
 		t.Text = text
 		t.TextSize = size
 		t.TextColor3 = color
@@ -71,26 +73,26 @@ local function build(npc)
 		t.Parent = parent
 		return t
 	end
-	label(frame, "TOP 50 POWER", 34, Color3.fromRGB(255, 210, 90), UDim2.fromOffset(0, 10), UDim2.new(1, 0, 0, 40), Enum.TextXAlignment.Center)
-	label(frame, "STRONGEST IN THIS SERVER", 16, Color3.fromRGB(200, 190, 220), UDim2.fromOffset(0, 50), UDim2.new(1, 0, 0, 20), Enum.TextXAlignment.Center)
-	local top0 = 82
-	local rowH = math.floor((px.Y - top0 - 10) / PER_COL)
-	local colW = math.floor((px.X - 30) / 2)
+	label(frame, "TOP 50 POWER", 20, Color3.fromRGB(255, 210, 90), UDim2.fromOffset(0, 6), UDim2.new(1, 0, 0, 22), Enum.TextXAlignment.Center)
+	label(frame, "STRONGEST IN THIS SERVER", 8, Color3.fromRGB(200, 190, 220), UDim2.fromOffset(0, 30), UDim2.new(1, 0, 0, 10), Enum.TextXAlignment.Center)
+	local top0 = 46
+	local rowH = math.floor((px.Y - top0 - 6) / PER_COL)
+	local colW = math.floor((px.X - 18) / 2)
 	local b = { rows = {} }
 	for i = 1, TOP do
 		local col = (i - 1) // PER_COL
 		local r = (i - 1) % PER_COL
 		local bg = Instance.new("Frame")
-		bg.Position = UDim2.fromOffset(10 + col * (colW + 10), top0 + r * rowH)
-		bg.Size = UDim2.fromOffset(colW, rowH - 2)
+		bg.Position = UDim2.fromOffset(6 + col * (colW + 6), top0 + r * rowH)
+		bg.Size = UDim2.fromOffset(colW, rowH - 1)
 		bg.BackgroundColor3 = r % 2 == 0 and Color3.fromRGB(40, 34, 52) or Color3.fromRGB(34, 29, 45)
 		bg.BorderSizePixel = 0
 		bg.Visible = false
 		bg.Parent = frame
-		local fs = math.max(10, rowH - 8)
-		local rank = label(bg, tostring(i), fs, i <= 3 and Color3.fromRGB(255, 210, 90) or Color3.fromRGB(170, 160, 190), UDim2.fromOffset(4, 0), UDim2.new(0, 34, 1, 0))
-		local name = label(bg, "", fs, Color3.new(1, 1, 1), UDim2.fromOffset(40, 0), UDim2.new(1, -120, 1, 0))
-		local power = label(bg, "", fs, Color3.fromRGB(255, 120, 110), UDim2.new(1, -84, 0, 0), UDim2.new(0, 80, 1, 0), Enum.TextXAlignment.Right)
+		local fs = rowH - 2
+		local rank = label(bg, tostring(i), fs, i <= 3 and Color3.fromRGB(255, 210, 90) or Color3.fromRGB(170, 160, 190), UDim2.fromOffset(2, 0), UDim2.new(0, 22, 1, 0), nil, Enum.Font.GothamBold)
+		local name = label(bg, "", fs, Color3.new(1, 1, 1), UDim2.fromOffset(24, 0), UDim2.new(1, -78, 1, 0), nil, Enum.Font.GothamBold)
+		local power = label(bg, "", fs, Color3.fromRGB(255, 120, 110), UDim2.new(1, -54, 0, 0), UDim2.new(0, 52, 1, 0), Enum.TextXAlignment.Right, Enum.Font.GothamBold)
 		b.rows[i] = { bg = bg, rank = rank, name = name, power = power }
 	end
 	table.insert(boards, b)

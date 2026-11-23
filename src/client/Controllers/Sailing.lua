@@ -111,10 +111,7 @@ local function buildHud()
 	end)
 	btn("⚓ DOCK", T.Green, 80, 4, function()
 		local res = Net.Request("DockShip")
-		UI.Toast(res.msg or (res.ok and "Docked" or "Cannot dock"), res.ok and "good" or "bad")
-		if res.ok then
-			Audio.Play("Bell")
-		end
+		UI.Toast(res.msg or (res.ok and "Docked" or "Cannot dock"), res.ok and "good" or "bad") -- v0.25.117 (owner): no bell
 	end)
 	hud = { frame = f, name = name, hp = hp, zone = zone, zoneText = zoneText, speedT = speedT, windT = windT, sailT = sailT, gunT = gunT, reload = reload }
 end

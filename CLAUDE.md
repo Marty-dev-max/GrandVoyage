@@ -887,6 +887,8 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     `WaterGush` (ProSoundEffects Water Hose Gun 3). DeFlicker: buckets by direction, stacks split where planes are > GAP
     0.12 apart, Grass faces first then biggest, same material+color overlaps ignored, each face climbs past every covered
     face within STEP of its target (sorted sweep, MAX_LIFT 0.32). WORLD_VERSION 28.
+    v0.25.116 (owner): every Music entry in Sounds.lua x0.6. Owner screenshots with the Roblox top bar = the PUBLISHED game
+    (check the version bottom-right); fixes reach it only after File > Publish to Roblox.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

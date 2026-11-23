@@ -538,7 +538,7 @@ function UI.Bar(parent, color, size, label, start)
 	local fill = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), Size = UDim2.new(start or 1, 0, 1, 0), Parent = back })
 	UI.Corner(fill, 8)
 	local g = New("UIGradient", { Color = UI.RichFill(color), Rotation = 90, Parent = fill })
-	local hi = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.55, BorderSizePixel = 0, Size = UDim2.new(1, -4, 0, 2), Position = UDim2.fromOffset(2, 2), Parent = fill })
+	local hi = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.55, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 2), Position = UDim2.fromOffset(0, 2), Parent = fill }) -- (1,-4 on an empty bar = a stray 4 px dash)
 	UI.Corner(hi, 6)
 	-- segment ticks (every 10%) give the bar its "gauge" detail
 	for i = 1, 9 do

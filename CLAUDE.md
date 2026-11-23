@@ -816,6 +816,10 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     weapon previews (Bag, ItemReveal, Blacksmith), Wep_ mesh only without a grade icon. Held weapons are unchanged.
   * v0.25.99-100: title menu UPDATE LOG lines = `GameConfig.UpdateNotes` (box grows), tab labels sized by the square
     pixel font (UI.TabBar: width = icon 42 / plain 20 + chars x size), potion % left of the gear.
+  * v0.25.101 (owner): Store detail = UIListLayout with the stage as `UIFlexItem` Fill (buttons/notes keep their height,
+    the stage shrinks), store cards = one centred column; Toki Color benefits use toki_* icons; Bag egg tiles =
+    UI.VoxelEgg; Pets empty state + Egg Odds cards; renderHunts measures height with a 100-px probe (UI.GetScale
+    misses the full-screen window UIScale). UIListLayout without SortOrder sorts by Name: always pass LayoutOrder.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

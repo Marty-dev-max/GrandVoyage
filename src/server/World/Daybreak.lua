@@ -973,7 +973,7 @@ local function npcs(ctx, api)
 	put("Blacksmith", "Blacksmith", Color3.fromRGB(110, 90, 80), "bandana", onPlaza(1.05), { SubTitle = "Refine & Cards" }, P0)
 	-- harbor: shipwright by the shipyard, courier gulls by the north dock
 	put("Shipwright", "Shipwright", Color3.fromRGB(90, 140, 200), "bandana", Vector2.new(230, -58), { SubTitle = "Shipyard & Launch" }, Vector2.new(150, -40))
-	put("Tavern", "Tavern Keeper", Color3.fromRGB(200, 90, 90), nil, Vector2.new(230, -48), { SubTitle = "Hire Crew" }, Vector2.new(150, -40)) -- v0.25.107: beside the Shipwright
+	put("Tavern", "Tavern Keeper", Color3.fromRGB(200, 90, 90), nil, Vector2.new(230, -42), { SubTitle = "Hire Crew" }, Vector2.new(150, -40)) -- v0.25.107: beside the Shipwright
 	put("FastTravel", "Courier Gull Post", Color3.fromRGB(240, 240, 240), "marine", Vector2.new(228, 50), { SubTitle = "Fast Travel" }, PLAZA)
 	-- props that dress the shops
 	local smith = ctx.at(onPlaza(1.05, 36).X, onPlaza(1.05, 36).Y)

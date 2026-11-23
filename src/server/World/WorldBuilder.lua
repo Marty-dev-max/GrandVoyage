@@ -246,7 +246,7 @@ local function buildShipyard(island)
 	if a then
 		npc({ island = island, reserve = function() end }, "Shipwright", "Shipwright", Color3.fromRGB(90, 140, 200), "bandana", island.radius - 24, platformZ + l / 2 + 12, { SubTitle = "Shipyard & Launch" }, Vector2.new(island.radius + 30, platformZ))
 		-- v0.25.107 (owner): the Tavern Keeper (hire crew) stands beside the Shipwright on every island
-		npc({ island = island, reserve = function() end }, "Tavern", "Tavern Keeper", Color3.fromRGB(200, 90, 90), nil, island.radius - 24, platformZ + l / 2 + 22, { SubTitle = "Hire Crew" }, Vector2.new(island.radius + 30, platformZ))
+		npc({ island = island, reserve = function() end }, "Tavern", "Tavern Keeper", Color3.fromRGB(200, 90, 90), nil, island.radius - 24, platformZ + l / 2 + 28, { SubTitle = "Hire Crew" }, Vector2.new(island.radius + 30, platformZ))
 		turnGroup(group, island, a)
 	end
 	Kit.parent = prevParent

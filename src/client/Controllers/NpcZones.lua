@@ -110,10 +110,17 @@ function NpcZones.Start()
 					local d = root.Position - z.center
 					inside = Vector2.new(d.X, d.Z).Magnitude <= RADIUS and math.abs(d.Y) < 8
 				end
-				if inside and not z.inside and not busy and not UI.AnyOpen() then
-					busy = true
+				if inside and not z.inside then
+					z.enterAt, z.done, z.nextTry = t, false, 0
+				end
+				-- the server may still see us outside the ring for a moment (replication), so a refusal retries for 2 s
+				if inside and not z.done and not busy and t - z.enterAt < 2 and t >= z.nextTry and not UI.AnyOpen() then
+					busy, z.nextTry = true, t + 0.6
 					task.spawn(function()
-						pcall(Net.Request, "ZoneEnter", { role = z.role })
+						local ok, res = pcall(Net.Request, "ZoneEnter", { role = z.role })
+						if ok and type(res) == "table" and res.ok then
+							z.done = true
+						end
 						busy = false
 					end)
 				end

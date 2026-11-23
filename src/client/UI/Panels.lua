@@ -2269,16 +2269,16 @@ function Panels.Guild()
 	local function factionLine(parent)
 		local f = player:GetAttribute("Faction") or "None"
 		local label = f == "Marine" and "⚓ Marine" or (f == "Pirate" and "☠️ Pirate" or "Civilian")
-		local row = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 44), Parent = parent })
-		UI.Text(row, "Your side: " .. label, 17, f == "Marine" and T.Marine or (f == "Pirate" and T.Pirate or T.TextSoft), "Bold", { Size = UDim2.new(0.5, 0, 1, 0) })
+		-- v0.25.110: the side on its own line, the Pirate button under it (the button covered the text in the narrow card)
+		local row = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, f == "None" and 70 or 26), Parent = parent })
+		UI.Text(row, "Your side: " .. label, 17, f == "Marine" and T.Marine or (f == "Pirate" and T.Pirate or T.TextSoft), "Bold", { Size = UDim2.new(1, 0, 0, 24) })
 		if f == "None" then
-			local _, h = UI.Button(row, "☠️ RAISE THE JOLLY ROGER", T.Pirate, UDim2.fromOffset(300, 40), function()
+			local _, h = UI.Button(row, "☠️ RAISE THE JOLLY ROGER", T.Pirate, UDim2.new(1, 0, 0, 40), function()
 				UI.Confirm("Become a Pirate? Every NPC ship becomes fair game and beating Marines raises your bounty.\nMarines enlist at the Marine Registrar in Conch Bay instead.", function()
 					req("SetFaction", { faction = "Pirate" })
 				end, nil, "Pirate!", "Not yet")
 			end)
-			h.AnchorPoint = Vector2.new(1, 0)
-			h.Position = UDim2.new(1, 0, 0, 2)
+			h.Position = UDim2.fromOffset(0, 28)
 		end
 		return row
 	end
@@ -2357,6 +2357,9 @@ function Panels.Guild()
 		UI.Section(right, "🤝", "Join a Crew", T.Green)
 		task.spawn(function()
 			local res = Net.Request("GuildList")
+			if #(res.data or {}) == 0 then
+				UI.Text(right, "No crews yet: form the first one!", 15, T.TextSoft, "Semi", { Size = UDim2.new(1, -12, 0, 30) })
+			end
 			for _, g2 in ipairs(res.data or {}) do
 				local row = UI.Card(right, UDim2.new(1, -12, 0, 52))
 				UI.Pad(row, 8)

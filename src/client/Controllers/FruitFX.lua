@@ -1682,79 +1682,302 @@ end
 local function seamPixels(pos)
 	Voxels.Pixels(pos, { count = 10, colors = { C.purple, C.lilac }, size = 0.25, speed = 6, gravity = 0, life = 0.4, glow = 0.8, spread = 1 })
 end
+-- ===== Split Split (v0.25.81, docs/Plan-Fruits-v2.md phase 6) =====
+-- The pieces that fly are COPIES of your own voxel blocks (sleeves, gloves, shoes, face and all): the real ones hide
+-- (LocalTransparencyModifier, every client) while the copies move as one group, with purple seam pixels at the cuts.
+local ARM_R = { "RightLowerArm", "RightHand" }
+local HAND_R = { "RightHand" }
+local LEGS = { "LowerTorso", "LeftUpperLeg", "LeftLowerLeg", "LeftFoot", "RightUpperLeg", "RightLowerLeg", "RightFoot" }
+local PIECES = {
+	{ "Head" },
+	{ "UpperTorso" },
+	{ "LeftUpperArm", "LeftLowerArm", "LeftHand" },
+	{ "RightUpperArm", "RightLowerArm", "RightHand" },
+	{ "LowerTorso", "LeftUpperLeg", "LeftLowerLeg", "LeftFoot" },
+	{ "RightUpperLeg", "RightLowerLeg", "RightFoot" },
+}
+-- copies of the blocks welded to `limbs`, placed relative to pivot (default: the first limb), originals hidden
+local function limbPieces(char, limbs, seconds, pivotCF)
+	local body = voxBody(char)
+	if not body then
+		return nil
+	end
+	local set = {}
+	for _, n in ipairs(limbs) do
+		local l = char:FindFirstChild(n)
+		if l then
+			set[l] = true
+			pivotCF = pivotCF or l.CFrame
+		end
+	end
+	if not pivotCF then
+		return nil
+	end
+	local g = { parts = {}, rel = {}, pivot = pivotCF }
+	local untilT = os.clock() + seconds
+	for _, b in ipairs(body:GetChildren()) do
+		local w = b:FindFirstChildOfClass("WeldConstraint")
+		if b:IsA("BasePart") and w and set[w.Part0] then
+			local was = b.Archivable
+			b.Archivable = true
+			local c = b:Clone()
+			b.Archivable = was
+			if c then
+				for _, ch in ipairs(c:GetChildren()) do
+					if not ch:IsA("Decal") then
+						ch:Destroy()
+					end
+				end
+				c.Anchored, c.CanCollide, c.CanQuery, c.CanTouch = true, false, false, false
+				c.LocalTransparencyModifier = 0
+				c.Parent = folder
+				table.insert(g.parts, c)
+				table.insert(g.rel, pivotCF:ToObjectSpace(b.CFrame))
+			end
+			hiddenUntil[b] = math.max(hiddenUntil[b] or 0, untilT)
+			b.LocalTransparencyModifier = 1
+			for _, dcl in ipairs(b:GetChildren()) do
+				if dcl:IsA("Decal") then
+					dcl.LocalTransparencyModifier = 1
+				end
+			end
+		end
+	end
+	task.delay(seconds + 0.03, function()
+		for _, bb in ipairs(body:GetChildren()) do
+			local t = hiddenUntil[bb]
+			if t and os.clock() >= t then
+				hiddenUntil[bb] = nil
+				if bb.Parent then
+					bb.LocalTransparencyModifier = 0
+					for _, dcl in ipairs(bb:GetChildren()) do
+						if dcl:IsA("Decal") then
+							dcl.LocalTransparencyModifier = 0
+						end
+					end
+				end
+			end
+		end
+	end)
+	local cfs = {}
+	function g.move(cf)
+		for i, rel in ipairs(g.rel) do
+			cfs[i] = cf * rel
+		end
+		if #g.parts > 0 then
+			workspace:BulkMoveTo(g.parts, cfs, Enum.BulkMoveMode.FireCFrameChanged)
+		end
+	end
+	function g.destroy()
+		for _, c in ipairs(g.parts) do
+			c:Destroy()
+		end
+	end
+	return g
+end
+FX.LimbPieces = limbPieces
+local function splitHit(pos, dir)
+	vfx().ImpactSplit(pos, dir, C.lilac, 4.5)
+	Voxels.Blocks(pos, { count = 8, colors = { C.purple, C.lilac, C.white }, size = { 0.25, 0.5 }, speed = 10, up = 4, neon = true, collide = false, life = 0.5, spread = 1 })
+end
+
+-- 1 Rocket Forearm (charge): the forearm + fist come off at the elbow, fly to the target spinning a little, punch,
+-- and fly back to snap on again
 FX.F_SplitCannon = function(d)
-	local from, to = d.from + Vector3.new(0, 1, 0), d.to or d.from
-	if (to - from).Magnitude < 1 then
-		return
-	end
-	local cf = CFrame.lookAt(from, to)
-	local f = fistBlocks(cf, { C.skin, C.skin }, 1.3, false)
-	local seam = blk(Vector3.new(2.2, 0.2, 0.2), C.purple, cf * CFrame.new(0, 0, 0.7), true)
-	table.insert(f, seam)
-	local t = math.clamp((to - from).Magnitude / 70, 0.12, 0.5)
-	moveAll(f, cf, CFrame.lookAt(to, to + (to - from).Unit), t)
-	for k = 1, 5 do
-		task.delay(t * k / 5, function()
-			seamPixels(from:Lerp(to, k / 5))
+	local char = d.char
+	local to = d.to or d.from
+	local strike = math.clamp(tonumber(d.strike) or 0.08, 0, 0.5)
+	local travel = math.clamp(tonumber(d.travel) or 0.25, 0.05, 0.6)
+	task.delay(strike, function()
+		local g = typeof(char) == "Instance" and limbPieces(char, ARM_R, travel * 2 + 0.25)
+		if not g then
+			return
+		end
+		local start = g.pivot
+		local dir = (to - start.Position).Magnitude > 0.1 and (to - start.Position).Unit or Vector3.zAxis
+		-- the arm points down its length (-Y): a +90 degree turn about X puts -Y onto -Z, along the flight
+		local aim = CFrame.lookAt(start.Position, start.Position + dir) * CFrame.Angles(math.pi / 2, 0, 0)
+		local t0 = os.clock()
+		local conn
+		conn = RunService.RenderStepped:Connect(function()
+			local t = os.clock() - t0
+			if t < travel then
+				local k = t / travel
+				g.move(aim + (to - dir * 1.2 - start.Position) * k + Vector3.zero)
+				if math.random() < 0.6 then
+					seamPixels(start.Position:Lerp(to, k))
+				end
+			elseif t < travel * 2 + 0.2 then
+				if not g.hit then
+					g.hit = true
+					splitHit(to, dir)
+				end
+				-- fly back to the elbow (it may have moved)
+				local elbowNow = typeof(char) == "Instance" and char:FindFirstChild("RightLowerArm")
+				local home = elbowNow and elbowNow.Position or start.Position
+				local k = math.min(1, (t - travel) / (travel + 0.2))
+				local p = (to - dir * 1.2):Lerp(home, k * k)
+				g.move(CFrame.lookAt(p, p + dir) * CFrame.Angles(math.pi / 2, 0, 0) * CFrame.Angles(0, k * 8, 0))
+			else
+				conn:Disconnect()
+				g.destroy()
+				seamPixels(start.Position)
+			end
 		end)
-	end
-	for _, p in ipairs(f) do
-		fade(p, t, 0.15)
-	end
-	task.delay(t, function()
-		Voxels.Blocks(to, { count = 10, colors = { C.purple, C.lilac, C.white }, size = { 0.25, 0.5 }, speed = 10, up = 4, neon = true, collide = false, life = 0.5, spread = 1 })
 	end)
 end
+
+-- 2 Phantom Hand: the hand flies off, swoops round BEHIND the enemy with a little knife and stabs from a new angle
+-- on every hit (server hits at strike + i x hitEvery), then flies home
 FX.F_ChopRush = function(d)
+	local char = d.char
 	local to = d.to or d.from
-	for k = 0, 5 do
-		task.delay(k * 0.07, function()
-			local a = math.random() * math.pi
-			local cf = CFrame.new(to + Vector3.new(0, 1.5, 0)) * CFrame.Angles(0, math.random() * 6.28, a)
-			local s = blk(Vector3.new(7, 0.25, 0.25), k % 2 == 0 and C.purple or C.white, cf, true, 0.1)
-			tw(s, 0.15, { Size = Vector3.new(9, 0.08, 0.08), Transparency = 1 })
-			Debris:AddItem(s, 0.2)
-			seamPixels(to + Vector3.new(0, 1.5, 0))
+	local strike = math.clamp(tonumber(d.strike) or 0.1, 0, 0.5)
+	local hits, every = 4, 0.18
+	task.delay(math.max(0, strike - 0.2), function()
+		local g = typeof(char) == "Instance" and limbPieces(char, HAND_R, 0.2 + hits * every + 0.45)
+		if not g then
+			return
+		end
+		local knife = blk(Vector3.new(0.18, 0.18, 1.6), Color3.fromRGB(220, 226, 236), CFrame.new(), false, 0)
+		knife.Material = Enum.Material.Metal
+		local start = g.pivot.Position
+		local fwd = (to - start) * Vector3.new(1, 0, 1)
+		fwd = fwd.Magnitude > 0.1 and fwd.Unit or Vector3.zAxis
+		local function angleSpot(i)
+			local a = math.atan2(fwd.Z, fwd.X) + math.pi + (i - (hits + 1) / 2) * 0.9 -- behind, fanning round
+			return to + Vector3.new(math.cos(a) * 4.5, 1 + (i % 2) * 1.2, math.sin(a) * 4.5)
+		end
+		local t0 = os.clock()
+		local conn
+		conn = RunService.RenderStepped:Connect(function()
+			local t = os.clock() - t0
+			local p, look
+			if t < 0.2 then
+				-- the swoop: an arc over the enemy to behind it
+				local k = t / 0.2
+				local behind = angleSpot(1)
+				p = start:Lerp(behind, k) + Vector3.new(0, math.sin(k * math.pi) * 4, 0)
+				look = behind - start
+			elseif t < 0.2 + hits * every then
+				local i = math.floor((t - 0.2) / every) + 1
+				local k = ((t - 0.2) % every) / every
+				local spot = angleSpot(i)
+				-- pull back, then thrust into the enemy
+				local thrust = k < 0.55 and (k / 0.55) or (1 - (k - 0.55) / 0.45)
+				p = spot:Lerp(to + Vector3.new(0, 1.2, 0), thrust * 0.8)
+				look = to + Vector3.new(0, 1.2, 0) - spot
+				if k >= 0.55 and g.lastStab ~= i then
+					g.lastStab = i
+					local s = blk(Vector3.new(4, 0.18, 0.18), i % 2 == 0 and C.purple or C.white, CFrame.lookAt(p, p + look) * CFrame.Angles(0, math.pi / 2, 0), true, 0.1)
+					tw(s, 0.12, { Size = Vector3.new(6, 0.05, 0.05), Transparency = 1 })
+					Debris:AddItem(s, 0.15)
+					seamPixels(p)
+				end
+			elseif t < 0.2 + hits * every + 0.35 then
+				local k = (t - 0.2 - hits * every) / 0.35
+				local home = typeof(char) == "Instance" and char:FindFirstChild("RightLowerArm")
+				local from = angleSpot(hits)
+				local h = home and (home.CFrame * CFrame.new(0, -home.Size.Y / 2, 0)).Position or start
+				p = from:Lerp(h, k * k)
+				look = h - from
+			else
+				conn:Disconnect()
+				g.destroy()
+				knife:Destroy()
+				return
+			end
+			look = look.Magnitude > 0.1 and look.Unit or fwd
+			local cf = CFrame.lookAt(p, p + look)
+			g.move(cf * CFrame.Angles(math.pi / 2, 0, 0))
+			knife.CFrame = cf * CFrame.new(0, 0, -1.1)
 		end)
-	end
+	end)
 end
-FX.F_SplitEscape = function(d)
-	local r = charRoot(d)
-	local at = r and r.Position or d.from
-	for i = 1, 3 do
-		local b = blk(Vector3.new(1.6, 1.4, 1), i == 1 and C.skin or C.purple, CFrame.new(at + Vector3.new(0, (i - 2) * 1.6, 0)), false, 0.15)
-		local out = Vector3.new(math.cos(i * 2.1), 0.3, math.sin(i * 2.1)) * 5
-		tw(b, 0.2, { CFrame = CFrame.new(at + out + Vector3.new(0, (i - 2) * 1.6, 0)) * CFrame.Angles(0, i, 0.4) })
-		task.delay(0.35, function()
-			tw(b, 0.2, { CFrame = CFrame.new(at + Vector3.new(0, (i - 2) * 1.6, 0)) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-		end)
-		fade(b, 0.55, 0.1)
+
+-- 3 Split Runner (dash): your legs come off as a spinning wheel and run down everything along the dash (the server
+-- slides you at 60 studs/s, hits at 0.08 + step / 60); the upper body glides along above it
+FX.F_SplitRunner = function(d)
+	local char = d.char
+	local from, to = d.from, d.to or d.from
+	local dist = (to - from).Magnitude
+	local dur = 0.08 + dist / 60
+	local g = typeof(char) == "Instance" and limbPieces(char, LEGS, dur + 0.25)
+	if not g then
+		return
 	end
-	seamPixels(at)
+	local dir = dist > 0.1 and (to - from).Unit or Vector3.zAxis
+	local axis = Vector3.yAxis:Cross(dir).Unit
+	local hip = g.pivot.Position - from -- the wheel turns round the hips
+	local t0 = os.clock()
+	local conn
+	conn = RunService.RenderStepped:Connect(function()
+		local t = os.clock() - t0
+		local k = math.clamp((t - 0.05) / dur, 0, 1)
+		local c = from:Lerp(to, k) + hip - Vector3.new(0, 0.4, 0)
+		g.move(CFrame.new(c) * CFrame.fromAxisAngle(axis, -t * 22) * (g.pivot - g.pivot.Position))
+		if math.random() < 0.5 then
+			Voxels.Pixels(c - Vector3.new(0, 2, 0), { count = 2, colors = { Color3.fromRGB(190, 175, 150), C.lilac }, size = 0.3, speed = 4, gravity = 6, life = 0.35, spread = 0.6 })
+		end
+		if t > dur + 0.2 then
+			conn:Disconnect()
+			g.destroy()
+			seamPixels(c)
+		end
+	end)
 end
+FX.F_SplitEscape = FX.F_SplitRunner
+
+-- 4 Scatter Storm: EVERY piece of you comes apart and whirls round in a wild ring (the head bobs in the middle),
+-- slamming into everything around over and over (server ticks), then they all fly back together
 FX.F_SplitFestival = function(d)
-	local at = d.from
-	local r = d.radius or 16
-	local pieces = {}
-	for i = 1, 14 do
-		pieces[i] = { b = blk(Vector3.new(1, 1, 1) * (0.8 + math.random() * 0.6), i % 3 == 0 and C.purple or C.skin, CFrame.new(at), i % 3 == 0, 0), a = i / 14 * 6.28, rr = r * (0.4 + math.random() * 0.6), h = math.random() * 4 }
+	local char = d.char
+	local root = typeof(char) == "Instance" and char:FindFirstChild("HumanoidRootPart")
+	if not root then
+		return
+	end
+	local r = math.min(d.radius or 16, 18)
+	local strike = math.clamp(tonumber(d.strike) or 0.1, 0, 0.5)
+	local dur = strike + 7 * 0.3 + 0.4
+	local groups = {}
+	for i, limbs in ipairs(PIECES) do
+		local g = limbPieces(char, limbs, dur + 0.1)
+		if g then
+			g.home = root.CFrame:ToObjectSpace(g.pivot)
+			g.a = i / #PIECES * math.pi * 2
+			g.rr = i == 1 and 0 or r * (0.35 + math.random() * 0.45)
+			g.h = (math.random() - 0.3) * 3
+			g.spin = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5) * 18
+			g.speed = 6 + math.random() * 5
+			table.insert(groups, g)
+		end
 	end
 	local t0 = os.clock()
 	local conn
-	conn = game:GetService("RunService").RenderStepped:Connect(function()
-		local k = os.clock() - t0
-		for _, e in ipairs(pieces) do
-			local a = e.a + k * 9
-			local rr = e.rr * math.min(1, k * 3)
-			e.b.CFrame = CFrame.new(at + Vector3.new(math.cos(a) * rr, e.h, math.sin(a) * rr)) * CFrame.Angles(a, a, 0)
-		end
-		if k > 0.9 then
-			conn:Disconnect()
-			for _, e in ipairs(pieces) do
-				seamPixels(e.b.Position)
-				fade(e.b, 0, 0.2)
+	conn = RunService.RenderStepped:Connect(function()
+		local t = os.clock() - t0
+		local c = root.Parent and root.Position or d.from
+		-- out over 0.3 s, whirl, back together in the last 0.3 s
+		local out = math.min(1, t / 0.3) * math.clamp((dur - t) / 0.3, 0, 1)
+		for _, g in ipairs(groups) do
+			local homeCF = (root.Parent and root.CFrame or CFrame.new(c)) * g.home
+			local a = g.a + t * g.speed
+			local p = c + Vector3.new(math.cos(a) * g.rr, g.h + math.sin(t * 7 + g.a) * 1.2, math.sin(a) * g.rr)
+			local whirl = CFrame.new(p) * CFrame.Angles(t * g.spin.X, t * g.spin.Y, t * g.spin.Z) * (g.pivot - g.pivot.Position)
+			g.move(homeCF:Lerp(whirl, out))
+			if out > 0.5 and math.random() < 0.15 then
+				seamPixels(p)
 			end
 		end
+		if t > dur then
+			conn:Disconnect()
+			for _, g in ipairs(groups) do
+				g.destroy()
+			end
+		end
+	end)
+	pcall(function()
+		require(script.Parent.Audio).Play("Whoosh", { pos = d.from, pitch = 0.8 })
 	end)
 end
 
@@ -1821,8 +2044,6 @@ FX.F_OilSlick = function(d)
 	oilDrops(at + Vector3.new(0, 2, 0), 20)
 end
 
--- v0.25.65 fruit v2: new skills borrow the closest existing look until their own pass (docs/Plan-Fruits-v2.md)
-FX.F_SplitRunner = FX.F_SplitEscape
 
 function FX.Play(d)
 	local f = FX[d.skill or ""]
@@ -1935,6 +2156,12 @@ function FX.Start()
 	-- v0.25.81 (owner: Haze legs still showed): Roblox's camera transparency controller resets LocalTransparencyModifier
 	-- on your own character's parts whenever the zoom changes, so the hidden limb blocks are re-hidden every frame
 	game:GetService("RunService").RenderStepped:Connect(function()
+		local now = os.clock()
+		for b, t in pairs(hiddenUntil) do
+			if now < t and b.Parent then
+				b.LocalTransparencyModifier = 1
+			end
+		end
 		for _, st in pairs(fireDressed) do
 			for _, b in ipairs(st.blocks) do
 				b.LocalTransparencyModifier = 1

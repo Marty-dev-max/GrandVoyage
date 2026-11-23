@@ -451,7 +451,7 @@ SKILLS = {
     'F_BarrierDome': R('Ward', lambda s: (dome(s, CYAN), sparkle(s, 16, 16, WHITE, 2))),
     # Split
     'F_SplitCannon': R('Split', lambda s: (fist(s, 21, 15, 0.8), s.rect(2, 13, 10, 17, SKIN), s.line([(11, 13), (11, 17)], PURP, 1, True), speed_lines(s, 2, 22, 11, 22, 2, WHITE, 3))),
-    'F_ChopRush': R('Split', lambda s: (sword(s, 6, 26, 22, 10), s.line([(4, 6), (28, 6)], PURP, 1, True), s.line([(4, 26), (28, 26)], PURP, 1, True))),
+    'F_ChopRush': R('Split', lambda s: (hand_open(s, 14, 18, SKIN), s.line([(19, 13), (27, 5)], STEEL, 2), s.line([(17, 15), (19, 13)], WOOD, 2), s.line([(7, 24), (12, 24)], PURP, 1, True), speed_lines(s, 2, 26, 8, 26, 2, WHITE, 3))),  # v0.25.81 Phantom Hand: a flying hand with a knife
     'F_SplitEscape': R('Split', lambda s: (s.rect(10, 3, 22, 10, SKIN), s.rect(9, 12, 23, 20, (90, 90, 140)), s.rect(10, 22, 22, 29, (60, 60, 100)), speed_lines(s, 26, 6, 30, 6, 1), speed_lines(s, 2, 24, 6, 24, 1))),
     'F_SplitRunner': R('Split', lambda s: (s.arc(16, 18, 9, 0, 360, (60, 60, 100), 3, False), s.rect(13, 14, 19, 22, (90, 90, 140)), speed_lines(s, 2, 18, 6, 18, 3, WHITE, 3))),
     'F_SplitFestival': R('Split', lambda s: (fist(s, 8, 8, 0.45), fist(s, 24, 9, 0.45), fist(s, 9, 24, 0.45), fist(s, 24, 24, 0.45), star(s, 16, 16, 6, 2.5, 6, PURP, fx=True))),

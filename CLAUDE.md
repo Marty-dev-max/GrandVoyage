@@ -751,6 +751,11 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     Dome = voxelDome (glass cubes welded to one anchored hub) + server Heartbeat holds non-boss mobs at the rim (no
     shove). Barrier Steps use clearPane. Inferno = voxelFireBall (shell of churning cubes + px_flame emitter, BulkMoveTo)
     + billowing landing. Roar aura = rim ring + shocks every ~0.2 s across the radius, RoarArcLoop volume/pitch envelope.
+  * v0.25.82 FRUITS v2 phase 6 = Split: FruitFX `limbPieces(char, limbs, seconds)` clones the VoxelBody blocks welded to
+    those limbs (decals kept), hides the originals (hiddenUntil, re-hidden every frame) and returns g.move(cf)/destroy.
+    F_SplitCannon "Rocket Forearm" (charged Ranged, travel 0.25, arm flies + returns), F_ChopRush "Phantom Hand"
+    (hand + knife stabs from behind, hits 4 / hitEvery 0.18), F_SplitRunner (legs wheel along the dash), F_SplitFestival
+    "Scatter Storm" (every piece orbits). Never "Split/Chop Cannon" or "... Festival" (One Piece Bara Bara moves).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

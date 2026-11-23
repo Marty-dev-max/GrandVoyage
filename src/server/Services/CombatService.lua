@@ -1212,7 +1212,7 @@ local function setup()
 			fxData.radius = skill.radius
 			shipCircle(root.Position, skill.radius or 10)
 			if skill.ticks then
-				-- v0.25.65: lingering storms (White Out, Split Festival) hit again every tickEvery seconds, around you
+				-- v0.25.65: lingering storms (White Out, Scatter Storm) hit again every tickEvery seconds, around you
 				fxData.vanish = skill.vanish
 				if skill.vanish then
 					-- v0.25.76 White Out: you ARE the smoke while it spins: nothing can hit you

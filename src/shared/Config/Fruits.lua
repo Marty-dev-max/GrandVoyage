@@ -72,10 +72,10 @@ F.List = {
 		desc = "Split your body into pieces. Blades pass between them.",
 		passive = { flee = 12, maxHpPct = 0.05 }, passiveText = "Split Body: blades, claws and axes pass between your pieces • +12 FLEE, +5% Max HP",
 		skills = {
-			{ id = "F_SplitCannon", name = "Split Cannon", kind = "Ranged", sp = 10, cd = 3, range = 40, mult = 2.2, charge = true, mastery = 1, fx = "Bullet", desc = "Hold to wind up, release: your forearm flies off and punches across the field." },
-			{ id = "F_ChopRush", name = "Chop Rush", kind = "Melee", sp = 16, cd = 6, range = 12, mult = 0.75, hits = 4, mastery = 10, fx = "Slash", desc = "Your hand flies off behind you and swoops back to stab, again and again." },
-			{ id = "F_SplitRunner", name = "Split Runner", kind = "Dash", sp = 18, cd = 9, range = 26, mult = 1.9, mastery = 25, fx = "Burst", desc = "Your legs spin off as a wheel and run down everything in the way." },
-			{ id = "F_SplitFestival", name = "Split Festival", kind = "AoE", sp = 34, cd = 18, radius = 16, mult = 0.45, ticks = 7, tickEvery = 0.3, mastery = 50, fx = "Tornado", desc = "Every piece of you whirls around in a wild circle, hitting over and over." },
+			{ id = "F_SplitCannon", name = "Rocket Forearm", kind = "Ranged", sp = 10, cd = 3, range = 40, mult = 2.2, travel = 0.25, charge = true, anim = "Bounce_Pistol", chargeAnim = "Bounce_Wind", mastery = 1, fx = "None", desc = "Hold to wind up, release: your forearm flies off and punches across the field." },
+			{ id = "F_ChopRush", name = "Phantom Hand", kind = "Melee", sp = 16, cd = 6, range = 16, mult = 0.75, hits = 4, hitEvery = 0.18, anim = "Haze_Grip", mastery = 10, fx = "None", desc = "Your hand flies off behind you and swoops back to stab, again and again." },
+			{ id = "F_SplitRunner", name = "Split Runner", kind = "Dash", sp = 18, cd = 9, range = 26, mult = 1.9, mastery = 25, fx = "None", desc = "Your legs spin off as a wheel and run down everything in the way." },
+			{ id = "F_SplitFestival", name = "Scatter Storm", kind = "AoE", sp = 34, cd = 18, radius = 16, mult = 0.45, ticks = 7, tickEvery = 0.3, mastery = 50, fx = "None", desc = "Every piece of you whirls around in a wild circle, hitting over and over." },
 		},
 	},
 	{

@@ -15,7 +15,7 @@ return {
 	F_BarrierDome = "rbxassetid://88370481538382",
 	F_BarrierWall = "rbxassetid://129104325916357",
 	F_BounceGatling = "rbxassetid://96142411096971",
-	F_ChopRush = "rbxassetid://116661614125944",
+	F_ChopRush = "rbxassetid://73975544326850",
 	F_Emberflies = "rbxassetid://87667118144358",
 	F_FireDash = "rbxassetid://100418934799113",
 	F_FireFist = "rbxassetid://122631036050769",

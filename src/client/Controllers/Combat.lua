@@ -425,6 +425,10 @@ function Combat.StairsStart(id, keyCode)
 			if now - t0 > (keyCode and (skill.maxHold or 5) or 1.5) or n >= (skill.maxSteps or 32) then
 				break
 			end
+			-- v0.25.81: it runs on SP (every step costs spPerStep): stop when it runs dry
+			if (player:GetAttribute("SP") or 0) < (skill.spPerStep or 0) then
+				break
+			end
 			if keyCode and not UserInputService:IsKeyDown(keyCode) then
 				break
 			end
@@ -1272,6 +1276,11 @@ local function startAim(id, slot, src)
 			-- v0.25.77 Inferno: a fireball grows over your head while you hold
 			local ok, stopBall = pcall(require(script.Parent.FruitFX).ChargeBall, c)
 			hold.ballStop = ok and stopBall or nil
+		end
+		if id == "F_BarrierBash" then
+			-- v0.25.81 Ward Pistol: a glass ball grows round the fist while you hold
+			local ok, stopOrb = pcall(require(script.Parent.FruitFX).HoldOrb, c)
+			hold.ballStop = ok and stopOrb or nil
 		end
 		if skill.chargeAnim == "Bounce_WindBoth" or skill.chargeAnim == "Blaze_BallCharge" then -- both hands gather power
 			pcall(require(script.Parent.VFX).Charge, c and c:FindFirstChild("LeftHand"), col, chargeTime(id) + 0.2)

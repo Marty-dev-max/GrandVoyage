@@ -45,7 +45,7 @@ return {
 	HammerSmash = "rbxassetid://80802019941983",
 	Heal = "rbxassetid://137116860074835",
 	HeartyMeal = "rbxassetid://77056286660464",
-	HeatedLeg = "rbxassetid://101918071791181",
+	HeatedLeg = "rbxassetid://106061970454082",
 	HookKick = "rbxassetid://77911273340846",
 	IronBody = "rbxassetid://117654568131791",
 	IronFist = "rbxassetid://103299478186866",

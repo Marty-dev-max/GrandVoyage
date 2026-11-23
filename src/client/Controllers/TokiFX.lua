@@ -105,8 +105,8 @@ local function roar(d)
 	local at = root.Position
 	local feet = at - Vector3.new(0, 2.7, 0)
 	-- a dark flash sphere of blocks at the body
-	local flash = blk(Vector3.new(2, 2, 2), color, CFrame.new(at), 0.1)
-	TweenService:Create(flash, TweenInfo.new(0.35, Enum.EasingStyle.Quad), { Size = Vector3.new(14, 14, 14), Transparency = 1 }):Play()
+	local flash = blk(Vector3.new(2, 2, 2), color, CFrame.new(at), 0.45)
+	TweenService:Create(flash, TweenInfo.new(0.25, Enum.EasingStyle.Quad), { Size = Vector3.new(8, 8, 8), Transparency = 1 }):Play()
 	Debris:AddItem(flash, 0.4)
 	-- three voxel rings racing out over the ground
 	for ring = 0, 2 do
@@ -148,39 +148,73 @@ local function roar(d)
 		Audio.Play("FinisherBoom", { pos = at })
 		arc = Audio.Attach("RoarArcLoop", root, 80)
 	end)
-	-- v0.25.80 (owner): the aura HANGS ON for 2.5 s: bolts keep crackling round the body, colored pixels rise off it and
-	-- the light around them pulses in the Toki color, then it all fades out
+	-- v0.25.81 (owner): the aura holds at its FULL radius for 2.5 s and keeps striking: every ~0.22 s a shock runs
+	-- across the whole area (bolts from the body out to the rim + a flicker of the rim ring) and the crackle swells and
+	-- ebbs with it (volume / pitch ride an up-down envelope, a zap per shock at a varied pitch)
 	local AURA = 2.5
 	local light = Instance.new("PointLight")
 	light.Color = color
-	light.Range = 14
+	light.Range = 18
 	light.Brightness = 3
 	light.Parent = root
+	-- the rim: a ring of blocks on the ground at the full radius that stays while the aura lasts
+	local rim = {}
+	local nRim = math.clamp(math.floor(radius * 1.4), 24, 80)
+	for i = 1, nRim do
+		local a = i / nRim * math.pi * 2
+		local b = blk(Vector3.new(1, 0.4, 1), i % 3 == 0 and core or color, CFrame.new(feet + Vector3.new(math.cos(a) * radius, 0.25, math.sin(a) * radius)), 0.3)
+		table.insert(rim, b)
+	end
 	local t0 = os.clock()
-	local lastBolt = 0
+	local nextShock = 0.15
+	local Audio = require(script.Parent.Audio)
 	local conn
 	conn = RunService.Heartbeat:Connect(function()
 		local t = os.clock() - t0
 		if t > AURA or not root.Parent then
 			conn:Disconnect()
 			light:Destroy()
+			for _, b in ipairs(rim) do
+				TweenService:Create(b, TweenInfo.new(0.35), { Transparency = 1 }):Play()
+				Debris:AddItem(b, 0.4)
+			end
 			if arc then
 				TweenService:Create(arc, TweenInfo.new(0.4), { Volume = 0 }):Play()
 				Debris:AddItem(arc, 0.45)
 			end
 			return
 		end
-		local fadeK = t > AURA - 0.6 and (AURA - t) / 0.6 or 1
-		light.Brightness = (2 + math.sin(t * 22) * 1.2) * fadeK
-		if os.clock() - lastBolt > 0.09 and math.random() < 0.85 * fadeK + 0.1 then
-			lastBolt = os.clock()
-			local p = root.Position
-			local a = math.random() * math.pi * 2
-			local from = p + Vector3.new(math.cos(a) * 1.2, math.random() * 4 - 2.5, math.sin(a) * 1.2)
-			local b = math.random() * math.pi * 2
-			bolt(from, p + Vector3.new(math.cos(b) * (3 + math.random() * 3), math.random() * 5 - 2, math.sin(b) * (3 + math.random() * 3)), color, core, 0.15)
+		local fadeK = t > AURA - 0.5 and (AURA - t) / 0.5 or 1
+		-- swell and ebb: two slow waves on top of each other
+		local env = (0.55 + 0.45 * math.sin(t * 5.5)) * (0.75 + 0.25 * math.sin(t * 1.7 + 1)) * fadeK
+		light.Brightness = 1 + env * 4
+		if arc then
+			arc.Volume = 0.15 + env * 0.55
+			arc.PlaybackSpeed = 0.85 + env * 0.35
 		end
-		if math.random() < 0.5 * fadeK then
+		local c = root.Position - Vector3.new(0, 2.7, 0)
+		for i, b in ipairs(rim) do
+			local a = i / nRim * math.pi * 2
+			b.CFrame = CFrame.new(c + Vector3.new(math.cos(a) * radius, 0.25 + math.max(0, math.sin(t * 14 + i)) * 0.4 * env, math.sin(a) * radius))
+			b.Transparency = 1 - (0.35 + env * 0.6) * fadeK
+		end
+		if t >= nextShock then
+			nextShock = t + 0.18 + math.random() * 0.1
+			-- a shock across the whole area: bolts from the body to the rim + a couple of arcs along the rim
+			local p = root.Position
+			for _ = 1, 4 do
+				local a = math.random() * math.pi * 2
+				local tip = Vector3.new(c.X + math.cos(a) * radius, c.Y + 0.5 + math.random() * 2, c.Z + math.sin(a) * radius)
+				bolt(p + Vector3.new(0, math.random() * 2 - 1, 0), tip, color, core, 0.16)
+			end
+			for _ = 1, 2 do
+				local a = math.random() * math.pi * 2
+				local a2 = a + 0.4 + math.random() * 0.4
+				bolt(Vector3.new(c.X + math.cos(a) * radius, c.Y + 0.6, c.Z + math.sin(a) * radius), Vector3.new(c.X + math.cos(a2) * radius, c.Y + 0.6, c.Z + math.sin(a2) * radius), color, core, 0.14)
+			end
+			Audio.Play("ZapHit", { pos = p, volume = 0.25 + env * 0.4, pitch = 0.8 + math.random() * 0.5 })
+		end
+		if math.random() < 0.6 * fadeK then
 			Voxels.Pixels(root.Position - Vector3.new(0, 2, 0), { count = 3, colors = { color, core }, size = 0.3, speed = 2, gravity = -14, life = 0.6, glow = 1, spread = 1.6 })
 		end
 	end)

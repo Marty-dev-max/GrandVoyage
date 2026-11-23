@@ -57,11 +57,11 @@ F.List = {
 		desc = "Create unbreakable barriers to shield your crew.",
 		passive = { defPct = 0.12 }, passiveText = "Barrier Steps: jump and keep holding Space to build stairs of barrier under your feet • +12% DEF",
 		skills = {
-			{ id = "F_BarrierBash", name = "Ward Pistol", kind = "Melee", sp = 10, cd = 3, range = 12, mult = 2.4, knockDist = 12, knockPower = 2.2, anim = "Blaze_Fist", mastery = 1, fx = "None", desc = "Wrap a ball of barrier round your fist and punch: the glass hits like a wall and throws the enemy back." },
+			{ id = "F_BarrierBash", name = "Ward Pistol", kind = "Ranged", sp = 10, cd = 3, range = 30, mult = 2.4, splash = 6, travel = 0.3, firstHit = true, charge = true, knockDist = 12, knockPower = 2.2, anim = "Blaze_Fist", chargeAnim = "Blaze_Wind", mastery = 1, fx = "None", desc = "Hold: a ball of barrier forms round your fist. Let go and punch it out: it bursts on the first enemy it meets (or where it stops), throwing everyone near it back." },
 			-- v0.25.79 Channel skills (owner): HOLD the key = the barrier stands and SP drains each second; let go (or run out of
 			-- SP / time) = it bursts outward. Auto / a tap holds it for TapHold seconds.
 			{ id = "F_BarrierWall", name = "Barrier Wall", kind = "Channel", shape = "Wall", sp = 8, spPerSec = 7, maxHold = 6, cd = 10, mult = 1.8, pushRadius = 9, anim = "Shield_Hold", releaseAnim = "Bounce_Cannon", mastery = 10, fx = "None", desc = "Hold: a wall of barrier in front of you blocks every blow from that side (SP drains). Let go: it slams forward and knocks enemies back." },
-			{ id = "F_GlassStairs", name = "Glass Stairway", kind = "Stairs", sp = 16, cd = 12, maxSteps = 32, maxHold = 5, mastery = 25, fx = "None", desc = "Hold and drag the pointer: barrier steps build out wherever you drag (up into the sky, over the sea). Anyone can walk on them for a while." },
+			{ id = "F_GlassStairs", name = "Glass Stairway", kind = "Stairs", sp = 6, spPerStep = 1.5, cd = 12, maxSteps = 120, maxHold = 40, mult = 1.4, mastery = 25, fx = "None", desc = "Hold and drag the pointer: barrier steps build out wherever you drag (up into the sky, over the sea) for as long as your SP lasts. Steps that burst out under or into enemies hurt them. Anyone can walk on them for a while." },
 			{ id = "F_BarrierDome", name = "Barrier Dome", kind = "Channel", shape = "Dome", radius = 14, sp = 12, spPerSec = 10, maxHold = 8, cd = 25, mult = 0.8, anim = "Shield_DomeHold", releaseAnim = "Skill_PowerUp", mastery = 50, fx = "None", desc = "Hold: a glass dome closes over you and your crew; nothing outside can hit anyone inside (SP drains). Let go: it bursts outward." },
 		},
 	},

@@ -974,13 +974,15 @@ local function buildSkillBar()
 	local ammoIcon = HUD.Pellet(ammoBtn, Color3.new(1, 1, 1), 34)
 	local ammoCount = UI.Text(ammoBtn, "", 13, T.Text, "Number", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -1), Size = UDim2.fromOffset(50, 14), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 6 })
 	HUD.ammo = { holder = ammoHolder, spacer = ammoSpacer, btn = ammoBtn, icon = ammoIcon, count = ammoCount }
+	-- v0.25.81 (owner): one ammo only (Musket Ball): the button just shows how many are left
 	ammoBtn.Activated:Connect(function()
-		HUD.ToggleAmmoPicker()
+		local p = State.profile
+		local a = AmmoCfg.ById[AmmoCfg.Default]
+		UI.Toast((p and ammoCount(p, a) or 0) .. " " .. a.name .. "s left. Buy more at the General Store; bandits and gunners drop them.", "info")
 	end)
 	UI.Tooltip(ammoBtn, function()
-		local p = State.profile
-		local a = AmmoCfg.ById[p and p.ammo or ""] or AmmoCfg.ById[AmmoCfg.Default]
-		return "<b>" .. a.name .. "</b> loaded\n" .. a.desc .. "\nTap to change ammo.", a.color
+		local a = AmmoCfg.ById[AmmoCfg.Default]
+		return "<b>" .. a.name .. "s</b>\n" .. a.desc .. "\nGeneral Store, or dropped by bandits and gunners.", Color3.fromRGB(200, 200, 210)
 	end)
 
 	if UI.IsMobile then
@@ -1291,10 +1293,11 @@ local function refresh()
 		HUD.ammo.holder.Visible = shoots
 		HUD.ammo.spacer.Visible = shoots
 		if shoots then
-			local a = AmmoCfg.ById[p.ammo or ""] or AmmoCfg.ById[AmmoCfg.Default]
+			local a = AmmoCfg.ById[AmmoCfg.Default]
 			tintPellet(HUD.ammo.icon, a.color)
 			local n = ammoCount(p, a)
-			HUD.ammo.count.Text = n == math.huge and "∞" or tostring(n)
+			HUD.ammo.count.Text = tostring(n)
+			HUD.ammo.count.TextColor3 = n == 0 and T.Red or T.Text
 		elseif picker then
 			picker:Destroy()
 			picker = nil

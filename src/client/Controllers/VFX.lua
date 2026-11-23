@@ -689,11 +689,19 @@ SkillFX.Tornado = function(d)
 	end
 end
 SkillFX.WaveSlash = function(d)
-	local p = part(Vector3.new(9, 0.4, 2.5), Color3.fromRGB(150, 255, 180), CFrame.lookAt(d.from, d.to))
-	tween(p, 0.25, { CFrame = CFrame.lookAt(d.to, d.to + (d.to - d.from).Unit), Size = Vector3.new(12, 0.3, 3) })
-	task.delay(0.25, function()
-		fadeOut(p, 0.15)
-		VFX.Burst(d.to, 5, Color3.fromRGB(150, 255, 180), 0.3)
+	-- v0.25.81: the wave flies its full range (Flying Slash pierces), wide, timed with the server (strike + travel)
+	local dir = (d.to - d.from)
+	dir = dir.Magnitude > 0.1 and dir.Unit or Vector3.zAxis
+	local to = d.from + dir * math.max((d.to - d.from).Magnitude, 40)
+	local strike = math.clamp(tonumber(d.strike) or 0.1, 0, 0.5)
+	local travel = math.clamp(tonumber(d.travel) or 0.2, 0.05, 0.6)
+	task.delay(strike, function()
+		local p = part(Vector3.new(11, 0.4, 2.5), Color3.fromRGB(150, 255, 180), CFrame.lookAt(d.from, d.from + dir))
+		tween(p, travel, { CFrame = CFrame.lookAt(to, to + dir), Size = Vector3.new(13, 0.3, 3) }, Enum.EasingStyle.Linear)
+		task.delay(travel, function()
+			fadeOut(p, 0.15)
+			VFX.Burst(to, 5, Color3.fromRGB(150, 255, 180), 0.3)
+		end)
 	end)
 end
 SkillFX.Bullet = function(d)
@@ -1067,17 +1075,24 @@ local weaponFX = {
 		end
 	end,
 	Slingshot = function(d)
-		-- the shot looks like the ammo it is (Config/Ammo colors); every pellet lands with a small split impact
-		local AmmoCfg = require(ReplicatedStorage.Shared.Config.Ammo)
-		local am = AmmoCfg.ById[d.ammo or ""]
-		local c = am and am.color or Color3.fromRGB(255, 240, 160)
-		VFX.Projectile(d.from, d.to, c, am and am.id ~= "Pebble" and 0.8 or 0.6, 0.18, 1, c:Lerp(Color3.new(1, 1, 1), 0.3))
+		-- v0.25.81 (owner): the Sharpshooter's M1 fires a MUSKET BALL: muzzle flash + gunsmoke, a dark ball in a bright
+		-- streak, a split impact with iron chips (lighter than the Lead Pellet skill)
+		local hand = typeof(d.char) == "Instance" and d.char:FindFirstChild("RightHand")
+		local from = hand and hand.Position or d.from
+		local dir = (d.to - from).Magnitude > 0.1 and (d.to - from).Unit or Vector3.zAxis
+		local muzzle = from + dir * 1.2
+		VFX.Flash(muzzle, Color3.fromRGB(255, 220, 140), 2.2)
+		VFX.Smoke(muzzle, Color3.fromRGB(205, 200, 195), 3, 1.6)
+		Audio.Play("MusketShot", { pos = muzzle, volume = 0.45, pitch = 1.05 + math.random() * 0.1 })
+		local ball = part(Vector3.one * 0.5, Color3.fromRGB(46, 44, 50), CFrame.lookAt(muzzle, d.to), nil, Enum.Material.Metal, 0)
+		local glow = part(Vector3.new(0.32, 0.32, 2.4), Color3.fromRGB(255, 240, 190), ball.CFrame, nil, Enum.Material.Neon, 0.3)
+		tween(ball, 0.18, { CFrame = CFrame.lookAt(d.to, d.to + dir) }, Enum.EasingStyle.Linear)
+		tween(glow, 0.18, { CFrame = CFrame.lookAt(d.to, d.to + dir) * CFrame.new(0, 0, 1.2) }, Enum.EasingStyle.Linear)
 		task.delay(0.18, function()
-			local dir = d.to - d.from
-			if am and am.splash then
-				VFX.Explosion(d.to, am.splash * 0.6)
-			end
-			VFX.ImpactSplit(d.to, dir, c, am and am.id ~= "Pebble" and 3.6 or 2.8)
+			ball:Destroy()
+			glow:Destroy()
+			VFX.ImpactSplit(d.to, dir, Color3.fromRGB(255, 215, 120), 3.6)
+			Voxels.Blocks(d.to, { count = 4, colors = { Color3.fromRGB(70, 66, 72), Color3.fromRGB(150, 140, 130) }, size = 0.25, speed = 10, up = 6, life = 0.45, collide = false })
 		end)
 	end,
 	StormBaton = function(d, n)
@@ -1984,12 +1999,18 @@ local fxSounds = {
 	end,
 	BasicAttack = function(d)
 		-- the swing itself: a soft whoosh (the impact sound comes on contact)
+		if d.weapon == "Slingshot" then
+			return nil -- the musket's bang plays on the shot frame (weaponFX.Slingshot)
+		end
 		local blade = d.weapon == "Sword" or d.weapon == "Hammer"
 		return blade and "Slash" or "Whoosh", d.from, blade and 1 or 1.25
 	end,
 	Skill = function(d)
 		if d.fx == "Heal" or d.fx == "Food" then
 			return "Heal", d.from
+		end
+		if type(d.fx) == "string" and string.sub(d.fx, 1, 6) == "Musket" then
+			return nil -- the gunshot comes with the shot (SkillFX.Musket*)
 		end
 		if d.fx == "ThunderCall" or d.fx == "Lightning" then
 			return "ThunderCrack", d.to or d.from

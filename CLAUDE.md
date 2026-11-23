@@ -740,6 +740,17 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     diagonal streaks (FruitFX clearPane); Dome = hemisphere on the ground, full sphere in the air; server shoves
     non-boss mobs out of the dome every 0.25 s. Conqueror's Roar: 2.5 s aura (bolts, pixels, light) + RoarBurst1-4 by
     UserId % 4 + RoarArcLoop. Hammer icon drawn from the handle direction, fully inside the tile.
+  * v0.25.81 (owner): ONE ammo = Musket Ball (Config/Ammo List = Musket, Legacy = old shots kept as sellable items,
+    Starter 300 via CombatService.MusketStarter on load / first shot, p.musketStarter); out of balls = no M1 shot; humanoid
+    monsters drop Ammo_Musket (Monsters.lua from MonsterLooks; HeldRifle/HeldPistol more); HUD ammo button = count only;
+    weaponFX.Slingshot = musket ball + MusketShot. Voxel monster faces are Decals on Transparency-1 plates: CreatureAnim
+    `seen`/`hide` include + hide them (faces floated after death). Roblox's camera resets LocalTransparencyModifier on
+    your own character: FruitFX re-hides dressFire blocks every RenderStepped. Flying Slash `line` 6 + `pierce` (full
+    range). Ward Pistol = charged Ranged `firstHit` (bursts on the first target or at range; FX.HoldOrb while held,
+    glassOrb). Glass Stairway runs on SP (`spPerStep`, server per step) and steps hurt monsters (st.hit once each).
+    Dome = voxelDome (glass cubes welded to one anchored hub) + server Heartbeat holds non-boss mobs at the rim (no
+    shove). Barrier Steps use clearPane. Inferno = voxelFireBall (shell of churning cubes + px_flame emitter, BulkMoveTo)
+    + billowing landing. Roar aura = rim ring + shocks every ~0.2 s across the radius, RoarArcLoop volume/pitch envelope.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

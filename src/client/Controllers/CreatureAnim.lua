@@ -9,6 +9,20 @@ local Net = require(ReplicatedStorage.Shared.Modules.Net)
 local Voxels = require(script.Parent.Voxels)
 
 local CreatureAnim = {}
+
+-- v0.25.81 (owner: monsters' FACES stayed floating after death): voxel faces are Decals on invisible plates
+-- (Transparency 1), so "visible" = a see-able part OR a plate carrying a decal; hiding one hides its decals too
+local function seen(p)
+	return p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" and (p.Transparency < 1 or p:FindFirstChildOfClass("Decal") ~= nil)
+end
+local function hide(p)
+	p.LocalTransparencyModifier = 1
+	for _, d in ipairs(p:GetChildren()) do
+		if d:IsA("Decal") then
+			d.LocalTransparencyModifier = 1
+		end
+	end
+end
 CreatureAnim.Stats = { rigged = 0, plain = 0, animated = 0, attacks = 0, hits = 0 }
 
 -- white flash on hit (a short-lived Highlight, so we never keep dozens alive)
@@ -41,7 +55,7 @@ function CreatureAnim.SplitDeath(model, _color, mode, dir)
 	local halves = { {}, {} }
 	local orig = {}
 	for _, p in ipairs(model:GetDescendants()) do
-		if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" and p.Transparency < 1 then
+		if seen(p) then
 			local rel = p.Position - center
 			local a = mode == "v" and (rel:Dot(side) > 0 and 1 or 2) or (rel.Y > bsize.Y * 0.05 and 1 or 2)
 			table.insert(halves[a], p)
@@ -117,7 +131,7 @@ function CreatureAnim.SplitDeath(model, _color, mode, dir)
 					c.Parent = box
 					table.insert(copies, c)
 				end
-				p.LocalTransparencyModifier = 1
+				hide(p)
 			end
 			box.Parent = workspace
 			-- the push: the top slides off along the blow and tips over / the two sides fall apart
@@ -150,7 +164,7 @@ function CreatureAnim.SplitDeath(model, _color, mode, dir)
 		while model.Parent do
 			for _, list in ipairs(halves) do
 				for _, p in ipairs(list) do
-					p.LocalTransparencyModifier = 1
+					hide(p)
 				end
 			end
 			task.wait(0.1)
@@ -163,7 +177,7 @@ end
 local function shatter(model, color, boss)
 	local parts = {}
 	for _, p in ipairs(model:GetDescendants()) do
-		if p:IsA("BasePart") and p.Transparency < 1 then
+		if seen(p) then
 			table.insert(parts, p)
 		end
 	end
@@ -174,7 +188,10 @@ local function shatter(model, color, boss)
 	local per = math.max(2, math.floor(budget / #parts))
 	color = color or Color3.fromRGB(220, 220, 220)
 	for _, p in ipairs(parts) do
-		p.LocalTransparencyModifier = 1
+		hide(p)
+		if p.Transparency >= 1 then
+			continue -- a face plate: hidden, no cubes
+		end
 		local s = p.Size
 		local cube = math.clamp(math.min(s.X, s.Y, s.Z) / 2.2, 0.35, boss and 2.4 or 1.2)
 		for _ = 1, per do
@@ -213,7 +230,7 @@ local function deathFall(model, color, boss)
 	color = color or Color3.fromRGB(220, 220, 220)
 	local parts, orig = {}, {}
 	for _, p in ipairs(model:GetDescendants()) do
-		if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" and p.Transparency < 1 then
+		if seen(p) then
 			table.insert(parts, p)
 			orig[p] = p.CFrame
 		end
@@ -301,7 +318,7 @@ local function deathFall(model, color, boss)
 		Voxels.Blocks(cf2.Position, { count = math.clamp(math.floor(vol / (blockSize ^ 3) / 6), 10, boss and 60 or 26), colors = cols, size = { blockSize * 0.7, blockSize * 1.2 }, speed = boss and 16 or 8, up = boss and 14 or 9, spread = math.max(size2.X, size2.Z) * 0.3, life = 0.9 })
 		Voxels.Pixels(cf2.Position, { count = boss and 90 or 40, colors = cols, size = boss and 0.8 or 0.3, speed = boss and 22 or 12, gravity = -4, up = 6, life = 0.9, spread = math.max(size2.X, size2.Z) * 0.6 })
 		for _, p in ipairs(parts) do
-			p.LocalTransparencyModifier = 1
+			hide(p)
 			for _, d in ipairs(p:GetDescendants()) do
 				if d:IsA("Decal") or d:IsA("Texture") then
 					d.Transparency = 1

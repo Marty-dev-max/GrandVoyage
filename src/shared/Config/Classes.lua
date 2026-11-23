@@ -52,7 +52,7 @@ local Classes = {
 		skills = {
 			{ id = "OniSlash", name = "Demon Cross", split = "v", kind = "Melee", sp = 12, cd = 4, range = 10, mult = 2.4, maxLevel = 10, fx = "CrossSlash", desc = "Two crossing cuts." },
 			{ id = "TornadoCut", name = "Tornado Cut", split = "h", kind = "AoE", sp = 20, cd = 8, range = 0, radius = 14, mult = 1.7, maxLevel = 10, fx = "Tornado", desc = "Spin and slash everything nearby." },
-			{ id = "FlyingSlash", name = "Flying Slash", split = "h", kind = "Ranged", sp = 15, cd = 5.5, range = 40, mult = 1.9, maxLevel = 10, fx = "WaveSlash", desc = "Launch a blade wave." },
+			{ id = "FlyingSlash", name = "Flying Slash", split = "h", kind = "Ranged", sp = 15, cd = 5.5, range = 40, mult = 1.9, line = 6, pierce = true, maxLevel = 10, fx = "WaveSlash", desc = "Launch a wide blade wave that flies its full range and cuts through everyone in its path." },
 			{ id = "IronBody", name = "Iron Body", kind = "Buff", sp = 25, cd = 30, duration = 15, buff = { def = 0.35 }, maxLevel = 5, fx = "AuraGreen", desc = "Harden your body: DEF up." },
 		},
 	},

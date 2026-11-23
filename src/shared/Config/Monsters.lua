@@ -205,6 +205,17 @@ for t, ids in pairs(TYPE_OF) do
 		end
 	end
 end
+-- v0.25.81 (owner): humanoid monsters carry musket balls (the ones with a rifle / pistol carry more)
+do
+	local Looks = require(script.Parent.MonsterLooks).ById
+	for id, look in pairs(Looks) do
+		local def = M[id]
+		if type(def) == "table" and def.level and type(def.drops) == "table" then
+			local gun = look.held == "HeldRifle" or look.held == "HeldPistol"
+			table.insert(def.drops, { "Ammo_Musket", gun and 0.55 or 0.25, gun and 4 or 2, gun and 10 or 5 })
+		end
+	end
+end
 for id, def in pairs(M) do
 	if type(def) == "table" and def.level then
 		def.stars = STARS[id] or (def.isBoss and 4 or 2)

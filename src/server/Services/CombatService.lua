@@ -1,5 +1,6 @@
 -- CombatService: basic attacks, skills, buffs, regen and player damage (server-authoritative)
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local ClassesCfg = require(Shared.Config.Classes)
@@ -523,7 +524,28 @@ local function partyInRadius(player, radius)
 end
 
 -- ===== handlers =====
+-- v0.25.81: every character gets one starter pouch of Musket Balls (the first time they shoot or load in as a
+-- Sharpshooter)
+function Combat.MusketStarter(player)
+	local p = R.DataService.Get(player)
+	if not p or p.musketStarter then
+		return
+	end
+	if R.InventoryService.AddItem(player, AmmoCfg.ById[AmmoCfg.Default].item, AmmoCfg.Starter) then
+		p.musketStarter = true
+		R.PlayerService.MarkDirty(player)
+		R.PlayerService.Notify(player, "Starter pouch: " .. AmmoCfg.Starter .. " Musket Balls", "good")
+	end
+end
+
 local function setup()
+	R.DataService.Loaded:Connect(function(pl)
+		task.delay(4, function()
+			if pl.Parent and AmmoCfg.Weapons[weaponType(pl)] then
+				Combat.MusketStarter(pl) -- a Sharpshooter sees the pouch right away
+			end
+		end)
+	end)
 	Net.Handle("Attack", function(player, data)
 		if not alive(player) or player:GetAttribute("Vending") then
 			return false
@@ -550,16 +572,15 @@ local function setup()
 		local magic = wType == "StormBaton"
 		R.WeaponService.Draw(player, wType)
 		local n, strike, speed = comboStep(player, wType)
-		-- slingshots fire the picked ammo (1 per shot; out of it -> free Pebble Shot)
+		-- v0.25.81 (owner): the musket fires Musket Balls, 1 per shot; none left = no shot
 		local ammo, mult = nil, 1
 		if AmmoCfg.Weapons[wType] then
-			local p = R.DataService.Get(player)
-			ammo = AmmoCfg.ById[p and p.ammo or ""] or AmmoCfg.ById[AmmoCfg.Default]
-			if ammo.item and not R.InventoryService.RemoveItem(player, ammo.item, 1) then
-				R.PlayerService.Notify(player, "Out of " .. ammo.name .. ": back to Pebble Shot", "bad")
-				p.ammo = AmmoCfg.Default
-				R.PlayerService.MarkDirty(player)
-				ammo = AmmoCfg.ById[AmmoCfg.Default]
+			ammo = AmmoCfg.ById[AmmoCfg.Default]
+			Combat.MusketStarter(player)
+			if not R.InventoryService.RemoveItem(player, ammo.item, 1) then
+				lastAttack[player] = nil
+				R.PlayerService.Notify(player, "Out of Musket Balls: buy more at the General Store", "bad")
+				return false, "Out of Musket Balls"
 			end
 			mult = ammo.mult
 		end
@@ -783,6 +804,37 @@ local function setup()
 			c:SetAttribute("Channel", skill.shape)
 			c:SetAttribute("ChannelR", skill.radius)
 		end
+		if skill.shape == "Dome" then
+			-- v0.25.81 (owner): the dome is a solid wall for monsters: one that reaches it stops at the glass (it is held at
+			-- the rim every frame, no shove); bosses are too big to hold (their blows are still blocked)
+			local conn
+			conn = RunService.Heartbeat:Connect(function()
+				local root = R.PlayerService.Root(player)
+				if channels[player] ~= ch or not root then
+					conn:Disconnect()
+					return
+				end
+				local center = root.Position
+				local r = ch.radius
+				for _, mob in ipairs(R.MonsterService.InRadius(center, r + 2)) do
+					local mr = mob.root
+					if not mob.dead and mr and not mob.def.isBoss and not mob.def.isLeviathan then
+						local off = (mr.Position - center) * Vector3.new(1, 0, 1)
+						local dist = off.Magnitude
+						if dist < r + 1 and dist > 0.1 then
+							local out = off.Unit
+							local rot = mr.CFrame - mr.Position
+							mr.CFrame = rot + Vector3.new(center.X, mr.Position.Y, center.Z) + out * (r + 1)
+							local v = mr.AssemblyLinearVelocity
+							local inward = v:Dot(-out)
+							if inward > 0 then
+								mr.AssemblyLinearVelocity = v + out * inward
+							end
+						end
+					end
+				end
+			end)
+		end
 		task.spawn(function()
 			while channels[player] == ch do
 				task.wait(0.25)
@@ -795,21 +847,6 @@ local function setup()
 					break
 				end
 				player:SetAttribute("SP", left)
-				-- v0.25.80 (owner): nothing walks INTO the dome: monsters inside its radius are shoved back out
-				if ch.shape == "Dome" then
-					local root = R.PlayerService.Root(player)
-					if root then
-						for _, mob in ipairs(R.MonsterService.InRadius(root.Position, ch.radius)) do
-							if not mob.dead and mob.root and not mob.def.isBoss and not mob.def.isLeviathan then
-								local off = (mob.root.Position - root.Position) * Vector3.new(1, 0, 1)
-								local dist = off.Magnitude
-								if dist < ch.radius then
-									R.MonsterService.Knockback(mob, root.Position, ch.radius - dist + 3, 1.2, 0.2)
-								end
-							end
-						end
-					end
-				end
 			end
 		end)
 		return true
@@ -858,7 +895,9 @@ local function setup()
 		end
 		player:SetAttribute("SP", sp - skill.sp)
 		skillCd[player][skill.id] = os.clock() + skill.cd
-		stairs[player] = { t0 = os.clock(), n = 0, max = skill.maxSteps or 32, hold = skill.maxHold or 5 }
+		local d = R.PlayerService.Derived(player)
+		stairs[player] = { t0 = os.clock(), n = 0, max = skill.maxSteps or 32, hold = skill.maxHold or 5, per = skill.spPerStep or 0,
+			mult = (skill.mult or 1) * (1 + 0.1 * (lv - 1)), magic = d and d.matk > d.atk, hit = {} }
 		R.FruitService.OnCast(player)
 		return true
 	end, 0.2)
@@ -880,9 +919,23 @@ local function setup()
 			if st.last and (pt - st.last).Magnitude > cfg.Run + cfg.Rise + 0.6 then
 				break
 			end
+			-- v0.25.81 (owner): every step costs SP (draw for as long as your SP lasts)
+			local spNow = player:GetAttribute("SP") or 0
+			if spNow < st.per then
+				break
+			end
+			player:SetAttribute("SP", spNow - st.per)
 			st.last = pt
 			st.n += 1
 			table.insert(ok, pt)
+			-- a step that bursts out under / into a monster hurts it (each one once per stairway)
+			for _, tt in ipairs(inRadiusTargets(player, pt + Vector3.new(0, 1.5, 0), 4)) do
+				local key = tt.mob or tt.player
+				if key and not st.hit[key] then
+					st.hit[key] = true
+					hitTarget(player, tt, st.mult, st.magic, { element = "barrier", knock = 4, knockPower = 1.2, knockFrom = pt })
+				end
+			end
 		end
 		if #ok > 0 then
 			Net.FX("Skill", { skill = "F_GlassStairs_Step", from = ok[1], to = ok[#ok], pts = ok, first = st.n == #ok, stepper = player.UserId }, root.Position, 500)
@@ -1033,8 +1086,26 @@ local function setup()
 			end
 			local land = strike + (kind == "Ranged" and travel or 0)
 			local seen = {}
+			if skill.firstHit then
+				-- v0.25.81 Ward Pistol: the ball flies until it meets someone (or its range) and bursts there
+				local burst = root.Position + aim3 * range
+				for step = 2, range, 2 do
+					local at = root.Position + aim3 * step
+					if #inRadiusTargets(player, at, 3.5) > 0 then
+						burst = at
+						break
+					end
+				end
+				local frac = (burst - root.Position).Magnitude / range
+				fxData.to = burst
+				fxData.travel = travel * frac
+				for _, tt in ipairs(inRadiusTargets(player, burst, skill.splash or 5)) do
+					hitLater(strike + travel * frac, player, tt, mult, magic, lastHitOpts(true, root.Position))
+				end
+				range = 0 -- no path hits below
+			end
 			for step = 2, range, 3 do
-				for _, tt in ipairs(inRadiusTargets(player, root.Position + aim3 * step, skill.splash or 4.5)) do
+				for _, tt in ipairs(inRadiusTargets(player, root.Position + aim3 * step, skill.line or skill.splash or 4.5)) do
 					local key = tt.mob or tt.player
 					if key and not seen[key] then
 						seen[key] = true
@@ -1072,6 +1143,10 @@ local function setup()
 				-- v0.25.69 pumped Stretch Pistol: the blast of air hits everything between you and the target too
 				local from, seen = root.Position, { [target.mob or target.player or 0] = true }
 				local path = target.pos - from
+				if skill.pierce and path.Magnitude > 0.5 then
+					-- v0.25.81 Flying Slash: the wave flies on through to its full range, cutting everyone in its way
+					path = path.Unit * math.max(path.Magnitude, skill.range or 40)
+				end
 				for step = 2, path.Magnitude, 3 do
 					for _, tt in ipairs(inRadiusTargets(player, from + path.Unit * step, skill.line)) do
 						local key = tt.mob or tt.player

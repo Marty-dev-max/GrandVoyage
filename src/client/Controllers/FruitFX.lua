@@ -272,85 +272,167 @@ FX.F_Emberflies = function(d)
 	end
 end
 
+-- v0.25.81 (owner reference clip: a round VOXEL-art fireball, pixel particles, a soft billowing landing):
+-- the ball is a sphere of cubes (yellow-white core -> orange -> red rim) that churns (cubes flicker between shades and
+-- wobble), with pixel flames + embers streaming off it. move(cf, k) places it (k = scale), destroy() removes it.
+local function voxelFireBall(radius)
+	local cells = {}
+	local cell = radius / 3.2
+	local n = 4
+	for ix = -n, n do
+		for iy = -n, n do
+			for iz = -n, n do
+				local p = Vector3.new(ix, iy, iz) * cell
+				local d = p.Magnitude
+				if d <= radius and d >= radius - cell * 1.6 then
+					local depth = d / radius
+					local c = depth > 0.85 and C.fire3 or (depth > 0.7 and C.fire2 or C.fire1)
+					local b = blk(Vector3.one * cell * 1.02, c, CFrame.new(p), true, depth > 0.85 and 0.15 or 0)
+					table.insert(cells, { p = b, off = p, depth = depth, seed = math.random() * 10 })
+				end
+			end
+		end
+	end
+	local core = blk(Vector3.one * radius * 1.3, Color3.fromRGB(255, 250, 220), CFrame.new(), true, 0)
+	local light = Instance.new("PointLight")
+	light.Color = C.fire2
+	light.Range = radius * 5
+	light.Brightness = 4
+	light.Parent = core
+	local Textures = require(game:GetService("ReplicatedStorage").Shared.Config.Textures)
+	local pe = Instance.new("ParticleEmitter")
+	pe.Texture = Textures.px_flame or Textures.flame or ""
+	pe.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, C.fire1), ColorSequenceKeypoint.new(0.5, C.fire2), ColorSequenceKeypoint.new(1, C.fire3) })
+	pe.LightEmission = 1
+	pe.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, radius * 0.35), NumberSequenceKeypoint.new(1, 0.1) })
+	pe.Transparency = NumberSequence.new(0.05, 1)
+	pe.Lifetime = NumberRange.new(0.3, 0.6)
+	pe.Speed = NumberRange.new(2, 6)
+	pe.SpreadAngle = Vector2.new(180, 180)
+	pe.Shape = Enum.ParticleEmitterShape.Sphere
+	pe.Acceleration = Vector3.new(0, 14, 0)
+	pe.Rate = 60
+	pe.Parent = core
+	local parts, cfs = {}, {}
+	local function move(cf, k)
+		local t = os.clock()
+		table.clear(parts)
+		table.clear(cfs)
+		for _, e in ipairs(cells) do
+			local wob = 1 + math.sin(t * 9 + e.seed) * 0.05
+			table.insert(parts, e.p)
+			table.insert(cfs, cf * CFrame.new(e.off * k * wob))
+			e.p.Size = Vector3.one * cell * 1.02 * k
+			if math.random() < 0.08 then
+				-- churning: a cube flickers one shade hotter or cooler
+				e.p.Color = (e.depth > 0.85 and (math.random() < 0.5 and C.fire3 or C.fire2)) or (math.random() < 0.5 and C.fire2 or C.fire1)
+			end
+		end
+		table.insert(parts, core)
+		table.insert(cfs, cf)
+		core.Size = Vector3.one * radius * 1.3 * k
+		pe.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, radius * 0.35 * k), NumberSequenceKeypoint.new(1, 0.1) })
+		workspace:BulkMoveTo(parts, cfs, Enum.BulkMoveMode.FireCFrameChanged)
+		if math.random() < 0.5 then
+			Voxels.Pixels(cf.Position, { count = 2, colors = { C.fire1, C.fire2, C.fire3 }, size = 0.35 * k + 0.15, speed = 4, gravity = -10, life = 0.6, glow = 1, spread = radius * k })
+		end
+	end
+	local function destroy()
+		for _, e in ipairs(cells) do
+			e.p:Destroy()
+		end
+		pe.Enabled = false
+		core.Transparency = 1
+		light:Destroy()
+		Debris:AddItem(core, 0.7)
+	end
+	return move, destroy
+end
+
 -- a fireball growing over the caster's head while the Inferno key is held (local, the caster's own view)
 function FX.ChargeBall(char)
 	local head = typeof(char) == "Instance" and (char:FindFirstChild("VoxelHead", true) or char:FindFirstChild("Head"))
 	if not head then
 		return function() end
 	end
-	local core = blk(Vector3.one, C.fire1, CFrame.new(head.Position), true, 0)
-	local shell = blk(Vector3.one, C.fire2, CFrame.new(head.Position), true, 0.35)
+	local R = 6 -- full size radius
+	local move, destroy = voxelFireBall(R)
 	local t0 = os.clock()
 	local conn
 	conn = game:GetService("RunService").RenderStepped:Connect(function()
 		local t = os.clock() - t0
-		local s = math.min(1, t / 1.2)
-		local size = 1 + s * 11 -- v0.25.80 (owner): 2-3x bigger
-		local p = head.Position + Vector3.new(0, 2 + size * 0.55, 0)
-		core.Size = Vector3.one * size * 0.7
-		shell.Size = Vector3.one * size * (1 + math.sin(t * 14) * 0.05)
-		core.CFrame = CFrame.new(p) * CFrame.Angles(t * 2, t * 3, 0)
-		shell.CFrame = CFrame.new(p) * CFrame.Angles(-t * 2.5, t, t)
-		if math.random() < 0.6 then
-			Voxels.Pixels(p, { count = 3, colors = { C.fire1, C.fire2, C.fire3 }, size = 0.4, speed = 3, gravity = -8, life = 0.5, glow = 1, spread = size * 0.5 })
-		end
+		local k = 0.2 + math.min(1, t / 1.2) * 0.8
+		local p = head.Position + Vector3.new(0, 2 + R * k, 0)
+		move(CFrame.new(p) * CFrame.Angles(t * 0.8, t * 1.3, 0), k)
 	end)
 	return function()
 		conn:Disconnect()
-		core:Destroy()
-		shell:Destroy()
+		destroy()
 	end
 end
 
--- Inferno (v0.25.77, owner): the giant fireball is hurled the way you aim (strike 0.14, 0.4 of flight) and bursts
--- into a sea of fire where it lands
+-- Inferno (v0.25.77, owner): the giant fireball is hurled the way you aim (strike 0.14, 0.4 of flight); v0.25.81: it
+-- lands with a soft BILLOW of fire (cubes swell up and roll outward, cool to red and smoke) instead of a hard burst,
+-- and a carpet of low flames stays where it fell
 FX.F_Inferno = function(d)
 	local to = d.to or d.from
 	local head = typeof(d.char) == "Instance" and d.char:FindFirstChild("UpperTorso")
 	local from = (head and head.Position or d.from) + Vector3.new(0, 9, 0)
 	local r = d.splash or 18
+	local R = 6
 	task.delay(0.14, function()
-		local core = blk(Vector3.one * 8.5, C.fire1, CFrame.new(from), true, 0)
-		local shell = blk(Vector3.one * 12, C.fire2, CFrame.new(from), true, 0.35)
+		local move, destroy = voxelFireBall(R)
 		local t0 = os.clock()
 		local conn
 		conn = game:GetService("RunService").RenderStepped:Connect(function()
-			local k = math.min(1, (os.clock() - t0) / 0.4)
+			local t = os.clock() - t0
+			local k = math.min(1, t / 0.4)
 			local p = from:Lerp(to, k) + Vector3.new(0, math.sin(k * math.pi) * 3, 0)
-			core.CFrame = CFrame.new(p) * CFrame.Angles(k * 9, k * 7, 0)
-			shell.CFrame = CFrame.new(p) * CFrame.Angles(-k * 6, k * 4, k * 3)
-			Voxels.Pixels(p, { count = 8, colors = { C.fire1, C.fire2, C.fire3 }, size = 0.8, speed = 4, gravity = -6, life = 0.6, glow = 1, spread = 5 })
+			move(CFrame.new(p) * CFrame.Angles(t * 3, t * 2, 0), 1)
 			if k >= 1 then
 				conn:Disconnect()
-				core:Destroy()
-				shell:Destroy()
+				destroy()
 			end
 		end)
 	end)
 	task.delay(0.54, function()
 		local at = ground(to)
 		local V = require(script.Parent.VFX)
-		V.Ring(at + Vector3.new(0, 0.3, 0), r, C.fire2, 0.5)
-		V.Shockwave(at + Vector3.new(0, 2, 0), Vector3.yAxis, C.fire1, r * 0.8)
-		fireBurst(at + Vector3.new(0, 2, 0), 4)
-		for ring = 1, 4 do
-			task.delay(ring * 0.06, function()
-				local n = 10 + ring * 7
-				for i = 1, n do
-					local a = i / n * math.pi * 2 + ring * 0.4
-					local p = at + Vector3.new(math.cos(a), 0, math.sin(a)) * (r * ring / 4) * (0.85 + math.random() * 0.3)
-					local h = 1 + math.random() * 2.5
-					local c = ring <= 1 and C.fire1 or (ring <= 2 and C.fire2 or C.fire3)
-					local b = blk(Vector3.new(1.3, 0.2, 1.3), c, CFrame.new(p + Vector3.new(0, 0.1, 0)), true, 0.05)
-					tw(b, 0.25, { Size = Vector3.new(1.3, h, 1.3), CFrame = CFrame.new(p + Vector3.new(0, h / 2, 0)) }, Enum.EasingStyle.Back)
-					task.delay(0.5 + math.random() * 0.6, function()
-						if b.Parent then
-							tw(b, 0.35, { Size = Vector3.new(0.4, h * 1.6, 0.4), CFrame = CFrame.new(p + Vector3.new(0, h * 1.4, 0)), Transparency = 1 })
-						end
-					end)
-					Debris:AddItem(b, 1.6)
+		V.Ring(at + Vector3.new(0, 0.3, 0), r, C.fire2, 0.7)
+		-- the billow: fire cubes swell up from the impact and roll outward + upward, cooling to red then smoke
+		local smoke = Color3.fromRGB(70, 60, 58)
+		for _ = 1, 46 do
+			local a = math.random() * math.pi * 2
+			local out = Vector3.new(math.cos(a), 0, math.sin(a))
+			local dist = r * (0.25 + math.random() * 0.75)
+			local up = 2 + math.random() * 9 * (1 - dist / r) + math.random() * 3
+			local size = 1.2 + math.random() * 2.6
+			local p0 = at + Vector3.new(0, 1.5, 0) + out * 1.5
+			local p1 = at + out * dist + Vector3.new(0, up, 0)
+			local b = blk(Vector3.one * 0.4, C.fire1, CFrame.new(p0) * CFrame.Angles(math.random() * 3, math.random() * 3, 0), true, 0)
+			local life = 0.9 + math.random() * 0.7
+			tw(b, life * 0.45, { CFrame = CFrame.new(p0:Lerp(p1, 0.75)) * CFrame.Angles(math.random() * 3, math.random() * 3, 0), Size = Vector3.one * size, Color = C.fire2 }, Enum.EasingStyle.Quart)
+			task.delay(life * 0.45, function()
+				if b.Parent then
+					tw(b, life * 0.55, { CFrame = CFrame.new(p1 + Vector3.new(0, 3, 0)), Size = Vector3.one * size * 0.3, Color = (math.random() < 0.4) and smoke or C.fire3, Transparency = 1 }, Enum.EasingStyle.Sine, Enum.EasingDirection.In)
 				end
 			end)
+			Debris:AddItem(b, life + 0.1)
+		end
+		Voxels.Pixels(at + Vector3.new(0, 2, 0), { count = 70, colors = { C.fire1, C.fire2, C.fire3 }, size = 0.45, speed = 16, gravity = -9, life = 1.1, glow = 1, spread = r * 0.4 })
+		-- low flames left on the ground for a moment
+		for i = 1, 18 do
+			local a = i / 18 * math.pi * 2
+			local p = at + Vector3.new(math.cos(a), 0, math.sin(a)) * r * (0.3 + math.random() * 0.6)
+			local h = 0.8 + math.random() * 1.6
+			local b = blk(Vector3.new(1.2, 0.2, 1.2), math.random() < 0.5 and C.fire2 or C.fire3, CFrame.new(p), true, 0.1)
+			tw(b, 0.3, { Size = Vector3.new(1.2, h, 1.2), CFrame = CFrame.new(p + Vector3.new(0, h / 2, 0)) }, Enum.EasingStyle.Back)
+			task.delay(0.8 + math.random() * 0.8, function()
+				if b.Parent then
+					tw(b, 0.4, { Size = Vector3.new(0.4, h * 1.5, 0.4), CFrame = CFrame.new(p + Vector3.new(0, h * 1.3, 0)), Transparency = 1 })
+				end
+			end)
+			Debris:AddItem(b, 2.2)
 		end
 	end)
 end
@@ -669,6 +751,82 @@ local function grounded(char, root)
 	params.FilterDescendantsInstances = { char, folder }
 	return workspace:Raycast(root.Position, Vector3.new(0, -6, 0), params) ~= nil
 end
+-- v0.25.81 (owner): the dome is VOXEL: a shell of clear glass cubes on a grid (a hemisphere on the ground, a whole
+-- sphere in the air), every 4th cube carrying a diagonal shine streak that glints as a light band sweeps over.
+-- All cubes are welded to one anchored hub, so following the holder moves a single part per frame.
+local function voxelDome(char, root, radius)
+	local r = math.min(radius or 14, 18)
+	local sphere = not grounded(char, root)
+	local cy = sphere and 0 or -2.6
+	local cell = 2.4
+	local hub = blk(Vector3.new(0.2, 0.2, 0.2), Color3.new(1, 1, 1), CFrame.new(root.Position + Vector3.new(0, cy, 0)), false, 1)
+	local cubes, streaks = {}, {}
+	local n = math.ceil(r / cell) + 1
+	for ix = -n, n do
+		for iy = sphere and -n or 0, n do
+			for iz = -n, n do
+				local p = Vector3.new(ix, iy, iz) * cell
+				if math.abs(p.Magnitude - r) <= cell * 0.5 then
+					local c = blk(Vector3.one * 0.1, Color3.fromRGB(205, 245, 255), hub.CFrame * CFrame.new(p), false, 0.82)
+					c.Material = Enum.Material.Glass
+					c.Reflectance = 0.15
+					c.Anchored = false
+					c.Massless = true
+					local w = Instance.new("WeldConstraint")
+					w.Part0, w.Part1 = hub, c
+					w.Parent = c
+					table.insert(cubes, { p = c, d = p.Magnitude, pos = p })
+					if (ix + iy * 3 + iz * 5) % 4 == 0 then
+						local out = p.Unit
+						local cf = CFrame.lookAt(p + out * (cell * 0.52), p + out * 2) * CFrame.Angles(0, 0, 0.7)
+						local sk = blk(Vector3.new(0.2, cell * 0.9, 0.05), Color3.new(1, 1, 1), hub.CFrame * cf, true, 0.75)
+						sk.Anchored = false
+						sk.Massless = true
+						local w2 = Instance.new("WeldConstraint")
+						w2.Part0, w2.Part1 = hub, sk
+						w2.Parent = sk
+						table.insert(streaks, { p = sk, phase = (p.X + p.Y) * 0.25 })
+					end
+				end
+			end
+		end
+	end
+	-- pop in ring by ring from the bottom (sizes only; the welds keep them in place)
+	for _, e in ipairs(cubes) do
+		local delay = math.clamp((e.pos.Y + r) / (2 * r), 0, 1) * 0.15
+		task.delay(delay, function()
+			if e.p.Parent then
+				e.p.Size = Vector3.one * cell
+			end
+		end)
+	end
+	local conn = game:GetService("RunService").RenderStepped:Connect(function()
+		if not root.Parent then
+			return
+		end
+		hub.CFrame = CFrame.new(root.Position + Vector3.new(0, cy, 0))
+		local now = os.clock()
+		for _, e in ipairs(streaks) do
+			local glint = (math.sin(now * 2.2 - e.phase) + 1) / 2
+			e.p.Transparency = 0.8 - glint ^ 3 * 0.75
+		end
+	end)
+	local st = { shape = "Dome" }
+	function st.stop()
+		conn:Disconnect()
+		barriers[char] = nil
+		for _, e in ipairs(cubes) do
+			e.p.Anchored = true
+			fade(e.p, 0, 0.2)
+		end
+		for _, e in ipairs(streaks) do
+			e.p.Anchored = true
+			fade(e.p, 0, 0.2)
+		end
+		Debris:AddItem(hub, 0.3)
+	end
+	return st
+end
 local function dressBarrier(char, shape, radius)
 	local st = barriers[char]
 	if st and st.shape ~= shape then
@@ -686,6 +844,10 @@ local function dressBarrier(char, shape, radius)
 	end
 	local root = char:FindFirstChild("HumanoidRootPart")
 	if not root then
+		return
+	end
+	if shape == "Dome" then
+		barriers[char] = voxelDome(char, root, radius)
 		return
 	end
 	local parts = {}
@@ -806,8 +968,9 @@ FX.F_BarrierDome_End = function(d)
 	for i = 1, 18 do
 		local a = i / 18 * math.pi * 2
 		local pos = at + Vector3.new(math.cos(a) * r * 0.8, 1 + (i % 3) * 2, math.sin(a) * r * 0.8)
-		local p = blk(Vector3.new(2.2, 2.2, 0.25), GLASS, CFrame.lookAt(pos, at), true, 0.45)
-		tw(p, 0.35, { CFrame = CFrame.lookAt(pos + (pos - at).Unit * 6, at), Transparency = 1 })
+		local p = blk(Vector3.new(2.2, 2.2, 2.2), Color3.fromRGB(205, 245, 255), CFrame.lookAt(pos, at), false, 0.6)
+		p.Material = Enum.Material.Glass
+		tw(p, 0.35, { CFrame = CFrame.lookAt(pos + (pos - at).Unit * 6, at) * CFrame.Angles(1, 0.5, 0), Transparency = 1 })
 		Debris:AddItem(p, 0.4)
 	end
 	shatterGlass(at + Vector3.new(0, 2, 0), 30)
@@ -828,15 +991,18 @@ FX.F_BarrierBlock = function(d)
 end
 -- Barrier Steps of OTHER players (yours are real, local, collidable ones below)
 local function stepVisual(pos, collide)
-	local p, rim = glassPane(Vector3.new(4.6, 0.45, 4.6), CFrame.new(pos), 0.45)
+	-- v0.25.81 (owner: the jump steps still had the old look): clear glass like the dome / stairs + a shine streak
+	local p, rim = clearPane(Vector3.new(4.6, 0.45, 4.6), CFrame.new(pos))
 	p.CanCollide = collide == true
 	p.Size = Vector3.new(0.2, 0.45, 0.2)
 	tw(p, 0.12, { Size = Vector3.new(4.6, 0.45, 4.6) }, Enum.EasingStyle.Back)
-	rim.Size = Vector3.new(4.8, 0.2, 4.8)
-	rim.CFrame = CFrame.new(pos - Vector3.new(0, 0.2, 0))
+	rim.Size = Vector3.new(4.8, 0.12, 4.8)
+	rim.CFrame = CFrame.new(pos - Vector3.new(0, 0.22, 0))
+	local sh = blk(Vector3.new(0.22, 0.05, 4), Color3.new(1, 1, 1), CFrame.new(pos + Vector3.new(0, 0.24, 0)) * CFrame.Angles(0, 0.7, 0), true, 0.25)
 	local life = require(game:GetService("ReplicatedStorage").Shared.Config.Fruits).BarrierSteps.Life
 	fade(p, life, 0.4)
 	fade(rim, life, 0.4)
+	fade(sh, life, 0.4)
 	Voxels.Pixels(pos, { count = 8, colors = { GLASS, C.white }, size = 0.25, speed = 4, gravity = 2, life = 0.3, glow = 1, spread = 1.5 })
 	return p
 end
@@ -895,70 +1061,97 @@ local RunService = game:GetService("RunService")
 local function vfx()
 	return require(script.Parent.VFX)
 end
--- Ward Pistol: a ball of glass panes + spinning light rings closes round the right fist during the wind-up, then the
--- punch: the ball smashes into the target (flash, shockwave, glass and rock chips flying)
+-- Ward Pistol (v0.25.81, owner): HOLD = a ball of glass panes + spinning light rings forms round the right fist and
+-- grows; LET GO = the punch throws it: it flies until it meets an enemy (or where it stops) and bursts there.
+local function glassOrb(hand, scale)
+	local orb = {}
+	for _, face in ipairs({ CFrame.new(0, 0, -1), CFrame.new(0, 0, 1), CFrame.new(1, 0, 0) * CFrame.Angles(0, math.pi / 2, 0), CFrame.new(-1, 0, 0) * CFrame.Angles(0, math.pi / 2, 0), CFrame.new(0, 1, 0) * CFrame.Angles(math.pi / 2, 0, 0), CFrame.new(0, -1, 0) * CFrame.Angles(math.pi / 2, 0, 0) }) do
+		local p, rim = clearPane(Vector3.new(2, 2, 0.12), hand.CFrame * face)
+		table.insert(orb, { p = p, off = face, size = Vector3.new(2, 2, 0.12) })
+		table.insert(orb, { p = rim, off = face * CFrame.new(0, 0, 0.03), size = rim.Size })
+	end
+	for k = 1, 2 do
+		for e = 0, 3 do
+			local bar = blk(Vector3.new(2.8, 0.14, 0.14), Color3.fromRGB(230, 252, 255), hand.CFrame, true, 0.1)
+			table.insert(orb, { p = bar, off = CFrame.Angles(0, k * 1.1, 0) * CFrame.Angles(0, 0, e * math.pi / 2) * CFrame.new(0, 1.4, 0), spin = k, size = bar.Size })
+		end
+	end
+	local function place(cf, k, t)
+		for _, e in ipairs(orb) do
+			local spin = e.spin and CFrame.Angles(t * 14 * e.spin, t * 9, 0) or CFrame.identity
+			local o = e.off
+			e.p.CFrame = cf * spin * (o - o.Position) + (cf * spin):VectorToWorldSpace(o.Position * k)
+			e.p.Size = e.size * Vector3.new(k, k, 1)
+		end
+	end
+	local function destroy()
+		for _, e in ipairs(orb) do
+			e.p:Destroy()
+		end
+	end
+	place(hand.CFrame, scale or 1, 0)
+	return place, destroy
+end
+-- the caster's own view while the key is held (Combat startAim): grows from a fist-sized ball to full size
+function FX.HoldOrb(char)
+	local hand = typeof(char) == "Instance" and char:FindFirstChild("RightHand")
+	if not hand then
+		return function() end
+	end
+	local place, destroy = glassOrb(hand, 0.5)
+	local t0 = os.clock()
+	local conn = RunService.RenderStepped:Connect(function()
+		local t = os.clock() - t0
+		if hand.Parent then
+			place(hand.CFrame, 0.5 + math.min(1, t / 1.2) * 0.6, t)
+		end
+	end)
+	return function()
+		conn:Disconnect()
+		destroy()
+	end
+end
 FX.F_BarrierBash = function(d)
 	local char = d.char
 	local hand = typeof(char) == "Instance" and char:FindFirstChild("RightHand")
-	local strike = math.clamp(tonumber(d.strike) or 0.1, 0.02, 0.5)
+	local strike = math.clamp(tonumber(d.strike) or 0.08, 0.02, 0.5)
+	local travel = math.clamp(tonumber(d.travel) or 0.3, 0.02, 0.6)
 	local to = d.to or d.from
-	local orb = {}
-	if hand then
-		for _, face in ipairs({ CFrame.new(0, 0, -0.9), CFrame.new(0, 0, 0.9), CFrame.new(0.9, 0, 0) * CFrame.Angles(0, math.pi / 2, 0), CFrame.new(-0.9, 0, 0) * CFrame.Angles(0, math.pi / 2, 0), CFrame.new(0, 0.9, 0) * CFrame.Angles(math.pi / 2, 0, 0), CFrame.new(0, -0.9, 0) * CFrame.Angles(math.pi / 2, 0, 0) }) do
-			local p, rim = clearPane(Vector3.new(1.8, 1.8, 0.12), hand.CFrame * face)
-			table.insert(orb, { p = p, off = face })
-			table.insert(orb, { p = rim, off = face * CFrame.new(0, 0, 0.03) })
-		end
-		-- two spinning light rings round the ball: thin square frames of 4 bars (voxel look)
-		for k = 1, 2 do
-			for e = 0, 3 do
-				local bar = blk(Vector3.new(2.6, 0.14, 0.14), Color3.fromRGB(230, 252, 255), hand.CFrame, true, 0.1)
-				table.insert(orb, { p = bar, off = CFrame.Angles(0, k * 1.1, 0) * CFrame.Angles(0, 0, e * math.pi / 2) * CFrame.new(0, 1.3, 0), spin = k })
-			end
-		end
+	if not hand then
+		return
 	end
+	-- the ball on the fist until the punch lands (everyone sees it), then it flies
+	local place, destroy = glassOrb(hand, 1)
 	local t0 = os.clock()
+	local from
 	local conn
 	conn = RunService.RenderStepped:Connect(function()
 		local t = os.clock() - t0
-		if not hand or not hand.Parent or t > strike + 0.08 then
-			conn:Disconnect()
-			for _, e in ipairs(orb) do
-				e.p:Destroy()
+		if t < strike then
+			if hand.Parent then
+				place(hand.CFrame, 1, t)
 			end
 			return
 		end
-		local grow = math.min(1, t / 0.08)
-		for _, e in ipairs(orb) do
-			local spin = e.spin and CFrame.Angles(t * 14 * e.spin, t * 9, 0) or CFrame.identity
-			e.p.CFrame = hand.CFrame * spin * e.off
-			if grow < 1 then
-				e.p.Transparency = math.max(e.p.Transparency, 1 - grow)
-			end
-		end
-	end)
-	task.delay(strike, function()
-		local VFX = vfx()
-		local from = hand and hand.Position or d.from
-		local dir = (to - from).Magnitude > 0.1 and (to - from).Unit or Vector3.zAxis
-		local at = to - dir * 1.2
-		-- the glass ball flies the last bit and bursts
-		local ball = blk(Vector3.new(2.4, 2.4, 2.4), Color3.fromRGB(205, 245, 255), CFrame.new(from), false, 0.6)
-		ball.Material = Enum.Material.Glass
-		tw(ball, 0.06, { CFrame = CFrame.new(at) }, Enum.EasingStyle.Linear)
-		Debris:AddItem(ball, 0.07)
-		task.delay(0.06, function()
-			VFX.Flash(at, Color3.new(1, 1, 1), 7)
-			VFX.ImpactSplit(at, dir, Color3.fromRGB(190, 245, 255), 7)
-			VFX.Shockwave(at, dir, Color3.fromRGB(220, 250, 255), 9)
-			shatterGlass(at, 22)
-			Voxels.Blocks(ground(at) + Vector3.new(0, 0.5, 0), { count = 10, colors = { Color3.fromRGB(196, 180, 150), Color3.fromRGB(140, 128, 110) }, size = { 0.5, 1.1 }, speed = 14, up = 14, collide = false, life = 0.8, spread = 2 })
-			VFX.Crack(ground(at), 4)
+		from = from or (hand.Parent and hand.Position or d.from)
+		local k = math.min(1, (t - strike) / travel)
+		local p = from:Lerp(to, k)
+		place(CFrame.lookAt(p, to + (to - from).Unit), 1.1, t)
+		if k >= 1 then
+			conn:Disconnect()
+			destroy()
+			local VFX = vfx()
+			local dir = (to - from).Magnitude > 0.1 and (to - from).Unit or Vector3.zAxis
+			VFX.Flash(to, Color3.new(1, 1, 1), 7)
+			VFX.ImpactSplit(to, dir, Color3.fromRGB(190, 245, 255), 7)
+			VFX.Shockwave(to, dir, Color3.fromRGB(220, 250, 255), 9)
+			shatterGlass(to, 26)
+			Voxels.Blocks(ground(to) + Vector3.new(0, 0.5, 0), { count = 10, colors = { Color3.fromRGB(196, 180, 150), Color3.fromRGB(140, 128, 110) }, size = { 0.5, 1.1 }, speed = 14, up = 14, collide = false, life = 0.8, spread = 2 })
 			pcall(function()
-				require(script.Parent.Audio).Play("ShieldBlock", { pos = at, pitch = 0.7 })
-				require(script.Parent.Audio).Play("PunchHeavy", { pos = at })
+				require(script.Parent.Audio).Play("ShieldBlock", { pos = to, pitch = 0.7 })
+				require(script.Parent.Audio).Play("PunchHeavy", { pos = to })
 			end)
-		end)
+		end
 	end)
 end
 
@@ -1739,6 +1932,15 @@ function FX.Start()
 	folder.Name = "FruitFX"
 	folder.Parent = workspace
 	pcall(stepsLoop)
+	-- v0.25.81 (owner: Haze legs still showed): Roblox's camera transparency controller resets LocalTransparencyModifier
+	-- on your own character's parts whenever the zoom changes, so the hidden limb blocks are re-hidden every frame
+	game:GetService("RunService").RenderStepped:Connect(function()
+		for _, st in pairs(fireDressed) do
+			for _, b in ipairs(st.blocks) do
+				b.LocalTransparencyModifier = 1
+			end
+		end
+	end)
 	task.spawn(function()
 		local Players = game:GetService("Players")
 		while true do

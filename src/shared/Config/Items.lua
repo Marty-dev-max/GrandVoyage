@@ -152,16 +152,18 @@ add("SeaBait", { name = "Sea Bait", desc = "Throw it at a weakened Wild Boar or 
 -- ===== Ammo (slingshot classes, Config/Ammo) =====
 local Ammo = require(script.Parent.Ammo)
 for _, am in ipairs(Ammo.List) do
-	if am.item then
-		add(am.item, { name = am.name, desc = am.desc .. " Pick it with the bullet button by the hotbar.", kind = "Ammo", ammo = am.id, price = am.price, stack = true, rarity = am.rarity or "Common", icon = "🔸" })
-	end
+	add(am.item, { name = am.name, desc = am.desc, kind = "Ammo", ammo = am.id, price = am.price, stack = true, rarity = am.rarity or "Common", icon = "🔸" })
+end
+-- v0.25.81: the old slingshot shots are no longer fired; they only sell
+for _, am in ipairs(Ammo.Legacy) do
+	add(am.item, { name = am.name, desc = "Old slingshot ammo. It no longer fits a musket: sell it.", kind = "Material", price = am.price, stack = true, rarity = am.rarity or "Common", icon = "🔸" })
 end
 
 -- General store stock
 local Shop = {
 	"MeatOnBone", "RoastShank", "BigFeast", "TangerineJuice", "SeaGrog", "CaptainsKeg", "RepairKit", "SeaBait", "SteelOre", "Wood", "SailCloth",
 	"SailorVest", "Bandana", "CompassCharm", "SeastoneBracer", "BeardDark", "BeardBrown", "ClownWig",
-	"Ammo_Ember", "Ammo_Frost", "Ammo_Spark", "Ammo_Needle", "Ammo_Blast", "Ammo_Star",
+	"Ammo_Musket",
 	"Knuckles_Plain", "Sword_Plain", "Slingshot_Plain", "Shoes_Plain", "StormBaton_Plain", "MedKit_Plain", "Hammer_Plain",
 }
 

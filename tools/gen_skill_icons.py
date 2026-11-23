@@ -264,6 +264,27 @@ def wind(s, c=(200, 240, 255)):
         s.arc(x1, y - 3, 3, 270, 450, c, 2, False)
 
 
+def tempest(s):
+    # Tabletop Tempest (v0.25.81, owner: "it is not a fire foot any more"): the cook upside down on his hands, legs
+    # spread wide like a blade at the top, wind arcs whirling round, dust at the hands
+    W = (225, 245, 255)
+    s.arc(16, 13, 13, 200, 340, W, 2)            # wind sweep over the legs
+    s.arc(16, 14, 11, 10, 60, lerp(W, (120, 170, 200), 0.3), 2)  # side swooshes
+    s.arc(16, 14, 11, 120, 170, lerp(W, (120, 170, 200), 0.3), 2)
+    s.rect(14, 18, 18, 24, (60, 90, 150))         # jacket (body upside down)
+    s.rect(13, 24, 19, 27, SKIN)                  # head near the ground
+    s.rect(14, 24, 18, 25, DARK)                  # hair
+    s.line([(14, 21), (10, 28)], SKIN, 2)         # arms down to the floor
+    s.line([(18, 21), (22, 28)], SKIN, 2)
+    s.rect(14, 13, 18, 18, (50, 50, 60))          # hips / trousers
+    s.line([(15, 14), (5, 9)], (50, 50, 60), 3)   # legs spread wide
+    s.line([(17, 14), (27, 9)], (50, 50, 60), 3)
+    s.rect(3, 7, 6, 10, (120, 60, 40))            # shoes
+    s.rect(26, 7, 29, 10, (120, 60, 40))
+    for x in (7, 25):
+        s.rect(x, 28, x + 2, 29, (200, 185, 160), True)  # dust
+
+
 def hexwall(s, c=CYAN, k=1.0, cx=16, cy=16):
     pts = [(cx + 12 * k * math.cos(math.radians(60 * i + 30)), cy + 12 * k * math.sin(math.radians(60 * i + 30))) for i in range(6)]
     s.poly(pts, c)
@@ -384,7 +405,7 @@ SKILLS = {
     # Sea Cook
     'HookKick': R('Cook', lambda s: (boot(s, 13, 15), s.arc(16, 16, 13, 300, 420, WHITE, 2, True))),
     'BanquetKick': R('Cook', lambda s: (tornado(s, 16, 6, 28, (255, 240, 200)), boot(s, 14, 15))),
-    'HeatedLeg': R('Cook', lambda s: (flame(s, 16, 18, 10, 1.3), boot(s, 13, 16, (120, 60, 40)))),
+    'HeatedLeg': R('Cook', tempest),  # v0.25.81 Tabletop Tempest: handstand spin, legs swept round + wind
     'HeartyMeal': R('Cook', lambda s: (meat(s), sparkle(s, 6, 6, YEL, 2), sparkle(s, 26, 5, WHITE, 1))),
     # Navigator
     'ThunderCall': R('Navigator', lambda s: (smoke(s, 16, 8, 0.9, (200, 205, 220), (130, 135, 160)), bolt(s, 16, 20, 0.75))),

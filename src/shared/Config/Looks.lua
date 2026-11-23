@@ -39,10 +39,12 @@ L.Shoes = { "Sandals", "Boots", "Sneakers", "Barefoot", "Tall Boots", "Wraps", "
 L.Eyes = {
 	"Bright", "Gentle", "Sharp", "Fierce", "Sleepy", "Sparkle", "Cat", "Calm", "Happy", "Wink", "Tired", "Starry",
 	"Lovestruck", "Determined", "Shy", "Cool", "Spiral", "Shocked", "Closed", "Round",
+	"Thug", "Stern", "Beady", "Crazed", "Feral", -- v0.25.91: monster eyes (players may pick them too)
 }
 L.Mouths = {
 	"Smile", "Grin", "Smirk", "Open", "Flat", "Frown", "Cat", "Fang", "Shout", "Tongue", "Small Smile", "Nervous",
 	"Toothy", "Pout", "Laugh", "Clench", "Happy",
+	"Snarl", "Scowl", "Painted",
 }
 
 -- Heritages (the game's own peoples): rolled with spins on the server. Each has looks VARIANTS rolled with it

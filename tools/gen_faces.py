@@ -86,6 +86,12 @@ EYES = [
     dict(name='Shocked', rx=56, ry=60, tilt=0.0, lid=7, lash=1, iris=0.42, pupil='dot', shine=1, lower=True, brow=-18),
     dict(name='Closed', closed='line'),
     dict(name='Round', rx=46, ry=50, tilt=0.0, lid=8, lash=0, iris=0.9, pupil='dot', shine=2, lower=False),
+    # v0.25.91 (owner: monsters all had the same face): rougher eyes for monsters (players may pick them too)
+    dict(name='Thug', rx=52, ry=28, tilt=0.2, lid=15, lash=0, iris=0.95, pupil='dot', shine=0, lower=True, brow=30, bw=15, lidcut=0.18),
+    dict(name='Stern', rx=56, ry=30, tilt=0.03, lid=14, lash=0, iris=0.82, pupil='dot', shine=1, lower=False, brow=8, bw=15, lidcut=0.22),
+    dict(name='Beady', rx=30, ry=32, tilt=0.0, lid=7, lash=0, iris=0.98, pupil='bead', shine=1, lower=False, brow=20, bw=12),
+    dict(name='Crazed', rx=58, ry=54, tilt=0.0, lid=7, lash=0, iris=0.3, pupil='dot', shine=0, lower=True, brow=-12, bags=True),
+    dict(name='Feral', rx=56, ry=36, tilt=0.26, lid=12, lash=1, iris=0.9, pupil='slit', shine=1, lower=True, brow=26, bw=12, lidcut=0.12),
 ]
 
 
@@ -119,6 +125,8 @@ def draw_eye(layers, cx, cy, st, mirror):
     if p == 'dot':
         pr = ir * 0.45
         over.ellipse([S(ix - pr), S(iy - pr * 1.15), S(ix + pr), S(iy + pr * 1.15)], fill=(20, 14, 24, 235))
+    elif p == 'bead':
+        over.ellipse([S(ix - ir * 0.9), S(iy - ir), S(ix + ir * 0.9), S(iy + ir)], fill=(20, 14, 24, 245))
     elif p == 'slit':
         over.ellipse([S(ix - ir * 0.16), S(iy - ir * 0.95), S(ix + ir * 0.16), S(iy + ir * 0.95)], fill=(20, 14, 24, 240))
     elif p == 'star':
@@ -176,7 +184,7 @@ def draw_eye(layers, cx, cy, st, mirror):
     bx0, bx1 = cx - rx * 0.85, cx + rx * 0.85
     y0 = by + math.tan(ang) * (-rx * 0.85) * -1
     y1 = by + math.tan(ang) * (rx * 0.85) * -1
-    over.line([(S(bx0), S(y0)), (S(bx1), S(y1))], fill=(60, 40, 40, 230), width=S(9))
+    over.line([(S(bx0), S(y0)), (S(bx1), S(y1))], fill=(60, 40, 40, 230), width=S(st.get('bw', 9)))
 
 
 def draw_closed(over, cx, cy, kind, m=1):
@@ -287,13 +295,81 @@ def make_mouth(i, kind):
     elif kind == 'clench':
         d.rounded_rectangle([S(cx - 30), S(cy - 10), S(cx + 30), S(cy + 10)], radius=S(8), fill=TEETH, outline=INK, width=S(6))
         d.line([(S(cx - 30), S(cy)), (S(cx + 30), S(cy))], fill=INK, width=S(3))
+    elif kind == 'snarl':  # lip pulled up on one side over bared teeth
+        pts = [(S(cx - 34), S(cy + 6)), (S(cx - 6), S(cy + 2)), (S(cx + 16), S(cy - 12)), (S(cx + 34), S(cy - 4)),
+               (S(cx + 30), S(cy + 12)), (S(cx - 34), S(cy + 12))]
+        d.polygon(pts, fill=TEETH)
+        for k in range(1, 6):
+            x = cx - 34 + k * 64 / 6
+            d.line([(S(x), S(cy - 6)), (S(x), S(cy + 12))], fill=INK, width=S(3))
+        d.polygon([(S(cx + 12), S(cy - 8)), (S(cx + 20), S(cy - 9)), (S(cx + 16), S(cy + 6))], fill=TEETH, outline=INK)
+        d.line(pts + [pts[0]], fill=INK, width=S(6), joint='curve')
+    elif kind == 'scowl':
+        arc(30, 12, 200, 340, 11, dy=16)
+        d.line([(S(cx - 34), S(cy + 14)), (S(cx - 26), S(cy + 22))], fill=INK, width=S(7))
+        d.line([(S(cx + 34), S(cy + 14)), (S(cx + 26), S(cy + 22))], fill=INK, width=S(7))
+    elif kind == 'painted':  # clown: wide red painted smile with a white grin inside
+        d.polygon(ellipse_pts(cx, cy - 14, 54, 40, 10, 170, 40) + ellipse_pts(cx, cy - 14, 40, 22, 170, 10, 40)[::1],
+                  fill=(220, 40, 60, 255))
+        pts, _ = opening(30, 16, -4, teeth=True, tongue=False, flat_top=True)
+        d.line(pts + [pts[0]], fill=INK, width=S(5))
     down(img, MW, MH).save(os.path.join(OUT, f'mouth{i}.png'))
+
+
+# ---------- face marks (monsters, v0.25.91): one full-face overlay (256x256) on top of eyes + mouth ----------
+FW = 256
+
+
+def make_mark(name):
+    img = canvas(FW, FW)
+    d = ImageDraw.Draw(img)
+    # where things sit on the face (matches VoxelChar faceLayer boxes): eyes ~ (0.27|0.73, 0.5), mouth (0.5, 0.75)
+    ex, ey, mx, my = FW * 0.27, FW * 0.5, FW * 0.5, FW * 0.76
+    if name == 'Scar':  # slash over the right eye (viewer's left) with stitches
+        a, b = (ex - 30, ey - 52), (ex + 26, ey + 46)
+        d.line([(S(a[0]), S(a[1])), (S(b[0]), S(b[1]))], fill=(176, 72, 80, 255), width=S(7))
+        for k in range(1, 5):
+            t = k / 5
+            x, y = a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t
+            d.line([(S(x - 9), S(y + 4)), (S(x + 9), S(y - 4))], fill=(90, 40, 46, 255), width=S(3))
+    elif name == 'Stubble':
+        import random
+        rnd = random.Random(3)
+        for _ in range(90):
+            x, y = rnd.uniform(FW * 0.18, FW * 0.82), rnd.uniform(FW * 0.72, FW * 0.97)
+            if abs(x - mx) < 26 and abs(y - my) < 12:
+                continue  # keep the mouth clear
+            d.ellipse([S(x - 1.6), S(y - 1.6), S(x + 1.6), S(y + 1.6)], fill=(40, 30, 30, 120))
+    elif name == 'ClownPaint':
+        for cx in (ex, FW - ex):
+            d.polygon([(S(cx), S(ey - 62)), (S(cx + 9), S(ey - 40)), (S(cx), S(ey - 30)), (S(cx - 9), S(ey - 40))], fill=(60, 110, 230, 255))
+            d.polygon([(S(cx), S(ey + 30)), (S(cx + 9), S(ey + 42)), (S(cx), S(ey + 62)), (S(cx - 9), S(ey + 42))], fill=(60, 110, 230, 255))
+            d.ellipse([S(cx - 16), S(ey + 52), S(cx + 16), S(ey + 76)], fill=(255, 110, 140, 200))
+    elif name == 'WarPaint':
+        for cx, m in ((ex, -1), (FW - ex, 1)):
+            for k in range(2):
+                y = ey + 40 + k * 13
+                d.line([(S(cx - 22), S(y)), (S(cx + 22), S(y - 6 * m * 0))], fill=(200, 40, 40, 235), width=S(6))
+    elif name == 'Gills':
+        for cx, m in ((FW * 0.1, 1), (FW * 0.9, -1)):
+            for k in range(3):
+                y = ey + 34 + k * 14
+                d.line(ellipse_pts(cx, y, 14, 9, 270 - 60 * m, 270 + 60 * m, 16), fill=(40, 60, 90, 220), width=S(4))
+    elif name == 'Whiskers':
+        for cx, m in ((FW * 0.2, -1), (FW * 0.8, 1)):
+            for k in range(3):
+                y = my - 18 + k * 10
+                d.line([(S(cx - 20 * m), S(y)), (S(cx + 16 * m), S(y - 8 + k * 8))], fill=(40, 30, 40, 220), width=S(3))
+    down(img, FW, FW).save(os.path.join(OUT, f'mark{name}.png'))
+
+
+MARKS = ['Scar', 'Stubble', 'ClownPaint', 'WarPaint', 'Gills', 'Whiskers']
 
 
 MOUTHS = [('Smile', 'smile'), ('Grin', 'grin'), ('Smirk', 'smirk'), ('Open', 'o'), ('Flat', 'flat'), ('Frown', 'frown'),
           ('Cat', 'cat'), ('Fang', 'fang'), ('Shout', 'shout'), ('Tongue', 'tongue'), ('Small Smile', 'small'),
           ('Nervous', 'wavy'), ('Toothy', 'toothy'), ('Pout', 'pout'), ('Laugh', 'laugh'), ('Clench', 'clench'),
-          ('Happy', 'open_smile')]
+          ('Happy', 'open_smile'), ('Snarl', 'snarl'), ('Scowl', 'scowl'), ('Painted', 'painted')]
 
 
 def preview():
@@ -326,6 +402,8 @@ if __name__ == '__main__':
         make_eyes(i, st)
     for i, (_, kind) in enumerate(MOUTHS, 1):
         make_mouth(i, kind)
+    for mk in MARKS:
+        make_mark(mk)
     preview()
     print('eyes', len(EYES), 'mouths', len(MOUTHS))
     print('EYE NAMES', [e['name'] for e in EYES])

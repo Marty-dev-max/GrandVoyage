@@ -721,6 +721,9 @@ local function buildAll(look, heritage, variant, mode, place, emit)
 	faceLayer(e .. "_iris2", 0.04, 0.24, 0.92, 0.46, C("eyes2"), 3)
 	faceLayer(e .. "_over", 0.04, 0.24, 0.92, 0.46, nil, 4)
 	faceLayer("mouth" .. look.mouth, 0.27, 0.64, 0.46, 0.23, nil, 5)
+	if type(look.mark) == "string" then
+		faceLayer("mark" .. look.mark, 0, 0, 1, 1, nil, 6) -- v0.25.91: monster face marks (scar, stubble, clown paint ...)
+	end
 
 	local style = HAIR[look.hair] or HAIR[1]
 	local lumpy = not NO_LUMP[look.hair] and not LITE

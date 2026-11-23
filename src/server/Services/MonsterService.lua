@@ -849,6 +849,7 @@ local function seaInit(mob)
 	mob.swimY = SEA - 3 + half
 	mob.hiddenY = SEA - half * 2 - 10
 	mob.model:SetAttribute("BodyY", mob.bodyY)
+	mob.model:SetAttribute("SeaState", "hidden")
 	mob.sea = { state = "hidden", rear = 0, until_ = 0, angle = math.random() * math.pi * 2, look = -root.CFrame.LookVector }
 	ap.Position = Vector3.new(mob.home.X, mob.hiddenY, mob.home.Z)
 	ao.CFrame = CFrame.lookAt(Vector3.zero, Vector3.new(1, 0, 0))
@@ -1002,6 +1003,7 @@ local function seaStep(mob, now)
 		if pl then
 			mob.target = pl
 			sea.state = "rising"
+			mob.model:SetAttribute("SeaState", "rising") -- client BossIntro
 			sea.until_ = now + 1.8
 			local up = Vector3.new(home.X, SEA, home.Z)
 			Net.FX("SerpentRise", { pos = up }, up, 700)
@@ -1012,6 +1014,7 @@ local function seaStep(mob, now)
 		mob.ap.MaxVelocity = 26
 		if now >= sea.until_ then
 			sea.state = "fight"
+			mob.model:SetAttribute("SeaState", "fight") -- client BossIntro
 			mob.ap.MaxVelocity = def.moveSpeed * 1.6
 		end
 	elseif sea.state == "fight" then
@@ -1023,6 +1026,7 @@ local function seaStep(mob, now)
 		end
 		if not troot then
 			sea.state = "diving"
+			mob.model:SetAttribute("SeaState", "diving") -- client BossIntro
 			sea.until_ = now + 3
 			sea.rear = 0
 		else
@@ -1056,6 +1060,7 @@ local function seaStep(mob, now)
 		target = Vector3.new(pos.X, mob.hiddenY, pos.Z)
 		if now >= sea.until_ then
 			sea.state = "hidden"
+			mob.model:SetAttribute("SeaState", "hidden") -- client BossIntro
 			mob.hp = mob.maxHp
 			mob.damageBy = {}
 			mob.target = nil

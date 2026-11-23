@@ -14,6 +14,7 @@ local BossIntro = {}
 local New, Tween, T = UI.New, UI.Tween, UI.Theme
 
 local NEAR = 90 -- studs from your character
+local SEA_NEAR = 320 -- a sea boss wakes for ships within its wakeRadius (150) and then circles them
 local seen = setmetatable({}, { __mode = "k" })
 local playing = false
 
@@ -130,10 +131,32 @@ function BossIntro.Start()
 				for _, m in ipairs(folder:GetChildren()) do
 					if m:GetAttribute("Boss") and not seen[m] and (m:GetAttribute("HP") or 1) > 0 then
 						local p = m:GetPivot().Position
-						-- a sea boss waits under the water until it rises: no intro for a hidden one
-						if p.Y > -4 and (p - root.Position).Magnitude < NEAR then
+						-- a sea boss (SeaState from MonsterService) waits under the water: intro once it rises, from
+						-- further away (you are on a ship and it surfaces around you)
+						local sea = m:GetAttribute("SeaState")
+						local ok
+						if sea ~= nil then
+							ok = (sea == "rising" or sea == "fight") and Vector2.new(p.X - root.Position.X, p.Z - root.Position.Z).Magnitude < SEA_NEAR
+						else
+							ok = (p - root.Position).Magnitude < NEAR
+						end
+						if ok then
 							seen[m] = true
-							task.spawn(play, m)
+							playing = true
+							task.spawn(function()
+								local fine, err = pcall(play, m)
+								if not fine then
+									-- never leave the music muted or the next intro blocked
+									warn("[BossIntro]", err)
+									State.bossIntroUntil = 0
+									State.lastBoss = os.clock()
+									local g = Players.LocalPlayer.PlayerGui:FindFirstChild("BossIntro")
+									if g then
+										g:Destroy()
+									end
+								end
+								playing = false
+							end)
 							break
 						end
 					end

@@ -87,7 +87,6 @@ local function standardNPCs(ctx)
 	local r = math.min(island.townRadius, island.radius - 40)
 	npc(ctx, "Blacksmith", "Blacksmith", Color3.fromRGB(110, 90, 80), "bandana", r * 0.55, -r * 0.6, { SubTitle = "Refine & Cards" })
 	npc(ctx, "Shop", "General Store", Color3.fromRGB(240, 170, 80), nil, -r * 0.2, -r * 0.75, { SubTitle = "Shop" })
-	npc(ctx, "Tavern", "Tavern Keeper", Color3.fromRGB(200, 90, 90), nil, -r * 0.6, -r * 0.4, { SubTitle = "Hire Crew" })
 	npc(ctx, "FastTravel", "Courier Gull Post", Color3.fromRGB(240, 240, 240), "marine", -r * 0.65, r * 0.35, { SubTitle = "Fast Travel" })
 	npc(ctx, "Guide", Quests.Guide[island.id] or "Guide", Color3.fromRGB(255, 200, 90), "captain", r * 0.32, r * 0.05, { SubTitle = "📜 Quests" })
 	-- v0.25.21 (owner): Bounty Board and Guild Registrar only on the first and the last island
@@ -233,6 +232,8 @@ local function buildShipyard(island)
 	local a = island.yardAngle
 	if a then
 		npc({ island = island, reserve = function() end }, "Shipwright", "Shipwright", Color3.fromRGB(90, 140, 200), "bandana", island.radius - 24, platformZ + l / 2 + 12, { SubTitle = "Shipyard & Launch" }, Vector2.new(island.radius + 30, platformZ))
+		-- v0.25.107 (owner): the Tavern Keeper (hire crew) stands beside the Shipwright on every island
+		npc({ island = island, reserve = function() end }, "Tavern", "Tavern Keeper", Color3.fromRGB(200, 90, 90), nil, island.radius - 24, platformZ + l / 2 + 22, { SubTitle = "Hire Crew" }, Vector2.new(island.radius + 30, platformZ))
 		turnGroup(group, island, a)
 	end
 	Kit.parent = prevParent
@@ -970,7 +971,7 @@ end
 -- away and rebuilt from code at server start (so the owner's published place updates through Rojo too).
 -- Hand-built content made in Studio goes in workspace.Handmade (never touched by rebuilds). Kit props placed there
 -- (tagged EnvProp/EnvPart) are dressed with the stylized meshes like the generated ones.
-WB.WORLD_VERSION = 22 -- v22 (v0.25.27): shipyards snap to the island side nearest the next island; v21 (v0.25.25): shipyards face the next island, circus ship offshore; v20 (v0.25.24): Marmalade Town hand-laid (World/Marmalade); v19 (v0.25.23): Conch Bay street spawns keep their houses; v18 (v0.25.22): Conch Bay terraced (quay, two terraces, garrison plateau, tapered towers); v17 (v0.25.21): islands turned to face the previous one, Conch Bay stairs; v16 (v0.25.20): Daybreak spawn by Rowan, Conch Bay hand-laid (World/ConchBay); v15 (v0.25.11): islands spread north/south, wider sea, islets; v14 (v0.25.6): Daybreak spawn by the campfire; v13: voxel NPCs; v12: Voxelize pass
+WB.WORLD_VERSION = 23 -- v23 (v0.25.107): Tavern Keeper beside the Shipwright; v22 (v0.25.27): shipyards snap to the island side nearest the next island; v21 (v0.25.25): shipyards face the next island, circus ship offshore; v20 (v0.25.24): Marmalade Town hand-laid (World/Marmalade); v19 (v0.25.23): Conch Bay street spawns keep their houses; v18 (v0.25.22): Conch Bay terraced (quay, two terraces, garrison plateau, tapered towers); v17 (v0.25.21): islands turned to face the previous one, Conch Bay stairs; v16 (v0.25.20): Daybreak spawn by Rowan, Conch Bay hand-laid (World/ConchBay); v15 (v0.25.11): islands spread north/south, wider sea, islets; v14 (v0.25.6): Daybreak spawn by the campfire; v13: voxel NPCs; v12: Voxelize pass
 
 -- Old copies of the map can hide anywhere in Workspace: a renamed or regrouped World, an island dragged into
 -- Handmade, single NPCs / chests / docks pasted from an old bake. They draw on top of the new islands and register

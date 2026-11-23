@@ -844,6 +844,8 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     the item. FORGE/EVOLVE play `UI/ForgeScene` (3 s ViewportFrame: still copy of the nearest Blacksmith NPC, tags/
     prompts stripped, `NpcLife.Rest` first; right arm + block hammer swung around the shoulder, 3 strikes = AnvilClang +
     neon sparks + shake), the server result shows after it.
+  * v0.25.107 (owner): Tavern Keeper stands beside the Shipwright on every island (WorldBuilder shipyard group, turned
+    with it; Daybreak at the east harbor); standardNPCs / ConchBay / Marmalade no longer place one. WORLD_VERSION 23.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

@@ -308,7 +308,6 @@ local function npcs(ctx, api)
 	end
 	put("Shop", "General Store", Color3.fromRGB(240, 170, 80), nil, -22, 132, { SubTitle = "Shop" })
 	put("Blacksmith", "Blacksmith", Color3.fromRGB(110, 90, 80), "bandana", 22, 132, { SubTitle = "Refine & Cards" })
-	put("Tavern", "Tavern Keeper", Color3.fromRGB(200, 90, 90), nil, -22, 86, { SubTitle = "Hire Crew" })
 	put("FastTravel", "Courier Gull Post", Color3.fromRGB(240, 240, 240), "marine", 22, 86, { SubTitle = "Fast Travel" })
 	put("Guide", Quests.Guide[ctx.island.id] or "Guide", Color3.fromRGB(255, 200, 90), "captain", -14, 176, { SubTitle = "📜 Quests" }, Vector2.new(0, 150))
 	local d = Dungeons[ctx.island.dungeon]

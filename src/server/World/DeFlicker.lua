@@ -13,10 +13,22 @@ local function q(x, s)
 	return math.floor(x / s + 0.5)
 end
 
+-- v0.25.112: the first runtime pass hit the server script timeout (whole Init aborted); yield every ~50 ms so a big
+-- world spreads over a few frames (results do not depend on timing)
+local lastYield = 0
+local function breathe()
+	if os.clock() - lastYield > 0.05 then
+		task.wait()
+		lastYield = os.clock()
+	end
+end
+
 function D.Run(root)
 	local t0 = os.clock()
 	local buckets = {}
+	lastYield = os.clock()
 	for _, p in ipairs(root:GetDescendants()) do
+		breathe()
 		if p.ClassName == "Part" and (p.Shape == nil or p.Shape == Enum.PartType.Block) and p.Transparency < 0.9 and p.Name ~= "Water" then -- (the Lune bake leaves Shape unset = block)
 			local cf, sz = p.CFrame, p.Size / 2
 			local axes = {
@@ -48,6 +60,7 @@ function D.Run(root)
 	end
 	local moves, moved = {}, 0
 	for _, b in pairs(buckets) do
+		breathe()
 		if #b > 1 then
 			-- biggest face first: it stays, the pieces on it get levels
 			table.sort(b, function(x, y)
@@ -59,6 +72,9 @@ function D.Run(root)
 			-- earlier (bigger) faces are found through a CELL grid on the plane; faces wider than BIG cells go in a list
 			local grid, big = {}, {}
 			for i = 1, #b do
+				if i % 64 == 0 then
+					breathe()
+				end
 				local A = b[i]
 				local c0u, c1u, c0v, c1v = math.floor(A.u0 / CELL), math.floor(A.u1 / CELL), math.floor(A.v0 / CELL), math.floor(A.v1 / CELL)
 				local level, seen = 0, {}
@@ -75,7 +91,7 @@ function D.Run(root)
 				if not wide then
 					for cu = c0u, c1u do
 						for cv = c0v, c1v do
-							for _, B in ipairs(grid[cu .. ":" .. cv] or {}) do
+							for _, B in ipairs(grid[cu * 65536 + cv] or {}) do
 								test(B)
 							end
 						end
@@ -92,7 +108,7 @@ function D.Run(root)
 				else
 					for cu = c0u, c1u do
 						for cv = c0v, c1v do
-							local k = cu .. ":" .. cv
+							local k = cu * 65536 + cv
 							local cell = grid[k]
 							if not cell then
 								cell = {}

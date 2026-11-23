@@ -11,12 +11,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UI = require(script.Parent.UIKit)
 local Audio = require(script.Parent.Parent.Controllers.Audio)
 local Tex = require(ReplicatedStorage.Shared.Config.Textures)
+local CardArt = require(script.Parent.CardArt)
 
 local CardReveal = {}
 local New, Tween = UI.New, UI.Tween
 local queue, busy = {}, false
 
-local W, H = 220, 308
+local W, H = CardArt.W, CardArt.H
 local GOLD = Color3.fromRGB(255, 214, 90)
 
 local function screenGui()
@@ -103,108 +104,11 @@ local function ring(parent, color, delay, size, img)
 	end)
 end
 
--- the card face: rarity gradient, foil sheen, art popping out of the top, name, stars, bonus
-local function buildFace(card, def, tier, k)
-	local face = New("Frame", { Name = "Face", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), Visible = false, ZIndex = 6, Parent = card })
-	UI.Corner(face, 16)
-	local g = New("UIGradient", { Color = ColorSequence.new(tier.top, tier.bottom), Rotation = 90, Parent = face })
-	if tier.rainbow then
-		g.Color = ColorSequence.new(Color3.fromRGB(60, 50, 80), Color3.fromRGB(12, 10, 20))
-	elseif tier.prismatic then
-		-- Mythic: rainbow prismatic face that shimmers, with a turning rainbow rim
-		g.Color = UI.PrismaticSequence
-		UI.SpinGradient(g)
-	end
-	local rim = UI.Stroke(face, (tier.rainbow or tier.prismatic) and Color3.new(1, 1, 1) or tier.color:Lerp(Color3.new(1, 1, 1), 0.4), 4)
-	if tier.prismatic then
-		UI.SpinGradient(New("UIGradient", { Color = UI.RainbowSequence, Parent = rim }))
-	end
-	-- inner art window
-	local art = New("Frame", { Name = "Art", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 16), Size = UDim2.new(1, -28, 0, 150), BackgroundColor3 = Color3.fromRGB(20, 18, 34), BackgroundTransparency = 0.25, ZIndex = 7, Parent = face })
-	UI.Corner(art, 10)
-	UI.Stroke(art, Color3.fromRGB(20, 16, 30), 2)
-	New("UIGradient", { Color = ColorSequence.new(tier.color:Lerp(Color3.new(0, 0, 0), 0.4), Color3.fromRGB(14, 12, 24)), Rotation = 90, Parent = art })
-	-- holographic foil: two moving rarity-tinted bands across the whole face
-	local foil = New("Frame", { Name = "Foil", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.35, ZIndex = 12, Parent = face })
-	UI.Corner(foil, 16)
-	local fc = (tier.rainbow or tier.prismatic) and UI.RainbowSequence or ColorSequence.new({
-		ColorSequenceKeypoint.new(0, tier.color),
-		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(150, 255, 240)),
-		ColorSequenceKeypoint.new(1, tier.top),
-	})
-	local fg = New("UIGradient", {
-		Color = fc,
-		Rotation = 30,
-		Transparency = NumberSequence.new({
-			NumberSequenceKeypoint.new(0, 1),
-			NumberSequenceKeypoint.new(0.3, 1),
-			NumberSequenceKeypoint.new(0.4, 0.35 - 0.2 * k),
-			NumberSequenceKeypoint.new(0.47, 1),
-			NumberSequenceKeypoint.new(0.6, 1),
-			NumberSequenceKeypoint.new(0.68, 0.5 - 0.2 * k),
-			NumberSequenceKeypoint.new(0.74, 1),
-			NumberSequenceKeypoint.new(1, 1),
-		}),
-		Parent = foil,
-	})
-	-- the monster (or the card icon) bigger than the window, so it breaks out over the top edge
-	local view = UI.ModelView(face, "Monsters", def.monster or "", 230, true)
-	if not view then
-		view = UI.Icon(face, UI.ItemIconId(def) or "🃏", 150)
-	end
-	view.AnchorPoint = Vector2.new(0.5, 0.5)
-	view.Position = UDim2.new(0.5, 0, 0, 70)
-	view.ZIndex = 9
-	local viewScale = New("UIScale", { Scale = 0.4, Parent = view })
-	-- name + stars + bonus
-	local name = UI.Text(face, def.name or "Card", 20, Color3.new(1, 1, 1), "Display", {
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 174),
-		Size = UDim2.new(1, -16, 0, 26),
-		TextXAlignment = Enum.TextXAlignment.Center,
-		TextScaled = true,
-		ZIndex = 11,
-	})
-	UI.Stroke(name, Color3.fromRGB(20, 16, 30), 2.5, Enum.ApplyStrokeMode.Contextual)
-	local chroma = {}
-	if tier.rank >= 6 then
-		for i, c in ipairs({ Color3.fromRGB(255, 40, 80), Color3.fromRGB(40, 230, 255) }) do
-			local copy = name:Clone()
-			for _, ch in ipairs(copy:GetChildren()) do
-				ch:Destroy()
-			end
-			copy.TextColor3 = c
-			copy.TextTransparency = 0.25
-			copy.ZIndex = 10
-			copy.Parent = face
-			chroma[i] = copy
-		end
-	end
-	local starRow = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 202), Size = UDim2.fromOffset(180, 28), ZIndex = 11, Parent = face })
-	local nStars = UI.Rarity.StarsOf(tier.id) -- Common 1 .. Mythic 5
-	local stars = {}
-	for i = 1, nStars do
-		local st = UI.Text(starRow, "★", 26, i <= nStars and GOLD or Color3.new(0.3, 0.3, 0.3), "Display", {
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.new(0.5, (i - (nStars + 1) / 2) * 30, 0.5, 0),
-			Size = UDim2.fromOffset(28, 28),
-			TextXAlignment = Enum.TextXAlignment.Center,
-			TextTransparency = 1,
-			ZIndex = 11,
-		})
-		UI.Stroke(st, Color3.fromRGB(110, 60, 10), 2, Enum.ApplyStrokeMode.Contextual)
-		stars[i] = { label = st, scale = New("UIScale", { Scale = 0, Parent = st }) }
-	end
-	local desc = UI.Text(face, (def.desc or "") .. ((def.cardSlot and ("\n" .. string.upper(def.cardSlot) .. " SLOT")) or ""), 14, Color3.fromRGB(255, 250, 235), "Bold", {
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 234),
-		Size = UDim2.new(1, -20, 0, 60),
-		TextXAlignment = Enum.TextXAlignment.Center,
-		TextWrapped = true,
-		ZIndex = 11,
-	})
-	UI.Stroke(desc, Color3.fromRGB(20, 16, 30), 2, Enum.ApplyStrokeMode.Contextual)
-	return { face = face, foil = fg, view = view, viewScale = viewScale, chroma = chroma, name = name, stars = stars }
+-- the card face (UI/CardArt: TCG layout, manga art panel, real 3D monster), hidden until the flip
+local function buildFace(card, def)
+	local parts = CardArt.Build(card, def, { popIn = true })
+	parts.face.Visible = false
+	return parts
 end
 
 local function play(def)
@@ -261,7 +165,7 @@ local function play(def)
 
 	-- 2. whip flip with ghost trails, hitstop, bouncy landing
 	Audio.Play("CardFlip", { pitch = pitch + 0.1 })
-	local parts = buildFace(card, def, tier, k)
+	local parts = buildFace(card, def)
 	for i = 1, 2 + math.floor(k * 3) do
 		local ghost = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = home + UDim2.fromOffset(-i * 14, 0), Size = UDim2.fromOffset(W * 0.85, H * 0.85), BackgroundColor3 = tier.color, BackgroundTransparency = 0.45 + i * 0.1, ZIndex = 5, Parent = g })
 		UI.Corner(ghost, 16)
@@ -324,7 +228,7 @@ local function play(def)
 		local my = math.clamp((m.Y / vs.Y - 0.5) * 2, -1, 1) + math.cos(t * 1.1) * 0.2
 		card.Rotation = mx * 4
 		card.Position = home + UDim2.fromOffset(mx * 6, my * 4)
-		parts.view.Position = UDim2.new(0.5, mx * 16, 0, 70 + my * 10)
+		parts.view.Position = parts.viewPos + UDim2.fromOffset(mx * 10, my * 6)
 		for i, c in ipairs(parts.chroma) do
 			local sgn = i == 1 and -1 or 1
 			c.Position = parts.name.Position + UDim2.fromOffset(sgn * (2 + math.random() * 3 * k), (math.random() - 0.5) * 2)

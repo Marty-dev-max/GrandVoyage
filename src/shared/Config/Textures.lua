@@ -2,6 +2,7 @@
 return {
 	bubble = "rbxassetid://85888187238145",
 	burst = "rbxassetid://131596201558088",
+	card_manga = "rbxassetid://116340376319148",
 	crack = "rbxassetid://96552388532690",
 	flame = "rbxassetid://97002980212489",
 	focuslines = "rbxassetid://134938825303806",

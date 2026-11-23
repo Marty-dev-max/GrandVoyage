@@ -811,6 +811,47 @@ function UI.AccessoryView(parent, id, size, props)
 	return UI.ModelViewOf(parent, m, size, 0.8, props)
 end
 
+-- v0.25.90: a monster as players see it in the world: humanoid ones are voxel characters (Config/MonsterLooks, the
+-- same look + accessories + held weapon ModelFactory.VoxelMonster builds on the server), others the Assets mesh.
+function UI.MonsterModel(id)
+	local MonsterLooks = require(ReplicatedStorage.Shared.Config.MonsterLooks)
+	local look = MonsterLooks.Look(id or "")
+	if not look then
+		local src = UI.ModelAsset("Monsters", id or "")
+		return src and src:Clone()
+	end
+	local VC = require(ReplicatedStorage.Shared.Modules.VoxelChar)
+	local Accessory = require(ReplicatedStorage.Shared.Modules.Accessory)
+	local race, variant = MonsterLooks.Race(id)
+	local m = VC.Preview(look, race, variant)
+	local function limbOf(limb)
+		local r = VC.Rest[limb == "Head" and "Head" or limb]
+		if not r then
+			return nil
+		end
+		if limb == "Head" then
+			return CFrame.new(r[2] + Vector3.new(0, (VC.HEAD - r[1].Y) / 2, 0)), Vector3.new(VC.HEAD, VC.HEAD, VC.HEAD)
+		end
+		return CFrame.new(r[2]), r[1]
+	end
+	local e = MonsterLooks.ById[id]
+	local list = table.clone(e.acc or {})
+	if e.held then
+		table.insert(list, e.held)
+	end
+	for _, a in ipairs(list) do
+		Accessory.Build(a, limbOf, function(sz, cf, color, material)
+			New("Part", { Anchored = true, Size = sz, CFrame = cf, Color = color, Material = material or Enum.Material.SmoothPlastic, Parent = m })
+		end)
+	end
+	m.WorldPivot = CFrame.new((m:GetBoundingBox()).Position)
+	return m
+end
+function UI.MonsterView(parent, id, size, spin, props)
+	local m = UI.MonsterModel(id)
+	return m and UI.ModelViewOf(parent, m, size, spin, props)
+end
+
 function UI.ModelViewOf(parent, m, size, spin, props)
 	local vp = New("ViewportFrame", {
 		BackgroundTransparency = 1,

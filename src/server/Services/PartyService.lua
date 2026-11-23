@@ -63,6 +63,27 @@ function Party.Leave(player)
 	end
 end
 
+-- v0.25.108 (crews): put `player` (not in a party) into `mate`'s party, making one if needed; false when full
+function Party.Join(player, mate)
+	if partyOf[player] or not mate.Parent then
+		return false
+	end
+	local p = partyOf[mate]
+	if p and #p.members >= MAX then
+		return false
+	end
+	if not p then
+		nextId += 1
+		p = { id = nextId, leader = mate, members = { mate } }
+		parties[p.id] = p
+		partyOf[mate] = p
+	end
+	table.insert(p.members, player)
+	partyOf[player] = p
+	push(p)
+	return true
+end
+
 -- Share EXP with nearby party members
 function Party.ShareExp(player, base, job, pos)
 	local p = partyOf[player]

@@ -17,7 +17,7 @@ Hotkeys.Actions = {
 	{ "Set4", "Set 4: Armament", "Four" }, { "Set5", "Set 5: Observation", "Five" }, { "Set6", "Set 6: Conqueror", "Six" },
 	{ "Dash", "Dash", "Q" }, { "Auto", "Auto / Manual", "T" }, { "Target", "Nearest target", "Tab" }, { "Race", "Race mode", "V" }, { "Sling", "Slingshot Launch (Bounce)", "U" },
 	{ "Inventory", "Bag", "I" }, { "Skills", "Skills", "K" }, { "Quests", "Quests", "J" }, { "Map", "Map", "M" },
-	{ "Pets", "Pets", "N" }, { "PearlShop", "Store", "H" }, { "Stats", "Stats", "Y" }, { "Guild", "Guild", "G" },
+	{ "Pets", "Pets", "N" }, { "PearlShop", "Store", "H" }, { "Stats", "Stats", "Y" }, { "Guild", "Crew", "G" },
 	{ "Party", "Party", "P" }, { "BossBoard", "Bosses", "B" }, { "Settings", "Settings", "O" }, { "MenuHub", "Menu", "L" },
 }
 local DEFAULT = {}

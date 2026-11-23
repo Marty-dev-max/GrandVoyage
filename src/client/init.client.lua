@@ -62,6 +62,7 @@ local panelForRole = {
 	BossBoard = "BossBoard",
 	JobMaster = "JobMaster",
 	Guild = "Guild",
+	Marine = "Marine",
 	Dungeon = "Dungeon",
 	Stall = "Stall",
 	StallSetup = "StallSetup",
@@ -362,10 +363,11 @@ local handlers = {
 	end,
 	Prompt = function(d)
 		Audio.Play("Bell")
+		local answer = d.kind == "Duel" and "DuelRespond" or (d.kind == "CrewInvite" and "CrewRespond" or "PartyRespond")
 		UI.Confirm(d.text, function()
-			Net.Request(d.kind == "Duel" and "DuelRespond" or "PartyRespond", { accept = true })
+			Net.Request(answer, { accept = true })
 		end, function()
-			Net.Request(d.kind == "Duel" and "DuelRespond" or "PartyRespond", { accept = false })
+			Net.Request(answer, { accept = false })
 		end)
 	end,
 }

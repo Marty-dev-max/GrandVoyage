@@ -154,7 +154,7 @@ end
 local styled = setmetatable({}, { __mode = "k" })
 -- pixel icon names (v0.25.8: no emoji)
 local NEAR = 22 -- studs: closer than this an NPC plate shows its name and role
-local ROLE_ICON = { Blacksmith = "hammer", Shop = "bag", Tavern = "juice", FastTravel = "map", Shipwright = "anchor", BossBoard = "crown", JobMaster = "book", Guild = "flag", Dungeon = "skull", Stall = "chest", Quest = "scroll" }
+local ROLE_ICON = { Blacksmith = "hammer", Shop = "bag", Tavern = "juice", FastTravel = "map", Shipwright = "anchor", BossBoard = "crown", JobMaster = "book", Guild = "flag", Marine = "anchor", Dungeon = "skull", Stall = "chest", Quest = "scroll" }
 -- v0.25.8 (owner): nameplates are big up close and shrink with distance, gone when far (the plaza was a wall of names)
 local plates = setmetatable({}, { __mode = "k" }) -- billboard -> { sc = UIScale, text, ribbon }
 local function styleNameplate(model)

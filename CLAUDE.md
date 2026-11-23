@@ -846,6 +846,11 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     neon sparks + shake), the server result shows after it.
   * v0.25.107 (owner): Tavern Keeper stands beside the Shipwright on every island (WorldBuilder shipyard group, turned
     with it; Daybreak at the east harbor); standardNPCs / ConchBay / Marmalade no longer place one. WORLD_VERSION 23.
+  * v0.25.108 (owner): players see **Crew**, never "Guild" (code, saves, DataStore, Net names keep Guild*). Forming a crew
+    picks no side; faction is per player (p.faction, attr Faction): `SetFaction` Marine/None only at the Marine Registrar
+    (role "Marine", Conch Bay quay, Panels.Marine), Pirate from the Crew window (not while Marine; Lv GuildCreateLevel).
+    `CrewInvite` { name } -> Prompt kind CrewInvite -> `CrewRespond`; crewmates auto-party (`PartyService.Join`) on load
+    and on joining. No Guild Registrar NPC any more. WORLD_VERSION 24.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

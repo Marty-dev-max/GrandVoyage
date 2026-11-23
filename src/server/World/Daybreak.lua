@@ -972,7 +972,6 @@ local function npcs(ctx, api)
 	-- plaza: Job Master and the Bounty Board at the trail entrance, shops around the fountain
 	put("JobMaster", "Job Master", Color3.fromRGB(120, 200, 140), "marine", onPlaza(2.75), { SubTitle = "Choose a Class" }, P0)
 	put("BossBoard", "Bounty Board", Color3.fromRGB(255, 220, 120), nil, onPlaza(-2.75), { SubTitle = "Bosses & Bounties" }, P0)
-	put("Guild", "Guild Registrar", Color3.fromRGB(90, 90, 200), "marine", onPlaza(0.2), { SubTitle = "Marine / Pirate Guilds" }, P0)
 	put("Shop", "General Store", Color3.fromRGB(240, 170, 80), nil, onPlaza(-1.25), { SubTitle = "Shop" }, P0)
 	put("Blacksmith", "Blacksmith", Color3.fromRGB(110, 90, 80), "bandana", onPlaza(1.05), { SubTitle = "Refine & Cards" }, P0)
 	-- harbor: shipwright by the shipyard, courier gulls by the north dock

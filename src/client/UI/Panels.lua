@@ -2235,7 +2235,7 @@ function Panels.BossBoard()
 		end
 		local gw = State.guildWar
 		if gw then
-			UI.Section(list, "⚔️", "Guild War", gw.active and T.Red or T.Gold, gw.active and "IN PROGRESS!" or "Saturdays")
+			UI.Section(list, "⚔️", "Crew War", gw.active and T.Red or T.Gold, gw.active and "IN PROGRESS!" or "Saturdays")
 			for _, f in ipairs(gw.forts) do
 				UI.Text(list, "🏰 " .. f.name .. "  •  held by " .. f.owner, 16, f.faction == "Marine" and T.Marine or (f.faction == "Pirate" and T.Pirate or T.TextSoft), "Bold")
 			end
@@ -2254,9 +2254,27 @@ end
 
 -- ===================== GUILD =====================
 function Panels.Guild()
-	local win = UI.Window("Guild", "Guild", UDim2.fromOffset(820, 580), T.Purple, "🏴")
+	-- v0.25.108 (owner): CREW (shipmates). Forming one picks no side; invite online players by name; crewmates share a
+	-- party when they come online. Your own side: Jolly Roger here, Marines at the Marine Registrar (Conch Bay).
+	local win = UI.Window("Guild", "Crew", UDim2.fromOffset(820, 580), T.Purple, "🏴")
 	task.spawn(Net.Request, "GuildInfo")
 	local body = win.body
+	local function factionLine(parent)
+		local f = player:GetAttribute("Faction") or "None"
+		local label = f == "Marine" and "⚓ Marine" or (f == "Pirate" and "☠️ Pirate" or "Civilian")
+		local row = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 44), Parent = parent })
+		UI.Text(row, "Your side: " .. label, 17, f == "Marine" and T.Marine or (f == "Pirate" and T.Pirate or T.TextSoft), "Bold", { Size = UDim2.new(0.5, 0, 1, 0) })
+		if f == "None" then
+			local _, h = UI.Button(row, "☠️ RAISE THE JOLLY ROGER", T.Pirate, UDim2.fromOffset(300, 40), function()
+				UI.Confirm("Become a Pirate? Every NPC ship becomes fair game and beating Marines raises your bounty.\nMarines enlist at the Marine Registrar in Conch Bay instead.", function()
+					req("SetFaction", { faction = "Pirate" })
+				end, nil, "Pirate!", "Not yet")
+			end)
+			h.AnchorPoint = Vector2.new(1, 0)
+			h.Position = UDim2.new(1, 0, 0, 2)
+		end
+		return row
+	end
 	local function render()
 		clear(body)
 		local oldLayout = body:FindFirstChildOfClass("UIListLayout")
@@ -2265,17 +2283,36 @@ function Panels.Guild()
 		end
 		local g = State.guild
 		if g then
-			local color = g.faction == "Marine" and T.Marine or T.Pirate
 			UI.List(body, nil, 8)
-			UI.Text(body, (g.faction == "Marine" and "⚓ " or "☠️ ") .. g.name .. "  Lv." .. g.level, 32, color, "Display")
-			UI.Text(body, "Faction: " .. g.faction, 18, T.TextSoft, "Semi")
-			UI.Section(body, "👥", "Members", color)
-			local list = UI.Scroll(body, UDim2.new(1, 0, 0, 280))
+			UI.Text(body, "🏴 " .. g.name .. "  Lv." .. g.level, 30, T.Gold, "Display", { LayoutOrder = 1 })
+			local f = factionLine(body)
+			-- invite by name
+			local inv = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 46), LayoutOrder = 3, Parent = body })
+			local box = New("TextBox", { Size = UDim2.new(1, -170, 1, 0), PlaceholderText = "Player name", Text = "", ClearTextOnFocus = false, FontFace = UI.Fonts.Bold, TextSize = 20, TextColor3 = T.Text, PlaceholderColor3 = T.TextSoft, BackgroundColor3 = T.PanelDeep, Parent = inv })
+			UI.Corner(box, 10)
+			UI.Stroke(box, T.Edge, 2.5)
+			local _, ih = UI.Button(inv, "📨 INVITE", T.Green, UDim2.fromOffset(160, 46), function()
+				if #box.Text >= 2 then
+					local res = req("CrewInvite", { name = box.Text })
+					if res.ok then
+						box.Text = ""
+					end
+				end
+			end)
+			ih.AnchorPoint = Vector2.new(1, 0)
+			ih.Position = UDim2.fromScale(1, 0)
+			local sec = UI.Section(body, "👥", "Crewmates", T.Purple)
+			if typeof(sec) == "Instance" then
+				sec.LayoutOrder = 4
+			end
+			local list = UI.Scroll(body, UDim2.new(1, 0, 0, 250))
+			list.LayoutOrder = 5
 			UI.List(list, nil, 4)
 			for uid, m in pairs(g.members) do
+				local online = Players:GetPlayerByUserId(tonumber(uid) or 0) ~= nil
 				local row = UI.Card(list, UDim2.new(1, -12, 0, 46))
 				UI.Pad(row, 8)
-				UI.Text(row, (m.rank == "Leader" and "👑 " or "• ") .. m.name .. "  [" .. m.rank .. "]", 17, T.Text, "Bold")
+				UI.Text(row, (m.rank == "Leader" and "👑 " or "• ") .. m.name .. "  [" .. m.rank .. "]" .. (online and '  <font color="#7CFF9B">online</font>' or ""), 17, T.Text, "Bold")
 				if g.leader == player.UserId and tonumber(uid) ~= player.UserId then
 					local _, h = UI.Button(row, "Kick", T.Red, UDim2.fromOffset(74, 32), function()
 						req("GuildKick", { userId = uid })
@@ -2283,54 +2320,40 @@ function Panels.Guild()
 					h.Position = UDim2.new(1, -76, 0, -2)
 				end
 			end
-			UI.Button(body, "Leave Guild", T.Red, UDim2.fromOffset(190, 46), function()
-				UI.Confirm("Leave the guild? You will become a Civilian again.", function()
+			local _, lh = UI.Button(body, "Leave Crew", T.Red, UDim2.fromOffset(190, 46), function()
+				UI.Confirm("Leave the crew?", function()
 					req("GuildLeave")
 				end, nil, "Leave", "Stay")
 			end)
+			lh.LayoutOrder = 6
+			if f then
+				f.LayoutOrder = 2
+			end
 			return
 		end
 		local left = UI.Card(body, UDim2.new(0.48, 0, 1, 0))
 		UI.Pad(left, 14)
 		UI.List(left, nil, 8)
-		UI.Section(left, "🏗️", "Found a Guild", T.Gold)
+		UI.Section(left, "🏗️", "Form a Crew", T.Gold)
 		UI.Text(left, "Requires Lv." .. GameConfig.GuildCreateLevel .. "  •  " .. COIN .. " " .. UI.Format(GameConfig.GuildCreateCost), 15, T.TextSoft, "Semi")
-		local box = New("TextBox", { Size = UDim2.new(1, 0, 0, 44), PlaceholderText = "Guild name", Text = "", FontFace = UI.Fonts.Bold, TextSize = 20, TextColor3 = T.Text, PlaceholderColor3 = T.TextSoft, BackgroundColor3 = T.PanelDeep, Parent = left })
+		local box = New("TextBox", { Size = UDim2.new(1, 0, 0, 44), PlaceholderText = "Crew name", Text = "", ClearTextOnFocus = false, FontFace = UI.Fonts.Bold, TextSize = 20, TextColor3 = T.Text, PlaceholderColor3 = T.TextSoft, BackgroundColor3 = T.PanelDeep, Parent = left })
 		UI.Corner(box, 10)
 		UI.Stroke(box, T.Edge, 2.5)
-		local faction = "Pirate"
-		local fRow = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 100), Parent = left })
-		UI.List(fRow, Enum.FillDirection.Horizontal, 8)
-		local mBtn = UI.Button(fRow, "⚓ MARINE", T.Grey, UDim2.fromOffset(170, 92))
-		local pBtn = UI.Button(fRow, "☠️ PIRATE", T.Pirate, UDim2.fromOffset(170, 92))
-		local desc = UI.Text(left, "", 14, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 96) })
-		local function updateF()
-			UI.SetButtonColor(mBtn, faction == "Marine" and T.Marine or T.Grey)
-			UI.SetButtonColor(pBtn, faction == "Pirate" and T.Pirate or T.Grey)
-			desc.Text = faction == "Marine" and "Marines: Marine NPC ships leave you alone. Catch pirates for Merit and a cut of their bounty. Unlocks the Marine Mast." or "Pirates: every NPC ship is fair game. Beating Marines and sinking their ships raises your bounty. Unlocks the Jolly Roger Mast."
-		end
-		mBtn.Activated:Connect(function()
-			faction = "Marine"
-			updateF()
+		UI.Text(left, "A crew is your band of shipmates: invite players by name, and crewmates join the same party when they come online. Forming a crew picks no side.", 14, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 80) })
+		UI.Button(left, "Form Crew", T.Green, UDim2.new(1, 0, 0, 48), function()
+			req("GuildCreate", { name = box.Text }, "Purchase")
 		end)
-		pBtn.Activated:Connect(function()
-			faction = "Pirate"
-			updateF()
-		end)
-		updateF()
-		UI.Button(left, "Found Guild", T.Green, UDim2.new(1, 0, 0, 48), function()
-			req("GuildCreate", { name = box.Text, faction = faction }, "Purchase")
-		end)
+		factionLine(left)
 		local right = UI.Scroll(body, UDim2.new(0.5, 0, 1, 0))
 		right.Position = UDim2.new(0.5, 0, 0, 0)
 		UI.List(right, nil, 6)
-		UI.Section(right, "🤝", "Join a Guild", T.Green)
+		UI.Section(right, "🤝", "Join a Crew", T.Green)
 		task.spawn(function()
 			local res = Net.Request("GuildList")
 			for _, g2 in ipairs(res.data or {}) do
-				local row = UI.Card(right, UDim2.new(1, -12, 0, 52), g2.faction == "Marine" and T.Marine:Lerp(T.Panel, 0.6) or T.Pirate:Lerp(T.Panel, 0.6))
+				local row = UI.Card(right, UDim2.new(1, -12, 0, 52))
 				UI.Pad(row, 8)
-				UI.Text(row, (g2.faction == "Marine" and "⚓ " or "☠️ ") .. g2.name .. "  (" .. g2.count .. ")", 17, T.Text, "Bold")
+				UI.Text(row, "🏴 " .. g2.name .. "  (" .. g2.count .. ")", 17, T.Text, "Bold")
 				local _, h = UI.Button(row, "Join", T.Green, UDim2.fromOffset(84, 34), function()
 					req("GuildJoin", { id = g2.id })
 				end)
@@ -2344,6 +2367,39 @@ function Panels.Guild()
 			render()
 		end
 	end)
+	local fconn = player:GetAttributeChangedSignal("Faction"):Connect(render)
+	win.frame.Destroying:Connect(function()
+		conn:Disconnect()
+		fconn:Disconnect()
+	end)
+end
+
+-- v0.25.108 (owner): the Marine Registrar in Conch Bay: enlist in the Marines or resign (back to Civilian)
+function Panels.Marine()
+	local win = UI.Window("Marine", "Marine Registrar", UDim2.fromOffset(620, 440), T.Marine, "⚓")
+	local body = win.body
+	local function render()
+		clear(body)
+		UI.List(body, nil, 10)
+		local f = player:GetAttribute("Faction") or "None"
+		UI.Text(body, f == "Marine" and "⚓ You serve in the Marines." or (f == "Pirate" and "☠️ You fly the Jolly Roger." or "You are a Civilian."), 22, f == "Marine" and T.Marine or (f == "Pirate" and T.Pirate or T.Text), "Display", { LayoutOrder = 1 })
+		UI.Text(body, "Marines: Marine NPC ships leave you alone. Catch pirates for Merit and a cut of their bounty. Seastone gear and the Marine Mast. Requires Lv." .. GameConfig.GuildCreateLevel .. "; wanted pirates cannot enlist.", 15, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 90), LayoutOrder = 2 })
+		local _, h
+		if f == "Marine" then
+			_, h = UI.Button(body, "RESIGN", T.Red, UDim2.fromOffset(260, 56), function()
+				UI.Confirm("Leave the Marines and become a Civilian?", function()
+					req("SetFaction", { faction = "None" })
+				end, nil, "Resign", "Stay")
+			end)
+		else
+			_, h = UI.Button(body, "⚓ ENLIST", T.Marine, UDim2.fromOffset(260, 56), function()
+				req("SetFaction", { faction = "Marine" })
+			end)
+		end
+		h.LayoutOrder = 3
+	end
+	render()
+	local conn = player:GetAttributeChangedSignal("Faction"):Connect(render)
 	win.frame.Destroying:Connect(function()
 		conn:Disconnect()
 	end)

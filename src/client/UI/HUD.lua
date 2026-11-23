@@ -469,7 +469,7 @@ local MENU = {
 	{ "🛍️", "PearlShop", hex("846030"), "H", "Store", main = true, bg = { hex("846030"), hex("513648") }, fx = { icons = { "gem", "coin" }, color = hex("FFE297"), star = 0.2 } },
 	{ "📊", "Stats", T.Purple, "Y", "Stats", main = true, fx = { plus = true, star = 0.9, color = hex("7DFF8E") } },
 	{ "ship", "SummonShip", T.OceanDark, nil, "Ships", fx = { bubble = true, color = hex("B8F0FF"), star = 0.15 } }, -- calls / stores the ship (editing = Shipwright NPC)
-	{ "🏴", "Guild", hex("A44C64"), "G", "Guild", bg = { hex("A44C64"), hex("58293F") }, stripes = hex("FFC6A8"), fx = { icons = { "flag" }, faction = true, color = hex("FFC6A8") } },
+	{ "🏴", "Crew", hex("A44C64"), "G", "Guild", bg = { hex("A44C64"), hex("58293F") }, stripes = hex("FFC6A8"), fx = { icons = { "flag" }, faction = true, color = hex("FFC6A8") } },
 	{ "👥", "Party", T.Green, "P", "Party", fx = { plus = true, star = 0.9, color = hex("C8FFC8") } },
 	{ "👑", "BossBoard", hex("AC404F"), "B", "Bosses", bg = { hex("AC404F"), hex("541E35") }, fx = { icons = { "skull" }, iconFrac = 0.35, color = hex("FF9373"), star = 0 } },
 	{ "⚙️", "Settings", T.Grey, "O", "Settings", fx = { icons = { "gear" }, color = hex("D8DCEA") } },

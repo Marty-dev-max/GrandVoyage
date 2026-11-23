@@ -1383,7 +1383,8 @@ function Combat.Start()
 	end)
 	Net.OnPush("Knock", knocked)
 	-- Left click: attack (manual) / pick a target (Auto). Holding the button keeps swinging in manual mode.
-	local holding, holdPos = false, nil
+	-- v0.25.83: own name (it was "holding" and shadowed the aim state above: skill key-up indexed a boolean)
+	local mouseHeld, holdPos = false, nil
 	UserInputService.InputBegan:Connect(function(input, processed)
 		if processed then
 			return
@@ -1396,7 +1397,7 @@ function Combat.Start()
 				State.heldFruit.choose()
 				return
 			end
-			holding, holdPos = true, input.Position
+			mouseHeld, holdPos = true, input.Position
 			Combat.NotePress()
 			Combat.ClickAt(input.Position)
 		else
@@ -1489,17 +1490,17 @@ function Combat.Start()
 		end
 	end)
 	UserInputService.InputChanged:Connect(function(input)
-		if holding and input.UserInputType == Enum.UserInputType.MouseMovement then
+		if mouseHeld and input.UserInputType == Enum.UserInputType.MouseMovement then
 			holdPos = input.Position
 		end
 	end)
 	UserInputService.InputEnded:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			holding = false
+			mouseHeld = false
 		end
 	end)
 	RunService.Heartbeat:Connect(function()
-		if holding and holdPos and not State.auto then
+		if mouseHeld and holdPos and not State.auto then
 			Combat.ManualAttack(Vector2.new(holdPos.X, holdPos.Y))
 		end
 	end)

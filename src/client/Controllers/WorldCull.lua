@@ -76,7 +76,11 @@ local function show(z, now, at)
 	for i, e in ipairs(stash) do
 		local p, parent = e[1], e[2]
 		if parent.Parent or parent == z.model then
-			p.Parent = parent
+			-- v0.25.83: a stashed part can be destroyed meanwhile (AssetService swapping a placeholder): its Parent
+			-- is locked, so skip it instead of erroring out halfway through the island
+			pcall(function()
+				p.Parent = parent
+			end)
 		end
 		if not now and i % BATCH == 0 then
 			task.wait()

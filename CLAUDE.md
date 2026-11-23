@@ -756,6 +756,9 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     F_SplitCannon "Rocket Forearm" (charged Ranged, travel 0.25, arm flies + returns), F_ChopRush "Phantom Hand"
     (hand + knife stabs from behind, hits 4 / hitEvery 0.18), F_SplitRunner (legs wheel along the dash), F_SplitFestival
     "Scatter Storm" (every piece orbits). Never "Split/Chop Cannon" or "... Festival" (One Piece Bara Bara moves).
+  * v0.25.83 (Output errors): Combat.Start's mouse-hold flag is `mouseHeld` (a local named `holding` shadowed the
+    module aim state, so skill key-up indexed a boolean and held aims never cast on release). WorldCull.show pcalls
+    the re-parent (a stashed part destroyed meanwhile has a locked Parent and aborted the whole island).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

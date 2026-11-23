@@ -841,4 +841,6 @@ The owner tests in Studio and sends screenshots; previews of new art are rendere
    MonsterService.RefreshModels swaps placeholder island mobs). Pets + fruits DONE v0.11.1 (voxel_pets.py).
    Still to do: animation + VFX week (see docs/PLAN-week.md).
 3. Per-skill icons (render_icons.py), Seastone gear for Marines, fruit skill VFX polish.
+   Owner (23 Nov): every fruit / skill pass also makes the existing animations + FX prettier and smoother (anticipation,
+   follow-through, eased tweens, no popping particles).
 4. Playtest fixes (fruit Dash feel, pet follow, swim animation, quest flow). Friend playtest target: end of November 2026.

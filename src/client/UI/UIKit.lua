@@ -492,7 +492,7 @@ function UI.Button(parent, text, color, size, onClick, props)
 	local first, rest = string.match(text or "", "^(%S+)%s+(.+)$")
 	if first and not string.match(first, "^[%w%p]+$") and UI.IconId(first) then -- emoji only, never a word
 		btn.Text = rest
-		local ic = UI.Icon(btn, first, 26, { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, -2, 0.5, 0), ZIndex = btn.ZIndex + 2 })
+		local ic = UI.Icon(btn, first, 26, { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, -26, 0.5, 0), ZIndex = btn.ZIndex + 2 }) -- v0.25.100: x is inside the 30 px left padding (it sat on the first letter)
 		New("UIAspectRatioConstraint", { Parent = ic })
 		ic.Size = UDim2.new(0, 26, 0.9, 0)
 		local pad = btn:FindFirstChildOfClass("UIPadding")

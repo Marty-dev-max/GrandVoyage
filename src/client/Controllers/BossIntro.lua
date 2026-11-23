@@ -26,7 +26,7 @@ local function play(model)
 	State.bossIntroUntil = os.clock() + DUR
 
 	local gui = New("ScreenGui", { Name = "BossIntro", IgnoreGuiInset = true, ResetOnSpawn = false, DisplayOrder = 40, Parent = Players.LocalPlayer.PlayerGui })
-	local root = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Parent = gui })
+	local root = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0), Size = UDim2.fromScale(1, 1), Parent = gui }) -- UIScale shrinks toward the anchor: keep it centered
 	local sc = New("UIScale", { Scale = UI.GetScale and UI.GetScale() or 1, Parent = root })
 	local _ = sc
 	-- a dark band behind the name while it sits in the middle

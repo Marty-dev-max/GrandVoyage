@@ -869,6 +869,17 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     (Init aborted). Mesa grass caps 0.08 apart per lobe; VoxelChar OverallButton clears the Armor Vest plate.
     Quest guide = "Rowan"; Daybreak house sign "BLACKSMITH". `musket_ball` pixel icon (gen_pixel_icons lead_ball,
     IconVoxels) for Ammo_Musket; Blacksmith showcase shows blades as their pixel icon. WORLD_VERSION 26.
+  * v0.25.113 (owner): HUD card = square level ring (buildRing squarePoint path), height HUD.cardH (106, 128 with boosts),
+    Class/EXP lines Display font centered over the bars; `UI.Halftone(parent, color, {cells, size, pos, z})` = solid
+    pixel-square wave burst (returns holder, setColor) behind the portrait (class color) and the style meter (rank color).
+    Ship HUD (Sailing buildHud) 340x220 above the card: name, HP bar, SPEED/WIND/SAILS/GUNS cells, zone chip, reload bar,
+    SAIL-/SAIL+/FIRE/DOCK. No Bay Serpent buoys/sign. `Controllers/BossIntro`: first time within 90 studs of a boss
+    (risen sea bosses only): name slams center -> glides up -> bar slides in + fills from 0 -> BossRoar + rumble -> music
+    (State.bossIntroUntil mutes Sailing.updateAudio, State.lastBoss starts MusicBoss). Shipyard plots = WoodPlanks + rails.
+    Kit.Barrel = menu voxel barrel, Kit.Crate = framed crate (same single rng call). Chests (WorldBuilder chestModel):
+    voxel box + trim bands, `Lid` Model with attribute Hinge (back top edge), `Lock` Model, gold `Hoard` inside; FX
+    ChestOpen { model, id, by } -> VFX: padlock tumbles off, lid swings 105 deg, 16 local physics coins; non-openers see it
+    close again; Quest.paintChests snaps the open pose after 2 s unless LidOpen. WORLD_VERSION 27.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

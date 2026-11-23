@@ -82,7 +82,7 @@ function CardArt.Build(parent, def, opts)
 	local viewPos = UDim2.new(0.5, 0, 0, ART_Y + ART_H / 2 - 4)
 	local view = UI.MonsterView(face, def.monster, 190, opts.spin == nil and 0.5 or opts.spin)
 	if not view then
-		view = UI.Icon(face, UI.ItemIconId(def) or "🃏", 120)
+		view = UI.Icon(face, UI.ItemIconName(def) or "card", 120)
 	end
 	view.AnchorPoint = Vector2.new(0.5, 0.5)
 	view.Position = viewPos

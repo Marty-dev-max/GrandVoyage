@@ -16,6 +16,7 @@ local GameConfig = require(Shared.Config.GameConfig)
 local Net = require(Shared.Modules.Net)
 local UI = require(script.Parent.UIKit)
 local CardReveal = require(script.Parent.CardReveal)
+local ItemReveal = require(script.Parent.ItemReveal)
 local Panels = require(script.Parent.Panels)
 local State = require(script.Parent.Parent.State)
 local Combat = require(script.Parent.Parent.Controllers.Combat)
@@ -1112,7 +1113,11 @@ function HUD.Loot(data)
 	end
 	for _, it in ipairs(data.items or {}) do
 		local def = ItemDB.Get(it.id)
-		add((it.card and "🃏 " or "") .. (def and def.name or it.id) .. "  x" .. it.qty, def and def.rarity or "Common")
+		local reveal = not it.card and ItemReveal.Worth(def) -- v0.25.92: Rare+ items get the full-screen GET! moment
+		add((it.card and "🃏 " or "") .. (def and def.name or it.id) .. "  x" .. it.qty, def and def.rarity or "Common", reveal)
+		if reveal then
+			ItemReveal.Play(def)
+		end
 		if it.card then
 			if def then
 				CardReveal.Play(def)

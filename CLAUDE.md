@@ -625,6 +625,8 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     aliases until their own pass); DataService RENAMED maps F_FireDash/F_SmokeBody/F_SplitEscape on hotbars. Ward is
     shown as "Shield Shield no Mi" (id stays Ward). Next phases per fruit: Bounce -> Blaze -> Haze -> Shield -> Split
     -> Slick (anims, FX, Slingshot Launch, Blaze flight, barrier stairs, Slick skate, channel wall/dome).
+    Owner (23 Nov): while doing each fruit, also make the existing animations + FX prettier and smoother wherever
+    possible (anticipation / follow-through in clips, eased tweens, no popping particles).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

@@ -890,6 +890,10 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     v0.25.116 (owner): every Music entry in Sounds.lua x0.6. Owner screenshots with the Roblox top bar = the PUBLISHED game
     (check the version bottom-right); fixes reach it only after File > Publish to Roblox.
     v0.25.117 (owner): no Bell on DOCK either (Bell now only rings for party/duel/crew prompts).
+    v0.25.118 (owner): no Bell on invite prompts either. `Controllers/PowerBoard`: local wooden board (13x16, SurfaceGui
+    22 px/stud, PxKeep) right of every BossBoard NPC = top 50 players in the server by the Power attribute, refreshed
+    every 3 s. Job Master = ZONE_ROLES red ring + NPC_LOOK["Job Master"] (crimson Captain Coat, white swept hair, scar,
+    voxelHat "master" = red headband with tails). WORLD_VERSION 29.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

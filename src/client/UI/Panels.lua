@@ -2059,7 +2059,7 @@ function Panels.Shipwright()
 		if d then
 			local st = ShipStats.Compute(d, p.crew, { shipSpeed = State.derived and State.derived.shipSpeed })
 			UI.Text(card, "⛵ " .. d.name .. (slot == p.activeShip and '  <font color="#FFD54A">(active)</font>' or ""), 22, T.Text, "Display", { Size = UDim2.new(1, -250, 0, 26) })
-			UI.Text(card, string.format("%d parts • weight %d • HP %d • %d cannons\nSpeed: %d in wind / %d in the Doldrums", st.partCount, st.weight, st.hp, #st.cannons, ShipStats.Speed(st, 1), ShipStats.Speed(st, 0)), 15, T.TextSoft, "Semi", { Position = UDim2.fromOffset(0, 28), Size = UDim2.new(1, -250, 0, 40) })
+			UI.Text(card, string.format("%d parts • HP %d • %d cannons\nSpeed: %d in wind / %d in the Doldrums", st.partCount, st.hp, #st.cannons, ShipStats.Speed(st, 1), ShipStats.Speed(st, 0)), 15, T.TextSoft, "Semi", { Position = UDim2.fromOffset(0, 28), Size = UDim2.new(1, -250, 0, 40) })
 			if p.shipSunk and slot == p.activeShip then
 				UI.Text(card, "⚠️ Sunk: repairs are charged when you launch", 14, T.Red, "Bold", { Position = UDim2.fromOffset(0, 70), Size = UDim2.new(1, -250, 0, 18) })
 			end

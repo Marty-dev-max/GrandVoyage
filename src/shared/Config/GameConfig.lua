@@ -4,7 +4,7 @@ return {
 	LogoLines = { "LARPTALES", "VOXEL SEAS" },
 	LogoImage = 133908417032160, -- v0.25.87: pixel logo board floating behind the menu character (tools/gen_logo.py); nil = text logo
 	-- bump on every change: shown bottom-right in game and printed in Output, so you can tell which code is running
-	Version = "0.25.92",
+	Version = "0.25.93",
 	SagaName = "Azure East Saga",
 	DataStoreName = "GV_Player_v1",
 	GuildStoreName = "GV_Guild_v1",
@@ -81,7 +81,7 @@ return {
 		PlotSize = Vector3.new(9, 6, 21), -- shipyard plot cells X,Y,Z
 		MaxParts = 140,
 		MaxSpeed = 78,
-		WeightDrag = 0.085,
+		WeightDrag = 0.04, -- v0.25.93 (owner): speed comes mostly from sails, weight matters less
 		BaseTurnRate = 0.7, -- radians/second
 		BaseCrewCapacity = 2,
 		CrewCost = 800,

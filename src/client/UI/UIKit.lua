@@ -626,9 +626,9 @@ end
 -- icon name for an item definition (Config/Items)
 local ITEM_ICON = {
 	MeatOnBone = "meat_s", RoastShank = "meat_m", BigFeast = "meat_l", TangerineJuice = "grog_s", SeaGrog = "grog_m", CaptainsKeg = "grog_l", RepairKit = "repairkit", RefineGuard = "charm",
-	CaptainsLog = "book", SeaEgg = "egg", GoldenEgg = "golden_egg", SeaBait = "bait", Wood = "wood", TreasureWood = "wood",
-	SailCloth = "cloth", SteelOre = "ore", TidecoreShard = "shard", PureTidecore = "shard",
-	TreasureMap = "map", WantedPoster = "poster", MarineBadge = "charm", CompassCharm = "charm",
+	CaptainsLog = "book", SeaEgg = "egg", GoldenEgg = "golden_egg", SeaBait = "bait", Wood = "wood", TreasureWood = "wood_gold",
+	SailCloth = "cloth", SteelOre = "ore", TidecoreShard = "shard", PureTidecore = "shard_pure",
+	TreasureMap = "map", WantedPoster = "poster", MarineBadge = "badge", CompassCharm = "charm",
 	TangerinePin = "charm", SharkToothNecklace = "charm",
 	-- v0.25.3: monster materials get their own pixel icons
 	CrabShell = "crabshell", MonkeyFur = "monkeyfur", TigerPelt = "tigerpelt", BoarTusk = "boartusk", ClownPaint = "clownpaint",
@@ -647,6 +647,11 @@ function UI.ItemIconName(def)
 	end
 	if def.kind == "Card" and def.mtype and Icons["card_" .. def.mtype] then
 		return "card_" .. def.mtype
+	end
+	-- v0.25.97: every weapon grade has its own pixel icon (tools/gen_pixel_icons.py WEAPON_GRADE_ICONS)
+	local wIcon = def.weaponType and def.grade and ("w_" .. def.weaponType .. "_" .. def.grade)
+	if wIcon and Icons[wIcon] then
+		return wIcon
 	end
 	return ITEM_ICON[def.id]
 		or (def.fruit and ("fruit_" .. string.lower(def.fruit)))
@@ -798,6 +803,9 @@ end
 function UI.ModelView(parent, folder, key, size, spin, props)
 	if folder == "Weapons" and key == "Knuckles" then
 		return UI.ModelViewOf(parent, UI.FistModel(), size, spin, props)
+	end
+	if folder == "Weapons" and key == "Shoes" then
+		return nil -- v0.25.97: Leg Style is bare legs (no boot mesh): callers fall back to the w_Shoes_<grade> voxel icon
 	end
 	local src = UI.ModelAsset(folder, key)
 	if not src then

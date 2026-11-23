@@ -1012,6 +1012,237 @@ def st_stall(s):
     badge(s, '2', (60, 170, 90))
 
 
+# v0.25.97: materials that shared art get their own (rarer twin = richer colors)
+def logs_gold(s):
+    for y, x0 in ((20, 4), (12, 8)):
+        s.rect(x0, y - 4, x0 + 20, y + 4, (190, 120, 50))
+        s.line([(x0 + 2, y - 1), (x0 + 16, y - 1)], GOLD, 1, True)
+        s.oval(x0 + 20, y, 4, 4, GOLD)
+        s.oval(x0 + 20, y, 2, 2, (200, 120, 40))
+    sparkle(s, 6, 6, YEL, 2)
+    sparkle(s, 27, 27, WHITE, 1)
+
+
+def crystal_pure(s):
+    crystal(s, (235, 250, 255))
+    s.poly([(16, 9), (19, 14), (16, 22), (13, 14)], (150, 240, 255))
+    sparkle(s, 6, 24, CYAN, 1)
+
+
+def marine_badge(s):
+    s.poly([(7, 6), (25, 6), (25, 17), (16, 28), (7, 17)], (50, 90, 170))
+    s.poly([(9, 8), (23, 8), (23, 16), (16, 25), (9, 16)], (235, 240, 250))
+    s.oval(16, 10, 1.5, 1.5, (50, 90, 170))
+    s.rect(15.5, 11, 16.5, 21, (50, 90, 170))
+    s.rect(12, 13, 20, 14, (50, 90, 170))
+    s.arc(16, 17, 4, 30, 150, (50, 90, 170), 1, False)
+    s.rect(7, 4, 25, 6, GOLD)
+
+
+# ---------- v0.25.97 (owner: weapon tiers need their own look): one icon per weapon line + grade ----------
+# w_<WeaponType>_<Grade>; grades go wood/plain -> steel -> themed -> ornate gold -> Supreme (glow + sparkles)
+GRADES = ['Plain', 'Keen', 'Master', 'Grand', 'Supreme']
+
+
+def tier_fx(s, g):
+    if g >= 4:
+        sparkle(s, 27, 5, YEL if g == 4 else WHITE, 2)
+    if g == 5:
+        sparkle(s, 5, 8, CYAN, 1)
+        sparkle(s, 26, 26, PINK, 1)
+
+
+def katana(s, blade, edge, guard, grip, w=3, gw=4, x0=6, y0=26, x1=26, y1=6):
+    dx, dy = x1 - x0, y1 - y0
+    L = math.hypot(dx, dy)
+    ux, uy, nx, ny = dx / L, dy / L, -dy / L, dx / L
+    gx, gy = x0 + ux * 6, y0 + uy * 6
+    s.line([(gx + ux, gy + uy), (x1, y1)], blade, w)
+    s.line([(gx + ux * 2 - nx, gy + uy * 2 - ny), (x1 - ux * 2, y1 - uy * 2)], edge, 1, True)
+    s.line([(gx - nx * gw, gy - ny * gw), (gx + nx * gw, gy + ny * gw)], guard, 2)
+    s.line([(x0, y0), (gx - ux, gy - uy)], grip, 3)
+    return gx, gy
+
+
+def w_sword(g):
+    def draw(s):
+        if g == 1:  # Driftwood Katana
+            katana(s, (200, 160, 110), (235, 205, 160), WOOD_D, (170, 130, 80))
+        elif g == 2:  # Seagull Katana
+            gx, gy = katana(s, STEEL, WHITE, GOLD, (245, 245, 250))
+            s.oval(gx, gy, 2, 2, GOLD)
+            s.px(7, 24, DARK)
+            s.px(9, 22, DARK)
+        elif g == 3:  # Tidecutter
+            gx, gy = katana(s, (110, 200, 245), WHITE, (40, 90, 170), (30, 50, 110), 4)
+            s.arc(gx + 1, gy - 1, 4, 180, 330, CYAN, 2, False)
+        elif g == 4:  # Moonwave Blade
+            gx, gy = katana(s, (215, 205, 255), WHITE, GOLD, (110, 60, 170), 4, 5, 5, 27, 27, 4)
+            s.oval(gx, gy, 3, 3, GOLD)
+            s.oval(gx + 1, gy - 1, 2, 2, (0, 0, 0))
+        else:  # Stormfang
+            katana(s, (60, 60, 95), YEL, GOLD, (30, 30, 40), 4, 5, 5, 27, 27, 4)
+            bolt(s, 22, 12, 0.35, YEL)
+        tier_fx(s, g)
+    return draw
+
+
+def w_sling(g):
+    frame = [(130, 90, 50), (225, 175, 70), (150, 95, 55), (110, 90, 220), (245, 240, 230)][g - 1]
+    band = [(150, 90, 70), (120, 70, 50), (120, 70, 50), GOLD, CYAN][g - 1]
+    w = 2 if g == 1 else 3
+
+    def draw(s):
+        s.line([(16, 29), (16, 17)], frame, w)
+        s.line([(16, 18), (9, 6)], frame, w)
+        s.line([(16, 18), (23, 6)], frame, w)
+        s.rect(14, 23, 18, 26, band)
+        s.line([(9, 7), (16, 14), (23, 7)], (150, 90, 70) if g < 5 else CYAN, 1, True)
+        if g == 3:  # Falcon Sling: feathers on the fork tips
+            for x, d in ((9, -1), (23, 1)):
+                s.poly([(x, 6), (x + 5 * d, 2), (x + 6 * d, 6), (x + 2 * d, 9)], (245, 240, 225))
+                s.line([(x + 2 * d, 4), (x + 5 * d, 4)], BROWN, 1, True)
+        if g == 4:  # Stardrop: star at the fork
+            star(s, 16, 18, 5, 2, 5, YEL)
+        if g == 5:  # Skybreaker
+            bolt(s, 16, 18, 0.35, YEL)
+        pellet(s, 16, 14, 2, IRON if g < 4 else (120, 220, 255))
+        tier_fx(s, g)
+    return draw
+
+
+def w_leg(g):
+    # owner: Sea Cook fights bare-legged: a bare leg + foot with wraps, no boot
+    wrap = [(240, 232, 210), (210, 60, 60), STEEL, (210, 60, 40), (250, 250, 255)][g - 1]
+
+    def draw(s):
+        if g == 4:
+            flame(s, 9, 22, 6, 1.2)
+        if g == 5:
+            for x, y, r in ((6, 27, 4), (12, 28, 4), (19, 28, 4), (25, 27, 4)):
+                s.oval(x, y, r, r - 1, (235, 245, 255))
+        s.poly([(10, 3), (17, 3), (18, 18), (26, 20), (27, 25), (9, 25)], SKIN)
+        s.rect(9, 24, 27, 25, lerp(SKIN, DARK, 0.3))
+        s.rect(10, 15, 18, 19, wrap)  # ankle wrap
+        if g >= 2:
+            s.rect(10, 6, 17, 8, wrap)
+        if g == 3:  # Iron Leg: shin plate
+            s.rect(10, 6, 17, 14, STEEL)
+            s.line([(11, 7), (11, 13)], WHITE, 1, True)
+        tier_fx(s, g)
+    return draw
+
+
+def w_fist(g):
+    def draw(s):
+        k = 1.35 if g == 5 else 1.2
+        if g == 4:
+            bolt(s, 26, 9, 0.45, YEL)
+        fist(s, 15, 17, k)
+        tape = [(245, 242, 232), (245, 242, 232), (90, 120, 150), (250, 215, 60), GOLD][g - 1]
+        s.rect(15 - 6 * k, 17 + 5.5 * k, 15 + 5 * k, 17 + 5.5 * k + 3, tape)  # wrist wrap
+        if g == 2:  # Iron Fists: plate over the knuckles
+            s.rect(15 - 6.5 * k, 17 - 6.5 * k, 15 + 6.5 * k, 17 - 3.5 * k, IRON)
+        if g == 3:  # Sharktooth: teeth on the knuckles
+            for i in range(4):
+                x = 15 - 5.5 * k + i * 3.4 * k
+                s.poly([(x, 17 - 6 * k), (x + 1.6 * k, 17 - 10 * k), (x + 3 * k, 17 - 6 * k)], (250, 250, 240))
+        if g == 5:  # Titan: gold knuckle plate
+            s.rect(15 - 6.5 * k, 17 - 6.5 * k, 15 + 6.5 * k, 17 - 3.5 * k, GOLD)
+        tier_fx(s, g)
+    return draw
+
+
+def w_baton(g):
+    def draw(s):
+        a, b = (7, 27), (24, 7)
+        if g == 1:  # Bamboo Staff
+            s.line([a, b], (120, 190, 80), 3)
+            for t in (0.25, 0.5, 0.75):
+                x, y = a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t
+                s.rect(x - 1, y - 1, x + 1, y + 1, (80, 130, 50))
+        elif g == 2:  # Deckhand Baton
+            s.line([a, b], WOOD, 3)
+            s.line([(7, 27), (9, 25)], IRON, 4)
+            s.line([(22, 9), (24, 7)], IRON, 4)
+        elif g == 3:  # Folding Baton
+            s.line([a, b], STEEL, 3)
+            for t in (0.33, 0.66):
+                x, y = a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t
+                s.rect(x - 1.5, y - 1.5, x + 1.5, y + 1.5, IRON)
+            s.line([(7, 27), (10, 24)], DARK, 3)
+        elif g == 4:  # Tide Baton
+            s.line([a, (22, 9)], (40, 80, 170), 3)
+            s.oval(24, 7, 4, 4, CYAN)
+            s.arc(24, 7, 3, 200, 340, WHITE, 1, True)
+            s.line([(10, 24), (12, 21)], GOLD, 3)
+        else:  # Mariner's Rod
+            s.line([a, (22, 9)], GOLD, 3)
+            s.oval(24, 7, 5, 5, GOLD)
+            s.oval(24, 7, 3, 3, (40, 70, 140))
+            star(s, 24, 7, 3, 1, 4, WHITE, -90, True)
+        tier_fx(s, g)
+    return draw
+
+
+def w_pouch(g):
+    bag = [(120, 170, 80), (240, 230, 220), (250, 250, 255), (255, 170, 210), GOLD][g - 1]
+    tie = [(80, 60, 40), (200, 70, 90), (80, 130, 220), (200, 80, 160), RED][g - 1]
+
+    def draw(s):
+        if g >= 3:  # powder puff
+            for x, y, r in ((26, 9, 3), (23, 5, 2), (28, 4, 2)):
+                s.oval(x, y, r, r, (245, 245, 255) if g < 5 else YEL)
+        s.oval(15, 20, 10, 9, bag)
+        s.rect(10, 9, 20, 13, bag)
+        s.line([(8, 12), (22, 12)], tie, 2)
+        if g == 1:  # Herb Pouch: a leaf
+            s.poly([(11, 22), (15, 16), (19, 19), (15, 24)], (60, 140, 60))
+            s.line([(11, 23), (17, 18)], (40, 100, 40), 1, True)
+        elif g == 4:
+            star(s, 15, 20, 5, 2, 4, WHITE)
+        else:
+            plus(s, 15, 20, 5, {2: RED, 3: BLUE, 5: WHITE}[g], 1, False)
+        tier_fx(s, g)
+    return draw
+
+
+def w_hammer(g):
+    head, face, L, W = [((200, 150, 100), WOOD_D, 6.0, 3.0), (IRON, DARK, 7.2, 3.3), ((70, 74, 88), DARK, 8.4, 4.0),
+                        ((190, 90, 50), (120, 50, 30), 8.4, 4.0), (GOLD, GOLD_D, 9.0, 4.3)][g - 1]
+
+    def draw(s):
+        hx, hy = 1 / math.sqrt(2), -1 / math.sqrt(2)
+        ax, ay = -hy, hx
+        cx, cy = 18.6, 12.6
+
+        def pt(u, v):
+            return (cx + ax * u + hx * v, cy + ay * u + hy * v)
+        s.line([(7, 27), pt(0, -W + 0.5)], WOOD if g < 5 else (120, 60, 40), 3)
+        s.line([(7, 27), (10, 24)], (110, 70, 40) if g < 4 else GOLD, 3)
+        s.poly([pt(-L, -W), pt(L, -W), pt(L, W), pt(-L, W)], head)
+        s.poly([pt(-L, -W), pt(-L + 2.2, -W), pt(-L + 2.2, W), pt(-L, W)], face)
+        s.poly([pt(L - 2.2, -W), pt(L, -W), pt(L, W), pt(L - 2.2, W)], face)
+        if g == 3:  # Keel Breaker: rivets
+            for u in (-3, 0, 3):
+                x, y = pt(u, 0)
+                s.px(round(x), round(y), STEEL)
+        if g == 4:  # Galley Maul: gold bands
+            s.poly([pt(-L + 2.6, -W), pt(-L + 3.6, -W), pt(-L + 3.6, W), pt(-L + 2.6, W)], GOLD)
+            s.poly([pt(L - 3.6, -W), pt(L - 2.6, -W), pt(L - 2.6, W), pt(L - 3.6, W)], GOLD)
+        s.poly([pt(-L + 2.6, W - 1.4), pt(L - 2.6, W - 1.4), pt(L - 2.6, W - 0.4), pt(-L + 2.6, W - 0.4)],
+               WHITE if g == 5 else STEEL, True)
+        tier_fx(s, g)
+    return draw
+
+
+WEAPON_GRADE_ICONS = {}
+for _wt, _fn in (('Sword', w_sword), ('Slingshot', w_sling), ('Shoes', w_leg), ('Knuckles', w_fist),
+                 ('StormBaton', w_baton), ('MedKit', w_pouch), ('Hammer', w_hammer)):
+    for _i, _g in enumerate(GRADES):
+        WEAPON_GRADE_ICONS['w_%s_%s' % (_wt, _g)] = _fn(_i + 1)
+
+
 ICONS = {
     # HUD / menus
     'bag': backpack, 'shop': shopfront, 'stall': market_stall, 'pt_swirl': pt_swirl, 'pt_cloud': pt_cloud,
@@ -1043,6 +1274,8 @@ ICONS = {
     'st_gems_l': st_gems_l, 'st_ticket': st_ticket, 'st_stall': st_stall,
     'ingot': ingot, 'gunpowder': powder_keg, 'scale': scale_icon, 'compass': compass, 'poster': poster,
 }
+ICONS.update(WEAPON_GRADE_ICONS)
+ICONS.update({'wood_gold': logs_gold, 'shard_pure': crystal_pure, 'badge': marine_badge})
 
 
 def render(name):

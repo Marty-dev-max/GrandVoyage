@@ -51,6 +51,39 @@ local function pickLocalMonster(level, rng)
 	return best[rng:NextInteger(1, #best)]
 end
 
+-- hunts (Config/Hunts): a monster that lives on an island; the reward pays out by itself when the count is reached
+-- and the same hunt starts again (v0.25.86, owner: AFK-friendly, no claim button)
+local function huntDef(id)
+	local def = type(id) == "string" and Monsters[id]
+	if not def then
+		return nil
+	end
+	for _, m in ipairs(islandMonsters) do
+		if m.id == id then
+			return def
+		end
+	end
+	return nil
+end
+
+local function payHunt(player, p, def)
+	p.hunt.progress = 0
+	local exp = math.floor(def.exp * Hunts.Count * Hunts.ExpMult)
+	local job = math.floor((def.jobExp or 0) * Hunts.Count * Hunts.ExpMult)
+	local b = def.beli or { 0, 0 }
+	local beli = math.floor((b[1] + b[2]) / 2 * Hunts.Count * Hunts.BeliMult)
+	R.PlayerService.GiveExp(player, exp, job)
+	R.PlayerService.AddBeli(player, beli)
+	local got = {}
+	for _, it in ipairs(Hunts.Items) do
+		R.InventoryService.AddItem(player, it[1], it[2])
+		table.insert(got, { id = it[1], qty = it[2] })
+	end
+	Net.Push(player, "Loot", { beli = beli, items = got })
+	Net.Push(player, "Notice", { text = "HUNT COMPLETE  •  reward paid, next round started", color = "Green" })
+	R.PlayerService.MarkDirty(player)
+end
+
 -- ===== dailies =====
 local function rollDailies(player, p)
 	local rng = Random.new(player.UserId * 7 + tonumber(today()))
@@ -133,8 +166,9 @@ function PG.Event(player, kind, target, amount)
 	local h = p.hunt
 	if kind == "Kill" and type(h) == "table" and h.id == target and (h.progress or 0) < Hunts.Count then
 		h.progress = math.min(Hunts.Count, (h.progress or 0) + amount)
-		if h.progress >= Hunts.Count then
-			Net.Push(player, "Notice", { text = "HUNT COMPLETE  •  claim it in Quests (J)", color = "Green" })
+		local def = h.progress >= Hunts.Count and huntDef(h.id)
+		if def then
+			payHunt(player, p, def)
 		end
 		R.PlayerService.MarkDirty(player)
 	end
@@ -232,19 +266,7 @@ function PG.Start()
 		return true, "Daily reward claimed"
 	end, 0.5)
 
-	-- hunts (Config/Hunts): pick one, abandon it, claim it (it starts again)
-	local function huntDef(id)
-		local def = type(id) == "string" and Monsters[id]
-		if not def then
-			return nil
-		end
-		for _, m in ipairs(islandMonsters) do
-			if m.id == id then
-				return def
-			end
-		end
-		return nil
-	end
+	-- hunts: pick one or abandon it (the reward pays itself, see payHunt)
 	Net.Handle("HuntStart", function(player, data)
 		local p = R.PlayerService.Profile(player)
 		local def = huntDef(data.id)
@@ -274,20 +296,7 @@ function PG.Start()
 		if (h.progress or 0) < Hunts.Count then
 			return false, "Not finished yet"
 		end
-		h.progress = 0 -- repeatable: the same hunt starts again
-		local exp = math.floor(def.exp * Hunts.Count * Hunts.ExpMult)
-		local job = math.floor((def.jobExp or 0) * Hunts.Count * Hunts.ExpMult)
-		local b = def.beli or { 0, 0 }
-		local beli = math.floor((b[1] + b[2]) / 2 * Hunts.Count * Hunts.BeliMult)
-		R.PlayerService.GiveExp(player, exp, job)
-		R.PlayerService.AddBeli(player, beli)
-		local got = {}
-		for _, it in ipairs(Hunts.Items) do
-			R.InventoryService.AddItem(player, it[1], it[2])
-			table.insert(got, { id = it[1], qty = it[2] })
-		end
-		Net.Push(player, "Loot", { beli = beli, items = got })
-		R.PlayerService.MarkDirty(player)
+		payHunt(player, p, def) -- a save that was already full before v0.25.86
 		return true, "Hunt reward claimed! It starts again."
 	end, 0.5)
 

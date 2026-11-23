@@ -525,19 +525,42 @@ function Quest.Start()
 		HUD.Layout()
 	end
 	-- v0.25.18: the active Hunt under the quest tracker (owner reference: HUNT tag, name, progress, GO)
+	-- v0.25.86 (owner): with no hunt running the card SUGGESTS one (the toughest island monster your level opens),
+	-- START begins it right there; the reward pays itself when the count is reached (no claim)
 	local HuntsCfg = require(ReplicatedStorage.Shared.Config.Hunts)
 	local MonstersCfg = require(ReplicatedStorage.Shared.Config.Monsters)
+	local function suggestHunt()
+		local lv = State.profile and State.profile.baseLevel or 1
+		local best
+		for _, isl in ipairs(Islands.List) do
+			for _, sp in ipairs(isl.spawns) do
+				local def = MonstersCfg[sp.monster]
+				if def and lv >= math.max(1, def.level - HuntsCfg.LevelLead) and (not best or def.level > best.level) then
+					best = def
+				end
+			end
+		end
+		return best
+	end
+	local suggested
 	local hunt = New("Frame", { Name = "HuntCard", Size = UDim2.fromOffset(330, 64), BackgroundColor3 = Color3.new(1, 1, 1), Visible = false, Parent = tracker.Parent })
 	UI.Corner(hunt, 12)
 	UI.Gradient(hunt, T.PanelTop, T.PanelDeep, 90)
 	UI.Stroke(hunt, T.Edge, 3)
 	UI.Bevel(hunt, T.Bevel, 2, 0.3)
 	local tag = New("Frame", { BackgroundColor3 = T.Green, Position = UDim2.fromOffset(10, 8), Size = UDim2.fromOffset(54, 20), Parent = hunt })
-	UI.Text(tag, "HUNT", 12, Color3.new(1, 1, 1), "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false })
+	local tagText = UI.Text(tag, "HUNT", 12, Color3.new(1, 1, 1), "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false })
 	local hName = UI.Text(hunt, "", 14, T.Text, "Display", { Position = UDim2.fromOffset(70, 8), Size = UDim2.new(1, -150, 0, 20), TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd })
 	local hBar = UI.Bar(hunt, T.Gold, UDim2.new(1, -96, 0, 14), "", 0)
 	hBar.back.Position = UDim2.fromOffset(10, 38)
-	local _, goHolder = UI.Button(hunt, "GO", T.Green, UDim2.fromOffset(62, 44), function()
+	local goBtn, goHolder = UI.Button(hunt, "GO", T.Green, UDim2.fromOffset(62, 44), function()
+		if suggested then
+			local res = Net.Request("HuntStart", { id = suggested.id })
+			if res and res.msg then
+				UI.Toast(res.msg, res.ok and "good" or "bad")
+			end
+			return
+		end
 		require(script.Parent.Panels).Open("Quests", { tab = "Hunts" })
 	end)
 	goHolder.AnchorPoint = Vector2.new(1, 0.5)
@@ -545,17 +568,21 @@ function Quest.Start()
 	local function refreshHunt()
 		local h = State.profile and State.profile.hunt
 		local def = type(h) == "table" and MonstersCfg[h.id]
-		hunt.Visible = def ~= nil and not Quest.collapsed
+		suggested = not def and State.profile and suggestHunt() or nil
+		def = def or suggested
 		if def then
-			local n = h.progress or 0
-			hName.Text = "Defeat " .. def.name
+			local n = suggested and 0 or (h.progress or 0)
+			tagText.Text = suggested and "NEW" or "HUNT"
+			tag.BackgroundColor3 = suggested and T.Orange or T.Green
+			goBtn.Text = suggested and "START" or "GO"
+			hName.Text = "Defeat " .. def.name .. " x" .. HuntsCfg.Count
 			hBar:Set(n / HuntsCfg.Count, n .. " / " .. HuntsCfg.Count)
-			hBar.text.Text = n .. " / " .. HuntsCfg.Count
+			hBar.text.Text = suggested and "Repeats by itself" or (n .. " / " .. HuntsCfg.Count)
 		end
 	end
 	RunService.Heartbeat:Connect(function()
 		local h = State.profile and State.profile.hunt
-		hunt.Visible = not Quest.collapsed and type(h) == "table" and MonstersCfg[h.id] ~= nil
+		hunt.Visible = not Quest.collapsed and ((type(h) == "table" and MonstersCfg[h.id] ~= nil) or suggested ~= nil)
 		if hunt.Visible then
 			-- sit right under the tracker (or in its place when the story is done)
 			local tp = tracker.Position

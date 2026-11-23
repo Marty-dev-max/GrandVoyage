@@ -25,7 +25,7 @@ end
 local function preview(parent, def, size)
 	return (def.kind == "Fruit" and UI.ModelView(parent, "Fruits", def.fruit, size, 1.4))
 		or UI.AccessoryView(parent, def.id, size)
-		or (def.weaponType and UI.ModelView(parent, "Weapons", def.weaponType, size, 1.2))
+		or (def.weaponType and UI.WeaponView(parent, def, size, 1.2))
 		or (def.kind == "Egg" and UI.VoxelEgg(parent, def.id, size))
 		or UI.VoxelIcon(parent, UI.ItemIconName(def), size)
 		or UI.Icon(parent, UI.ItemIconName(def) or "🎁", size)

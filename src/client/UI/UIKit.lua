@@ -814,6 +814,14 @@ function UI.ModelView(parent, folder, key, size, spin, props)
 	return UI.ModelViewOf(parent, src:Clone(), size, spin, props)
 end
 
+-- v0.25.98 (owner: every grade looked the same): weapon previews = the grade's own voxel icon (w_<Type>_<Grade>),
+-- the shared Wep_ mesh only when a weapon has no grade icon
+function UI.WeaponView(parent, def, size, spin, props)
+	local icon = def.weaponType and def.grade and ("w_" .. def.weaponType .. "_" .. def.grade)
+	return (icon and UI.VoxelIcon(parent, icon, size, props))
+		or (def.weaponType and UI.ModelView(parent, "Weapons", def.weaponType, size, spin, props))
+end
+
 -- v0.25.36: a worn accessory as 3D blocks on a plain stand (same blocks as on the character), spinning
 function UI.AccessoryView(parent, id, size, props)
 	local Accessory = require(ReplicatedStorage.Shared.Modules.Accessory)

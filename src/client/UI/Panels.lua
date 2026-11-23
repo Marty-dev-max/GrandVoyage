@@ -444,7 +444,7 @@ function Panels.Inventory(args)
 		local big = (def.kind == "Card" and CardArt.Fitted(head, def).holder)
 			or (def.kind == "Fruit" and UI.ModelView(head, "Fruits", def.fruit, 200, 0.9, { ZIndex = 5 }))
 			or (UI.AccessoryView(head, def.id, 200, { ZIndex = 5 }))
-			or (def.weaponType and UI.ModelView(head, "Weapons", def.weaponType, 200, 0.7, { ZIndex = 5 }))
+			or (def.weaponType and UI.WeaponView(head, def, 200, 0.7, { ZIndex = 5 }))
 			or (def.kind == "Egg" and (UI.VoxelEgg(head, def.id, 200, { ZIndex = 5 })))
 			or (UI.VoxelIcon(head, UI.ItemIconName(def), 200, { ZIndex = 5 }))
 		if not big and iconId then
@@ -1586,7 +1586,7 @@ function Panels.Refine(opts)
 		UI.Corner(ring, size)
 		UI.Stroke(ring, tier.color:Lerp(Color3.new(1, 1, 1), 0.3), 4)
 		New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.glow, ImageColor3 = tier.color, ImageTransparency = 0.3, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(1, 1), Parent = holder })
-		local view = def.weaponType and UI.ModelView(holder, "Weapons", def.weaponType, math.floor(size * 0.8), 0.7, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5) })
+		local view = def.weaponType and UI.WeaponView(holder, def, math.floor(size * 0.8), 0.7, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5) })
 		if not view then
 			local img = UI.ItemIconId(def)
 			if img then

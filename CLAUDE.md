@@ -806,6 +806,8 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     picked first by UI.ItemIconName for weapons); UI.ModelView("Weapons", "Shoes") returns nil (bare legs, callers fall
     back to the voxel icon); materials wood_gold / shard_pure / badge. Render a few icons without rewriting the rest:
     import gen_pixel_icons and call render(name) for just those names.
+  * v0.25.98 (owner): `UI.WeaponView(parent, def, size, spin, props)` = the grade voxel icon (w_<Type>_<Grade>) for
+    weapon previews (Bag, ItemReveal, Blacksmith), Wep_ mesh only without a grade icon. Held weapons are unchanged.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

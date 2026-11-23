@@ -14,11 +14,11 @@ local function q(x, s)
 	return math.floor(x / s + 0.5)
 end
 
--- v0.25.112: the first runtime pass hit the server script timeout (whole Init aborted); yield every ~50 ms so a big
--- world spreads over a few frames (results do not depend on timing)
+-- v0.25.112: the first (slow) pass hit the server script timeout and aborted Init. It runs in ~1 s now; this yield is
+-- only a safety net (each task.wait during server start can take seconds, so it must not fire normally)
 local lastYield = 0
 local function breathe()
-	if os.clock() - lastYield > 0.05 then
+	if os.clock() - lastYield > 2 then
 		task.wait()
 		lastYield = os.clock()
 	end

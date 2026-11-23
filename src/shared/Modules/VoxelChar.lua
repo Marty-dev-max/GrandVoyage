@@ -395,7 +395,9 @@ end
 VC.Rest = REST -- limb rest poses (tools/export_char.luau dresses previews with Accessory.Build)
 local LITE = false -- set by VC.Preview(..., { lite = true }): fewer hair blocks (NPC crews)
 local function buildAll(look, heritage, variant, mode, place, emit)
+	local mark = type(look) == "table" and look.mark or nil
 	look = Looks.Sanitize(look)
+	look.mark = mark -- monsters only (MonsterLooks); Sanitize drops unknown keys
 	local her = Looks.HeritageById[heritage or ""]
 	if her and her.lock then
 		-- a locked heritage look (Cinderwing): these colors cannot be changed

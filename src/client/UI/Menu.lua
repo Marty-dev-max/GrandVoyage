@@ -481,15 +481,18 @@ local function buildTitle()
 		refreshSlots()
 	end, { LayoutOrder = 3 })
 	-- corner notes like the reference: version + what's new
-	local notes = pixelFrame(f, { BackgroundTransparency = 0.35, AnchorPoint = Vector2.new(0, 1), Size = UDim2.fromOffset(340, 120) })
-	New("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingTop = UDim.new(0, 10), Parent = notes })
+	-- v0.25.99: the box grows with its lines (the old fixed 120 px cut the second line off); lines = GameConfig.UpdateNotes
+	local notes = pixelFrame(f, { BackgroundTransparency = 0.35, AnchorPoint = Vector2.new(0, 1), Size = UDim2.fromOffset(340, 0), AutomaticSize = Enum.AutomaticSize.Y })
+	New("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12), PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 12), Parent = notes })
 	notes.PxShadow:Destroy() -- (a list layout would place it as an item)
 	notes.Position = UDim2.new(0, 24, 1, -24)
 	UI.List(notes, Enum.FillDirection.Vertical, 6)
 	label(notes, "UPDATE LOG", 12, PIXEL.gold, { LayoutOrder = 1 })
 	rule(notes, 160, PIXEL.line, 2)
 	label(notes, "VERSION " .. GameConfig.Version, 11, PIXEL.cream, { LayoutOrder = 3 })
-	label(notes, "Voxel world, character slots and a character creator!", 9, Color3.fromRGB(180, 190, 220), { LayoutOrder = 4, Size = UDim2.new(1, 0, 0, 26) })
+	for i, line in ipairs(GameConfig.UpdateNotes or {}) do
+		label(notes, "- " .. line, 9, Color3.fromRGB(180, 190, 220), { LayoutOrder = 3 + i, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y })
+	end
 	refreshTitle = function()
 		slotText.Text = slotLine(current)
 	end

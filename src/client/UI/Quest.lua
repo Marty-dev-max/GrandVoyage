@@ -97,7 +97,7 @@ local function buildTracker()
 	UI.Corner(tBar, 4)
 	tHint = UI.Text(tracker, "", 12, T.TextSoft, "Semi", { Position = UDim2.fromOffset(22, 82), Size = UDim2.new(1, -34, 0, 30), TextWrapped = true, TextYAlignment = Enum.TextYAlignment.Top, Visible = false })
 	tDist = UI.Text(tracker, "", 13, T.Gold, "Display", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -30, 0, 22), Size = UDim2.fromOffset(80, 18), TextXAlignment = Enum.TextXAlignment.Right, TextWrapped = false })
-	tChevron = UI.Text(tracker, "▾", 16, T.TextSoft, "Display", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 4), Size = UDim2.fromOffset(18, 18), TextXAlignment = Enum.TextXAlignment.Center })
+	tChevron = UI.Text(tracker, "+", 16, T.TextSoft, "Display", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 4), Size = UDim2.fromOffset(18, 18), TextXAlignment = Enum.TextXAlignment.Center })
 	local sb
 	sb, skipBtn = UI.Button(tracker, "Skip tutorial", T.Grey, UDim2.fromOffset(110, 24), function()
 		UI.Confirm("Skip the Daybreak tutorial? You keep everything you have, but miss its rewards.", function()
@@ -189,7 +189,7 @@ function Quest.ApplyExpanded()
 	end
 	tracker.Size = UDim2.fromOffset(tracker.Size.X.Offset, expanded and EXPANDED_H or COLLAPSED_H)
 	tHint.Visible = expanded
-	tChevron.Text = expanded and "▴" or "▾"
+	tChevron.Text = expanded and "-" or "+" -- v0.25.99: the pixel font has no ▾ ▴ (showed a box)
 	skipBtn.Visible = expanded and data ~= nil and data.tutorial == true
 	if Quest.replayBtn then
 		Quest.replayBtn.Visible = expanded

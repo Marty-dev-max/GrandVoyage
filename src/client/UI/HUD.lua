@@ -907,7 +907,7 @@ local function buildSkillBar()
 		local s = makeSlot(main, "F" .. i, 100 + i)
 		s.kind = kind
 		itemSlots[i] = s
-		s.pct = UI.Text(s.holder, "", 11, T.Gold, "Number", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 0, -1), Size = UDim2.new(1, 0, 0, 13), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false })
+		s.pct = UI.Text(s.holder, "", 10, T.Gold, "Number", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 0, 0, -1), Size = UDim2.new(1, -14, 0, 12), TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = false }) -- v0.25.99: left of the gear (centered it ran under it)
 		New("UIStroke", { Color = T.Edge, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual, Parent = s.pct })
 		local gear = New("ImageButton", { BackgroundColor3 = T.PanelDeep, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(1, -3, 0, 3), Size = UDim2.fromOffset(20, 20), ZIndex = 9, Parent = s.holder })
 		UI.Corner(gear, 10)

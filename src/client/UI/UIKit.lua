@@ -500,6 +500,21 @@ function UI.Button(parent, text, color, size, onClick, props)
 			pad.PaddingLeft = UDim.new(0, 30)
 		end
 	end
+	-- v0.25.99: UIPadding also moves child frames, so the bevel lines are pushed back out by the padding (on short
+	-- buttons like PARTY the lip sat across the text)
+	local function fitBevel()
+		local p = btn:FindFirstChildOfClass("UIPadding")
+		local l, r, t, b = p.PaddingLeft.Offset, p.PaddingRight.Offset, p.PaddingTop.Offset, p.PaddingBottom.Offset
+		btn.Gloss.Position = UDim2.fromOffset(2 - l, 2 - t)
+		btn.Gloss.Size = UDim2.new(1, l + r - 4, 0, 2)
+		btn.Lip.Position = UDim2.new(0, -l, 1, b)
+		btn.Lip.Size = UDim2.new(1, l + r, 0, 4)
+	end
+	fitBevel()
+	local pad = btn:FindFirstChildOfClass("UIPadding")
+	for _, prop in ipairs({ "PaddingLeft", "PaddingRight", "PaddingTop", "PaddingBottom" }) do
+		pad:GetPropertyChangedSignal(prop):Connect(fitBevel)
+	end
 	if onClick then
 		btn.Activated:Connect(onClick)
 	end

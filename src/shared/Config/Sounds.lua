@@ -137,6 +137,7 @@ add("FruitHum", "SFX", 0.5, "", { looped = true, id = "rbxassetid://9116396987" 
 add("SliceCut", "SFX", 0.6, "", { id = "rbxassetid://9116197246" }) -- Knife Slashing Rope 1
 add("HammerThud", "SFX", 0.8, "", { id = "rbxassetid://9114757499", rolloff = 260 }) -- Sledgehammer Impacts 5
 add("CannonBlast", "SFX", 0.9, "", { id = "rbxassetid://9117876319", rolloff = 700 }) -- Power Explosions Big Heavy Searing Boom 1
+add("ShieldBlock", "SFX", 0.6, "", { id = "rbxassetid://9119072660" }) -- Shield Clang As Hit Metal Sword Hubcap 1 (v0.25.79 barrier blocks)
 add("BlazeFlyLoop", "SFX", 0.55, "", { looped = true, id = "rbxassetid://9112780193" }) -- Fireplace Constant Burning Flame 1 (ProSoundEffects)
 add("HazeFlyLoop", "SFX", 0.35, "", { looped = true, id = "rbxassetid://9114438011" }) -- soft rushing hiss under the smoke trail -- Pixie Dust Twinkles 3 (ProSoundEffects), loops at a spawned fruit
 add("FruitTwinkle", "SFX", 0.7, "", { id = "rbxassetid://9116396069" }) -- Magic Insect Dive Down Pixie Dust Twinkles 2 (ProSoundEffects)

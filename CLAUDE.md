@@ -716,6 +716,14 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     Sounds SliceCut (Sword hits), HammerThud (Hammer hits), CannonBlast (ProSoundEffects ids; our audio upload quota is
     spent until 6 Dec). CannonDrop = two-hand throw (Blaze_BallThrow, delay 0.35, SkillFX.CannonThrow). Hammer icon
     redrawn centred (gen_skill_icons.hammer, shared by the pixel icon).
+  * v0.25.79 FRUITS v2 phase 5 = Shield: skill kind "Channel" (shape Wall/Dome, sp start, spPerSec, maxHold, mult,
+    pushRadius/radius, anim loop + releaseAnim). Server CombatService ChannelStart/ChannelEnd (channels[player], drains SP
+    every 0.25 s, char attrs Channel/ChannelR, release = hits + knock in front/around + FX "<id>_End"), CastSkill
+    refuses Channel; MonsterHit `barrierBlocks` (Wall = holder's front, Dome = victims inside from mobs outside) ->
+    "BLOCKED" + F_BarrierBlock FX. Client Combat.ChannelStart(id, keyCode)/ChannelEnd (key up, IsKeyDown check, server
+    attr gone; taps/Auto hold Fruits.Channel.TapHold). FruitFX dressBarrier (every client, from the attrs), release FX,
+    Barrier Steps = local collidable "BarrierStep" panes under the feet at each jump apex while Space is held
+    (Fruits.BarrierSteps MaxSteps/Life) + server "BarrierStep" -> FX for others. Clips Shield_Hold / Shield_DomeHold.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

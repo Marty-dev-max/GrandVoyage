@@ -638,6 +638,198 @@ FX.F_BarrierDome = function(d)
 	fade(top, 1.6, 0.4)
 end
 
+-- ===== v0.25.79 Shield phase 5: held barriers (Channel), their release, blocked blows, Barrier Steps =====
+local GLASS, GLASS2 = Color3.fromRGB(150, 240, 255), Color3.fromRGB(80, 200, 240)
+local function glassPane(size, cf, transp)
+	local p = blk(size, GLASS, cf, true, transp or 0.62)
+	local rim = blk(size + Vector3.new(0.25, 0.25, -size.Z + 0.06), GLASS2, cf, true, 0.25)
+	return p, rim
+end
+-- the barrier a channeling character holds up (every client sees it): a 3x3 wall of panes in front, or a dome
+local barriers = setmetatable({}, { __mode = "k" })
+local function dressBarrier(char, shape, radius)
+	local st = barriers[char]
+	if st and st.shape ~= shape then
+		st.stop()
+		st = nil
+	end
+	if not shape then
+		if st then
+			st.stop()
+		end
+		return
+	end
+	if st then
+		return
+	end
+	local root = char:FindFirstChild("HumanoidRootPart")
+	if not root then
+		return
+	end
+	local parts = {}
+	local layout = {} -- { offset CFrame in root space, size }
+	if shape == "Wall" then
+		for x = -1, 1 do
+			for y = -1, 1 do
+				table.insert(layout, { CFrame.new(x * 2.6, 1 + y * 2.6, -4), Vector3.new(2.45, 2.45, 0.3) })
+			end
+		end
+	else
+		local r = math.min(radius or 14, 18)
+		for ring = 0, 3 do
+			local el = ring / 4 * math.pi / 2
+			local rr = math.cos(el) * r
+			local n = math.max(6, math.floor(rr * 0.55))
+			for i = 1, n do
+				local a = i / n * math.pi * 2 + ring * 0.2
+				local pos = Vector3.new(math.cos(a) * rr, math.sin(el) * r - 2.6, math.sin(a) * rr)
+				table.insert(layout, { CFrame.lookAt(pos, Vector3.new(0, -2.6, 0)), Vector3.new(3.2, 3.2, 0.25), true })
+			end
+		end
+		table.insert(layout, { CFrame.new(0, r - 2.6, 0) * CFrame.Angles(math.pi / 2, 0, 0), Vector3.new(3.2, 3.2, 0.25), true })
+	end
+	for i, l in ipairs(layout) do
+		local p, rim = glassPane(Vector3.new(0.1, 0.1, 0.1), root.CFrame * l[1])
+		parts[i] = { p = p, rim = rim, off = l[1], size = l[2], world = l[3] }
+	end
+	local t0 = os.clock()
+	local conn = game:GetService("RunService").RenderStepped:Connect(function()
+		if not root.Parent then
+			return
+		end
+		local k = math.min(1, (os.clock() - t0) / 0.18)
+		local base = root.CFrame
+		for i, e in ipairs(parts) do
+			local kk = math.clamp(k * 1.6 - i * 0.02, 0, 1)
+			-- the dome stays level around you (no tilting with the body), the wall turns with you
+			local cf = e.world and (CFrame.new(base.Position) * e.off) or (base * e.off)
+			e.p.CFrame = cf
+			e.rim.CFrame = cf * CFrame.new(0, 0, 0.05)
+			e.p.Size = e.size * kk
+			e.rim.Size = (e.size + Vector3.new(0.25, 0.25, -e.size.Z + 0.06)) * kk
+			e.p.Transparency = 0.6 + math.sin(os.clock() * 4 + i) * 0.06
+		end
+	end)
+	st = { shape = shape }
+	function st.stop()
+		conn:Disconnect()
+		barriers[char] = nil
+		for _, e in ipairs(parts) do
+			fade(e.p, 0, 0.2)
+			fade(e.rim, 0, 0.2)
+		end
+	end
+	barriers[char] = st
+end
+local function shatterGlass(pos, n)
+	Voxels.Blocks(pos, { count = n or 14, colors = { GLASS, GLASS2, C.white }, size = { 0.3, 0.7 }, speed = 14, up = 6, neon = true, collide = false, life = 0.6, spread = 1.5 })
+end
+-- release: the wall slams forward and breaks on what it hits / the dome bursts outward
+FX.F_BarrierWall_End = function(d)
+	local look = typeof(d.look) == "Vector3" and d.look or Vector3.zAxis
+	local from = d.from + Vector3.new(0, 1, 0)
+	local cf = CFrame.lookAt(from + look * 4, from + look * 5)
+	local p, rim = glassPane(Vector3.new(7.5, 7.5, 0.4), cf, 0.4)
+	tw(p, 0.16, { CFrame = cf * CFrame.new(0, 0, -6) }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	tw(rim, 0.16, { CFrame = cf * CFrame.new(0, 0, -5.95) }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	task.delay(0.16, function()
+		fade(p, 0, 0.1)
+		fade(rim, 0, 0.1)
+		shatterGlass(from + look * 10, 26)
+		require(script.Parent.VFX).Shockwave(from + look * 10, look, GLASS, 11)
+	end)
+end
+FX.F_BarrierDome_End = function(d)
+	local at = d.from
+	local r = d.radius or 14
+	require(script.Parent.VFX).Ring(ground(at) + Vector3.new(0, 0.3, 0), r * 1.3, GLASS, 0.5)
+	for i = 1, 18 do
+		local a = i / 18 * math.pi * 2
+		local pos = at + Vector3.new(math.cos(a) * r * 0.8, 1 + (i % 3) * 2, math.sin(a) * r * 0.8)
+		local p = blk(Vector3.new(2.2, 2.2, 0.25), GLASS, CFrame.lookAt(pos, at), true, 0.45)
+		tw(p, 0.35, { CFrame = CFrame.lookAt(pos + (pos - at).Unit * 6, at), Transparency = 1 })
+		Debris:AddItem(p, 0.4)
+	end
+	shatterGlass(at + Vector3.new(0, 2, 0), 30)
+end
+-- a monster blow stopped by a barrier: the pane flashes where it was hit
+FX.F_BarrierBlock = function(d)
+	local to = d.to or d.from
+	local dir = (to - d.from) * Vector3.new(1, 0, 1)
+	dir = dir.Magnitude > 0.1 and dir.Unit or Vector3.zAxis
+	local p = d.from + dir * 2.5
+	local pane = blk(Vector3.new(3, 3, 0.3), C.white, CFrame.lookAt(p, p + dir), true, 0.2)
+	tw(pane, 0.25, { Transparency = 1, Size = Vector3.new(4.5, 4.5, 0.3) })
+	Debris:AddItem(pane, 0.3)
+	Voxels.Pixels(p, { count = 10, colors = { GLASS, C.white }, size = 0.3, speed = 8, gravity = 0, life = 0.3, glow = 1, spread = 1 })
+	pcall(function()
+		require(script.Parent.Audio).Play("ShieldBlock", { pos = p })
+	end)
+end
+-- Barrier Steps of OTHER players (yours are real, local, collidable ones below)
+local function stepVisual(pos, collide)
+	local p, rim = glassPane(Vector3.new(4.6, 0.45, 4.6), CFrame.new(pos), 0.45)
+	p.CanCollide = collide == true
+	p.Size = Vector3.new(0.2, 0.45, 0.2)
+	tw(p, 0.12, { Size = Vector3.new(4.6, 0.45, 4.6) }, Enum.EasingStyle.Back)
+	rim.Size = Vector3.new(4.8, 0.2, 4.8)
+	rim.CFrame = CFrame.new(pos - Vector3.new(0, 0.2, 0))
+	local life = require(game:GetService("ReplicatedStorage").Shared.Config.Fruits).BarrierSteps.Life
+	fade(p, life, 0.4)
+	fade(rim, life, 0.4)
+	Voxels.Pixels(pos, { count = 8, colors = { GLASS, C.white }, size = 0.25, speed = 4, gravity = 2, life = 0.3, glow = 1, spread = 1.5 })
+	return p
+end
+FX.F_BarrierStep = function(d)
+	if d.stepper == game:GetService("Players").LocalPlayer.UserId then
+		return
+	end
+	stepVisual(d.from, false)
+end
+-- your own Barrier Steps: jump and keep Space held; at the top of each hop a step appears under your feet, you land on
+-- it and (Space still held) jump again = stairs into the sky. MaxSteps before you must touch the ground again.
+local function stepsLoop()
+	local Players = game:GetService("Players")
+	local UIS = game:GetService("UserInputService")
+	local Net = require(game:GetService("ReplicatedStorage").Shared.Modules.Net)
+	local cfg = require(game:GetService("ReplicatedStorage").Shared.Config.Fruits).BarrierSteps
+	local me = Players.LocalPlayer
+	local count, lastAt = 0, 0
+	game:GetService("RunService").Heartbeat:Connect(function()
+		local c = me.Character
+		local h = c and c:FindFirstChildOfClass("Humanoid")
+		local r = c and c:FindFirstChild("HumanoidRootPart")
+		if not h or not r or h.Health <= 0 or me:GetAttribute("Fruit") ~= "Ward" or c:GetAttribute("Downed") then
+			return
+		end
+		local airborne = h.FloorMaterial == Enum.Material.Air
+		if not airborne then
+			local rp = RaycastParams.new()
+			rp.FilterType = Enum.RaycastFilterType.Exclude
+			rp.FilterDescendantsInstances = { c }
+			local below = workspace:Raycast(r.Position, Vector3.new(0, -6, 0), rp)
+			if not (below and below.Instance and below.Instance.Name == "BarrierStep") then
+				count = 0 -- back on real ground
+			end
+			return
+		end
+		local held = UIS:IsKeyDown(Enum.KeyCode.Space) or UIS:IsGamepadButtonDown(Enum.UserInputType.Gamepad1, Enum.KeyCode.ButtonA) or h.Jump
+		if not held or count >= cfg.MaxSteps or os.clock() - lastAt < 0.22 or r.AssemblyLinearVelocity.Y > 2 then
+			return
+		end
+		lastAt = os.clock()
+		count += 1
+		local feet = r.Position - Vector3.new(0, h.HipHeight + r.Size.Y / 2 + 0.3, 0)
+		local fwd = r.CFrame.LookVector * Vector3.new(1, 0, 1)
+		local pos = feet + (fwd.Magnitude > 0.1 and fwd.Unit * 0.8 or Vector3.zero)
+		local step = stepVisual(pos, true)
+		step.Name = "BarrierStep"
+		step.CanQuery = true
+		task.spawn(Net.Request, "BarrierStep", { pos = pos })
+	end)
+end
+FX.StepsLoop = stepsLoop
+
 -- ===== Bounce Bounce (v0.25.66, docs/Plan-Fruits-v2.md phase 2) =====
 -- The rubber arms are real voxel blocks in the character's own skin color (read from its hand block): a chain of
 -- cubes from the elbow to the fist that stretches out, holds, and snaps back with a wobble. The real forearm + hand
@@ -1355,12 +1547,14 @@ function FX.Start()
 	folder = Instance.new("Folder")
 	folder.Name = "FruitFX"
 	folder.Parent = workspace
+	pcall(stepsLoop)
 	task.spawn(function()
 		local Players = game:GetService("Players")
 		while true do
 			for _, pl in ipairs(Players:GetPlayers()) do
 				local c = pl.Character
 				if c then
+					pcall(dressBarrier, c, c:GetAttribute("Channel"), c:GetAttribute("ChannelR"))
 					local fruit = pl:GetAttribute("Fruit")
 					dressFire(c, (fruit == "Blaze" or fruit == "Haze") and c:GetAttribute("Flying") == true, fruit)
 				end

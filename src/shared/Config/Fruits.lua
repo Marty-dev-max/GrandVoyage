@@ -55,12 +55,14 @@ F.List = {
 		stats = { "VIT", "INT" }, -- v0.25.69: main / second stat bonus, grows with Fruit Mastery (F.StatBonus)
 		color = Color3.fromRGB(120, 220, 255), swirl = Color3.fromRGB(230, 250, 255), icon = "🛡️",
 		desc = "Create unbreakable barriers to shield your crew.",
-		passive = { defPct = 0.12 }, passiveText = "Barrier Steps: hold Space to build stairs of barrier • +12% DEF",
+		passive = { defPct = 0.12 }, passiveText = "Barrier Steps: jump and keep holding Space to build stairs of barrier under your feet • +12% DEF",
 		skills = {
 			{ id = "F_BarrierBash", name = "Barrier Bash", kind = "Melee", sp = 10, cd = 3, range = 10, mult = 2.2, mastery = 1, fx = "Smash", desc = "Ram a barrier into the enemy." },
-			{ id = "F_BarrierWall", name = "Barrier Wall", kind = "PartyBuff", sp = 24, cd = 25, radius = 30, duration = 12, buff = { def = 0.35 }, mastery = 10, fx = "AuraBlue", desc = "Shield the crew around you: DEF up." },
+			-- v0.25.79 Channel skills (owner): HOLD the key = the barrier stands and SP drains each second; let go (or run out of
+			-- SP / time) = it bursts outward. Auto / a tap holds it for TapHold seconds.
+			{ id = "F_BarrierWall", name = "Barrier Wall", kind = "Channel", shape = "Wall", sp = 8, spPerSec = 7, maxHold = 6, cd = 10, mult = 1.8, pushRadius = 9, anim = "Shield_Hold", releaseAnim = "Bounce_Cannon", mastery = 10, fx = "None", desc = "Hold: a wall of barrier in front of you blocks every blow from that side (SP drains). Let go: it slams forward and knocks enemies back." },
 			{ id = "F_BarrierCrash", name = "Barrier Crash", kind = "Ranged", sp = 16, cd = 6, range = 34, mult = 2.4, mastery = 25, fx = "Bullet", desc = "Launch a barrier like a battering ram." },
-			{ id = "F_BarrierDome", name = "Barrier Dome", kind = "PartyBuff", sp = 40, cd = 50, radius = 30, duration = 8, buff = { def = 0.7 }, mastery = 50, fx = "AuraGreen", desc = "An unbreakable dome: DEF massively up." },
+			{ id = "F_BarrierDome", name = "Barrier Dome", kind = "Channel", shape = "Dome", radius = 14, sp = 12, spPerSec = 10, maxHold = 8, cd = 25, mult = 0.8, anim = "Shield_DomeHold", releaseAnim = "Skill_PowerUp", mastery = 50, fx = "None", desc = "Hold: a glass dome closes over you and your crew; nothing outside can hit anyone inside (SP drains). Let go: it bursts outward." },
 		},
 	},
 	{
@@ -136,6 +138,10 @@ F.Drops = {
 
 -- Slingshot Launch (Bounce passive, v0.25.66): hold right mouse to aim a spot, hold left mouse = both arms stretch out
 -- and grab it, let go = fling yourself there (Controllers/Slingshot; server CombatService "Sling" checks it)
+F.Channel = { TapHold = 2.5 } -- Channel skills cast from Auto Battle / a tap stand this long
+-- Barrier Steps (Shield passive): one step under your feet each time you top out a jump with Space held, at most MaxSteps
+-- before you touch the ground again; each fades after Life seconds
+F.BarrierSteps = { MaxSteps = 14, Life = 3.5 }
 F.Slingshot = { Range = 70, MinDist = 8, Cooldown = 2.5, Speed = 95, GrabSeconds = 4,
 	-- pumped (Pump Up running, v0.25.69): a straight rocket at PumpSpeed that ends PumpLift studs above the spot (so you
 	-- do not slam into it) and keeps flying a little; everything in the way takes PumpMult x your attack

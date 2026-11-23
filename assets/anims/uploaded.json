@@ -227,6 +227,14 @@
   "id": "118967884472792",
   "sha1": "2a3d7cb14341dee938cf3450e9fe10e25a0256c8"
  },
+ "Shield_DomeHold": {
+  "id": "107933026457150",
+  "sha1": "0e1217dba7d861239672eeaa3f4d2e85cf41354c"
+ },
+ "Shield_Hold": {
+  "id": "79775370573991",
+  "sha1": "727ea795fd175eda1dd82188ab362918e39b9483"
+ },
  "Skill_Bless": {
   "id": "99592825957569",
   "sha1": "e6e778bd694ff01589caceb092f81c7d43220084"

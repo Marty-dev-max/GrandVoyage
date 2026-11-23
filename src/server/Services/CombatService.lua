@@ -148,6 +148,33 @@ end
 Combat.MonsterDmgType = monsterDmgType
 local LOGIA = { Blaze = true, Haze = true }
 local smokeZones = {} -- v0.25.76 Smoke Screen clouds { pos, r, untilT }
+local channels = {} -- v0.25.79 held barriers: player -> { skill, t0, shape, radius, mult, magic }
+
+-- a monster blow that a held barrier stops: the Wall covers its holder's front, the Dome everyone inside it from
+-- monsters outside it
+local function barrierBlocks(mob, victim)
+	if not mob.root then
+		return false
+	end
+	for holder, ch in pairs(channels) do
+		local hr = R.PlayerService.Root(holder)
+		if hr then
+			if ch.shape == "Wall" and holder == victim then
+				local to = (mob.root.Position - hr.Position) * Vector3.new(1, 0, 1)
+				local look = hr.CFrame.LookVector * Vector3.new(1, 0, 1)
+				if to.Magnitude > 0.1 and look.Magnitude > 0.1 and to.Unit:Dot(look.Unit) > 0.2 then
+					return true, hr.Position + look.Unit * 3
+				end
+			elseif ch.shape == "Dome" then
+				local vr = R.PlayerService.Root(victim)
+				if vr and (vr.Position - hr.Position).Magnitude <= ch.radius and (mob.root.Position - hr.Position).Magnitude > ch.radius - 1 then
+					return true, vr.Position
+				end
+			end
+		end
+	end
+	return false
+end
 
 -- true = the blow was absorbed by the victim's fruit body (Logia passes through, rubber bounces bullets back,
 -- a split body lets blades through)
@@ -202,6 +229,14 @@ function Combat.MonsterHit(mob, player, mult)
 	end
 	if fruitBody(mob, player, mult) then
 		return
+	end
+	do
+		local blocked, at = barrierBlocks(mob, player)
+		if blocked then
+			Net.FX("Miss", { pos = at + Vector3.new(0, 3, 0), text = "BLOCKED" }, at, 200)
+			Net.FX("Skill", { skill = "F_BarrierBlock", from = at, to = mob.root.Position }, at, 200)
+			return
+		end
 	end
 	-- v0.25.76 Smoke Screen: a monster blinded by the cloud swings at nothing half the time
 	if mob.root and #smokeZones > 0 then
@@ -688,12 +723,108 @@ local function setup()
 		slings[pl] = nil
 	end)
 
+	-- ===== v0.25.79 Channel skills (Shield: Barrier Wall / Dome): start on key down, end on key up =====
+	local function endChannel(player, ch)
+		if channels[player] ~= ch then
+			return
+		end
+		channels[player] = nil
+		local c = player.Character
+		if c then
+			c:SetAttribute("Channel", nil)
+			c:SetAttribute("ChannelR", nil)
+		end
+		local skill = ch.skill
+		skillCd[player] = skillCd[player] or {}
+		skillCd[player][skill.id] = os.clock() + skill.cd
+		local root = R.PlayerService.Root(player)
+		if not root or not alive(player) then
+			return
+		end
+		-- the release: the wall slams forward / the dome bursts outward, knocking back what it hits
+		local look = root.CFrame.LookVector * Vector3.new(1, 0, 1)
+		look = look.Magnitude > 0.1 and look.Unit or Vector3.zAxis
+		local center = skill.shape == "Wall" and root.Position + look * 5 or root.Position
+		local r = skill.shape == "Wall" and (skill.pushRadius or 9) or (skill.radius or 14)
+		local opts = { element = "barrier", knock = skill.shape == "Wall" and 12 or 9, knockPower = 2.5, knockFrom = root.Position }
+		for _, t in ipairs(inRadiusTargets(player, center, r)) do
+			hitTarget(player, t, ch.mult, ch.magic, opts)
+		end
+		Net.FX("Skill", { skill = skill.id .. "_End", from = root.Position, to = center, char = player.Character, radius = r, look = look }, root.Position, 350)
+		R.FruitService.OnCast(player)
+	end
+	Net.Handle("ChannelStart", function(player, data)
+		local skill = ClassesCfg.SkillById[type(data) == "table" and data.skillId or ""]
+		if not skill or skill.kind ~= "Channel" or channels[player] or not alive(player) then
+			return false
+		end
+		local lv, why = R.FruitService.SkillLevel(player, skill)
+		if not lv then
+			return false, why
+		end
+		skillCd[player] = skillCd[player] or {}
+		if skillCd[player][skill.id] and os.clock() < skillCd[player][skill.id] then
+			return false, "On cooldown"
+		end
+		local sp = player:GetAttribute("SP") or 0
+		if sp < skill.sp then
+			return false, "Not enough SP"
+		end
+		player:SetAttribute("SP", sp - skill.sp)
+		local d = R.PlayerService.Derived(player)
+		local ch = { skill = skill, t0 = os.clock(), shape = skill.shape, radius = skill.radius or 14, mult = (skill.mult or 1) * (1 + 0.1 * (lv - 1)), magic = d and d.matk > d.atk }
+		channels[player] = ch
+		local c = player.Character
+		if c then
+			c:SetAttribute("Channel", skill.shape)
+			c:SetAttribute("ChannelR", skill.radius)
+		end
+		task.spawn(function()
+			while channels[player] == ch do
+				task.wait(0.25)
+				if channels[player] ~= ch then
+					break
+				end
+				local left = (player:GetAttribute("SP") or 0) - skill.spPerSec * 0.25
+				if left < 0 or os.clock() - ch.t0 > (skill.maxHold or 6) or not alive(player) then
+					endChannel(player, ch)
+					break
+				end
+				player:SetAttribute("SP", left)
+			end
+		end)
+		return true
+	end, 0.2)
+	Net.Handle("ChannelEnd", function(player)
+		local ch = channels[player]
+		if ch then
+			endChannel(player, ch)
+		end
+		return true
+	end, 0.05)
+	Players.PlayerRemoving:Connect(function(pl)
+		channels[pl] = nil
+	end)
+
+	-- Barrier Steps (Shield passive): the stepping client tells the server so the others see the step
+	Net.Handle("BarrierStep", function(player, data)
+		local root = R.PlayerService.Root(player)
+		if player:GetAttribute("Fruit") ~= "Ward" or not root or type(data) ~= "table" or typeof(data.pos) ~= "Vector3" or (data.pos - root.Position).Magnitude > 12 then
+			return false
+		end
+		Net.FX("Skill", { skill = "F_BarrierStep", from = data.pos, to = data.pos, stepper = player.UserId }, root.Position, 300)
+		return true
+	end, 0.12)
+
 	Net.Handle("CastSkill", function(player, data)
 		if not alive(player) or player:GetAttribute("Vending") then
 			return false
 		end
 		local p = R.DataService.Get(player)
 		local skill = ClassesCfg.SkillById[data.skillId]
+		if skill and skill.kind == "Channel" then
+			return false -- held barriers go through ChannelStart / ChannelEnd
+		end
 		local lv
 		if skill and skill.fruit then
 			local why

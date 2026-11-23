@@ -625,6 +625,22 @@ C.Blaze_BallThrow = { rig = "R15", priority = "Action", strike = 0.14, keys = {
 	{ t = 0.7 },
 } }
 
+-- ===== Cursed Fruit: Shield Shield (v0.25.79, phase 5): held barriers =====
+-- Barrier Wall: both palms pushed out, braced (looped while held); release = Bounce_Cannon's two-palm shove
+C.Shield_Hold = { rig = "R15", loop = true, priority = "Action", length = 0.5, keys = {
+	{ t = 0, pose = with(CANNON, { UpperTorso = { -10, 0, 0 } }) },
+	{ t = 0.25, pose = with(CANNON, { UpperTorso = { -12, 0, 0 }, RightUpperArm = { 86, 0, -8 }, LeftUpperArm = { 86, 0, 8 } }) },
+	{ t = 0.5, pose = with(CANNON, { UpperTorso = { -10, 0, 0 } }) },
+} }
+-- Barrier Dome: arms raised wide, holding the dome up
+local DOME = { RightUpperArm = { 150, 0, 40 }, LeftUpperArm = { 150, 0, -40 }, RightLowerArm = { 20, 0, 0 }, LeftLowerArm = { 20, 0, 0 },
+	UpperTorso = { 8, 0, 0 }, Head = { 14, 0, 0 }, RightUpperLeg = { 0, 0, 12 }, LeftUpperLeg = { 0, 0, -12 }, LowerTorso = { 0, 0, 0, 0, -0.15, 0 } }
+C.Shield_DomeHold = { rig = "R15", loop = true, priority = "Action", length = 0.6, keys = {
+	{ t = 0, pose = DOME },
+	{ t = 0.3, pose = with(DOME, { RightUpperArm = { 154, 0, 44 }, LeftUpperArm = { 154, 0, -44 } }) },
+	{ t = 0.6, pose = DOME },
+} }
+
 -- weapon -> combo clips (in order), stance, and the clips each skill kind uses
 C.Weapons = {
 	-- freestyle street fighting: jab, cross, body blow, hook, knee, elbow, spinning backfist (the uppercut is a skill now)

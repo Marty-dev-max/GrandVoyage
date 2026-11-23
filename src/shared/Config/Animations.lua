@@ -57,6 +57,8 @@ return {
 	Mon_SerpentBite = 127676990905522,
 	Mon_SerpentSpit = 82548201541110,
 	Mon_Walk = 118967884472792,
+	Shield_DomeHold = 107933026457150,
+	Shield_Hold = 79775370573991,
 	Skill_Bless = 99592825957569,
 	Skill_Cast = 89459425171590,
 	Skill_GroundPunch = 121110938650178,

@@ -285,11 +285,98 @@ local function cdOf(skill)
 	return skill.cd * ((skill.fruit == "Bounce" and skill.id ~= "F_GearUp" and Combat.Pumped()) and 0.6 or 1)
 end
 
+-- ===== v0.25.79 Channel skills (Shield's Barrier Wall / Dome): held while the key is down, released on key up =====
+State.channel = nil
+-- keyCode: the held key (its up event can get lost, v0.25.49: the loop also checks the real key state)
+function Combat.ChannelStart(id, keyCode)
+	local skill = ClassesCfg.SkillById[id]
+	if not skill or State.channel or (State.cooldowns[id] or 0) > os.clock() then
+		return false
+	end
+	if (player:GetAttribute("SP") or 0) < skill.sp then
+		UI.Toast("Not enough SP", "bad")
+		return false
+	end
+	local ch = { id = id, t0 = os.clock() }
+	State.channel = ch
+	local h = hum()
+	if h and skill.anim then
+		Anim.Play(h, skill.anim, { fade = 0.08 })
+	end
+	task.spawn(function()
+		local res = Net.Request("ChannelStart", { skillId = id })
+		if not res.ok then
+			if State.channel == ch then
+				State.channel = nil
+				if h and skill.anim then
+					Anim.Stop(h, skill.anim, 0.1)
+				end
+			end
+			if res.msg and res.msg ~= "On cooldown" then
+				UI.Toast(res.msg, "bad")
+			end
+		end
+	end)
+	-- the server ends it on its own when SP / time runs out: follow the character attribute
+	task.spawn(function()
+		local c = char()
+		local seen = false
+		local t0 = os.clock()
+		while State.channel == ch and c and c.Parent do
+			if keyCode and not UserInputService:IsKeyDown(keyCode) then
+				break
+			end
+			local on = c:GetAttribute("Channel") ~= nil
+			seen = seen or on
+			if (seen and not on) or (not seen and os.clock() - t0 > 2) then
+				break -- the server ended it (SP / time) or never started it
+			end
+			task.wait(0.08)
+		end
+		if State.channel == ch then
+			Combat.ChannelEnd()
+		end
+	end)
+	return true
+end
+function Combat.ChannelEnd()
+	local ch = State.channel
+	if not ch then
+		return
+	end
+	State.channel = nil
+	local skill = ClassesCfg.SkillById[ch.id]
+	task.spawn(Net.Request, "ChannelEnd", {})
+	State.cooldowns[ch.id] = os.clock() + skill.cd
+	State.Fire("cooldown")
+	local h = hum()
+	if h then
+		if skill.anim then
+			Anim.Stop(h, skill.anim, 0.1)
+		end
+		if skill.releaseAnim then
+			Anim.Play(h, skill.releaseAnim, { fade = 0.05 })
+		end
+	end
+end
+
 -- charge (v0.25.65, docs/Plan-Fruits-v2.md): 0..1 for skills with `charge = true` (how long the key was held)
 function Combat.CastSkill(skillId, targetModel, aim, charge)
 	local skill = ClassesCfg.SkillById[skillId]
 	if not skill then
 		return false
+	end
+	if skill.kind == "Channel" then
+		-- a tap / Auto Battle: hold it for a moment, then release
+		if Combat.ChannelStart(skillId) then
+			local ch = State.channel
+			task.delay(require(Shared.Config.Fruits).Channel.TapHold, function()
+				if State.channel == ch then
+					Combat.ChannelEnd()
+				end
+			end)
+		end
+		return true
 	end
 	local now = os.clock()
 	if (State.cooldowns[skillId] or 0) > now then
@@ -579,6 +666,8 @@ local function engage(target, useSkills)
 					local srange = s.range or 0
 					if s.kind == "AoE" or s.kind == "Roar" then
 						srange = (s.radius or 10) - 2
+					elseif s.kind == "Channel" then
+						srange = 8
 					end
 					if s.kind == "Buff" or s.kind == "PartyBuff" then
 						if not string.find(player:GetAttribute("Buffs") or "", id) then
@@ -1209,7 +1298,9 @@ function Combat.Start()
 			local id = State.profile and Combat.BarId(i)
 			if id and id ~= "" then
 				local skill = ClassesCfg.SkillById[id]
-				if skill and AIM_KINDS[skill.kind] and (not State.auto or onShip()) then
+				if skill and skill.kind == "Channel" then
+					Combat.ChannelStart(id, key and Enum.KeyCode[key]) -- held until the key comes up (OnRelease below)
+				elseif skill and AIM_KINDS[skill.kind] and (not State.auto or onShip()) then
 					if holding then -- another skill key while aiming: the held one goes first
 						local held, t0 = holding.id, holding.t0
 						stopAim()
@@ -1222,6 +1313,9 @@ function Combat.Start()
 			end
 		end)
 		Hotkeys.OnRelease("Skill" .. i, function(cancelled)
+			if State.channel and State.channel.id == Combat.BarId(i) then
+				Combat.ChannelEnd()
+			end
 			if holding and holding.slot == i then
 				local id, t0 = holding.id, holding.t0
 				stopAim()

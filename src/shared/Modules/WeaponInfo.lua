@@ -48,7 +48,7 @@ function W.TypeOf(p)
 		return "Fists"
 	end
 	local e = p.equipment and p.equipment.weapon and Formulas.FindItem(p, p.equipment.weapon)
-	local def = e and ItemDB.Get(e.id)
+	local def = e and ItemDB.ForEntry(e)
 	return def and def.weaponType or "Fists"
 end
 

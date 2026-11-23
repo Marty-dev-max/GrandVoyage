@@ -832,6 +832,12 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     `blade(id, name, tier, spec)` tiers Fathom (green, Forty Fathoms) / Tide (blue, Twenty Tides, boss drops) /
     Awakened (purple, Whitevow only); ItemDB.Blades[tier] lists ids. Never One Piece blade/grade names. Offline
     preview: tools/blade_preview.py (Python mirror, keep in sync) + render_parts.py.
+  * v0.25.105 (owner): ASCEND = Blacksmith tab "Evolve" for every weapon type (GameConfig.Ascend: From Uncommon,
+    MaxRarity Rare this update, NeedRefine green 10 / blue 12 / purple 15 / gold 15, Cost per rarity). Saved as entry.asc
+    (steps); `ItemDB.ForEntry(entry)` = the def one rarity higher per step (ATK/MATK x(1 + 0.6 asc), lean stats +asc,
+    slots +asc): use it instead of ItemDB.Get(entry.id) for bag entries. `ItemDB.AscendInfo`, server `Ascend` (refine -> 0).
+    Items GREENS = 2 Uncommon weapons per other class (ItemDB.Greens). Owner: ladder names (Forty Fathoms ...) only in
+    the Index; every other screen shows the rarity (Common .. Secret). Dev "New Weapons" (`weapons` cmd) grants them all.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

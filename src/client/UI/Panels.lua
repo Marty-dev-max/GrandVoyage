@@ -92,9 +92,8 @@ local function describe(entry, def)
 	local tier = ItemDB.Rarity(def)
 	table.insert(lines, string.format('<font color="#%s"><b>%s</b></font>  %s', tier.color:ToHex(), string.upper(tier.id), def.kind))
 	local g = ItemDB.Grade(def)
-	if def.ledger then
-		table.insert(lines, def.ledger .. " (" .. (def.typeLabel or "Sword") .. ")  x" .. (g and g.mult or 1))
-	elseif g then
+	-- owner (v0.25.105): ladder names (Forty Fathoms ...) live only in the Index; normal screens show the rarity
+	if g and g.rarity == (def.baseRarity or def.rarity) then -- old grade lines only (new ladders don't match a grade)
 		table.insert(lines, "Grade: " .. g.name .. "  (x" .. g.mult .. ")")
 	end
 	if def.atk and def.atk > 0 then
@@ -134,7 +133,7 @@ end
 
 -- Rarity tile (Anime-Vanguards style card)
 local function itemTile(parent, entry, onClick, selected)
-	local def = ItemDB.Get(entry.id)
+	local def = ItemDB.ForEntry(entry)
 	if not def then
 		return
 	end
@@ -641,7 +640,7 @@ function Panels.Inventory(args)
 		end
 		local function slotOf(slot, label, hint, col, filterKind)
 			local entry = p.equipment[slot] and Formulas.FindItem(p, p.equipment[slot])
-			local def = entry and ItemDB.Get(entry.id)
+			local def = entry and ItemDB.ForEntry(entry)
 			gearSlot(col, label, hint, entry, def, function()
 				if entry then
 					detail(entry, def)
@@ -721,7 +720,7 @@ function Panels.Inventory(args)
 		bar.Size = UDim2.fromOffset(0, 38)
 		local list = {}
 		for i, e in ipairs(p.inventory) do
-			local def = ItemDB.Get(e.id)
+			local def = ItemDB.ForEntry(e)
 			if def and (filter == "All" or def.kind == filter or (filter == "Armor" and (def.kind == "Headgear" or def.kind == "Accessory"))) then
 				table.insert(list, { e = e, def = def, i = i })
 			end
@@ -753,7 +752,7 @@ function Panels.Inventory(args)
 		if selectedUid then
 			local e = Formulas.FindItem(p, selectedUid)
 			if e then
-				detail(e, ItemDB.Get(e.id))
+				detail(e, ItemDB.ForEntry(e))
 			else
 				selectedUid = nil
 				placeholder()
@@ -765,7 +764,7 @@ function Panels.Inventory(args)
 	if args and args.select and State.profile then
 		local e = Formulas.FindItem(State.profile, args.select)
 		if e then
-			detail(e, ItemDB.Get(e.id))
+			detail(e, ItemDB.ForEntry(e))
 		end
 	end
 	onProfile(win, render)
@@ -1560,7 +1559,7 @@ function Panels.Refine(opts)
 	-- Double-clicking gear with card slots in the Bag opens straight on Insert Card.
 	opts = opts or {}
 	local win = UI.Window("Refine", "Blacksmith", UDim2.fromOffset(1100, 620), T.Orange, "🔨", { fullscreen = true })
-	local tab = (opts.tab == "Cards") and "Cards" or "Forge"
+	local tab = (opts.tab == "Cards" or opts.tab == "Evolve") and opts.tab or "Forge"
 	local selected = opts.uid
 	local useGuard = false
 	local equippedOnly = false
@@ -1743,6 +1742,71 @@ function Panels.Refine(opts)
 		fh.Position = UDim2.new(0.5, -90, 1, -10)
 	end
 
+	-- v0.25.105 Evolve (Ascend): a weapon refined far enough climbs one rarity; refine goes back to +0
+	local function renderEvolve(p, e, def)
+		showcase(stage, def, 160, 230)
+		UI.Text(stage, ItemDB.DisplayName(e), 26, T.Text, "Display", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 286), Size = UDim2.new(1, -20, 0, 30), TextXAlignment = Enum.TextXAlignment.Center })
+		local ok, nextR, need, cost = ItemDB.AscendInfo(e)
+		if not ok then
+			UI.Text(stage, nextR, 20, T.TextSoft, "Semi", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 334), Size = UDim2.fromOffset(460, 26), TextXAlignment = Enum.TextXAlignment.Center })
+			return
+		end
+		local now, to = ItemDB.Rarity(def), Rarity.Get(nextR)
+		UI.Text(stage, string.format('<font color="#%s">%s</font>  >  <font color="#%s">%s</font>', now.color:ToHex(), string.upper(now.id), to.color:ToHex(), string.upper(to.id)), 30, T.Text, "Display", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 326), Size = UDim2.fromOffset(520, 36), TextXAlignment = Enum.TextXAlignment.Center })
+		local cur = e.refine or 0
+		local refOk = cur >= need
+		UI.Text(stage, "Needs +" .. need .. "  (now +" .. cur .. ")  •  refine resets to +0", 16, refOk and T.Green or T.Red, "Bold", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 368), Size = UDim2.fromOffset(520, 20), TextXAlignment = Enum.TextXAlignment.Center })
+		local mats = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 398), Size = UDim2.fromOffset(300, 84), Parent = stage })
+		UI.List(mats, Enum.FillDirection.Horizontal, 12, Enum.HorizontalAlignment.Center)
+		local payOk = true
+		for k, v in pairs(cost) do
+			local have = k == "beli" and (p.beli or 0) or count(k)
+			local enough = have >= v
+			payOk = payOk and enough
+			local t = New("Frame", { Size = UDim2.fromOffset(78, 78), BackgroundColor3 = T.Panel, Parent = mats })
+			UI.Corner(t, 12)
+			UI.Stroke(t, enough and T.Edge or T.Red, 3)
+			local img = k == "beli" and UI.IconId("coin") or UI.ItemIconId(ItemDB.Get(k))
+			if img then
+				New("ImageLabel", { BackgroundTransparency = 1, Image = img, ScaleType = Enum.ScaleType.Fit, Size = UDim2.fromScale(0.72, 0.72), Position = UDim2.fromScale(0.14, 0.04), Parent = t })
+			end
+			UI.Text(t, k == "beli" and UI.Short(v) or (have .. "/" .. v), 14, enough and T.Text or T.Red, "Number", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 0, 1, -2), Size = UDim2.new(1, -4, 0, 16), TextXAlignment = Enum.TextXAlignment.Right })
+		end
+		local ready = refOk and payOk
+		local _, vh = UI.Button(stage, "🔥 EVOLVE", ready and T.Orange or T.Grey, UDim2.fromOffset(300, 64), function()
+			if busy then
+				return
+			end
+			if not ready then
+				UI.Toast(refOk and "Not enough materials" or ("Refine it to +" .. need .. " first"), "bad")
+				return
+			end
+			UI.Confirm("Evolve " .. ItemDB.DisplayName(e) .. " to " .. string.upper(nextR) .. "?\nIts refine goes back to +0.", function()
+				busy = true
+				local res
+				task.spawn(function()
+					res = Net.Request("Ascend", { uid = e.uid })
+				end)
+				anvilAnimation(function()
+					while res == nil do
+						task.wait()
+					end
+					busy = false
+					if res.data and res.data.result == "evolved" then
+						Audio.Play("RefineSuccess")
+						local ne = Formulas.FindItem(State.profile, e.uid) or e
+						UI.Banner("Evolved!", ItemDB.DisplayName(ne), to.color, nextR)
+					else
+						UI.Toast(res.msg or "Could not evolve", "bad")
+					end
+					render()
+				end)
+			end, nil, "Evolve", "Cancel")
+		end)
+		vh.AnchorPoint = Vector2.new(0.5, 1)
+		vh.Position = UDim2.new(0.5, 0, 1, -10)
+	end
+
 	-- Insert Card: the item in the middle, a socket per card slot around it; tap "+" to choose a card that fits
 	local pickingSlot
 	local function renderCards(p, e, def)
@@ -1836,7 +1900,7 @@ function Panels.Refine(opts)
 		end
 		-- sidebar
 		UI.List(side, nil, 10)
-		for i, it in ipairs({ { "Forge", "🔨", "Forge" }, { "Cards", "🃏", "Insert Card" } }) do
+		for i, it in ipairs({ { "Forge", "🔨", "Forge" }, { "Evolve", "🔥", "Evolve" }, { "Cards", "🃏", "Insert Card" } }) do
 			local _, h = UI.Button(side, it[2] .. " " .. it[3], tab == it[1] and T.Orange or T.Grey, UDim2.new(1, -6, 0, 50), function()
 				tab = it[1]
 				pickingSlot = nil
@@ -1855,8 +1919,8 @@ function Panels.Refine(opts)
 		UI.List(list, nil, 8)
 		local first
 		for _, e in ipairs(p.inventory) do
-			local def = ItemDB.Get(e.id)
-			local fits = def and ((tab == "Forge" and def.refinable) or (tab == "Cards" and def.slots and def.slots > 0))
+			local def = ItemDB.ForEntry(e)
+			local fits = def and ((tab == "Forge" and def.refinable) or (tab == "Evolve" and def.kind == "Weapon") or (tab == "Cards" and def.slots and def.slots > 0))
 			if fits and (not equippedOnly or equippedUid(e.uid)) then
 				first = first or e.uid
 				local isSel = selected == e.uid
@@ -1888,7 +1952,7 @@ function Panels.Refine(opts)
 			end
 		end
 		if not first then
-			UI.Text(list, tab == "Forge" and "Nothing to forge: weapons and armor can be forged." or "No gear with card slots yet.", 15, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 50) })
+			UI.Text(list, tab == "Forge" and "Nothing to forge: weapons and armor can be forged." or (tab == "Evolve" and "No weapons in your bag." or "No gear with card slots yet."), 15, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 50) })
 		end
 		local e = selected and Formulas.FindItem(p, selected)
 		if not e and first then
@@ -1898,9 +1962,11 @@ function Panels.Refine(opts)
 		if not e then
 			return
 		end
-		local def = ItemDB.Get(e.id)
+		local def = ItemDB.ForEntry(e)
 		if tab == "Forge" then
 			renderForge(p, e, def)
+		elseif tab == "Evolve" then
+			renderEvolve(p, e, def)
 		else
 			renderCards(p, e, def)
 		end
@@ -2559,7 +2625,7 @@ function Panels.Stall(args)
 	grid.Position = UDim2.fromOffset(0, 32)
 	local items = {}
 	for i, it in ipairs(data.items) do
-		if it.qty > 0 and ItemDB.Get(it.id) then
+		if it.qty > 0 and ItemDB.ForEntry(it) then
 			it.i = i
 			table.insert(items, it)
 		end
@@ -2568,7 +2634,7 @@ function Panels.Stall(args)
 		return ItemDB.Get(x.id)
 	end)
 	for order, it in ipairs(items) do
-		shopCard(grid, { def = ItemDB.Get(it.id), entry = it, order = order, qty = it.qty, price = CUR .. " " .. UI.Format(it.price), buttons = { { "BUY", have >= it.price and T.Green or T.Red, function()
+		shopCard(grid, { def = ItemDB.ForEntry(it), entry = it, order = order, qty = it.qty, price = CUR .. " " .. UI.Format(it.price), buttons = { { "BUY", have >= it.price and T.Green or T.Red, function()
 			local r = req("StallBuy", { sellerId = args.sellerId, index = it.index, qty = 1 }, "Purchase")
 			if r.ok then
 				win:Destroy()
@@ -2611,7 +2677,7 @@ function Panels.StallSetup()
 			grid.Position = UDim2.fromOffset(0, 40)
 			local order = 0
 			for _, it in ipairs(st.items or {}) do
-				local def = ItemDB.Get(it.id)
+				local def = ItemDB.ForEntry(it)
 				if it.qty > 0 and def then
 					order += 1
 					local card = shopCard(grid, { def = def, entry = it, order = order, qty = it.qty, price = cur .. " " .. UI.Format(it.price), buttons = { { "REMOVE", T.Red, function()
@@ -2623,7 +2689,7 @@ function Panels.StallSetup()
 			local p = State.profile
 			local bag = {}
 			for i, e in ipairs(p.inventory) do
-				local def = ItemDB.Get(e.id)
+				local def = ItemDB.ForEntry(e)
 				if def and not equippedUid(e.uid) then
 					table.insert(bag, { e = e, def = def, i = i })
 				end
@@ -2684,7 +2750,7 @@ function Panels.StallSetup()
 	local p = State.profile
 	local list = {}
 	for i, e in ipairs(p.inventory) do
-		local def = ItemDB.Get(e.id)
+		local def = ItemDB.ForEntry(e)
 		if def and not equippedUid(e.uid) then
 			table.insert(list, { e = e, def = def, i = i })
 		end
@@ -2863,7 +2929,7 @@ function Panels.Settings(args)
 					end)
 				end
 			end
-			devGrid("Player", "🧪", T.Accent, { { "New Player", "resetall" }, { "Reset Lv1", "resetlevel" }, { "Lv70", "level" }, { "Job Lv.10", "joblevel" }, { "+1M " .. COIN, "beli" }, { "Materials", "items" }, { "+1000 " .. PearlsCfg.Icon, "pearls" }, { "Next Quest", "questnext" } })
+			devGrid("Player", "🧪", T.Accent, { { "New Player", "resetall" }, { "Reset Lv1", "resetlevel" }, { "Lv70", "level" }, { "Job Lv.10", "joblevel" }, { "+1M " .. COIN, "beli" }, { "Materials", "items" }, { "New Weapons", "weapons" }, { "+1000 " .. PearlsCfg.Icon, "pearls" }, { "Next Quest", "questnext" } })
 			-- heritages (and their variants) to test on this character (respawns with the new look)
 			local LooksCfg = require(ReplicatedStorage.Shared.Config.Looks)
 			local herButtons = {}

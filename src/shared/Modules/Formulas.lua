@@ -52,7 +52,7 @@ function F.EquipBonus(profile)
 	local b = { weaponAtk = 0, weaponMatk = 0, equipDef = 0, equipMdef = 0 }
 	for _, uid in pairs(profile.equipment) do
 		local entry = F.FindItem(profile, uid)
-		local def = entry and ItemDB.Get(entry.id)
+		local def = entry and ItemDB.ForEntry(entry)
 		if def then
 			local refine = entry.refine or 0
 			if def.kind == "Weapon" then
@@ -134,7 +134,7 @@ function F.StatSources(profile)
 	local gear, cards = {}, {}
 	for _, uid in pairs(profile.equipment or {}) do
 		local entry = F.FindItem(profile, uid)
-		local def = entry and ItemDB.Get(entry.id)
+		local def = entry and ItemDB.ForEntry(entry)
 		if def then
 			for _, k in ipairs(F.StatNames) do
 				gear[k] = (gear[k] or 0) + (def[string.lower(k)] or 0)

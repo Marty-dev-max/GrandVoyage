@@ -171,7 +171,7 @@ local function setup()
 	Net.Handle("EquipItem", function(player, data)
 		local p = profile(player)
 		local entry = Formulas.FindItem(p, data.uid)
-		local def = entry and ItemDB.Get(entry.id)
+		local def = entry and ItemDB.ForEntry(entry)
 		if not def or not def.slot then
 			return false, "Cannot equip"
 		end
@@ -220,7 +220,7 @@ local function setup()
 				end
 			end
 		end
-		local def = entry and ItemDB.Get(entry.id)
+		local def = entry and ItemDB.ForEntry(entry)
 		if not def or def.kind ~= "Consumable" or def.special then
 			return false, "Cannot use"
 		end
@@ -264,7 +264,7 @@ local function setup()
 		local cardEntry = Formulas.FindItem(p, data.cardUid)
 		local target = Formulas.FindItem(p, data.targetUid)
 		local cardDef = cardEntry and ItemDB.Get(cardEntry.id)
-		local targetDef = target and ItemDB.Get(target.id)
+		local targetDef = target and ItemDB.ForEntry(target)
 		if not cardDef or cardDef.kind ~= "Card" or not targetDef then
 			return false, "Invalid request"
 		end
@@ -287,7 +287,7 @@ local function setup()
 	Net.Handle("Refine", function(player, data)
 		local p = profile(player)
 		local entry = Formulas.FindItem(p, data.uid)
-		local def = entry and ItemDB.Get(entry.id)
+		local def = entry and ItemDB.ForEntry(entry)
 		if not def or not def.refinable then
 			return false, "Cannot be refined"
 		end
@@ -347,6 +347,40 @@ local function setup()
 		return { ok = true, msg = guard and "Failed (Willpower Charm protected it)" or "Failed... refine level dropped", data = { result = "fail", refine = entry.refine } }
 	end, 0.6)
 
+	-- v0.25.105 Ascend: a weapon refined to NeedRefine[rarity] climbs one rarity (ItemDB.ForEntry), refine resets to +0
+	Net.Handle("Ascend", function(player, data)
+		local p = profile(player)
+		local entry = type(data) == "table" and Formulas.FindItem(p, data.uid)
+		if not entry then
+			return false, "Item not found"
+		end
+		local ok, nextR, need, cost = ItemDB.AscendInfo(entry)
+		if not ok then
+			return false, nextR
+		end
+		if not R.WorldBuilder.NearNPC(player, "Blacksmith") then
+			return false, "Stand near a Blacksmith"
+		end
+		if (entry.refine or 0) < need then
+			return false, "Refine it to +" .. need .. " first"
+		end
+		local paid, msg = Inv.Pay(player, cost)
+		if not paid then
+			return false, msg
+		end
+		entry.asc = (entry.asc or 0) + 1
+		entry.refine = 0
+		R.PlayerService.Recompute(player)
+		R.PlayerService.MarkDirty(player)
+		local root = R.PlayerService.Root(player)
+		if root then
+			Net.FX("RefineSuccess", { pos = root.Position }, root.Position, 200)
+		end
+		local def = ItemDB.ForEntry(entry)
+		Net.PushAll("Announce", { text = player.DisplayName .. " evolved " .. def.name .. " to " .. string.upper(nextR) .. "!" })
+		return { ok = true, msg = "Evolved to " .. nextR .. "!", data = { result = "evolved", rarity = nextR } }
+	end, 0.6)
+
 	Net.Handle("ShopBuy", function(player, data)
 		local def = ItemDB.Get(data.id)
 		local qty = math.clamp(math.floor(tonumber(data.qty) or 1), 1, 99)
@@ -369,7 +403,7 @@ local function setup()
 	Net.Handle("ShopSell", function(player, data)
 		local p = profile(player)
 		local entry = Formulas.FindItem(p, data.uid)
-		local def = entry and ItemDB.Get(entry.id)
+		local def = entry and ItemDB.ForEntry(entry)
 		if not def then
 			return false
 		end

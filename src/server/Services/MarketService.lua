@@ -33,7 +33,7 @@ end
 local function listing(stall)
 	local out = {}
 	for i, it in ipairs(stall.items) do
-		table.insert(out, { index = i, id = it.entry.id, refine = it.entry.refine, cards = it.entry.cards, qty = it.qty, price = it.price, currency = stall.currency })
+		table.insert(out, { index = i, id = it.entry.id, refine = it.entry.refine, asc = it.entry.asc, cards = it.entry.cards, qty = it.qty, price = it.price, currency = stall.currency })
 	end
 	return out
 end

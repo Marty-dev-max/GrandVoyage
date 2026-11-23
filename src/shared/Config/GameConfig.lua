@@ -4,7 +4,7 @@ return {
 	LogoLines = { "LARPTALES", "VOXEL SEAS" },
 	LogoImage = 133908417032160, -- v0.25.87: pixel logo board floating behind the menu character (tools/gen_logo.py); nil = text logo
 	-- bump on every change: shown bottom-right in game and printed in Output, so you can tell which code is running
-	Version = "0.25.104",
+	Version = "0.25.105",
 	SagaName = "Azure East Saga",
 	-- title menu UPDATE LOG lines (newest first, keep 3-4 short ones)
 	UpdateNotes = {
@@ -81,6 +81,22 @@ return {
 		BreakChance = 0.35,
 		AtkPerRefine = 0.06, -- +6% weapon ATK per level (multiplies grade)
 		DefPerRefine = 1.5,
+	},
+	-- v0.25.105 Ascend (evolve) at the Blacksmith: a weapon at NeedRefine[its rarity] climbs one rarity, refine back to +0.
+	-- Owner's table: green +10 -> blue, blue +12 -> purple, purple +15 -> gold, gold +15 (+ trial) -> Eclipsed.
+	-- This update stops at Rare (blue); MaxRarity moves up with the next updates.
+	Ascend = {
+		From = "Uncommon",
+		MaxRarity = "Rare",
+		NeedRefine = { Uncommon = 10, Rare = 12, Epic = 15, Legendary = 15 },
+		AtkStep = 0.6, -- +60% weapon ATK/MATK per step
+		MaxSlots = 4,
+		Cost = {
+			Uncommon = { beli = 25000, PureTidecore = 2 },
+			Rare = { beli = 120000, PureTidecore = 5 },
+			Epic = { beli = 500000, PureTidecore = 12 },
+			Legendary = { beli = 2000000, PureTidecore = 25 },
+		},
 	},
 
 	-- ===== Ships =====

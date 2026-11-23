@@ -143,7 +143,7 @@ function FS.TrySeastone(attacker, victim)
 	local chance, seconds = 0, 0
 	for _, uid in pairs(p and p.equipment or {}) do
 		local entry = Formulas.FindItem(p, uid)
-		local def = entry and ItemDB.Get(entry.id)
+		local def = entry and ItemDB.ForEntry(entry)
 		if def and def.seastone and def.seastone[1] > chance then
 			chance, seconds = def.seastone[1], def.seastone[2]
 		end

@@ -955,7 +955,7 @@ function Combat.PotionsOwned(kind)
 	local p = State.profile
 	local byId, list = {}, {}
 	for _, e in ipairs(p and p.inventory or {}) do
-		local def = ItemDB.Get(e.id)
+		local def = ItemDB.ForEntry(e)
 		local power = potionPower(def, kind)
 		if power then
 			if not byId[e.id] then

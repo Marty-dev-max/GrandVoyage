@@ -240,8 +240,17 @@ function GW.Start()
 		elseif data.cmd == "beli" then
 			R.PlayerService.AddBeli(player, tonumber(data.value) or 1000000)
 		elseif data.cmd == "items" then
-			for _, id in ipairs({ "IronIngot", "Gunpowder", "Wood", "SailCloth", "SteelOre", "TidecoreShard", "TreasureWood" }) do
+			for _, id in ipairs({ "IronIngot", "Gunpowder", "Wood", "SailCloth", "SteelOre", "TidecoreShard", "PureTidecore", "TreasureWood" }) do
 				R.InventoryService.AddItem(player, id, 50)
+			end
+		elseif data.cmd == "weapons" then -- v0.25.105: every famed blade + green class weapon (Index / Evolve tests)
+			local ItemDB = require(Shared.Modules.ItemDB)
+			local list = table.clone(ItemDB.Greens)
+			for _, tier in ipairs({ "Fathom", "Tide", "Awakened" }) do
+				table.move(ItemDB.Blades[tier], 1, #ItemDB.Blades[tier], #list + 1, list)
+			end
+			for _, id in ipairs(list) do
+				R.InventoryService.AddItem(player, id, 1)
 			end
 		-- ===== test helpers for fruits / pets / pearls / quests =====
 		elseif data.cmd == "fruit" then

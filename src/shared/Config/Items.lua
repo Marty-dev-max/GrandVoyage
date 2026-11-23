@@ -127,6 +127,45 @@ blade("Blade_Emberwake", "Emberwake", "Tide", { form = "Cutlass", shape = "falch
 -- Awakened Tide (purple): Whitevow, a vow sworn on a white hilt (Battle Pass tier 50 later; Dev grant until then)
 blade("Blade_Whitevow", "Whitevow", "Awakened", { form = "Katana", shape = "long", hilt = "square", blade = "E8EAF4", edge = "FFFFFF", guard = "C9B8F0", wrap = "FFFFFF", wrap2 = "D8D4EC", pommel = "9A7FD8", scabbard = "F6F6FA", glow = true })
 
+-- v0.25.105: green (Uncommon) weapons for every other class, so each one can start the Ascend ladder (stats differ only;
+-- they use their type's model + the Keen icon). { id, name, type, main stat, second stat }
+local GREENS = {
+	{ "Knuckles_Barnacle", "Barnacle Fists", "Knuckles", "str", "agi" },
+	{ "Knuckles_Rope", "Rope-Wrap Fists", "Knuckles", "agi", "str" },
+	{ "Shoes_Gale", "Gale Leg", "Shoes", "agi", "str" },
+	{ "Shoes_Anchor", "Anchor Leg", "Shoes", "str", "vit" },
+	{ "Slingshot_Reed", "Reedline Musket", "Slingshot", "dex", "agi" },
+	{ "Slingshot_Gull", "Gullsight Musket", "Slingshot", "dex", "luk" },
+	{ "StormBaton_Kelp", "Kelpwood Baton", "StormBaton", "int", "dex" },
+	{ "StormBaton_Compass", "Compass Baton", "StormBaton", "int", "agi" },
+	{ "MedKit_Mint", "Seamint Pouch", "MedKit", "int", "vit" },
+	{ "MedKit_Salt", "Saltpetre Pouch", "MedKit", "int", "dex" },
+	{ "Hammer_Rivet", "Rivet Hammer", "Hammer", "str", "vit" },
+	{ "Hammer_Keel", "Keelpin Maul", "Hammer", "vit", "str" },
+}
+local GreenIds = {}
+for _, g in ipairs(GREENS) do
+	local t, line = BLADE_TIERS.Fathom, WeaponLines[g[3]]
+	add(g[1], {
+		name = g[2],
+		kind = "Weapon",
+		slot = "weapon",
+		weaponType = g[3],
+		typeLabel = line.label,
+		grade = t.grade,
+		rarity = t.rarity,
+		atk = line.magic and math.floor(t.atk * 0.6) or t.atk,
+		matk = line.magic and t.atk or 0,
+		reqLevel = t.req,
+		slots = t.slots,
+		price = t.price,
+		refinable = true,
+		[g[4]] = t.lean,
+		[g[5]] = math.ceil(t.lean / 2),
+	})
+	table.insert(GreenIds, g[1])
+end
+
 -- ===== Armor / headgear / accessories =====
 add("SailorVest", { name = "Sailor Vest", kind = "Armor", slot = "armor", def = 6, reqLevel = 1, slots = 1, price = 400, refinable = true, rarity = "Common" })
 add("MarineCoat", { name = "Marine Greatcoat", kind = "Armor", slot = "armor", def = 16, reqLevel = 20, slots = 1, price = 8000, refinable = true, rarity = "Rare" })
@@ -242,6 +281,7 @@ return {
 	Items = Items,
 	Blades = Blades,
 	BladeTiers = BLADE_TIERS,
+	Greens = GreenIds,
 	Grades = Grades,
 	GradeById = GradeById,
 	Shop = Shop,

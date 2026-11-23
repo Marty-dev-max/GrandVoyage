@@ -129,7 +129,7 @@ local function equipped(player)
 	local p = player and R.DataService.Get(player)
 	local uid = p and p.equipment and p.equipment.weapon
 	local e = uid and Formulas.FindItem(p, uid)
-	local def = e and ItemDB.Get(e.id)
+	local def = e and ItemDB.ForEntry(e)
 	return e and e.id or "", def and def.blade
 end
 

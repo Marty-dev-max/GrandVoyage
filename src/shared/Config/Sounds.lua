@@ -122,12 +122,13 @@ add("WaterGush", "SFX", 0.6, SPLASH, { id = "rbxassetid://9120560453", rolloff =
 add("AmbienceNight", "Ambience", 0.4, "", { looped = true, id = "rbxassetid://9112764573" }) -- Crickets Night 3 (ProSoundEffects)
 -- v0.25.8 (owner: music for each situation): Roblox's licensed partner tracks (APMOfficial / DistrokidOfficial,
 -- free for every experience). Picked by Sailing.updateAudio: boss > combat > sea > island night > island day.
-add("MusicIsland", "Music", 0.3, "", { looped = true, id = "rbxassetid://106935542174276" }) -- Modern Pirate Vibe
-add("MusicNight", "Music", 0.3, "", { looped = true, id = "rbxassetid://138384771239589" }) -- Cozy Tavern Ambience VII
-add("MusicBattle", "Music", 0.32, "", { looped = true, id = "rbxassetid://98662458200229" }) -- Cinematic Orchestral JRPG Battle
+-- v0.25.116 (owner: music too loud): every Music volume x0.6
+add("MusicIsland", "Music", 0.18, "", { looped = true, id = "rbxassetid://106935542174276" }) -- Modern Pirate Vibe
+add("MusicNight", "Music", 0.18, "", { looped = true, id = "rbxassetid://138384771239589" }) -- Cozy Tavern Ambience VII
+add("MusicBattle", "Music", 0.19, "", { looped = true, id = "rbxassetid://98662458200229" }) -- Cinematic Orchestral JRPG Battle
 -- owner's pick (v0.22.5): jazz piano track (assets/music/MusicJazz.mp3). v0.24.0: title menu + character creator only
-add("MusicJazz", "Music", 0.4, "", { looped = true, id = "rbxassetid://78909647577056" })
-add("MusicSea", "Music", 0.3, "", { looped = true, id = "rbxassetid://1836603880" }) -- Deep Blue Sea Shanty 2 (APM)
+add("MusicJazz", "Music", 0.24, "", { looped = true, id = "rbxassetid://78909647577056" })
+add("MusicSea", "Music", 0.18, "", { looped = true, id = "rbxassetid://1836603880" }) -- Deep Blue Sea Shanty 2 (APM)
 -- v0.25.33 (owner): Fruit Notifier = a narrator says WHERE a Cursed Fruit appeared (never which one) + a twinkle
 -- (tools/gen_voice_elevenlabs.py, ids filled by upload_sfx.py; the audio upload quota ran out until 6 Dec 2026,
 -- so until then the client speaks the line with Roblox text-to-speech: Controllers/FruitAlert)
@@ -162,8 +163,8 @@ add("Narr_FruitEpilogue", "SFX", 1, "")
 add("Narr_FruitFortWest", "SFX", 1, "")
 add("Narr_FruitFortMid", "SFX", 1, "")
 add("Narr_FruitFortEast", "SFX", 1, "")
-add("MusicDefeat", "Music", 0.45, "", { looped = true, id = "rbxassetid://1838577168" }) -- Sad Story (Piano & Harp) (APM), death screen
-add("MusicBoss", "Music", 0.4, "", { looped = true, id = "rbxassetid://139997523791273" }) -- Boss Battle Burnout
+add("MusicDefeat", "Music", 0.27, "", { looped = true, id = "rbxassetid://1838577168" }) -- Sad Story (Piano & Harp) (APM), death screen
+add("MusicBoss", "Music", 0.24, "", { looped = true, id = "rbxassetid://139997523791273" }) -- Boss Battle Burnout
 
 
 

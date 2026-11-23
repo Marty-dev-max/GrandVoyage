@@ -603,7 +603,7 @@ end
 local itemSlots, barRows
 local setSlots = {}
 -- the icon a set button shows
-local SET_ICON = { Basic = "anchor", Armament = "armor", Observation = "compass", Conqueror = "crown" }
+local SET_ICON = { Basic = "anchor", Armament = "toki_arm", Observation = "toki_obs", Conqueror = "toki_conq" }
 local SET_LABEL = { Class = "CLASS", Fruit = "FRUIT", Basic = "BASIC", Armament = "ARM", Observation = "OBS", Conqueror = "CONQ" }
 local function setIcon(p, set)
 	if set.id == "Class" then

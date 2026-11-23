@@ -304,28 +304,12 @@ def fruit_haze(s):
     fruit_stem(s, 16, 6)
 
 
-def fruit_ward(s):
-    s.oval(16, 18, 11, 11, (110, 205, 240))
-    for x in (9, 16, 23):
-        s.line([(x, 9), (x, 28)], (240, 255, 255), 1, True)
-    for y in (13, 19, 25):
-        s.line([(6, y), (26, y)], (240, 255, 255), 1, True)
-    fruit_stem(s, 16, 6)
-
-
 def fruit_bounce(s):
     s.oval(16, 19, 10, 9, (255, 120, 190))  # v0.25.33 (owner): purple bulges over pink creases
     for x, y in ((10, 15), (17, 13), (23, 17), (11, 22), (18, 21), (22, 25), (14, 27)):
         s.oval(x, y, 4, 4, (175, 70, 215))
         s.px(x - 1, y - 2, WHITE)
     fruit_stem(s, 16, 8)
-
-
-def fruit_split(s):
-    for y0, y1, dx in ((8, 13, 0), (15, 21, 2), (23, 28, -1)):
-        s.rect(7 + dx, y0, 25 + dx, y1, (80, 190, 100))
-        s.rect(9 + dx, y1 - 1, 23 + dx, y1, (215, 170, 255))
-    fruit_stem(s, 16, 6)
 
 
 def fruit_slick(s):
@@ -772,6 +756,84 @@ def grog_l(s):
 
 
 # Cursed Fruit marker (owner reference): a black fruit silhouette with a white question mark and a white aura
+# Toki (v0.25.88, owner references): Armament = a fist hardened dark blue-black with white shine streaks in a violet
+# aura; Observation = a wide-open glowing eye with sense rays; Conqueror = a crown crackling with lightning
+def toki_arm(s):
+    # fist seen from the front, fingers curled toward the viewer, forearm running off to the right (owner reference)
+    D, M, L = (22, 26, 74), (40, 50, 140), (90, 110, 230)
+    s.rect(18, 11, 31, 21, D)  # forearm
+    s.poly([(9, 7), (19, 7), (21, 9), (21, 22), (19, 24), (9, 24)], M)  # fist body, cut corners
+    for i, y in enumerate((9, 13, 17, 21)):  # four curled fingers bulging toward the viewer (left)
+        s.oval(8, y + 1, 4, 2, M)
+        s.line([(5, y), (6, y)], L, 1, True)
+        s.line([(6, y + 3), (12, y + 3)], D, 1, True)
+    s.poly([(12, 5), (19, 5), (21, 8), (14, 10), (11, 8)], M)  # thumb over the top
+    s.line([(13, 5), (18, 5)], L, 1, True)
+    for pts in (((21, 13), (30, 12)), ((22, 17), (31, 18)), ((15, 13), (18, 12))):
+        s.line(list(pts), WHITE, 1, True)
+    for x, y in ((5, 10), (5, 14), (5, 18), (14, 6)):
+        s.px(x, y, WHITE)
+    for a0, a1, r in ((100, 200, 14), (200, 260, 13), (60, 110, 13), (250, 300, 15)):  # violet aura wisps
+        s.arc(14, 15, r, a0, a1, (160, 140, 255), 1, True)
+
+
+def toki_obs(s):
+    for a in range(0, 360, 30):  # sense rays
+        r0, r1 = 12, 15
+        x, y = math.cos(math.radians(a)), math.sin(math.radians(a))
+        s.line([(16 + x * r0, 16 + y * r0 * 0.8), (16 + x * r1, 16 + y * r1 * 0.8)], (160, 230, 255), 1, True)
+    s.poly([(3, 16), (10, 9), (22, 9), (29, 16), (22, 23), (10, 23)], (236, 244, 255))
+    s.oval(16, 16, 6, 6, (40, 170, 230))
+    s.oval(16, 16, 4, 4, (120, 230, 255), True)
+    s.oval(16, 16, 2, 2, DARK, True)
+    s.px(14, 14, WHITE)
+    s.line([(4, 15), (10, 8), (22, 8), (28, 15)], (40, 50, 90), 1, True)  # lid line
+
+
+def toki_conq(s):
+    s.poly([(5, 25), (5, 11), (11, 17), (16, 8), (21, 17), (27, 11), (27, 25)], GOLD)
+    s.rect(5, 23, 27, 27, GOLD_D)
+    for x, c in ((11, RED), (16, (200, 90, 255)), (21, RED)):
+        s.rect(x - 1, 24, x + 1, 26, c, True)
+    for pts in (((3, 4), (6, 8), (4, 9), (8, 14)), ((29, 3), (26, 7), (28, 8), (24, 13)), ((16, 0), (14, 3), (17, 4), (15, 6))):
+        s.line(list(pts), (210, 120, 255), 1, True)  # black-violet lightning around the crown
+    s.px(16, 13, WHITE)
+
+
+# fruits matching the v0.25.85 models: Shield = round shield with hex glass plates; Split = three drifting slices
+def fruit_ward(s):
+    s.oval(16, 18, 12, 12, (40, 80, 175))  # rim
+    s.oval(16, 18, 10, 10, (70, 160, 225))
+    for x, y in ((16, 18), (16, 11), (16, 25), (10, 14), (22, 14), (10, 22), (22, 22)):
+        s.poly([(x - 2, y - 3), (x + 2, y - 3), (x + 4, y), (x + 2, y + 3), (x - 2, y + 3), (x - 4, y)], (45, 125, 215))
+        s.poly([(x - 1, y - 2), (x + 1, y - 2), (x + 3, y), (x + 1, y + 2), (x - 1, y + 2), (x - 3, y)], (190, 242, 255))
+        s.px(x - 1, y - 2, WHITE)
+    for a in (45, 135, 225, 315):
+        s.px(16 + math.cos(math.radians(a)) * 11, 18 + math.sin(math.radians(a)) * 11, GOLD, True)
+    fruit_stem(s, 16, 6)
+
+
+def fruit_split(s):
+    # a round fruit cut in three slices that drift apart sideways; lilac flesh + pale rind on each top cut
+    cy, r = 18, 11
+    for y0, y1, dx in ((7, 12, 2), (14, 20, -2), (22, 29, 2)):
+        for y in range(y0, y1 + 1):
+            t = (y - cy) / r
+            hw = int(round(r * math.sqrt(max(0.0, 1 - t * t))))
+            if hw > 0:
+                s.rect(16 - hw + dx, y, 16 + hw + dx, y, (80, 190, 100))
+        t = (y0 - cy) / r
+        hw = int(round(r * math.sqrt(max(0.0, 1 - t * t))))
+        if y0 > 8:
+            s.rect(16 - hw + 1 + dx, y0, 16 + hw - 1 + dx, y0, (205, 245, 160), True)
+            s.rect(16 - hw + 3 + dx, y0, 16 + hw - 3 + dx, y0, (200, 150, 250), True)
+            s.px(16 + dx - 3, y0, (80, 30, 120))
+            s.px(16 + dx + 3, y0, (80, 30, 120))
+    s.line([(10, 16), (12, 15)], (40, 125, 62), 1, True)
+    s.line([(19, 25), (22, 24)], (40, 125, 62), 1, True)
+    fruit_stem(s, 18, 5)
+
+
 def fruit_unknown(s):
     aura = (255, 255, 255)
     ink = (22, 20, 28)
@@ -934,7 +996,7 @@ ICONS = {
     'meat_s': meat_size('S'), 'meat_m': meat_size('M'), 'meat_l': meat_size('L'),
     'grog_s': lambda s: (grog_s(s), size_disc(s, 'S')), 'grog_m': lambda s: (grog_m(s), size_disc(s, 'M')),
     'grog_l': lambda s: (grog_l(s), size_disc(s, 'L')),
-    'fruit_unknown': fruit_unknown,
+    'fruit_unknown': fruit_unknown, 'toki_arm': toki_arm, 'toki_obs': toki_obs, 'toki_conq': toki_conq,
     'juice': cup, 'hat': tricorn, 'armor': vest, 'boots': lambda s: boot(s, 14, 16), 'meat': meat, 'bait': worm_hook,
     'repairkit': toolbox, 'medkit': pouch, 'staff': staff, 'slingshot': slingshot, 'knuckles': knuckles,
     'sword': lambda s: sword(s, 6, 26, 26, 6), 'hammer': hammer,

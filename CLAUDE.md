@@ -770,6 +770,8 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
   * v0.25.85 (owner approved previews): new fruit_v2 "ward" = round shield (lens front, blue rim, gold rivets, raised
     overlapping hex glass plates) and "split" = three slanted slices drifting apart (lilac flesh, rind, seed ring)
     in tools/blender/voxel_pets.py; GLBs in assets/models3d, NOT uploaded yet (Config/Models still the old ids).
+  * v0.25.86 (owner): hunts pay out inside ProgressService.Event (payHunt) and restart, no claim (HuntClaim kept for
+    saves already full); Quest.lua HuntCard suggests the toughest unlocked island monster (NEW tag + START).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

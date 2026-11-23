@@ -609,7 +609,7 @@ function Quest.Start()
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 		if root and State.questTarget and tracker.Visible then
 			local d = (Vector2.new(State.questTarget.X, State.questTarget.Z) - Vector2.new(root.Position.X, root.Position.Z)).Magnitude
-			tDist.Text = d < 25 and "here!" or (UI.Format(math.floor(d)) .. " m ➜")
+			tDist.Text = d < 25 and "here!" or (UI.Format(math.floor(d)) .. " m >")
 		else
 			tDist.Text = ""
 		end

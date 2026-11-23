@@ -10,9 +10,9 @@ return {
 		{ id = "ResetStats", name = "Reset Stats", icon = "st_reset_stats", gems = 200, robux = 79, productId = 3733424822, desc = "Get back every stat point you spent and plan your build again." },
 		{ id = "BossRespawn", name = "Boss Respawn", icon = "st_boss_respawn", gems = 400, robux = 149, productId = 3733424831, desc = "Every defeated MVP boss on this server comes back now." },
 		-- v0.25.72 (owner): pick your own Toki color (forever, this character; you must have that Toki). Panels.TokiColor
-		{ id = "TokiColorConqueror", name = "Conqueror Toki Color", icon = "crown", gems = 320, robux = 129, productId = 3734898364, tokiColor = "Conqueror", desc = "Pick any color for your Conqueror Toki, forever (needs the Conqueror Toki)." },
-		{ id = "TokiColorArmament", name = "Armament Toki Color", icon = "armor", gems = 200, robux = 79, productId = 3734897888, tokiColor = "Armament", desc = "Pick any color for your Armament Toki, forever (needs the Armament Toki)." },
-		{ id = "TokiColorObservation", name = "Observation Toki Color", icon = "compass", gems = 200, robux = 79, productId = 3734898118, tokiColor = "Observation", desc = "Pick any color for your Observation Toki, forever (needs the Observation Toki)." },
+		{ id = "TokiColorConqueror", name = "Conqueror Toki Color", icon = "toki_conq", gems = 320, robux = 129, productId = 3734898364, tokiColor = "Conqueror", desc = "Pick any color for your Conqueror Toki, forever (needs the Conqueror Toki)." },
+		{ id = "TokiColorArmament", name = "Armament Toki Color", icon = "toki_arm", gems = 200, robux = 79, productId = 3734897888, tokiColor = "Armament", desc = "Pick any color for your Armament Toki, forever (needs the Armament Toki)." },
+		{ id = "TokiColorObservation", name = "Observation Toki Color", icon = "toki_obs", gems = 200, robux = 79, productId = 3734898118, tokiColor = "Observation", desc = "Pick any color for your Observation Toki, forever (needs the Observation Toki)." },
 		{ id = "FruitNotifier", name = "Fruit Notifier 1h", icon = "st_notifier", gems = 250, robux = 99, productId = 3733424839, minutes = 60, boost = "fruit", desc = "1 hour: see which island a fruit appears on." },
 	},
 	Boosts = {

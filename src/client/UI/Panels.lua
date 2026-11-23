@@ -144,7 +144,9 @@ local function itemTile(parent, entry, onClick, selected)
 	end
 	UI.Tactile(b)
 	local iconId = UI.ItemIconId(def)
-	if iconId then
+	if def.kind == "Egg" and UI.VoxelEgg(b, def.id, 56, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 2), ZIndex = 4 }) then
+		-- v0.25.101 (owner): eggs show the block egg model itself, like the Store
+	elseif iconId then
 		New("ImageLabel", { BackgroundTransparency = 1, Image = iconId, ScaleType = Enum.ScaleType.Fit, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 2), Size = UDim2.fromOffset(56, 56), ZIndex = 4, Parent = b })
 	else
 		UI.Text(b, def.icon or kindIcon[def.kind] or "❔", 30, T.Text, "Display", { Size = UDim2.new(1, 0, 0.55, 0), Position = UDim2.fromOffset(0, 4), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 4 })
@@ -1666,7 +1668,7 @@ function Panels.Refine(opts)
 		local chance = math.min(1, GameConfig.Refine.Chance[cur + 1] + (cls and cls.passive and cls.passive.refineBonus or 0))
 		local mat, qty, cost = ItemDB.RefineMaterial(cur)
 		local md = ItemDB.Get(mat)
-		UI.Text(stage, "+" .. cur .. "  ➜  +" .. (cur + 1), 36, T.Gold, "Display", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 334), Size = UDim2.fromOffset(300, 40), TextXAlignment = Enum.TextXAlignment.Center })
+		UI.Text(stage, "+" .. cur .. "  >  +" .. (cur + 1), 36, T.Gold, "Display", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 334), Size = UDim2.fromOffset(300, 40), TextXAlignment = Enum.TextXAlignment.Center })
 		-- materials
 		local mats = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 382), Size = UDim2.fromOffset(300, 84), Parent = stage })
 		UI.List(mats, Enum.FillDirection.Horizontal, 12, Enum.HorizontalAlignment.Center)
@@ -3341,7 +3343,7 @@ function Panels.Pets()
 	local right = UI.Card(win.body, UDim2.new(0.4, 0, 1, 0))
 	right.Position = UDim2.new(0.6, 0, 0, 0)
 	UI.Pad(right, 12)
-	local render
+	local render, empty
 	render = function()
 		clear(left)
 		clear(right)
@@ -3357,9 +3359,26 @@ function Panels.Pets()
 		end, 32)
 		bar.Size = UDim2.new(1, -90, 1, 0)
 		UI.Text(top, #pets .. "/" .. PetsCfg.MaxPets, 18, T.Text, "Number", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 6), Size = UDim2.fromOffset(80, 24), TextXAlignment = Enum.TextXAlignment.Right })
+		if empty then
+			empty:Destroy()
+			empty = nil
+		end
 		if #pets == 0 then
-			local tip = UI.Text(left, "No companions yet.\n• Hatch eggs from chests (or the Shop)\n• Buy Sea Bait at the General Store, weaken a Wild Boar below 35% HP, then press 🪤 Capture", 14, T.TextSoft, "Semi", { Size = UDim2.fromOffset(420, 90) })
-			local _ = tip
+			-- v0.25.101 (owner: the hint sat squeezed in one grid cell): a centred empty card over the grid area
+			empty = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 48), Size = UDim2.new(0.6, -10, 1, -48), Parent = win.body })
+			UI.List(empty, nil, 14, Enum.HorizontalAlignment.Center).VerticalAlignment = Enum.VerticalAlignment.Center
+			local eggs = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(240, 110), LayoutOrder = 1, Parent = empty })
+			UI.List(eggs, Enum.FillDirection.Horizontal, 10, Enum.HorizontalAlignment.Center)
+			UI.VoxelEgg(eggs, "SeaEgg", 100)
+			UI.VoxelEgg(eggs, "GoldenEgg", 100)
+			UI.Text(empty, "NO COMPANIONS YET", 20, T.Text, "Display", { TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 28), LayoutOrder = 2 })
+			for i, line in ipairs({ { "egg", "Hatch eggs from chests or the Store" }, { "bait", "Buy Sea Bait at the General Store, bring a wild creature under 35% HP, then press Capture" } }) do
+				local row = New("Frame", { BackgroundColor3 = T.PanelDeep, BackgroundTransparency = 0.3, Size = UDim2.new(0.85, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, LayoutOrder = 2 + i, Parent = empty })
+				UI.Corner(row, 10)
+				New("UIPadding", { PaddingLeft = UDim.new(0, 56), PaddingRight = UDim.new(0, 12), PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10), Parent = row })
+				UI.Icon(row, line[1], 36, { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, -46, 0.5, 0) }) -- (x is inside the 56 px padding)
+				UI.Text(row, line[2], 15, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextYAlignment = Enum.TextYAlignment.Center })
+			end
 		end
 		local order = {}
 		for i, pet in ipairs(pets) do
@@ -3422,14 +3441,31 @@ function Panels.Pets()
 		UI.List(right, nil, 8, Enum.HorizontalAlignment.Center)
 		if not pet then
 			UI.Section(right, "🥚", "Egg Odds", T.Gold)
-			for id, egg in pairs(PetsCfg.Eggs) do
-				local parts = {}
-				for sid, w in pairs(egg.weights) do
-					table.insert(parts, sid .. " " .. w .. "%")
+			-- v0.25.101: each egg as its model + one row per companion, most likely first (emoji in the text drew boxes)
+			for i, id in ipairs({ "SeaEgg", "GoldenEgg" }) do
+				local egg = PetsCfg.Eggs[id]
+				if egg then
+					local card = New("Frame", { BackgroundColor3 = T.PanelDeep, BackgroundTransparency = 0.3, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, LayoutOrder = i, Parent = right })
+					UI.Corner(card, 10)
+					New("UIPadding", { PaddingLeft = UDim.new(0, 96), PaddingRight = UDim.new(0, 10), PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8), Parent = card })
+					UI.VoxelEgg(card, id, 80, { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, -90, 0.5, 0) })
+					local col = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, Parent = card })
+					UI.List(col, nil, 3)
+					UI.Text(col, egg.name, 16, Rarity.Get(egg.rarity).color, "Display", { Size = UDim2.new(1, 0, 0, 22), LayoutOrder = 0 })
+					local list = {}
+					for sid, w in pairs(egg.weights) do
+						table.insert(list, { sid = sid, w = w })
+					end
+					table.sort(list, function(a, b)
+						return a.w > b.w
+					end)
+					for k, it in ipairs(list) do
+						local sp = PetsCfg.ById[it.sid]
+						local r = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 18), LayoutOrder = k, Parent = col })
+						UI.Text(r, sp and sp.stages[1] or it.sid, 14, sp and Rarity.Get(sp.rarity).color or T.Text, "Semi", { Size = UDim2.new(0.7, 0, 1, 0) })
+						UI.Text(r, it.w .. "%", 14, T.Text, "Number", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0), Size = UDim2.new(0.3, 0, 1, 0), TextXAlignment = Enum.TextXAlignment.Right })
+					end
 				end
-				table.sort(parts)
-				UI.Text(right, egg.icon .. " " .. egg.name .. ": " .. table.concat(parts, " • "), 13, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 34) })
-				local _ = id
 			end
 			return
 		end
@@ -3459,11 +3495,11 @@ function Panels.Pets()
 					vp.ImageColor3 = Color3.fromRGB(40, 40, 60) -- not evolved yet: silhouette
 				end
 				if st < 3 then
-					UI.Text(evo, "➜", 18, T.TextSoft, "Display", { Size = UDim2.fromOffset(18, 56), LayoutOrder = st * 2 + 1, TextXAlignment = Enum.TextXAlignment.Center })
+					UI.Text(evo, ">", 18, T.TextSoft, "Display", { Size = UDim2.fromOffset(18, 56), LayoutOrder = st * 2 + 1, TextXAlignment = Enum.TextXAlignment.Center })
 				end
 			end
 		end
-		UI.Text(right, table.concat(sp.stages, "  ➜  "), 13, T.TextSoft, "Semi", { TextXAlignment = Enum.TextXAlignment.Center })
+		UI.Text(right, table.concat(sp.stages, "  >  "), 13, T.TextSoft, "Semi", { TextXAlignment = Enum.TextXAlignment.Center })
 		local need = PetsCfg.ExpToNext(pet.level)
 		local bar = UI.Bar(right, T.Green, UDim2.new(1, 0, 0, 18), pet.level >= PetsCfg.MaxLevel and "MAX" or ("Lv." .. pet.level .. "  " .. pet.exp .. "/" .. need))
 		bar:Set(pet.level >= PetsCfg.MaxLevel and 1 or pet.exp / need)
@@ -3653,7 +3689,7 @@ function Panels.PearlShop(args)
 	end
 
 	local function bigButton(parent, text, color, onClick)
-		local btn = UI.Button(parent, text, color, UDim2.new(1, 0, 0, 52), onClick)
+		local btn = UI.Button(parent, text, color, UDim2.new(1, 0, 0, 46), onClick)
 		UI.Shine(btn, math.random())
 		return btn
 	end
@@ -3663,7 +3699,10 @@ function Panels.PearlShop(args)
 		UI.Pad(panel, 14)
 		UI.List(panel, nil, 10, Enum.HorizontalAlignment.Center)
 		-- frameless stage (owner reference): the item floats in a soft color glow with twinkles (v0.25.41: no rays)
-		local stage = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0.42, 0), Parent = panel })
+		-- v0.25.101 (owner: buttons + notes fell out of the frame): the stage takes whatever height is left (flex fill),
+		-- everything under it keeps its own height, so the panel always fits
+		local stage = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 40), Parent = panel })
+		New("UIFlexItem", { FlexMode = Enum.UIFlexMode.Fill, Parent = stage })
 		New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.glow, ImageColor3 = e.color:Lerp(Color3.new(1, 1, 1), 0.35), ImageTransparency = 0.25, AnchorPoint = Vector2.new(0.5, 0.5),
 			Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(1.15, 1.15), SizeConstraint = Enum.SizeConstraint.RelativeYY, Parent = stage })
 		UI.Sparkles(stage, Color3.new(1, 1, 1), 12, { star = 0.8 })
@@ -3675,7 +3714,7 @@ function Panels.PearlShop(args)
 		UI.Text(panel, e.sub, 13, e.color:Lerp(Color3.new(1, 1, 1), 0.45), "Display", { TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 16) })
 		UI.Text(panel, e.name, 24, T.Text, "Display", { TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 34) })
 		local status = e.active and ("ACTIVE: " .. e.active .. " min left (buying adds time)") or (e.owned and "Owned") or nil
-		UI.Text(panel, e.desc .. (status and ("\n\n" .. status) or ""), 15, status and T.Green or T.TextSoft, "Semi", { TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 84) })
+		UI.Text(panel, e.desc .. (status and ("\n" .. status) or ""), 14, status and T.Green or T.TextSoft, "Semi", { TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y })
 		if e.kind == "store" and e.it.tokiColor and e.owned then
 			-- v0.25.73 (owner: "where do I change it again?"): bought once = change it here (or Stats -> palette)
 			bigButton(panel, "CHANGE COLOR", T.Gold, function()
@@ -3710,8 +3749,8 @@ function Panels.PearlShop(args)
 			end
 		elseif e.kind == "gemshop" and e.it.bulk then
 			-- v0.25.12 (owner): buy 1 / 10 / 30 at a time
-			local row = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 104), Parent = panel })
-			New("UIGridLayout", { CellSize = UDim2.new(1 / #e.it.bulk, -6, 0, 104), CellPadding = UDim2.fromOffset(8, 0), Parent = row })
+			local row = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 66), Parent = panel })
+			New("UIGridLayout", { CellSize = UDim2.new(1 / #e.it.bulk, -6, 0, 60), CellPadding = UDim2.fromOffset(8, 0), Parent = row })
 			for _, q in ipairs(e.it.bulk) do
 				UI.Button(row, "x" .. q .. "\n" .. PearlsCfg.Icon .. " " .. (e.it.price * q), q == 1 and T.Green or q == 10 and T.Orange or T.Purple, UDim2.new(1, 0, 1, 0), function()
 					if req("PearlShopBuy", { id = e.it.id, qty = q }, "Purchase").ok then
@@ -3744,7 +3783,7 @@ function Panels.PearlShop(args)
 		end
 		if d and (e.kind == "pack" or e.kind == "gemshop") then
 			UI.Text(panel, string.format("Tradable %s • Shop-only %s\nEarned today %d / %d", UI.Format(d.pearls), UI.Format(d.bound), d.earnedToday, d.cap)
-				.. (d.canTrade and "" or ("\n🔒 " .. (d.tradeWhy or ""))), 12, T.TextSoft, "Semi", { TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 54) })
+				.. (d.canTrade and "" or ("\n🔒 " .. (d.tradeWhy or ""))), 12, T.TextSoft, "Semi", { TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y })
 		end
 	end
 

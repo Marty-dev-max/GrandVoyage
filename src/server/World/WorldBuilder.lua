@@ -162,7 +162,6 @@ local function buildDock(island, side)
 	Kit.Rowboat(CFrame.new(x0 + side * 60, 0.3, zc - 13) * CFrame.Angles(0, math.pi / 2, 0), Color3.fromRGB(90, 150, 210))
 	Kit.CrateStack(Vector3.new(x0 + side * 14, dockY + 0.5, zc - 5))
 	Kit.Lamp(Vector3.new(tip.X - side * 3, dockY + 0.5, zc + 7))
-	sign(island.name, CFrame.new(x0 + side * 6, dockY + 10, zc - 10) * CFrame.Angles(0, side > 0 and -math.pi / 2 or math.pi / 2, 0), Vector2.new(18, 4))
 end
 
 -- v0.25.25 (owner): the shipyard sits on the side that faces the NEXT island, so you launch toward where you are
@@ -970,7 +969,7 @@ end
 -- away and rebuilt from code at server start (so the owner's published place updates through Rojo too).
 -- Hand-built content made in Studio goes in workspace.Handmade (never touched by rebuilds). Kit props placed there
 -- (tagged EnvProp/EnvPart) are dressed with the stylized meshes like the generated ones.
-WB.WORLD_VERSION = 24 -- v24 (v0.25.108): Marine Registrar in Conch Bay, no Guild Registrar; v23 (v0.25.107): Tavern Keeper beside the Shipwright; v22 (v0.25.27): shipyards snap to the island side nearest the next island; v21 (v0.25.25): shipyards face the next island, circus ship offshore; v20 (v0.25.24): Marmalade Town hand-laid (World/Marmalade); v19 (v0.25.23): Conch Bay street spawns keep their houses; v18 (v0.25.22): Conch Bay terraced (quay, two terraces, garrison plateau, tapered towers); v17 (v0.25.21): islands turned to face the previous one, Conch Bay stairs; v16 (v0.25.20): Daybreak spawn by Rowan, Conch Bay hand-laid (World/ConchBay); v15 (v0.25.11): islands spread north/south, wider sea, islets; v14 (v0.25.6): Daybreak spawn by the campfire; v13: voxel NPCs; v12: Voxelize pass
+WB.WORLD_VERSION = 25 -- v25 (v0.25.109): no island name signs at the docks; v24 (v0.25.108): Marine Registrar in Conch Bay, no Guild Registrar; v23 (v0.25.107): Tavern Keeper beside the Shipwright; v22 (v0.25.27): shipyards snap to the island side nearest the next island; v21 (v0.25.25): shipyards face the next island, circus ship offshore; v20 (v0.25.24): Marmalade Town hand-laid (World/Marmalade); v19 (v0.25.23): Conch Bay street spawns keep their houses; v18 (v0.25.22): Conch Bay terraced (quay, two terraces, garrison plateau, tapered towers); v17 (v0.25.21): islands turned to face the previous one, Conch Bay stairs; v16 (v0.25.20): Daybreak spawn by Rowan, Conch Bay hand-laid (World/ConchBay); v15 (v0.25.11): islands spread north/south, wider sea, islets; v14 (v0.25.6): Daybreak spawn by the campfire; v13: voxel NPCs; v12: Voxelize pass
 
 -- Old copies of the map can hide anywhere in Workspace: a renamed or regrouped World, an island dragged into
 -- Handmade, single NPCs / chests / docks pasted from an old bake. They draw on top of the new islands and register

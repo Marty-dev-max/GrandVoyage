@@ -899,10 +899,7 @@ local function dock(ctx, z, len, launch)
 			Ball(4, Color3.fromRGB(255, 80, 70), tip + Vector3.new(30, -6, sz), {})
 			Ball(1.4, Color3.fromRGB(255, 240, 160), tip + Vector3.new(30, -3.6, sz), { material = M.Neon, decor = true, collide = false })
 		end
-		Kit.Sign(island.name, CFrame.new(x0 + 6, y + 9, z - 9) * CFrame.Angles(0, -math.pi / 2, 0), Vector2.new(18, 4))
-		for _, sx in ipairs({ -1, 1 }) do
-			P(Vector3.new(0.8, 9, 0.8), C.DarkWood, CFrame.new(x0 + 6, y + 4.5, z - 9 + sx * 9.5), { material = M.Wood })
-		end
+		-- v0.25.109 (owner): no island name sign (the name shows on screen when you arrive: Controllers/IslandEnter)
 	else
 		-- moored rowboats and a little sailboat along the side docks
 		Kit.Rowboat(CFrame.new(x0 + len * 0.45, 0.3, z + (z > 0 and 11 or -11)) * CFrame.Angles(0, math.pi / 2, 0), Color3.fromRGB(196, 130, 80))

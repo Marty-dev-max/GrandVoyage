@@ -47,6 +47,7 @@ local Footsteps = require(script.Controllers.Footsteps)
 local ShiftLock = require(script.Controllers.ShiftLock)
 local FruitAlert = require(script.Controllers.FruitAlert)
 local NpcLife = require(script.Controllers.NpcLife)
+local IslandEnter = require(script.Controllers.IslandEnter)
 
 pcall(function()
 	StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Health, false)
@@ -417,7 +418,7 @@ end)
 for _, c in ipairs({
 	{ "Sailing", Sailing }, { "Builder", Builder }, { "VFX", VFX }, { "Readability", Readability }, { "Swim", Swim },
 	{ "Pets", PetsCtl }, { "Titles", Titles }, { "Ocean", Ocean }, { "Atmos", Atmos }, { "GrassField", GrassField },
-	{ "CreatureAnim", CreatureAnim }, { "CharAnim", CharAnim }, { "Interact", Interact }, { "ChartsView", ChartsView }, { "ShipBars", ShipBars }, { "Underwater", Underwater }, { "SerpentBody", SerpentBody }, { "Heritage", Heritage }, { "Flight", Flight }, { "Crosshair", Crosshair }, { "HeritageAnim", HeritageAnim }, { "QuestPath", QuestPath }, { "WorldCull", WorldCull }, { "FruitFX", FruitFX }, { "Footsteps", Footsteps }, { "ShiftLock", ShiftLock }, { "FruitAlert", FruitAlert }, { "NpcLife", NpcLife }, { "Slingshot", Slingshot }, { "TokiFX", TokiFX }, { "Sprint", Sprint },
+	{ "CreatureAnim", CreatureAnim }, { "CharAnim", CharAnim }, { "Interact", Interact }, { "ChartsView", ChartsView }, { "ShipBars", ShipBars }, { "Underwater", Underwater }, { "SerpentBody", SerpentBody }, { "Heritage", Heritage }, { "Flight", Flight }, { "Crosshair", Crosshair }, { "HeritageAnim", HeritageAnim }, { "QuestPath", QuestPath }, { "WorldCull", WorldCull }, { "FruitFX", FruitFX }, { "Footsteps", Footsteps }, { "ShiftLock", ShiftLock }, { "FruitAlert", FruitAlert }, { "NpcLife", NpcLife }, { "Slingshot", Slingshot }, { "TokiFX", TokiFX }, { "Sprint", Sprint }, { "IslandEnter", IslandEnter },
 }) do
 	task.spawn(start, c[1], c[2])
 end

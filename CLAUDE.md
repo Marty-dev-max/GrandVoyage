@@ -851,6 +851,8 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     (role "Marine", Conch Bay quay, Panels.Marine), Pirate from the Crew window (not while Marine; Lv GuildCreateLevel).
     `CrewInvite` { name } -> Prompt kind CrewInvite -> `CrewRespond`; crewmates auto-party (`PartyService.Join`) on load
     and on joining. No Guild Registrar NPC any more. WORLD_VERSION 24.
+  * v0.25.109 (owner): no island name signs (dock signs removed, floating banner already off); `Controllers/IslandEnter`
+    shows UI.Banner(name, subtitle + level range) when your character enters an island radius (again after 90 s away).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

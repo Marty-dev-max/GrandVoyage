@@ -31,7 +31,7 @@ function D.Run(root)
 	for _, p in ipairs(root:GetDescendants()) do
 		breathe()
 		if p.ClassName == "Part" and (p.Shape == nil or p.Shape == Enum.PartType.Block) and p.Transparency < 0.9 and p.Name ~= "Water" then -- (the Lune bake leaves Shape unset = block)
-			local cf, sz = p.CFrame, p.Size / 2
+			local cf, sz, name = p.CFrame, p.Size / 2, p.Name -- (Instance reads are slow: cache once per part)
 			local axes = {
 				{ cf.RightVector, sz.X, cf.UpVector * sz.Y, cf.LookVector * sz.Z },
 				{ cf.UpVector, sz.Y, cf.RightVector * sz.X, cf.LookVector * sz.Z },
@@ -53,12 +53,13 @@ function D.Run(root)
 							b = {}
 							buckets[key] = b
 						end
-						table.insert(b, { p = p, n = n, u0 = cu - hu, u1 = cu + hu, v0 = cv - hv, v1 = cv + hv, area = hu * hv })
+						table.insert(b, { p = p, name = name, n = n, u0 = cu - hu, u1 = cu + hu, v0 = cv - hv, v1 = cv + hv, area = hu * hv })
 					end
 				end
 			end
 		end
 	end
+	local tBuild = os.clock() - t0
 	local moves, moved = {}, 0
 	for _, b in pairs(buckets) do
 		breathe()
@@ -68,7 +69,7 @@ function D.Run(root)
 				if x.area ~= y.area then
 					return x.area > y.area
 				end
-				return x.p.Name < y.p.Name
+				return x.name < y.name
 			end)
 			-- earlier (bigger) faces are found through a CELL grid on the plane; faces wider than BIG cells go in a list
 			local grid, big = {}, {}
@@ -134,6 +135,7 @@ function D.Run(root)
 			end
 		end
 	end
+	local tLevel = os.clock() - t0 - tBuild
 	for p, m in pairs(moves) do
 		local off = Vector3.new(0, 0, 0)
 		for _, e in pairs(m) do
@@ -142,7 +144,7 @@ function D.Run(root)
 		p.CFrame = p.CFrame + off
 		moved += 1
 	end
-	print(string.format("[DeFlicker] %d parts lifted off coplanar faces in %.2fs", moved, os.clock() - t0))
+	print(string.format("[DeFlicker] %d parts lifted off coplanar faces in %.2fs (faces %.2f, levels %.2f)", moved, os.clock() - t0, tBuild, tLevel))
 	return moved
 end
 

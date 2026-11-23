@@ -6,7 +6,7 @@
 local D = {}
 
 local STEP = 0.04 -- studs per level; enough for the depth buffer at ~150 studs, too small to see as a lip
-local MAX_LIFT = 0.2
+local MAX_LIFT = 0.32 -- deep stacks (plaza paths over paths over grass) need room
 local GAP = 0.035 -- v0.25.115: faces closer than this along the normal belong to one stack (they still z-fight)
 local CELL, BIG = 64, 64 -- plane grid cell (studs); a face covering more cells than BIG is checked against all
 -- (16-stud cells meant 2M cell entries and a 21 s pass; 64 brings it to a fraction)

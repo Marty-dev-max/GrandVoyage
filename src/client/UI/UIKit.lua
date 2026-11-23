@@ -832,6 +832,10 @@ end
 -- v0.25.98 (owner: every grade looked the same): weapon previews = the grade's own voxel icon (w_<Type>_<Grade>),
 -- the shared Wep_ mesh only when a weapon has no grade icon
 function UI.WeaponView(parent, def, size, spin, props)
+	-- v0.25.104: swords are real block models (Shared/Modules/BladeModel), framed on a diagonal
+	if def.blade then
+		return UI.ModelViewOf(parent, require(ReplicatedStorage.Shared.Modules.BladeModel).Build(def.blade, "preview"), size, spin, props)
+	end
 	local icon = def.weaponType and def.grade and ("w_" .. def.weaponType .. "_" .. def.grade)
 	return (icon and UI.VoxelIcon(parent, icon, size, props))
 		or (def.weaponType and UI.ModelView(parent, "Weapons", def.weaponType, size, spin, props))
@@ -1221,6 +1225,12 @@ function UI.CharacterView(parent, props, opts)
 		end
 		table.insert(watchConns, char.ChildAdded:Connect(changed))
 		table.insert(watchConns, char.ChildRemoved:Connect(changed))
+		-- v0.25.104: another blade equipped -> the statue holds the new one
+		table.insert(watchConns, char:GetAttributeChangedSignal("WeaponItem"):Connect(function()
+			if vp.Parent then
+				refresh(lastType)
+			end
+		end))
 	end
 	pcall(function()
 		vp.Destroying:Connect(function()
@@ -1285,6 +1295,11 @@ function UI.CharacterView(parent, props, opts)
 			Fists = {},
 		}
 		local tpl = weaponType and UI.ModelAsset("Weapons", weaponType)
+		-- v0.25.104: hold the same blade the character carries (WeaponService sets WeaponItem)
+		local heldDef = weaponType == "Sword" and require(ReplicatedStorage.Shared.Modules.ItemDB).Get(char:GetAttribute("WeaponItem") or "")
+		if heldDef and heldDef.blade then
+			tpl = require(ReplicatedStorage.Shared.Modules.BladeModel).Build(heldDef.blade, "drawn")
+		end
 		for _, h in ipairs(tpl and (HOLD[weaponType] or { { "RightHand", CFrame.new(0, -0.15, 0) } }) or {}) do
 			local limb = copy:FindFirstChild(h[1])
 			if limb then

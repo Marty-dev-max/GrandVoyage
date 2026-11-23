@@ -92,7 +92,9 @@ local function describe(entry, def)
 	local tier = ItemDB.Rarity(def)
 	table.insert(lines, string.format('<font color="#%s"><b>%s</b></font>  %s', tier.color:ToHex(), string.upper(tier.id), def.kind))
 	local g = ItemDB.Grade(def)
-	if g then
+	if def.ledger then
+		table.insert(lines, def.ledger .. " (" .. (def.typeLabel or "Sword") .. ")  x" .. (g and g.mult or 1))
+	elseif g then
 		table.insert(lines, "Grade: " .. g.name .. "  (x" .. g.mult .. ")")
 	end
 	if def.atk and def.atk > 0 then
@@ -146,6 +148,8 @@ local function itemTile(parent, entry, onClick, selected)
 	local iconId = UI.ItemIconId(def)
 	if def.kind == "Egg" and UI.VoxelEgg(b, def.id, 56, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 2), ZIndex = 4 }) then
 		-- v0.25.101 (owner): eggs show the block egg model itself, like the Store
+	elseif def.blade and UI.WeaponView(b, def, 60, false, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 0), ZIndex = 4 }) then
+		-- v0.25.104 (owner): every sword shows its own block model
 	elseif iconId then
 		New("ImageLabel", { BackgroundTransparency = 1, Image = iconId, ScaleType = Enum.ScaleType.Fit, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 2), Size = UDim2.fromOffset(56, 56), ZIndex = 4, Parent = b })
 	else

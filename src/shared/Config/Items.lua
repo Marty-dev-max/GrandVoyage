@@ -56,6 +56,77 @@ for wtype, line in pairs(WeaponLines) do
 	end
 end
 
+-- ===== Famed blades (v0.25.104, docs/Plan-Weapons-v2.md) =====
+-- Every sword is a block model built from `blade` (Shared/Modules/BladeModel): shape + guard style + colors.
+-- Ladder (owner): gray = the wooden starter (Sword_Plain) | green "Forty Fathoms" (many, General Store + mob drops) |
+-- blue "Twenty Tides" (boss drops) | purple = a Tide blade awakened (this update: Whitevow only) | gold "Seven Crowns"
+-- (next update) | "Eclipsed" black blades (sea 3). Variants differ by stats only for now: Katana leans DEX/LUK,
+-- Cutlass leans STR/VIT.
+local SWORD_LINE_BLADES = {
+	Plain = { form = "Wooden", blade = "B08456", guard = "7A5232", wrap = "D8C9A0", pommel = "7A5232" },
+	Keen = { form = "Katana", hilt = "round", blade = "C9D3E0", edge = "F4F8FF", guard = "3B3F4A", wrap = "F2F2F2", wrap2 = "9AA6B8", pommel = "D9A441", scabbard = "E8E8EE" },
+	Master = { form = "Cutlass", hilt = "shell", blade = "B9C9DA", edge = "E6F3FF", guard = "D9A441", wrap = "2C4F8C", pommel = "D9A441", scabbard = "1E2E4A" },
+	Grand = { form = "Katana", shape = "long", hilt = "flower", blade = "D5DCF5", edge = "FFFFFF", guard = "6A5AA8", wrap = "3A2D63", pommel = "C9C9E8", scabbard = "2A2045", glow = true },
+	Supreme = { form = "Cutlass", shape = "hooked", hilt = "basket", blade = "AFC4E8", edge = "BFF4FF", guard = "2E3550", wrap = "6A3FB0", pommel = "FFD34D", scabbard = "1A1C2A", glow = true },
+}
+for gid, spec in pairs(SWORD_LINE_BLADES) do
+	Items["Sword_" .. gid].blade = spec
+end
+local BLADE_TIERS = {
+	Fathom = { rarity = "Uncommon", grade = "Keen", ledger = "Forty Fathoms", atk = 30, req = 10, slots = 1, price = 3500, lean = 2 },
+	Tide = { rarity = "Rare", grade = "Master", ledger = "Twenty Tides", atk = 52, req = 20, slots = 2, price = 30000, lean = 3 },
+	Awakened = { rarity = "Epic", grade = "Grand", ledger = "Twenty Tides, Awakened", atk = 80, req = 35, slots = 3, price = 150000, lean = 4 },
+}
+local Blades = {} -- id list per tier, in order (Index / store rolls / drops read these)
+local function blade(id, name, tierId, spec)
+	local t = BLADE_TIERS[tierId]
+	local katana = spec.form == "Katana"
+	add(id, {
+		name = name,
+		kind = "Weapon",
+		slot = "weapon",
+		weaponType = "Sword",
+		typeLabel = spec.form,
+		grade = t.grade,
+		ledger = t.ledger,
+		bladeTier = tierId,
+		rarity = t.rarity,
+		atk = t.atk,
+		matk = 0,
+		reqLevel = t.req,
+		slots = t.slots,
+		price = t.price,
+		refinable = true,
+		blade = spec,
+		dex = katana and t.lean or nil,
+		luk = katana and math.ceil(t.lean / 2) or nil,
+		str = not katana and t.lean or nil,
+		vit = not katana and math.ceil(t.lean / 2) or nil,
+	})
+	Blades[tierId] = Blades[tierId] or {}
+	table.insert(Blades[tierId], id)
+end
+-- Forty Fathoms (green)
+blade("Blade_Seafoam", "Seafoam Katana", "Fathom", { form = "Katana", hilt = "round", blade = "C8D6DC", edge = "F0FAFF", guard = "2F6F6A", wrap = "7FD1B9", wrap2 = "3E8C7A", pommel = "C9A441", scabbard = "2B4A47" })
+blade("Blade_CrimsonThread", "Crimson Thread", "Fathom", { form = "Katana", hilt = "square", blade = "C9CFD8", guard = "3A2A2A", wrap = "C8323C", wrap2 = "7A1C22", pommel = "D9A441", scabbard = "2A1416" })
+blade("Blade_Ashwind", "Ashwind Katana", "Fathom", { form = "Katana", shape = "straight", hilt = "bar", blade = "B4BAC4", guard = "2A2C30", wrap = "5A5E66", wrap2 = "2E3136", pommel = "8A8F99", scabbard = "1C1D20" })
+blade("Blade_Sunbrand", "Sunbrand Katana", "Fathom", { form = "Katana", shape = "broad", hilt = "flower", blade = "D2CFC4", guard = "B8862B", wrap = "F08A24", wrap2 = "A3521A", pommel = "FFD34D", scabbard = "5A3416" })
+blade("Blade_IndigoRain", "Indigo Rain", "Fathom", { form = "Katana", shape = "slim", hilt = "oval", blade = "C0CBE0", guard = "1F2A4A", wrap = "3A4FA8", wrap2 = "1F2B66", pommel = "B8C4E8", scabbard = "141B33" })
+blade("Blade_Harbor", "Harbor Cutlass", "Fathom", { form = "Cutlass", hilt = "bow", blade = "BCC6D0", guard = "C8963E", wrap = "6B4226", pommel = "C8963E", scabbard = "3A2A1E" })
+blade("Blade_Coral", "Coral Cutlass", "Fathom", { form = "Cutlass", shape = "falchion", hilt = "cross", blade = "D0C8CC", guard = "E07A7A", wrap = "8C2F3E", pommel = "F2A0A0", scabbard = "4A1E26" })
+blade("Blade_Jade", "Jade Cutlass", "Fathom", { form = "Cutlass", hilt = "shell", blade = "BFD8C8", edge = "E8FFF0", guard = "2E7D4F", wrap = "1F4A33", pommel = "7FD19A", scabbard = "16301F" })
+blade("Blade_Gullfeather", "Gullfeather Cutlass", "Fathom", { form = "Cutlass", shape = "straight", hilt = "ring", blade = "D8DEE6", guard = "E8E8EE", wrap = "F4F4F4", wrap2 = "B8C0CC", pommel = "9AA6B8", scabbard = "D8D8E0" })
+blade("Blade_Stormsteel", "Stormsteel Cutlass", "Fathom", { form = "Cutlass", shape = "broad", hilt = "basket", blade = "9FB4D0", edge = "D8E8FF", guard = "3E4A63", wrap = "2A3448", pommel = "8FA8D8", scabbard = "1A2030" })
+-- Twenty Tides (blue): boss drops
+blade("Blade_Gullwing", "Gullwing", "Tide", { form = "Katana", shape = "long", hilt = "oval", blade = "E2E8F2", edge = "FFFFFF", guard = "D8DDE6", wrap = "6FB7FF", wrap2 = "F4F8FF", pommel = "FFFFFF", scabbard = "F0F2F6", glow = true })
+blade("Blade_Saltfang", "Saltfang", "Tide", { form = "Cutlass", shape = "hooked", hilt = "basket", blade = "9CC8E8", edge = "CFF6FF", guard = "1E5C8A", wrap = "0E2F4D", pommel = "6FD3FF", scabbard = "0B2236", glow = true })
+blade("Blade_Coralvein", "Coralvein", "Tide", { form = "Katana", shape = "deep", hilt = "flower", blade = "E6C8C8", edge = "FFE0E0", guard = "8C1E2E", wrap = "D8404E", wrap2 = "5A0E18", pommel = "FF9AA8", scabbard = "3A0A12", glow = true })
+blade("Blade_Moonhook", "Moonhook", "Tide", { form = "Cutlass", shape = "hooked", hilt = "ring", blade = "D8DCE8", edge = "F4F6FF", guard = "8A8FA8", wrap = "2E2A4A", pommel = "E8E8FF", scabbard = "22203A", glow = true })
+blade("Blade_Kelpwhisper", "Kelpwhisper", "Tide", { form = "Katana", shape = "slim", hilt = "round", blade = "C4DCC8", edge = "E8FFEC", guard = "2A5A3A", wrap = "3F8F55", wrap2 = "1C3F26", pommel = "B8E8A0", scabbard = "13301C", glow = true })
+blade("Blade_Emberwake", "Emberwake", "Tide", { form = "Cutlass", shape = "falchion", hilt = "shell", blade = "D8C4B4", edge = "FFD8A0", guard = "8A3A14", wrap = "2A1610", pommel = "FF9A3C", scabbard = "2A120A", glow = true })
+-- Awakened Tide (purple): Whitevow, a vow sworn on a white hilt (Battle Pass tier 50 later; Dev grant until then)
+blade("Blade_Whitevow", "Whitevow", "Awakened", { form = "Katana", shape = "long", hilt = "square", blade = "E8EAF4", edge = "FFFFFF", guard = "C9B8F0", wrap = "FFFFFF", wrap2 = "D8D4EC", pommel = "9A7FD8", scabbard = "F6F6FA", glow = true })
+
 -- ===== Armor / headgear / accessories =====
 add("SailorVest", { name = "Sailor Vest", kind = "Armor", slot = "armor", def = 6, reqLevel = 1, slots = 1, price = 400, refinable = true, rarity = "Common" })
 add("MarineCoat", { name = "Marine Greatcoat", kind = "Armor", slot = "armor", def = 16, reqLevel = 20, slots = 1, price = 8000, refinable = true, rarity = "Rare" })
@@ -169,6 +240,8 @@ local Shop = {
 
 return {
 	Items = Items,
+	Blades = Blades,
+	BladeTiers = BLADE_TIERS,
 	Grades = Grades,
 	GradeById = GradeById,
 	Shop = Shop,

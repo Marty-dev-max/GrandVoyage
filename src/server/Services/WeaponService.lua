@@ -12,6 +12,8 @@ local Players = game:GetService("Players")
 local WeaponInfo = require(ReplicatedStorage.Shared.Modules.WeaponInfo)
 local Formulas = require(ReplicatedStorage.Shared.Modules.Formulas)
 local Net = require(ReplicatedStorage.Shared.Modules.Net)
+local ItemDB = require(ReplicatedStorage.Shared.Modules.ItemDB)
+local BladeModel = require(ReplicatedStorage.Shared.Modules.BladeModel)
 
 local WS = {}
 local R
@@ -79,12 +81,16 @@ local function weld(model, limb)
 	end
 end
 
-local function mount(char, list, tag)
+-- v0.25.104: swords are block models built from the equipped item's `blade` spec (every blade its own look)
+local BLADE_MODE = { Sword = "drawn", SwordSheathed = "sheathed", Scabbard = "scabbard" }
+
+local function mount(char, list, tag, spec)
 	for _, m in ipairs(list or {}) do
 		local limb = char:FindFirstChild(m[1])
-		local tpl = template(m[2])
-		if limb and tpl then
-			local w = tpl:Clone()
+		local mode = spec and BLADE_MODE[m[2]]
+		local tpl = not mode and template(m[2])
+		if limb and (tpl or mode) then
+			local w = mode and BladeModel.Build(spec, mode) or tpl:Clone()
 			w.Name = tag .. "_" .. m[2]
 			w:SetAttribute(tag, m[2])
 			w:PivotTo(limb.CFrame * m[3])
@@ -118,10 +124,21 @@ local function strap(char)
 	folder.Parent = char
 end
 
+-- the equipped weapon's item id + its blade spec (nil for non-swords)
+local function equipped(player)
+	local p = player and R.DataService.Get(player)
+	local uid = p and p.equipment and p.equipment.weapon
+	local e = uid and Formulas.FindItem(p, uid)
+	local def = e and ItemDB.Get(e.id)
+	return e and e.id or "", def and def.blade
+end
+
 -- put the right things where they belong for this character's weapon type and state
 local function dress(char, wType, out)
 	clear(char, "GVWeapon")
-	mount(char, out and DRAWN[wType] or HOLSTERED[wType], "GVWeapon")
+	local id, spec = equipped(Players:GetPlayerFromCharacter(char))
+	mount(char, out and DRAWN[wType] or HOLSTERED[wType], "GVWeapon", spec)
+	char:SetAttribute("WeaponItem", id) -- UI.CharacterView reads it to hold the same blade
 	char:SetAttribute("Weapon", wType)
 	char:SetAttribute("WeaponOut", out == true)
 end
@@ -229,7 +246,7 @@ function WS.Start()
 					if t and now - t > HOLSTER_AFTER then
 						lastUse[p] = nil
 						dress(char, wType, false)
-					elseif not t and (char:GetAttribute("Weapon") ~= wType or char:GetAttribute("WeaponOut") == nil) then
+					elseif not t and (char:GetAttribute("Weapon") ~= wType or char:GetAttribute("WeaponOut") == nil or char:GetAttribute("WeaponItem") ~= (equipped(p))) then
 						dress(char, wType, false) -- fresh character, class switch or new weapon equipped
 					end
 					pcall(wearGear, char, WeaponInfo.ClassWeapon(R.DataService.Get(p)))

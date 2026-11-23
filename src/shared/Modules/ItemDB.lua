@@ -59,6 +59,8 @@ end
 
 ItemDB.Grades = ItemsCfg.Grades
 ItemDB.Shop = ItemsCfg.Shop
+ItemDB.Blades = ItemsCfg.Blades
+ItemDB.BladeTiers = ItemsCfg.BladeTiers
 ItemDB.RefineMaterial = ItemsCfg.RefineMaterial
 ItemDB.Cards = Cards
 ItemDB.RarityModule = Rarity

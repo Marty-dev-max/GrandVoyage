@@ -775,7 +775,7 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     oil trail tiles; server "SkateState" -> char attr Skating -> other clients draw the trail.
   * v0.25.85 (owner approved previews): new fruit_v2 "ward" = round shield (lens front, blue rim, gold rivets, raised
     overlapping hex glass plates) and "split" = three slanted slices drifting apart (lilac flesh, rind, seed ring)
-    in tools/blender/voxel_pets.py; GLBs in assets/models3d, NOT uploaded yet (Config/Models still the old ids).
+    in tools/blender/voxel_pets.py; GLBs uploaded in v0.25.103.
   * v0.25.86 (owner): hunts pay out inside ProgressService.Event (payHunt) and restart, no claim (HuntClaim kept for
     saves already full); Quest.lua HuntCard suggests the toughest unlocked island monster (NEW tag + START).
   * v0.25.87: menu logo = `tools/gen_logo.py` (own bitmap font + ship's wheel) -> GameConfig.LogoImage, drawn on a
@@ -823,7 +823,8 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
   * v0.25.102 (owner): acc_SailorVest is hand-drawn (gen_pixel_icons `sailor_vest`; gen_acc_icons HAND skips it).
     Cutlass guard + knuckle bow lie in the blade's plane (bow on the edge side, -z) in voxel_weapons sword() /
     sword_sheathed(). Models can be uploaded through Studio MCP `open_cloud_invoke` POST /assets/v1/assets (files
-    fileContent .glb) once the owner approves the folder in Assistant Settings -> MCP Permissions.
+    fileContent .glb, then poll GET /assets/v1/operations/<id>); the owner approved assets/models3d (v0.25.103: new
+    Wep_Sword / Wep_SwordSheathed + Fruit_Ward / Fruit_Split ids in Config/Models).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

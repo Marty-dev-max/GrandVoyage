@@ -43,6 +43,12 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
 
 ## Rules learned the hard way
 
+- UIPadding moves child GuiObjects too, not just text: anything placed inside a padded frame (bevel lines, icons)
+  is offset by the padding (UI.Button fitBevel + icon x -26 compensate). The pixel font (Press Start 2P) has no
+  arrows / pencil glyphs like ▾ ▴ ✎ (they draw as a box): use ASCII or a pixel icon. Live UI check: Studio MCP
+  start_stop_play, click PLAY with user_mouse_input at the button's AbsolutePosition (GUI space, inset excluded), then
+  keys (I, K, ...) + screen_capture. Never require client modules from execute_luau to drive the game: it gets a
+  separate copy (Menu.Play there sent MenuPlay but left the real menu stuck).
 - Never add custom fields or methods to Roblox Instances (`function btn:Foo()` errors and silently broke the whole HUD once).
   Use module functions such as `UI.SetButtonColor(btn, color)`.
 - `InputObject.Position` excludes the top-bar inset: use `Camera:ScreenPointToRay`, or add `GuiService:GetGuiInset()` before
@@ -808,6 +814,8 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     import gen_pixel_icons and call render(name) for just those names.
   * v0.25.98 (owner): `UI.WeaponView(parent, def, size, spin, props)` = the grade voxel icon (w_<Type>_<Grade>) for
     weapon previews (Bag, ItemReveal, Blacksmith), Wep_ mesh only without a grade icon. Held weapons are unchanged.
+  * v0.25.99-100: title menu UPDATE LOG lines = `GameConfig.UpdateNotes` (box grows), tab labels sized by the square
+    pixel font (UI.TabBar: width = icon 42 / plain 20 + chars x size), potion % left of the gear.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

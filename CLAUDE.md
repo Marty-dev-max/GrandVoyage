@@ -799,6 +799,9 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     Weapons/Knuckles). The Wep_Knuckles glove mesh is no longer shown anywhere.
   * v0.25.95 (owner): card icons by monster type: gen_pixel_icons `type_card` -> card_STR/AGI/DEX/INT (Config/Icons);
     ItemDB card items carry `mtype`, UI.ItemIconName returns card_<mtype> for cards.
+  * v0.25.96 (owner): Menu buildStage remodel: `barrel(cf, k)` (octagon slices bulging in the middle, iron hoops, lid)
+    x2 + a keg on its side, rowboat (tapered rows, stripe, flush rails, floor, thwarts, oars, mast + furled sail +
+    pennant). Preview without Play: loadstring the block..lookKey chunk of the synced Menu source in Studio Edit.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

@@ -762,7 +762,40 @@ function UI.ModelAsset(folder, key)
 	return f and f:FindFirstChild(key)
 end
 
+-- v0.25.94 (owner: Street Fist looked like a boxing glove; Brawlers fight bare-fisted): a clenched bare fist with
+-- tape wraps, built from blocks (knuckles face -Z = the camera in ModelViewOf).
+function UI.FistModel()
+	local m = Instance.new("Model")
+	local SKIN, WRAP, TAPE = Color3.fromRGB(232, 176, 128), Color3.fromRGB(244, 240, 228), Color3.fromRGB(206, 52, 52)
+	local function b(sx, sy, sz, x, y, z, c)
+		local p = Instance.new("Part")
+		p.Anchored, p.CanCollide, p.CastShadow = true, false, false
+		p.Material = Enum.Material.SmoothPlastic
+		p.Size, p.CFrame, p.Color = Vector3.new(sx, sy, sz), CFrame.new(x, y, z), c
+		p.Parent = m
+	end
+	b(1.0, 0.9, 0.9, 0, 0.05, 0.15, SKIN) -- back of the hand
+	for i, x in ipairs({ -0.375, -0.125, 0.125, 0.375 }) do
+		local c = i % 2 == 0 and SKIN or SKIN:Lerp(Color3.new(0, 0, 0), 0.08)
+		b(0.24, 0.62, 0.34, x, -0.02, -0.4, c) -- curled fingers
+		b(0.22, 0.16, 0.2, x, 0.3, -0.47, SKIN:Lerp(Color3.new(1, 1, 1), 0.12)) -- knuckle bumps
+	end
+	b(1.04, 0.16, 0.38, 0, 0.12, -0.42, WRAP) -- tape across the knuckles
+	b(0.26, 0.32, 0.42, -0.52, -0.16, -0.22, SKIN) -- thumb base
+	b(0.52, 0.22, 0.26, -0.16, -0.26, -0.62, SKIN) -- thumb across the fingers
+	b(1.06, 0.3, 0.96, 0, 0.05, 0.22, WRAP) -- wrap around the palm
+	b(0.8, 0.8, 0.5, 0, 0, 0.82, WRAP) -- wrist wrap
+	b(0.84, 0.84, 0.09, 0, 0, 0.7, TAPE)
+	b(0.84, 0.84, 0.09, 0, 0, 0.96, TAPE)
+	b(0.68, 0.68, 0.3, 0, 0, 1.2, SKIN) -- forearm
+	m.PrimaryPart = m:FindFirstChildWhichIsA("BasePart")
+	return m
+end
+
 function UI.ModelView(parent, folder, key, size, spin, props)
+	if folder == "Weapons" and key == "Knuckles" then
+		return UI.ModelViewOf(parent, UI.FistModel(), size, spin, props)
+	end
 	local src = UI.ModelAsset(folder, key)
 	if not src then
 		return nil

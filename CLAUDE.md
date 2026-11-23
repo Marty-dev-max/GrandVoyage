@@ -795,6 +795,8 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     (UI.ModelViewOf of ShipModel.BuildPart + cost chips, red = short), MATERIALS owned. Client canPlace mirrors
     BuildPlace for the ghost color + reason; delete = red Highlight on the `Index` model inside Build_<name>, click ->
     BuildRemove. Right click never deletes. GameConfig.Ship.WeightDrag 0.04 (was 0.085: sails matter more).
+  * v0.25.94 (owner): Knuckles previews = `UI.FistModel()` (bare fist + tape wraps in blocks; UI.ModelView intercepts
+    Weapons/Knuckles). The Wep_Knuckles glove mesh is no longer shown anywhere.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

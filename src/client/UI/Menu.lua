@@ -196,11 +196,26 @@ local function buildStage()
 	block(m, Vector3.new(2.4, 2.4, 2.4), CFrame.new(-5.2, 1.2, 9) * CFrame.Angles(0, 0.2, 0), crate, Enum.Material.WoodPlanks)
 	block(m, Vector3.new(2.4, 2.4, 2.4), CFrame.new(-5.6, 1.2, 6.2) * CFrame.Angles(0, -0.1, 0), crate:Lerp(Color3.new(0, 0, 0), 0.1), Enum.Material.WoodPlanks)
 	block(m, Vector3.new(2, 2, 2), CFrame.new(-5.3, 3.4, 8.2) * CFrame.Angles(0, 0.5, 0), crate:Lerp(Color3.new(1, 1, 1), 0.08), Enum.Material.WoodPlanks)
-	for _, z in ipairs({ 2.5, 4.4 }) do
-		block(m, Vector3.new(1.8, 2.2, 1.8), CFrame.new(-6.4, 1.1, z), Color3.fromRGB(124, 76, 44), Enum.Material.Wood)
-		block(m, Vector3.new(1.9, 0.25, 1.9), CFrame.new(-6.4, 1.6, z), Color3.fromRGB(70, 70, 76), Enum.Material.Metal)
-		block(m, Vector3.new(1.9, 0.25, 1.9), CFrame.new(-6.4, 0.5, z), Color3.fromRGB(70, 70, 76), Enum.Material.Metal)
+	-- v0.25.96 (owner: remodel): bulging voxel barrels (octagon slices, iron hoops, plank lid) + a keg on its side
+	local function barrel(cf, k)
+		local staves, hoop = Color3.fromRGB(150, 92, 50), Color3.fromRGB(64, 62, 70)
+		local ws = { 1.45, 1.75, 1.9, 1.9, 1.75, 1.45 }
+		for i, w in ipairs(ws) do
+			local y = (i - 0.5) * 0.4 * k
+			local c = i % 2 == 0 and staves or staves:Lerp(Color3.new(0, 0, 0), 0.1)
+			block(m, Vector3.new(w, 0.4, w * 0.72) * k, cf * CFrame.new(0, y, 0), c, Enum.Material.WoodPlanks)
+			block(m, Vector3.new(w * 0.72, 0.4, w) * k, cf * CFrame.new(0, y, 0), c, Enum.Material.WoodPlanks)
+		end
+		for _, y in ipairs({ 0.3, 1.2, 2.1 }) do
+			block(m, Vector3.new(1.96, 0.16, 1.4) * k, cf * CFrame.new(0, y * k, 0), hoop, Enum.Material.Metal)
+			block(m, Vector3.new(1.4, 0.16, 1.96) * k, cf * CFrame.new(0, y * k, 0), hoop, Enum.Material.Metal)
+		end
+		block(m, Vector3.new(1.2, 0.1, 1.2) * k, cf * CFrame.new(0, 2.43 * k, 0), Color3.fromRGB(176, 120, 70), Enum.Material.WoodPlanks)
+		block(m, Vector3.new(1.2, 0.12, 0.12) * k, cf * CFrame.new(0, 2.47 * k, 0), Color3.fromRGB(110, 70, 40), Enum.Material.Wood)
 	end
+	barrel(CFrame.new(-6.3, 0, 2.4) * CFrame.Angles(0, 0.3, 0), 1)
+	barrel(CFrame.new(-6.5, 0, 4.6) * CFrame.Angles(0, -0.2, 0), 1)
+	barrel(CFrame.new(-4.6, 0.62, 3.2) * CFrame.Angles(0, 0.4, 0) * CFrame.Angles(0, 0, math.pi / 2) * CFrame.new(0, -0.9 * 0.65, 0), 0.65)
 	block(m, Vector3.new(2, 0.6, 2), CFrame.new(5.4, 0.3, 7), Color3.fromRGB(196, 170, 120))
 	block(m, Vector3.new(1.2, 0.62, 1.2), CFrame.new(5.4, 0.32, 7), Color3.fromRGB(120, 100, 70))
 	block(m, Vector3.new(0.6, 6, 0.6), CFrame.new(6.6, 3, 11), Color3.fromRGB(70, 50, 36), Enum.Material.Wood)
@@ -228,13 +243,42 @@ local function buildStage()
 		end
 	end
 	block(m, Vector3.new(1.6, 1.2, 1.6), CFrame.new(top), Color3.fromRGB(110, 70, 40), Enum.Material.Wood)
-	-- a moored voxel dinghy beside the pier
-	local hull = Color3.fromRGB(120, 76, 46)
-	for i, w in ipairs({ 2.4, 3.6, 4.2, 4.2, 4.2, 3.6, 2.4, 1.2 }) do
-		block(m, Vector3.new(w, 1.2, 1.2), CFrame.new(12.5, -0.4, -2 + i * 1.2), hull, Enum.Material.WoodPlanks)
-		block(m, Vector3.new(math.max(0.6, w - 1), 0.4, 1.2), CFrame.new(12.5, -1.2, -2 + i * 1.2), hull:Lerp(Color3.new(0, 0, 0), 0.25), Enum.Material.WoodPlanks)
+	-- v0.25.96 (owner: remodel): a moored voxel rowboat beside the pier: tapered hull with a painted stripe, gunwale
+	-- rails, plank floor, two thwarts, crossed oars, a short mast with a furled sail and a red pennant
+	local BX, BY, BZ = 12.5, -0.9, 2
+	local hull, dark, stripe = Color3.fromRGB(132, 84, 50), Color3.fromRGB(92, 58, 36), Color3.fromRGB(70, 150, 200)
+	local widths = { 1.0, 2.2, 3.0, 3.6, 3.9, 4.0, 4.0, 3.8, 3.4, 2.8, 2.0 }
+	local n = #widths
+	for i, w in ipairs(widths) do
+		local z = BZ + (i - (n + 1) / 2) * 1.0
+		local rise = (i <= 2 or i >= n) and 0.35 or 0 -- bow and stern sweep up
+		block(m, Vector3.new(math.max(0.6, w - 1.6), 0.5, 1.02), CFrame.new(BX, BY - 0.5, z), dark, Enum.Material.WoodPlanks) -- keel
+		block(m, Vector3.new(w, 0.6, 1.02), CFrame.new(BX, BY + 0.05 + rise * 0.5, z), hull, Enum.Material.WoodPlanks)
+		block(m, Vector3.new(w + 0.06, 0.22, 1.04), CFrame.new(BX, BY + 0.2 + rise * 0.5, z), stripe, Enum.Material.SmoothPlastic)
+		for sx = -1, 1, 2 do -- gunwale rails
+			block(m, Vector3.new(0.3, 0.5 + rise, 1.04), CFrame.new(BX + sx * (w / 2 - 0.15), BY + 0.6 + rise / 2, z), hull:Lerp(Color3.new(1, 1, 1), 0.08), Enum.Material.Wood)
+		end
+		if i > 1 and i < n then
+			block(m, Vector3.new(math.max(0.4, w - 0.6), 0.1, 1.02), CFrame.new(BX, BY + 0.38, z), Color3.fromRGB(176, 128, 74), Enum.Material.WoodPlanks) -- floor
+		end
 	end
-	block(m, Vector3.new(3.6, 0.3, 1), CFrame.new(12.5, 0, 3.2), Color3.fromRGB(176, 128, 74), Enum.Material.WoodPlanks)
+	block(m, Vector3.new(0.5, 1.4, 0.5), CFrame.new(BX, BY + 0.9, BZ - n / 2 - 0.1), dark, Enum.Material.Wood) -- stem post
+	for _, dz in ipairs({ -1.5, 2 }) do
+		block(m, Vector3.new(3.4, 0.25, 0.7), CFrame.new(BX, BY + 0.75, BZ + dz), Color3.fromRGB(176, 128, 74), Enum.Material.WoodPlanks) -- thwarts
+	end
+	for sx = -1, 1, 2 do -- oars resting across the boat, blades over the water
+		block(m, Vector3.new(6.2, 0.2, 0.2), CFrame.new(BX, BY + 1.0, BZ + 0.6 + sx * 0.35) * CFrame.Angles(0, sx * 0.25, sx * 0.06), Color3.fromRGB(196, 150, 96), Enum.Material.Wood)
+		block(m, Vector3.new(1.2, 0.12, 0.6), CFrame.new(BX + sx * 3.3, BY + 1.0 - 0.2, BZ + 0.6 + sx * 0.35 - sx * 0.8), Color3.fromRGB(210, 166, 110), Enum.Material.Wood)
+	end
+	block(m, Vector3.new(0.35, 5.2, 0.35), CFrame.new(BX, BY + 3.2, BZ - 2.2), dark, Enum.Material.Wood) -- mast
+	block(m, Vector3.new(0.25, 0.25, 3.0), CFrame.new(BX, BY + 2.0, BZ - 0.9), dark, Enum.Material.Wood) -- boom
+	block(m, Vector3.new(0.6, 0.55, 2.8), CFrame.new(BX, BY + 2.35, BZ - 0.9), Color3.fromRGB(240, 232, 210), Enum.Material.Fabric) -- furled sail
+	for _, dz in ipairs({ -1.8, -0.9, 0 }) do
+		block(m, Vector3.new(0.66, 0.12, 0.14), CFrame.new(BX, BY + 2.4, BZ + dz), Color3.fromRGB(150, 120, 80), Enum.Material.Fabric) -- ties
+	end
+	block(m, Vector3.new(0.08, 0.5, 1.0), CFrame.new(BX, BY + 5.6, BZ - 1.65), Color3.fromRGB(214, 54, 54), Enum.Material.Fabric) -- pennant
+	block(m, Vector3.new(0.08, 0.3, 0.5), CFrame.new(BX, BY + 5.6, BZ - 0.9), Color3.fromRGB(214, 54, 54), Enum.Material.Fabric)
+	block(m, Vector3.new(0.15, 0.15, 3.2), CFrame.new(BX - 1.6, BY + 0.9, BZ - 6.4) * CFrame.Angles(0.35, 0, 0), Color3.fromRGB(196, 170, 120), Enum.Material.Fabric) -- mooring rope to the pier
 	m.Parent = workspace
 	return m
 end

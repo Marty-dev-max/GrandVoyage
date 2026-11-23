@@ -547,6 +547,84 @@ C.Haze_Vanish = { rig = "R15", priority = "Action", strike = 0.25, keys = {
 	{ t = 0.6 },
 } }
 
+-- ===== v0.25.77 (owner): Navigator swings the baton TWO-HANDED like a club (not a sword): left hand on the shaft =====
+local TWO_UP = { RightUpperArm = { 150, 0, 30 }, RightLowerArm = { 40, 0, 0 }, LeftUpperArm = { 140, 0, 35 }, LeftLowerArm = { 50, 0, 0 } }
+C.Baton_Smash1 = { rig = "R15", priority = "Action", strike = 0.16, keys = { -- diagonal chop from over the right shoulder
+	{ t = 0, pose = STAFF },
+	{ t = 0.09, pose = with(TWO_UP, { UpperTorso = { 10, 30, 0 }, LowerTorso = { 0, 10, 0 } }) },
+	{ t = 0.16, pose = { RightUpperArm = { 55, 0, -20 }, RightLowerArm = { 10, 0, 0 }, LeftUpperArm = { 60, 0, 32 }, LeftLowerArm = { 25, 0, 0 }, UpperTorso = { -22, -32, 0 }, LowerTorso = { 0, -10, 0, 0, -0.2, -0.15 } } },
+	{ t = 0.4, pose = STAFF },
+} }
+C.Baton_Swing2 = { rig = "R15", priority = "Action", strike = 0.15, keys = { -- flat backhand sweep, right to left
+	{ t = 0, pose = STAFF },
+	{ t = 0.08, pose = { RightUpperArm = { 80, 0, 60 }, RightLowerArm = { 30, 0, 0 }, LeftUpperArm = { 75, 0, 55 }, LeftLowerArm = { 50, 0, 0 }, UpperTorso = { -4, 45, 0 }, LowerTorso = { 0, 15, 0 } } },
+	{ t = 0.15, pose = { RightUpperArm = { 85, 0, -50 }, RightLowerArm = { 10, 0, 0 }, LeftUpperArm = { 82, 0, -30 }, LeftLowerArm = { 25, 0, 0 }, UpperTorso = { -8, -48, 0 }, LowerTorso = { 0, -18, 0 } } },
+	{ t = 0.4, pose = STAFF },
+} }
+C.Baton_Rise3 = { rig = "R15", priority = "Action", strike = 0.16, keys = { -- low to high rising swing
+	{ t = 0, pose = STAFF },
+	{ t = 0.08, pose = with(CROUCH, { RightUpperArm = { -30, 0, 25 }, RightLowerArm = { 20, 0, 0 }, LeftUpperArm = { -20, 0, 35 }, LeftLowerArm = { 30, 0, 0 }, UpperTorso = { -20, 20, 0 } }) },
+	{ t = 0.16, pose = { RightUpperArm = { 160, 0, 10 }, RightLowerArm = { 10, 0, 0 }, LeftUpperArm = { 150, 0, 25 }, LeftLowerArm = { 25, 0, 0 }, UpperTorso = { 14, -10, 0 }, Head = { 10, 0, 0 }, LowerTorso = { 0, 0, 0, 0, 0.15, 0 } } },
+	{ t = 0.42, pose = STAFF },
+} }
+C.Baton_Slam4 = { rig = "R15", priority = "Action", strike = 0.24, keys = { -- the finisher: a huge two-hand overhead slam
+	{ t = 0, pose = STAFF },
+	{ t = 0.14, pose = with(TWO_UP, { RightUpperArm = { 175, 0, 8 }, LeftUpperArm = { 170, 0, 12 }, UpperTorso = { 16, 0, 0 }, Head = { 14, 0, 0 }, LowerTorso = { 0, 0, 0, 0, 0.25, 0 } }) },
+	{ t = 0.24, pose = { RightUpperArm = { 40, 0, -8 }, LeftUpperArm = { 42, 0, 12 }, RightLowerArm = { 0, 0, 0 }, LeftLowerArm = { 10, 0, 0 }, UpperTorso = { -40, 0, 0 },
+		LowerTorso = { 0, 0, 0, 0, -0.85, -0.2 }, RightUpperLeg = { 45, 0, 4 }, RightLowerLeg = { -70, 0, 0 }, LeftUpperLeg = { -5, 0, -4 }, LeftLowerLeg = { -60, 0, 0 } } },
+	{ t = 0.55, pose = STAFF },
+} }
+-- Baton Flurry: the baton whirled round you three times (three hits)
+local TWIRL = { RightUpperArm = { 80, 0, 70 }, RightLowerArm = { 0, 0, 0 }, LeftUpperArm = { 40, 0, -50 }, LowerTorso = { 0, 0, 0, 0, -0.2, 0 }, RightUpperLeg = { 10, 0, 12 }, LeftUpperLeg = { 10, 0, -12 } }
+C.Baton_Twirl = { rig = "R15", priority = "Action", strike = 0.12, keys = {
+	{ t = 0, pose = STAFF },
+	{ t = 0.06, pose = TWIRL },
+	{ t = 0.14, pose = with(TWIRL, { LowerTorso = { 0, -120, 0, 0, -0.2, 0 } }) },
+	{ t = 0.22, pose = with(TWIRL, { LowerTorso = { 0, -240, 0, 0, -0.2, 0 } }) },
+	{ t = 0.3, pose = with(TWIRL, { LowerTorso = { 0, -359, 0, 0, -0.2, 0 } }) },
+	{ t = 0.38, pose = with(TWIRL, { LowerTorso = { 0, -479, 0, 0, -0.2, 0 } }) },
+	{ t = 0.46, pose = with(TWIRL, { LowerTorso = { 0, -599, 0, 0, -0.2, 0 } }) },
+	{ t = 0.54, pose = with(TWIRL, { LowerTorso = { 0, -719, 0, 0, -0.2, 0 } }) },
+	{ t = 0.75, pose = STAFF },
+} }
+-- Trick Vault: the baton planted behind, then a one-legged flying kick forward along the dash
+local VAULT_KICK = { RightUpperLeg = { 95, 0, 0 }, RightLowerLeg = { -5, 0, 0 }, LeftUpperLeg = { -30, 0, 0 }, LeftLowerLeg = { -70, 0, 0 },
+	UpperTorso = { 20, 0, 0 }, RightUpperArm = { -60, 0, 25 }, RightLowerArm = { 10, 0, 0 }, LeftUpperArm = { 50, 0, -40 }, Head = { -10, 0, 0 } }
+C.Baton_Vault = { rig = "R15", priority = "Action", strike = 0.1, keys = {
+	{ t = 0, pose = { RightUpperArm = { -40, 0, 20 }, RightLowerArm = { 20, 0, 0 }, UpperTorso = { -15, 0, 0 }, LowerTorso = { 0, 0, 0, 0, -0.3, 0 }, RightUpperLeg = { 20, 0, 0 }, RightLowerLeg = { -40, 0, 0 } } },
+	{ t = 0.1, pose = VAULT_KICK },
+	{ t = 0.45, pose = VAULT_KICK },
+	{ t = 0.65 },
+} }
+-- ===== v0.25.77 Sea Cook "Tabletop Tempest": a handstand, legs spread, spinning fast to sweep everything around =====
+local HANDSTAND = { LowerTorso = { 180, 0, 0, 0, 2.3, 0 }, RightUpperArm = { 180, 0, 0 }, LeftUpperArm = { 180, 0, 0 }, RightLowerArm = { 0, 0, 0 }, LeftLowerArm = { 0, 0, 0 },
+	RightUpperLeg = { 0, 0, 70 }, LeftUpperLeg = { 0, 0, -70 }, RightLowerLeg = { 0, 0, 0 }, LeftLowerLeg = { 0, 0, 0 }, Head = { -20, 0, 0 } }
+do
+	local keys = { { t = 0 }, { t = 0.12, pose = HANDSTAND } }
+	for i = 1, 8 do
+		local h = table.clone(HANDSTAND)
+		h.LowerTorso = { 180, i * 120, 0, 0, 2.3, 0 }
+		table.insert(keys, { t = 0.12 + i * 0.1, pose = h })
+	end
+	table.insert(keys, { t = 1.12 })
+	C.Cook_Tempest = { rig = "R15", priority = "Action", strike = 0.2, keys = keys }
+end
+-- ===== v0.25.77 Blaze Inferno (owner): both arms up feeding a giant fireball, then hurled forward =====
+local BALL_UP = { RightUpperArm = { 170, 0, 18 }, LeftUpperArm = { 170, 0, -18 }, RightLowerArm = { 25, 0, 0 }, LeftLowerArm = { 25, 0, 0 }, UpperTorso = { 14, 0, 0 }, Head = { 22, 0, 0 },
+	RightUpperLeg = { 0, 0, 10 }, LeftUpperLeg = { 0, 0, -10 } }
+C.Blaze_BallCharge = { rig = "R15", loop = true, priority = "Action", length = 0.4, keys = {
+	{ t = 0, pose = BALL_UP },
+	{ t = 0.2, pose = with(BALL_UP, { RightUpperArm = { 166, 0, 22 }, LeftUpperArm = { 166, 0, -22 }, UpperTorso = { 16, 0, 0 } }) },
+	{ t = 0.4, pose = BALL_UP },
+} }
+C.Blaze_BallThrow = { rig = "R15", priority = "Action", strike = 0.14, keys = {
+	{ t = 0, pose = BALL_UP },
+	{ t = 0.14, pose = { RightUpperArm = { 80, 0, -10 }, LeftUpperArm = { 80, 0, 10 }, RightLowerArm = { 0, 0, 0 }, LeftLowerArm = { 0, 0, 0 }, UpperTorso = { -24, 0, 0 },
+		LowerTorso = { 0, 0, 0, 0, -0.3, -0.35 }, RightUpperLeg = { 34, 0, 4 }, RightLowerLeg = { -45, 0, 0 }, LeftUpperLeg = { -20, 0, -4 } } },
+	{ t = 0.5, pose = { RightUpperArm = { 75, 0, -10 }, LeftUpperArm = { 75, 0, 10 }, UpperTorso = { -18, 0, 0 } } },
+	{ t = 0.7 },
+} }
+
 -- weapon -> combo clips (in order), stance, and the clips each skill kind uses
 C.Weapons = {
 	-- freestyle street fighting: jab, cross, body blow, hook, knee, elbow, spinning backfist (the uppercut is a skill now)
@@ -558,7 +636,7 @@ C.Weapons = {
 	Sword = { combo = { "Sword_Slash", "Sword_Backhand", "Sword_Slash", "Sword_Thrust" }, stance = "Sword_Stance", Melee = "Sword_Thrust", AoE = "Skill_Spin" },
 	Hammer = { combo = { "Hammer_Sweep", "Hammer_Sweep", "Hammer_Sweep", "Hammer_Smash" }, stance = "Hammer_Stance", Melee = "Hammer_Smash", AoE = "Hammer_Smash" },
 	Slingshot = { combo = { "Sling_Shoot", "Sling_Shoot", "Sling_Shoot", "Sling_Shoot" }, stance = "Sling_Stance", Ranged = "Sling_Shoot", Melee = "Sling_Shoot" },
-	StormBaton = { combo = { "Baton_Strike", "Baton_Strike", "Baton_Strike", "Baton_Strike" }, stance = "Baton_Stance", Ranged = "Baton_Strike", Melee = "Baton_Strike" },
+	StormBaton = { combo = { "Baton_Smash1", "Baton_Swing2", "Baton_Rise3", "Baton_Slam4" }, stance = "Baton_Stance", Ranged = "Baton_Smash1", Melee = "Baton_Smash1" },
 	MedKit = { combo = { "Med_Toss", "Med_Toss", "Med_Toss", "Med_Toss" }, Ranged = "Med_Toss", Melee = "Med_Toss" },
 }
 -- Heavy Attack (the starter skill): a big kick for kick fighters, a big punch for everyone else

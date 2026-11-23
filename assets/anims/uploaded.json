@@ -1,4 +1,16 @@
 {
+ "Baton_Rise3": {
+  "id": "100478558582775",
+  "sha1": "87f0c3ebe7d5d3a27ac5bf9355ecb52c33ab1211"
+ },
+ "Baton_Slam4": {
+  "id": "108499046386304",
+  "sha1": "d1dd14ec7837dd1b2310f3c6e87b2a11ed6fec65"
+ },
+ "Baton_Smash1": {
+  "id": "139750593200174",
+  "sha1": "23d920b4846a748e5af1e7d8f7d0aef9545294cd"
+ },
  "Baton_Stance": {
   "id": "113694728123108",
   "sha1": "58dd1ceadf3db7d78e6c3c3fa3646da171221200"
@@ -6,6 +18,26 @@
  "Baton_Strike": {
   "id": "113150741446246",
   "sha1": "e56fbb9ccee2c1a82913fa415c1fc5b5a4066a69"
+ },
+ "Baton_Swing2": {
+  "id": "76274424172145",
+  "sha1": "8ac2110de5458d799a6612f264714f5741d79ab2"
+ },
+ "Baton_Twirl": {
+  "id": "108362181146988",
+  "sha1": "7d346f92cfb2d9efc02ce91af59bcf0d8fbacac8"
+ },
+ "Baton_Vault": {
+  "id": "138684045692389",
+  "sha1": "6fb7ada7c810984d2e619576e264f760c40a9ec8"
+ },
+ "Blaze_BallCharge": {
+  "id": "116732098393060",
+  "sha1": "36bec06bc46d69dd1d84f925da2854d059d1174f"
+ },
+ "Blaze_BallThrow": {
+  "id": "117689701288369",
+  "sha1": "49e1555ebc77e6869c36b0f1e8eff4bde2388fab"
  },
  "Blaze_Ember": {
   "id": "82048315280098",
@@ -126,6 +158,10 @@
  "Cook_Stance": {
   "id": "111398432202586",
   "sha1": "ce487f41a0bbe52a6089e2f8b27577db5d0672ee"
+ },
+ "Cook_Tempest": {
+  "id": "89008912747572",
+  "sha1": "c8d957d664dcc56d651287f46222d89fe50f201c"
  },
  "Fly": {
   "id": "138150934138174",

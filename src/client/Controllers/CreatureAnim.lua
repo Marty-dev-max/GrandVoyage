@@ -15,8 +15,10 @@ CreatureAnim.Stats = { rigged = 0, plain = 0, animated = 0, attacks = 0, hits = 
 local function flash(model)
 	-- red hit flash (owner: monsters blink red when struck)
 	local hl = Instance.new("Highlight")
-	hl.FillColor = Color3.fromRGB(255, 40, 40)
-	hl.OutlineColor = Color3.fromRGB(255, 220, 220)
+	-- v0.25.77 (owner): a PERFECT hit flashes YELLOW instead (VFX BasicAttack marks the target with PerfectUntil)
+	local perfect = (model:GetAttribute("PerfectUntil") or 0) > os.clock()
+	hl.FillColor = perfect and Color3.fromRGB(255, 225, 60) or Color3.fromRGB(255, 40, 40)
+	hl.OutlineColor = perfect and Color3.fromRGB(255, 250, 200) or Color3.fromRGB(255, 220, 220)
 	hl.OutlineTransparency = 0.4
 	hl.FillTransparency = 0.15
 	hl.DepthMode = Enum.HighlightDepthMode.Occluded

@@ -109,6 +109,8 @@ function Flight.Start()
 		Flight.Allow("heritage", h ~= nil and h.fly == true)
 		-- v0.25.74 Blaze Flight (Blaze Blaze no Mi passive): hold Space in the air, the lower limbs turn to fire (FruitFX)
 		Flight.Allow("blaze", player:GetAttribute("Fruit") == "Blaze")
+		-- v0.25.77 (owner): Haze flies too, trailing a line of smoke
+		Flight.Allow("haze", player:GetAttribute("Fruit") == "Haze")
 		if not Flight.CanFly() then
 			stop()
 		end

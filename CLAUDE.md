@@ -696,6 +696,21 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     Smoke Screen `smoke = 6` -> CombatService smokeZones (MonsterHit: a mob inside misses 50%, "LOST IN SMOKE").
     White Out (AoE `vanish`) sets player attr Invulnerable for the vanish (VanishAt stamp) and FruitFX vanishChar hides
     the caster on every client while a smoke twister follows the root. Smoke Grip FX = a snaking block arm + coil.
+  * v0.25.77 (owner playtest): M1 CLEAVE (CombatService CLEAVE per melee weapon, up to CLEAVE_MAX extra targets in a
+    front arc within reach). Beat cue: Combat m1Swing schedules a yellow outline Highlight ("BeatCue") on the target
+    when the next hit's PERFECT window opens; perfect hits mark the target PerfectUntil (local attr) -> CreatureAnim
+    flash turns yellow. Knockback + skill dashes use LinearVelocity Vector mode with Y clamped <= 0 (no more "launched
+    into the sky": Smoke Grip pull, Trick Vault); MS.Knockback(mob, from, dist, power, durOverride). Navigator M1 =
+    Baton_Smash1/Swing2/Rise3/Slam4 (two-handed club, VFX no slash arc), BatonFlurry = Baton_Twirl (hitEvery 0.22),
+    TrickVault = Baton_Vault. Sea Cook HeatedLeg id = "Tabletop Tempest" (AoE 8 ticks, Cook_Tempest handstand spin);
+    HeartyMeal = PartyBuff foodHeal (InventoryService multiplies heal / healSp). Skill `stun` (MS.Stun "DAZED"),
+    SmokePellet stun + smoke zone + lingering SkillFX.Smoke (d.smoke). Doctor Adrenaline `syringe` (fxData.allies ->
+    VFX syringes), BurstTonic = GroundAoE + delay 0.3 + SkillFX.Tonic thrown flask. Skill `travel` overrides the Ranged
+    flight. Blaze Inferno = charged Ranged fireball (Blaze_BallCharge / BallThrow, FruitFX.ChargeBall over the head
+    while held, F_Inferno flight + sea of fire, splash 14); Emberflies fx "None" (the shared Explosion's dark debris
+    was the "black things"), sparks leave the chest and cling to monsters near the spot. Haze flight (Flight.Allow
+    "haze"); FruitFX dressFire(kind) = Haze smoke legs + smoke line trail; fly loops BlazeFlyLoop (9112780193
+    fireplace) / HazeFlyLoop.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

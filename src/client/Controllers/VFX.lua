@@ -713,6 +713,45 @@ SkillFX.Smoke = function(d)
 	local r = d.radius or 10
 	VFX.Smoke(d.to + Vector3.new(0, 1, 0), Color3.fromRGB(215, 215, 222), 16, r * 0.7)
 	VFX.Ring(d.to - Vector3.new(0, 1.5, 0), r, Color3.fromRGB(220, 220, 230), 0.6)
+	-- v0.25.77: a lingering cloud (skill `smoke` seconds: Smoke Pellet) keeps rolling where it landed
+	local linger = tonumber(d.smoke)
+	if linger and not (type(d.skill) == "string" and string.sub(d.skill, 1, 2) == "F_") then
+		for k = 1, math.floor(linger / 0.6) do
+			task.delay(k * 0.6, function()
+				VFX.Smoke(d.to + Vector3.new((math.random() - 0.5) * r, 1, (math.random() - 0.5) * r), Color3.fromRGB(205, 205, 214), 8, r * 0.6)
+			end)
+		end
+	end
+end
+-- v0.25.77 Burst Tonic: a flask arcs from the hand to the spot (Med_Toss strike 0.17 -> lands 0.55) and bursts
+SkillFX.Tonic = function(d)
+	local to = d.to or d.from
+	local hand = typeof(d.char) == "Instance" and d.char:FindFirstChild("RightHand")
+	local from = hand and hand.Position or (d.from + Vector3.new(0, 2, 0))
+	task.delay(0.17, function()
+		local glass = part(Vector3.new(0.7, 0.9, 0.7), Color3.fromRGB(120, 255, 170), CFrame.new(from), nil, Enum.Material.Neon, 0.2)
+		local cork = part(Vector3.new(0.4, 0.3, 0.4), Color3.fromRGB(140, 95, 60), CFrame.new(from), nil, Enum.Material.SmoothPlastic, 0)
+		local t0, T = os.clock(), 0.38
+		local h = math.clamp((to - from).Magnitude * 0.25, 3, 10)
+		local conn
+		conn = game:GetService("RunService").RenderStepped:Connect(function()
+			local k = math.min(1, (os.clock() - t0) / T)
+			local p = from:Lerp(to, k) + Vector3.new(0, math.sin(k * math.pi) * h, 0)
+			local cf = CFrame.new(p) * CFrame.Angles(k * 12, k * 5, 0)
+			glass.CFrame = cf
+			cork.CFrame = cf * CFrame.new(0, 0.6, 0)
+			if k >= 1 then
+				conn:Disconnect()
+				glass:Destroy()
+				cork:Destroy()
+				local c = Color3.fromRGB(120, 255, 170)
+				VFX.Flash(to, c, (d.radius or 12) * 0.8)
+				VFX.Ring(to - Vector3.new(0, 1.5, 0), d.radius or 12, c, 0.5)
+				VFX.Smoke(to + Vector3.new(0, 1, 0), Color3.fromRGB(190, 255, 210), 14, (d.radius or 12) * 0.6)
+				Voxels.Blocks(to, { count = 12, colors = { c, Color3.new(1, 1, 1) }, size = { 0.2, 0.4 }, speed = 16, up = 8, neon = true, collide = false, life = 0.5 })
+			end
+		end)
+	end)
 end
 SkillFX.Kick = function(d)
 	local c = Color3.fromRGB(255, 170, 60)
@@ -904,10 +943,16 @@ local weaponFX = {
 	StormBaton = function(d, n)
 		-- v0.25.51: the Navigator's folding baton is a melee weapon now: a quick swing arc + a crack on the hit
 		-- (the storm cloud + lightning ball moved to the Storm Caller second job)
+		-- v0.25.77 (owner: it read like a sword): a club, not a blade: no slash arc, a heavy blunt crack + dust, and the
+		-- 4th (two-hand slam) cracks the ground
 		local at, dir = hitPoint(d)
 		local c = Color3.fromRGB(190, 170, 255)
-		VFX.Slash(CFrame.lookAt(d.from, d.to) * CFrame.new(0, 0, -3) * CFrame.Angles(0, 0, (n or 1) % 2 == 0 and math.pi * 0.85 or 0), c, 6)
-		VFX.ImpactSplit(at, dir, c, (n or 1) >= 4 and 5.5 or 3.6)
+		VFX.ImpactSplit(at, dir, c, (n or 1) >= 4 and 6 or 4)
+		Voxels.Blocks(at, { count = 5, colors = { Color3.fromRGB(150, 130, 110), c }, size = { 0.2, 0.4 }, speed = 9, up = 6, collide = false, life = 0.4 })
+		if (n or 1) >= 4 then
+			VFX.Ring(at - Vector3.new(0, 2.5, 0), 8, c, 0.4)
+			VFX.Crack(at - Vector3.new(0, 2.6, 0), 4)
+		end
 	end,
 	MedKit = function(d)
 		-- a pinch of medicinal powder: a glittering puff arcs over and bursts into a colored dust cloud
@@ -1023,6 +1068,9 @@ handlers.BasicAttack = function(d)
 	end
 	-- v0.25.75 rhythm: a PERFECT hit flashes gold on the target, a FLAWLESS finisher bursts pink-gold (everyone sees it)
 	if d.perfect and typeof(d.to) == "Vector3" then
+		if typeof(d.target) == "Instance" then
+			d.target:SetAttribute("PerfectUntil", os.clock() + strike + 0.35) -- local only: the hit flash turns yellow
+		end
 		task.delay(strike + (MELEE[weapon] and 0 or 0.18), function()
 			local c = d.flawless and Color3.fromRGB(255, 120, 230) or Color3.fromRGB(255, 220, 90)
 			VFX.Flash(d.to, c, d.flawless and 9 or 5)
@@ -1032,6 +1080,37 @@ handlers.BasicAttack = function(d)
 	end
 end
 handlers.Skill = function(d)
+	-- v0.25.77 Adrenaline Shot: a syringe flies from the Doctor into every crewmate it buffs
+	if type(d.allies) == "table" then
+		local hand = typeof(d.char) == "Instance" and d.char:FindFirstChild("RightHand")
+		local from = hand and hand.Position or d.from
+		for _, ally in ipairs(d.allies) do
+			local r = typeof(ally) == "Instance" and ally:FindFirstChild("UpperTorso")
+			if r then
+				task.delay(0.17, function()
+					local body = part(Vector3.new(0.25, 0.25, 1.1), Color3.fromRGB(235, 245, 255), CFrame.lookAt(from, r.Position), nil, Enum.Material.SmoothPlastic, 0)
+					local fluid = part(Vector3.new(0.18, 0.18, 0.6), Color3.fromRGB(255, 110, 170), body.CFrame, nil, Enum.Material.Neon, 0)
+					local t0 = os.clock()
+					local conn
+					conn = game:GetService("RunService").RenderStepped:Connect(function()
+						local k = math.min(1, (os.clock() - t0) / 0.25)
+						local p = from:Lerp(r.Position, k) + Vector3.new(0, math.sin(k * math.pi) * 2, 0)
+						body.CFrame = CFrame.lookAt(p, r.Position)
+						fluid.CFrame = body.CFrame
+						if k >= 1 then
+							conn:Disconnect()
+							-- stuck in for a moment, then gone with a pink pop
+							task.delay(0.6, function()
+								body:Destroy()
+								fluid:Destroy()
+							end)
+							Voxels.Pixels(r.Position, { count = 14, colors = { Color3.fromRGB(255, 110, 170), Color3.new(1, 1, 1) }, size = 0.3, speed = 6, gravity = -4, life = 0.5, glow = 1, spread = 1 })
+						end
+					end)
+				end)
+			end
+		end
+	end
 	local f = SkillFX[d.fx]
 	if not custom(d.fx or "", CFrame.new(d.to or d.from)) and f then
 		f(d)

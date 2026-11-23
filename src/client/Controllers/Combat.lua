@@ -79,6 +79,29 @@ local function m1Swing(interval)
 		m1.perfects = (m1.perfects or 0) + 1
 	end
 	local flawless = perfect and m1.n == GameConfig.M1.Hits and m1.perfects == GameConfig.M1.Hits - 1
+	-- the beat (v0.25.77, owner): when the next hit of the string becomes ready, the target's outline blinks yellow
+	-- for the PERFECT window, so the rhythm can be felt
+	if m1.n < GameConfig.M1.Hits and not State.auto then
+		local nextAt = m1Gap(interval or 1.2)
+		local target = State.target
+		local stamp = m1.at
+		task.delay(math.max(0, nextAt - 0.04), function()
+			if m1.at ~= stamp or not target or not target.Parent then
+				return -- already swung again / gone
+			end
+			local hl = Instance.new("Highlight")
+			hl.Name = "BeatCue"
+			hl.FillTransparency = 0.82
+			hl.FillColor = Color3.fromRGB(255, 225, 60)
+			hl.OutlineColor = Color3.fromRGB(255, 235, 90)
+			hl.OutlineTransparency = 0
+			hl.DepthMode = Enum.HighlightDepthMode.Occluded
+			hl.Adornee = target
+			hl.Parent = target
+			game:GetService("TweenService"):Create(hl, TweenInfo.new(0.3), { OutlineTransparency = 1, FillTransparency = 1 }):Play()
+			game:GetService("Debris"):AddItem(hl, 0.35)
+		end)
+	end
 	if perfect then
 		pcall(function()
 			require(script.Parent.Audio).Play("BlkTick", { volume = 0.7, pitch = 1.2 + m1.n * 0.12 })
@@ -912,18 +935,24 @@ local function skillDash(d)
 	local lv = Instance.new("LinearVelocity")
 	lv.Attachment0 = att
 	lv.MaxForce = math.huge
-	lv.VelocityConstraintMode = Enum.VelocityConstraintMode.Plane
-	lv.PrimaryTangentAxis = Vector3.xAxis
-	lv.SecondaryTangentAxis = Vector3.zAxis
-	lv.PlaneVelocity = Vector2.new(dir.X, dir.Z) * speed
+	-- v0.25.77 (owner: Trick Vault flung you into the sky): drive the whole velocity and never let it climb (running
+	-- into a monster with the old plane mode pushed you up its body)
+	lv.VelocityConstraintMode = Enum.VelocityConstraintMode.Vector
+	lv.VectorVelocity = dir * speed
 	lv.RelativeTo = Enum.ActuatorRelativeTo.World
 	lv.Parent = r
+	local conn = RunService.Heartbeat:Connect(function()
+		if lv.Parent then
+			lv.VectorVelocity = Vector3.new(lv.VectorVelocity.X, math.min(0, r.AssemblyLinearVelocity.Y), lv.VectorVelocity.Z)
+		end
+	end)
 	task.delay(dur, function()
 		-- ease out instead of a dead stop
 		if lv.Parent then
-			lv.PlaneVelocity = Vector2.new(dir.X, dir.Z) * speed * 0.25
+			lv.VectorVelocity = dir * speed * 0.25
 		end
 		task.wait(0.08)
+		conn:Disconnect()
 		lv:Destroy()
 		att:Destroy()
 	end)
@@ -973,6 +1002,9 @@ local function stopAim()
 	holding.conn:Disconnect()
 	holding.line:Destroy()
 	holding.spot:Destroy()
+	if holding.ballStop then
+		holding.ballStop()
+	end
 	local h = hum()
 	if holding.chargeAnim and h then
 		-- the release clip (skill `anim`) starts from the same wind-up pose, so a short fade blends straight into it
@@ -1035,7 +1067,12 @@ local function startAim(id, slot, src)
 		local fdef = skill.fruit and require(Shared.Config.Fruits).ById[skill.fruit]
 		local col = fdef and fdef.color or Color3.fromRGB(255, 220, 140)
 		pcall(require(script.Parent.VFX).Charge, hand, col, chargeTime(id) + 0.2)
-		if skill.chargeAnim == "Bounce_WindBoth" then -- both arms wind back: both hands gather power
+		if skill.chargeAnim == "Blaze_BallCharge" then
+			-- v0.25.77 Inferno: a fireball grows over your head while you hold
+			local ok, stopBall = pcall(require(script.Parent.FruitFX).ChargeBall, c)
+			hold.ballStop = ok and stopBall or nil
+		end
+		if skill.chargeAnim == "Bounce_WindBoth" or skill.chargeAnim == "Blaze_BallCharge" then -- both hands gather power
 			pcall(require(script.Parent.VFX).Charge, c and c:FindFirstChild("LeftHand"), col, chargeTime(id) + 0.2)
 		end
 		-- v0.25.66: the wind-up pose loops while the key is held (replicates: everyone sees the arm pulled back)

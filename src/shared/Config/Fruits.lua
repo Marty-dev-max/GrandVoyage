@@ -31,8 +31,9 @@ F.List = {
 		skills = {
 			{ id = "F_FireFist", name = "Blaze Fist", kind = "Ranged", sp = 14, cd = 4, range = 48, mult = 2.6, charge = true, anim = "Blaze_Fist", chargeAnim = "Blaze_Wind", mastery = 1, fx = "Firebird", desc = "Hold: the arm bursts into flame. Release: a giant fist of fire." },
 			{ id = "F_FlamePillar", name = "Flame Twister", kind = "GroundAoE", sp = 22, cd = 8, range = 45, radius = 14, mult = 0.6, ticks = 5, tickEvery = 0.35, anim = "Blaze_Twister", mastery = 10, fx = "Tornado", desc = "A twister of fire spins up from the ground, burning again and again." },
-			{ id = "F_Emberflies", name = "Emberflies", kind = "GroundAoE", sp = 18, cd = 9, range = 40, radius = 12, mult = 0.7, ticks = 4, tickEvery = 0.18, delay = 1.0, anim = "Blaze_Ember", mastery = 25, fx = "Explosion", desc = "Green sparks drift onto your foes, then burst into fire, hit after hit." },
-			{ id = "F_Inferno", name = "Inferno", kind = "AoE", sp = 40, cd = 20, radius = 20, mult = 3.0, anim = "Blaze_Inferno", mastery = 50, fx = "Explosion", desc = "Explode into a sea of fire." },
+			{ id = "F_Emberflies", name = "Emberflies", kind = "GroundAoE", sp = 18, cd = 9, range = 40, radius = 12, mult = 0.7, ticks = 4, tickEvery = 0.18, delay = 1.0, anim = "Blaze_Ember", mastery = 25, fx = "None", desc = "Green sparks drift onto your foes, then burst into fire, hit after hit." },
+			-- v0.25.77 (owner): both arms up, a giant fireball grows (hold), then hurled the way you aim; bursts into a sea of fire
+			{ id = "F_Inferno", name = "Inferno", kind = "Ranged", sp = 40, cd = 20, range = 50, mult = 2.4, splash = 14, travel = 0.4, charge = true, anim = "Blaze_BallThrow", chargeAnim = "Blaze_BallCharge", mastery = 50, fx = "None", desc = "Hold: a giant fireball grows over your head. Release: hurl it, and it bursts into a sea of fire." },
 		},
 	},
 	{
@@ -40,7 +41,7 @@ F.List = {
 		stats = { "INT", "AGI" }, -- v0.25.69: main / second stat bonus, grows with Fruit Mastery (F.StatBonus)
 		color = Color3.fromRGB(200, 205, 215), swirl = Color3.fromRGB(120, 125, 140), icon = "💨",
 		desc = "Become smoke. Choke, blind and slip away.",
-		passive = { flee = 25 }, passiveText = "Smoke Body (Logia): monsters without Toki pass right through you • +25 FLEE",
+		passive = { flee = 25 }, passiveText = "Smoke Body (Logia): monsters without Toki pass right through you • Smoke Flight: hold Space in the air • +25 FLEE",
 		skills = {
 			{ id = "F_SmokeFist", name = "Smoke Fist", kind = "Ranged", sp = 12, cd = 4, range = 44, mult = 2.4, charge = true, anim = "Blaze_Fist", chargeAnim = "Blaze_Wind", mastery = 1, fx = "Smoke", desc = "Hold to gather smoke in your fist, release: a heavy fist of smoke." },
 			{ id = "F_SmokeScreen", name = "Smoke Screen", kind = "GroundAoE", sp = 20, cd = 9, range = 40, radius = 16, mult = 1.5, smoke = 6, anim = "Haze_Screen", mastery = 10, fx = "Smoke", desc = "A choking cloud: for 6 s monsters inside it miss half their blows." },

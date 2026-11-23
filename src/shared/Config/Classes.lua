@@ -70,7 +70,7 @@ local Classes = {
 		skills = {
 			{ id = "LeadPellet", name = "Lead Pellet", kind = "Ranged", sp = 8, cd = 2, range = 55, mult = 1.7, maxLevel = 10, fx = "Bullet", desc = "A fast, heavy shot." },
 			{ id = "BlazeShot", name = "Blaze Shot", kind = "Ranged", sp = 22, cd = 6, range = 60, mult = 2.6, maxLevel = 10, fx = "Firebird", desc = "A shot that bursts into a flaming bird." },
-			{ id = "SmokePellet", name = "Smoke Pellet", kind = "GroundAoE", sp = 18, cd = 9, range = 45, radius = 15, mult = 1.3, maxLevel = 10, fx = "Smoke", desc = "Choking cloud on the ground." },
+			{ id = "SmokePellet", name = "Smoke Pellet", kind = "GroundAoE", sp = 18, cd = 9, range = 45, radius = 15, mult = 1.3, stun = 2.5, smoke = 5, maxLevel = 10, fx = "Smoke", desc = "Dazes everything inside (2.5 s) and the smoke hangs for 5 s (monsters in it miss half their blows). Choking cloud on the ground." },
 			{ id = "EagleEye", name = "Eagle Eye", kind = "Buff", sp = 25, cd = 28, duration = 20, buff = { crit = 20 }, maxLevel = 5, fx = "AuraYellow", desc = "CRIT up." },
 		},
 	},
@@ -87,8 +87,9 @@ local Classes = {
 		skills = {
 			{ id = "HookKick", name = "Hook Kick", kind = "Melee", sp = 10, cd = 3, range = 9, mult = 2.1, maxLevel = 10, fx = "Kick", desc = "A snapping kick to the neck." },
 			{ id = "BanquetKick", name = "Banquet Spin", kind = "AoE", sp = 18, cd = 6.5, range = 0, radius = 13, mult = 1.6, maxLevel = 10, fx = "SpinKick", desc = "Handstand spin kick." },
-			{ id = "HeatedLeg", name = "Searing Leg", kind = "Buff", sp = 25, cd = 30, duration = 15, buff = { atk = 0.25 }, maxLevel = 5, fx = "AuraFire", desc = "ATK up." },
-			{ id = "HeartyMeal", name = "Hearty Meal", kind = "PartyHeal", sp = 30, cd = 20, radius = 30, power = 120, maxLevel = 5, fx = "Food", desc = "Feed the crew nearby." },
+			-- v0.25.77 (owner): id kept (saves), now "Tabletop Tempest": a handstand spin that sweeps everything around, hit after hit
+			{ id = "HeatedLeg", name = "Tabletop Tempest", anim = "Cook_Tempest", kind = "AoE", sp = 20, cd = 8, radius = 12, mult = 0.5, ticks = 8, tickEvery = 0.1, maxLevel = 10, fx = "SpinKick", desc = "Drop onto your hands and spin your legs round like a blade: 8 fast hits on everything around you." },
+			{ id = "HeartyMeal", name = "Hearty Meal", kind = "PartyBuff", sp = 25, cd = 60, radius = 30, duration = 180, buff = { foodHeal = 0.5 }, maxLevel = 5, fx = "Food", desc = "Cook a feast for the crew around you: for 3 minutes, food and drinks heal 50% more (more with each level)." },
 		},
 	},
 	Navigator = {
@@ -105,8 +106,8 @@ local Classes = {
 		icon = "🧭",
 		passive = { shipSpeed = 0.1 },
 		skills = {
-			{ id = "BatonFlurry", name = "Baton Flurry", kind = "Melee", sp = 10, cd = 3, range = 9, mult = 0.75, hits = 3, slow = 0.6, magic = true, maxLevel = 10, fx = "Burst", desc = "Three quick raps with the folding baton. Dazed enemies slow down." },
-			{ id = "TrickVault", name = "Trick Vault", kind = "Dash", sp = 12, cd = 5, range = 18, mult = 1.6, magic = true, maxLevel = 10, fx = "Burst", desc = "Plant the baton and vault forward, kicking through everything in your way." },
+			{ id = "BatonFlurry", name = "Baton Flurry", anim = "Baton_Twirl", kind = "Melee", sp = 10, cd = 3, range = 10, mult = 0.75, hits = 3, hitEvery = 0.22, slow = 0.6, magic = true, maxLevel = 10, fx = "Burst", desc = "Whirl the baton round you three times: three hits, and the target is dazed (slowed)." },
+			{ id = "TrickVault", name = "Trick Vault", anim = "Baton_Vault", kind = "Dash", sp = 12, cd = 5, range = 18, mult = 1.6, magic = true, maxLevel = 10, fx = "Burst", desc = "Plant the baton and vault forward, kicking through everything in your way." },
 			{ id = "MirageVeil", name = "Mirage Veil", kind = "Buff", sp = 20, cd = 25, duration = 15, buff = { flee = 40 }, maxLevel = 5, fx = "AuraBlue", desc = "FLEE up." },
 			{ id = "Tailwind", name = "Tailwind", kind = "ShipBuff", sp = 30, cd = 60, duration = 30, buff = { shipSpeed = 0.25 }, maxLevel = 5, fx = "Wind", desc = "Ship speed +25%." },
 		},
@@ -124,8 +125,8 @@ local Classes = {
 		skills = {
 			{ id = "Heal", name = "Field Medicine", kind = "PartyHeal", sp = 18, cd = 5, radius = 35, power = 160, maxLevel = 10, fx = "Heal", desc = "Heal nearby crew." },
 			{ id = "Scalpel", name = "Scalpel Toss", kind = "Ranged", sp = 8, cd = 2.5, range = 40, mult = 1.5, maxLevel = 10, fx = "Bullet", desc = "Throw a scalpel." },
-			{ id = "Adrenaline", name = "Adrenaline Shot", kind = "PartyBuff", sp = 35, cd = 40, radius = 35, duration = 30, buff = { aspd = 0.2, atk = 0.1 }, maxLevel = 5, fx = "AuraPink", desc = "Party attack speed and ATK up." },
-			{ id = "BurstTonic", name = "Burst Tonic", kind = "AoE", sp = 25, cd = 9, radius = 12, mult = 1.8, maxLevel = 10, fx = "Burst", desc = "An explosive flask." },
+			{ id = "Adrenaline", name = "Adrenaline Shot", kind = "PartyBuff", anim = "Med_Toss", syringe = true, sp = 35, cd = 40, radius = 35, duration = 30, buff = { aspd = 0.2, atk = 0.1 }, maxLevel = 5, fx = "AuraPink", desc = "Party attack speed and ATK up." },
+			{ id = "BurstTonic", name = "Burst Tonic", kind = "GroundAoE", range = 40, anim = "Med_Toss", delay = 0.3, sp = 25, cd = 9, radius = 12, mult = 1.8, maxLevel = 10, fx = "Tonic", desc = "Throw an explosive flask at the spot you pick: it bursts in a cloud of stinging powder." },
 		},
 	},
 	Shipwright = {

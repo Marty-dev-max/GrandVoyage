@@ -26,7 +26,10 @@ local AnimClips = require(Shared.Config.AnimClips)
 local AmmoCfg = require(Shared.Config.Ammo)
 -- ranged basic attacks: the shot flies this long after the release frame (matches VFX.Projectile durations)
 local CHARGE_BONUS = 0.6 -- full charge = x1.6 damage (client Combat CHARGE_TIME = 1.2 s)
-local SHOT_FLIGHT = { Slingshot = 0.18, MedKit = 0.2 } -- (v0.25.51: the Navigator's baton is melee now)
+local SHOT_FLIGHT = { Slingshot = 0.18, MedKit = 0.2 }
+-- v0.25.77 melee cleave: share of the hit the others in the arc take (heavy weapons sweep harder), and how many
+local CLEAVE = { Fists = 0.6, Knuckles = 0.6, Shoes = 0.7, Sword = 0.75, Hammer = 0.85, StormBaton = 0.7 }
+local CLEAVE_MAX = 4 -- (v0.25.51: the Navigator's baton is melee now)
 local combos = {} -- player -> { n, last }
 local WeaponInfo = require(Shared.Modules.WeaponInfo)
 local WeaponRange = WeaponInfo.Range
@@ -335,6 +338,10 @@ local function hitTarget(attacker, target, mult, magic, opts)
 		if opts.dot and not mob.dead then
 			applyDot(attacker, mob, opts.dot[1], math.floor(dmg * opts.dot[2]), opts.dot[3])
 		end
+		if opts.stun and not mob.dead and not mob.def.isBoss then
+			-- v0.25.77 dazed (Smoke Pellet): frozen in place for opts.stun seconds
+			R.MonsterService.Stun(mob, opts.stun)
+		end
 		if opts.slow and mob.hum and not mob.dead then
 			-- frost: slowed for 2 s (restored from the monster's own speed, so stacking cannot freeze it)
 			mob.hum.WalkSpeed = mob.def.moveSpeed * opts.slow
@@ -525,7 +532,7 @@ local function setup()
 		if perfect then
 			mult *= rh.Perfect * (flawless and rh.Flawless or 1)
 		end
-		Net.FX("BasicAttack", { from = root.Position, to = target.pos, weapon = wType, char = player.Character, combo = n, speed = speed, ammo = ammo and ammo.id, perfect = perfect or nil, flawless = flawless or nil }, root.Position, 250)
+		Net.FX("BasicAttack", { from = root.Position, to = target.pos, weapon = wType, char = player.Character, combo = n, speed = speed, ammo = ammo and ammo.id, perfect = perfect or nil, flawless = flawless or nil, target = perfect and target.model or nil }, root.Position, 250)
 		local hopts = ammo and { critBonus = ammo.critBonus, ignoreDef = ammo.ignoreDef, slow = ammo.slow, splash = ammo.splash, element = ammo.element, dot = ammo.dot } or {}
 		if wType == "MedKit" then
 			-- the Doctor's stinging powder: a little poison on every throw
@@ -540,6 +547,25 @@ local function setup()
 			end
 		end
 		hitLater(strike + (SHOT_FLIGHT[wType] or 0), player, target, mult, magic, hopts)
+		-- v0.25.77 (owner: one hit at a time felt odd in a crowd): melee swings CLEAVE: every other enemy inside the
+		-- weapon's reach in front of you (a wide arc) takes CLEAVE of the hit, up to CLEAVE_MAX of them
+		local cleave = CLEAVE[wType]
+		if cleave then
+			local face = (target.pos - root.Position) * Vector3.new(1, 0, 1)
+			face = face.Magnitude > 0.1 and face.Unit or root.CFrame.LookVector
+			local extra = 0
+			for _, tt in ipairs(inRadiusTargets(player, root.Position, range + 3)) do
+				local key = tt.mob or tt.player
+				if key ~= (target.mob or target.player) and extra < CLEAVE_MAX then
+					local to = (tt.pos - root.Position) * Vector3.new(1, 0, 1)
+					local model = tt.mob and tt.mob.model or (tt.player and tt.player.Character)
+					if to.Magnitude < 2 or (to.Unit:Dot(face) > 0.3 and model and Reach.Gap(root.Position, model) <= range + 2) then
+						extra += 1
+						hitLater(strike, player, tt, mult * cleave, magic, hopts)
+					end
+				end
+			end
+		end
 		return true
 	end, 0.2)
 
@@ -724,7 +750,7 @@ local function setup()
 		local kind = skill.kind
 		local fxData = { fx = skill.fx, from = root.Position, char = player.Character, skill = skill.id }
 		local strike = skillStrike(player, skill)
-		local travel = 0.2 -- a Ranged skill reaches its target this long after the strike frame
+		local travel = skill.travel or 0.2 -- a Ranged skill reaches its target this long after the strike frame
 		if pumped then
 			strike /= PUMP_SPEED
 			travel = 0.06 -- compressed air: there in a blink
@@ -739,6 +765,10 @@ local function setup()
 		if skill.slow then
 			skillOpts = skillOpts or {}
 			skillOpts.slow = skill.slow -- dazed (Navigator Baton Flurry)
+		end
+		if skill.stun then
+			skillOpts = skillOpts or {}
+			skillOpts.stun = skill.stun -- v0.25.77 Smoke Pellet: lost in the smoke
 		end
 		-- knockback (v0.24.12): damage skills shove on their LAST hit; power = the skill's multiplier (Heavy Attack 2.2+)
 		local knockPower = skill.knockPower or (skill.heavy and math.max(2.2, mult)) or mult
@@ -843,7 +873,9 @@ local function setup()
 					if mob and not mob.dead and mob.root then
 						local away = (mob.root.Position - from) * Vector3.new(1, 0, 1)
 						if away.Magnitude > 6 then
-							R.MonsterService.Knockback(mob, mob.root.Position + away.Unit * 5, away.Magnitude - 5, 3)
+							-- dragged to ~4 studs in front of you, at a speed it can actually travel (v0.25.77)
+							local dist = away.Magnitude - 4.5
+							R.MonsterService.Knockback(mob, mob.root.Position + away.Unit * 5, dist / 0.88, 3, math.clamp(dist / 80, 0.24, 0.45))
 						end
 					end
 				end)
@@ -953,6 +985,15 @@ local function setup()
 				stats[k] = v * scale
 			end
 			local targets = kind == "PartyBuff" and partyInRadius(player, skill.radius or 30) or { player }
+			if skill.syringe then
+				-- v0.25.77 Adrenaline Shot: a syringe flies into every crewmate it reaches (FX)
+				fxData.allies = {}
+				for _, m in ipairs(targets) do
+					if m ~= player and m.Character then
+						table.insert(fxData.allies, m.Character)
+					end
+				end
+			end
 			for _, m in ipairs(targets) do
 				Combat.AddBuff(m, skill.id, stats, skill.duration)
 			end

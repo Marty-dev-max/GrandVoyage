@@ -237,8 +237,10 @@ local function setup()
 				return false, "You must be aboard your own ship"
 			end
 		end
+		-- v0.25.77 Sea Cook Hearty Meal: a feast buff makes food and drinks heal more (buff stat foodHeal)
+		local foodK = 1 + (R.CombatService.GetBuffs(player).foodHeal or 0)
 		if def.heal then
-			hum.Health = math.min(hum.MaxHealth, hum.Health + hum.MaxHealth * def.heal)
+			hum.Health = math.min(hum.MaxHealth, hum.Health + hum.MaxHealth * def.heal * foodK)
 		end
 		if def.expBoost then
 			p.expBoostUntil = math.max(os.time(), p.expBoostUntil or 0) + def.expBoost
@@ -246,7 +248,7 @@ local function setup()
 		end
 		if def.healSp then
 			local max = player:GetAttribute("MaxSP") or 100
-			player:SetAttribute("SP", math.min(max, (player:GetAttribute("SP") or 0) + max * def.healSp))
+			player:SetAttribute("SP", math.min(max, (player:GetAttribute("SP") or 0) + max * def.healSp * foodK))
 		end
 		itemCooldowns[key] = os.clock() + (def.cd or 1)
 		Inv.RemoveUid(player, entry.uid, 1)

@@ -196,39 +196,56 @@ FX.F_FlamePillar = function(d)
 	end)
 end
 
--- Emberflies: green sparks drift off the finger to spots around the target, hover, then burst orange one by one
+-- Emberflies (v0.25.77, owner: no dark puffs, the green fire leaves YOUR body and sticks to the enemies): green
+-- sparks fly out of your chest to the monsters around the spot, cling to them, then burst orange one by one
 -- (server: delay 1.0 after the 0.2 strike, then 4 bursts 0.18 apart)
 FX.F_Emberflies = function(d)
 	local to = d.to or d.from
 	local r = math.min(d.radius or 12, 14)
-	local hand = typeof(d.char) == "Instance" and d.char:FindFirstChild("RightHand")
-	local start = hand and hand.Position or (d.from + Vector3.new(0, 1, 0))
+	local chest = typeof(d.char) == "Instance" and d.char:FindFirstChild("UpperTorso")
+	local start = chest and chest.Position or (d.from + Vector3.new(0, 1.5, 0))
+	-- the monsters it will cling to (nearest the spot first); spare sparks hover over the spot
+	local hosts = {}
+	local folder_ = workspace:FindFirstChild("Monsters")
+	for _, m in ipairs(folder_ and folder_:GetChildren() or {}) do
+		local p = m:IsA("Model") and (m.PrimaryPart or m:FindFirstChild("HumanoidRootPart"))
+		if p and (p.Position - to).Magnitude <= r + 3 then
+			table.insert(hosts, { part = p, d = (p.Position - to).Magnitude })
+		end
+	end
+	table.sort(hosts, function(a, b)
+		return a.d < b.d
+	end)
 	local flies = {}
 	for i = 1, 9 do
-		local a = i / 9 * math.pi * 2 + math.random()
-		local spot = to + Vector3.new(math.cos(a) * r * (0.2 + math.random() * 0.6), 1 + math.random() * 2.5, math.sin(a) * r * (0.2 + math.random() * 0.6))
-		local core = blk(Vector3.new(0.5, 0.5, 0.5), EMBER2, CFrame.new(start), true, 0)
-		local halo = blk(Vector3.new(1.1, 1.1, 1.1), EMBER, CFrame.new(start), true, 0.55)
-		flies[i] = { core = core, halo = halo, spot = spot, seed = math.random() * 10 }
+		local host = #hosts > 0 and hosts[(i - 1) % #hosts + 1].part or nil
+		local a = i * 2.4
+		local off = Vector3.new(math.cos(a) * 1.6, 0.5 + (i % 3) * 0.8, math.sin(a) * 1.6)
+		local spot = to + Vector3.new(math.cos(a) * r * 0.5, 1.5, math.sin(a) * r * 0.5)
+		local core = blk(Vector3.new(0.55, 0.55, 0.55), EMBER2, CFrame.new(start), true, 0)
+		local halo = blk(Vector3.new(1.2, 1.2, 1.2), EMBER, CFrame.new(start), true, 0.5)
+		flies[i] = { core = core, halo = halo, host = host, off = off, spot = spot, seed = math.random() * 10, launch = 0.18 + i * 0.035 }
 	end
-	local t0 = os.clock() + 0.2
+	local t0 = os.clock()
 	local conn
 	conn = game:GetService("RunService").RenderStepped:Connect(function()
 		local t = os.clock() - t0
-		if t < 0 then
-			return
-		end
 		for _, f in ipairs(flies) do
 			if f.core.Parent then
-				local k = math.min(1, t / 0.55)
-				local ease = 1 - (1 - k) ^ 2
-				-- a lazy curve out, then a firefly hover
-				local p = start:Lerp(f.spot, ease) + Vector3.new(0, math.sin(ease * math.pi) * 3, 0)
-				p += Vector3.new(math.sin(t * 5 + f.seed), math.sin(t * 7 + f.seed) * 0.6, math.cos(t * 4 + f.seed)) * 0.35 * k
-				local pulse = 1 + math.sin(t * 14 + f.seed) * 0.2
-				f.core.CFrame = CFrame.new(p)
+				local target = (f.host and f.host.Parent) and (f.host.Position + f.off) or f.spot
+				local k = math.clamp((t - f.launch) / 0.45, 0, 1)
+				local ease = 1 - (1 - k) ^ 3
+				local p = start:Lerp(target, ease) + Vector3.new(0, math.sin(ease * math.pi) * 2.5, 0)
+				if k >= 1 then
+					p = target + Vector3.new(math.sin(t * 6 + f.seed), math.sin(t * 9 + f.seed), math.cos(t * 5 + f.seed)) * 0.25
+				end
+				local pulse = 1 + math.sin(t * 16 + f.seed) * 0.25
+				f.core.CFrame = CFrame.new(p) * CFrame.Angles(t * 4, t * 3, 0)
 				f.halo.CFrame = CFrame.new(p)
-				f.halo.Size = Vector3.one * 1.1 * pulse
+				f.halo.Size = Vector3.one * 1.2 * pulse
+				if k > 0 and k < 1 and math.random() < 0.4 then
+					Voxels.Pixels(p, { count = 2, colors = { EMBER, EMBER2 }, size = 0.25, speed = 1, gravity = -3, life = 0.3, glow = 1, spread = 0.2 })
+				end
 			end
 		end
 		if t > 2 then
@@ -236,8 +253,7 @@ FX.F_Emberflies = function(d)
 		end
 	end)
 	for i, f in ipairs(flies) do
-		local tick = (i - 1) % 4
-		task.delay(1.2 + tick * 0.18 + math.random() * 0.05, function()
+		task.delay(1.2 + ((i - 1) % 4) * 0.18 + math.random() * 0.04, function()
 			local p = f.core.Parent and f.core.Position or f.spot
 			f.core:Destroy()
 			f.halo:Destroy()
@@ -249,20 +265,67 @@ FX.F_Emberflies = function(d)
 	end
 end
 
--- Inferno: the arms fling wide and a sea of fire floods out around you, flames standing for a moment
--- (server: one hit at strike 0.35)
+-- a fireball growing over the caster's head while the Inferno key is held (local, the caster's own view)
+function FX.ChargeBall(char)
+	local head = typeof(char) == "Instance" and (char:FindFirstChild("VoxelHead", true) or char:FindFirstChild("Head"))
+	if not head then
+		return function() end
+	end
+	local core = blk(Vector3.one, C.fire1, CFrame.new(head.Position), true, 0)
+	local shell = blk(Vector3.one, C.fire2, CFrame.new(head.Position), true, 0.35)
+	local t0 = os.clock()
+	local conn
+	conn = game:GetService("RunService").RenderStepped:Connect(function()
+		local t = os.clock() - t0
+		local s = math.min(1, t / 1.2)
+		local size = 1 + s * 4.5
+		local p = head.Position + Vector3.new(0, 2 + size * 0.55, 0)
+		core.Size = Vector3.one * size * 0.7
+		shell.Size = Vector3.one * size * (1 + math.sin(t * 14) * 0.05)
+		core.CFrame = CFrame.new(p) * CFrame.Angles(t * 2, t * 3, 0)
+		shell.CFrame = CFrame.new(p) * CFrame.Angles(-t * 2.5, t, t)
+		if math.random() < 0.6 then
+			Voxels.Pixels(p, { count = 3, colors = { C.fire1, C.fire2, C.fire3 }, size = 0.4, speed = 3, gravity = -8, life = 0.5, glow = 1, spread = size * 0.5 })
+		end
+	end)
+	return function()
+		conn:Disconnect()
+		core:Destroy()
+		shell:Destroy()
+	end
+end
+
+-- Inferno (v0.25.77, owner): the giant fireball is hurled the way you aim (strike 0.14, 0.4 of flight) and bursts
+-- into a sea of fire where it lands
 FX.F_Inferno = function(d)
-	local root = charRoot(d)
-	local at = ground(root and root.Position or d.from)
-	local r = d.radius or 20
-	armFlame(d.char, "Right", 0.5)
-	armFlame(d.char, "Left", 0.5)
-	task.delay(0.3, function()
+	local to = d.to or d.from
+	local head = typeof(d.char) == "Instance" and d.char:FindFirstChild("UpperTorso")
+	local from = (head and head.Position or d.from) + Vector3.new(0, 5, 0)
+	local r = 14
+	task.delay(0.14, function()
+		local core = blk(Vector3.one * 3.6, C.fire1, CFrame.new(from), true, 0)
+		local shell = blk(Vector3.one * 5.4, C.fire2, CFrame.new(from), true, 0.35)
+		local t0 = os.clock()
+		local conn
+		conn = game:GetService("RunService").RenderStepped:Connect(function()
+			local k = math.min(1, (os.clock() - t0) / 0.4)
+			local p = from:Lerp(to, k) + Vector3.new(0, math.sin(k * math.pi) * 3, 0)
+			core.CFrame = CFrame.new(p) * CFrame.Angles(k * 9, k * 7, 0)
+			shell.CFrame = CFrame.new(p) * CFrame.Angles(-k * 6, k * 4, k * 3)
+			Voxels.Pixels(p, { count = 5, colors = { C.fire1, C.fire2, C.fire3 }, size = 0.5, speed = 3, gravity = -6, life = 0.5, glow = 1, spread = 2 })
+			if k >= 1 then
+				conn:Disconnect()
+				core:Destroy()
+				shell:Destroy()
+			end
+		end)
+	end)
+	task.delay(0.54, function()
+		local at = ground(to)
 		local V = require(script.Parent.VFX)
 		V.Ring(at + Vector3.new(0, 0.3, 0), r, C.fire2, 0.5)
 		V.Shockwave(at + Vector3.new(0, 2, 0), Vector3.yAxis, C.fire1, r * 0.8)
 		fireBurst(at + Vector3.new(0, 2, 0), 2.6)
-		-- the floor of fire: blocks race out in rings, then rise as flames and die down
 		for ring = 1, 4 do
 			task.delay(ring * 0.06, function()
 				local n = 10 + ring * 7
@@ -273,18 +336,13 @@ FX.F_Inferno = function(d)
 					local c = ring <= 1 and C.fire1 or (ring <= 2 and C.fire2 or C.fire3)
 					local b = blk(Vector3.new(1.3, 0.2, 1.3), c, CFrame.new(p + Vector3.new(0, 0.1, 0)), true, 0.05)
 					tw(b, 0.25, { Size = Vector3.new(1.3, h, 1.3), CFrame = CFrame.new(p + Vector3.new(0, h / 2, 0)) }, Enum.EasingStyle.Back)
-					task.delay(0.5 + math.random() * 0.5, function()
+					task.delay(0.5 + math.random() * 0.6, function()
 						if b.Parent then
 							tw(b, 0.35, { Size = Vector3.new(0.4, h * 1.6, 0.4), CFrame = CFrame.new(p + Vector3.new(0, h * 1.4, 0)), Transparency = 1 })
 						end
 					end)
-					Debris:AddItem(b, 1.5)
+					Debris:AddItem(b, 1.6)
 				end
-			end)
-		end
-		for k = 0, 4 do
-			task.delay(0.1 + k * 0.2, function()
-				Voxels.Pixels(at + Vector3.new(0, 1.5, 0), { count = 36, colors = { C.fire1, C.fire2, C.fire3 }, size = 0.45, speed = 18, gravity = -12, life = 0.9, glow = 1, spread = r * 0.8 })
 			end)
 		end
 	end)
@@ -1223,18 +1281,50 @@ local function flameEmitter(parent, big)
 	e.Parent = parent
 	return e
 end
-local function dressFire(char, on)
+-- v0.25.77 Haze flight: the lower legs turn to smoke and a long line of smoke trails behind you
+local function smokeEmitter(parent, trail)
+	local Textures = require(game:GetService("ReplicatedStorage").Shared.Config.Textures)
+	local e = Instance.new("ParticleEmitter")
+	e.Name = "HazeLimb"
+	e.Texture = Textures.px_smoke or Textures.smoke or ""
+	e.Color = ColorSequence.new(C.smoke1, C.smoke2)
+	e.LightEmission, e.LightInfluence = 0.2, 0.6
+	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, trail and 1.6 or 1), NumberSequenceKeypoint.new(1, trail and 2.6 or 0.3) })
+	e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.15), NumberSequenceKeypoint.new(1, 1) })
+	e.Lifetime = trail and NumberRange.new(1.2, 1.6) or NumberRange.new(0.3, 0.5)
+	e.Speed = trail and NumberRange.new(0, 0.3) or NumberRange.new(0.5, 1.5)
+	e.SpreadAngle = Vector2.new(20, 20)
+	e.Rate = trail and 60 or 30
+	e.Parent = parent
+	return e
+end
+local SMOKE_LIMBS = { "LeftLowerLeg", "LeftFoot", "RightLowerLeg", "RightFoot" }
+local dressFire
+dressFire = function(char, on, kind)
 	local st = fireDressed[char]
+	if st and on and st.kind ~= kind then
+		dressFire(char, false) -- switched fruit while flying
+		st = nil
+	end
 	if on and not st then
-		st = { emitters = {}, blocks = {} }
+		st = { emitters = {}, blocks = {}, kind = kind }
 		fireDressed[char] = st
 		local limbs = {}
-		for _, n in ipairs(FIRE_LIMBS) do
+		for _, n in ipairs(kind == "Haze" and SMOKE_LIMBS or FIRE_LIMBS) do
 			local p = char:FindFirstChild(n)
 			if p then
 				limbs[p] = true
-				table.insert(st.emitters, flameEmitter(p, string.find(n, "Lower") ~= nil))
+				table.insert(st.emitters, kind == "Haze" and smokeEmitter(p, false) or flameEmitter(p, string.find(n, "Lower") ~= nil))
 			end
+		end
+		local torso = char:FindFirstChild("LowerTorso")
+		if kind == "Haze" and torso then
+			table.insert(st.emitters, smokeEmitter(torso, true)) -- the line of smoke left in the sky
+		end
+		-- the sound of it: a soft crackling fire / a hiss of smoke, on the body
+		local root = char:FindFirstChild("HumanoidRootPart")
+		if root then
+			st.sound = require(script.Parent.Audio).Attach(kind == "Haze" and "HazeFlyLoop" or "BlazeFlyLoop", root, 70)
 		end
 		local body = char:FindFirstChild("VoxelBody")
 		for _, b in ipairs(body and body:GetChildren() or {}) do
@@ -1246,6 +1336,9 @@ local function dressFire(char, on)
 		end
 	elseif not on and st then
 		fireDressed[char] = nil
+		if st.sound then
+			st.sound:Destroy()
+		end
 		for _, e in ipairs(st.emitters) do
 			e.Enabled = false
 			Debris:AddItem(e, 0.5)
@@ -1268,7 +1361,8 @@ function FX.Start()
 			for _, pl in ipairs(Players:GetPlayers()) do
 				local c = pl.Character
 				if c then
-					dressFire(c, pl:GetAttribute("Fruit") == "Blaze" and c:GetAttribute("Flying") == true)
+					local fruit = pl:GetAttribute("Fruit")
+					dressFire(c, (fruit == "Blaze" or fruit == "Haze") and c:GetAttribute("Flying") == true, fruit)
 				end
 			end
 			for c in pairs(fireDressed) do

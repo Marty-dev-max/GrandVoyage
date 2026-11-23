@@ -408,7 +408,8 @@ end
 local BOSS_POWER = 2.4
 local knockParams = RaycastParams.new()
 knockParams.FilterType = Enum.RaycastFilterType.Exclude
-function MS.Knockback(mob, fromPos, dist, power)
+-- durOverride (v0.25.77): a longer slide for long pulls (Smoke Grip), so the speed stays sane
+function MS.Knockback(mob, fromPos, dist, power, durOverride)
 	if mob.dead or not mob.root or not mob.hum or mob.sea or mob.chain or mob.def.static or mob.opts.static then
 		return
 	end
@@ -439,7 +440,7 @@ function MS.Knockback(mob, fromPos, dist, power)
 	if dist < 0.6 then
 		return
 	end
-	local dur = 0.24
+	local dur = durOverride or 0.24
 	mob.knockUntil = os.clock() + dur + 0.12
 	mob.hum:MoveTo(root.Position)
 	local att = Instance.new("Attachment")
@@ -447,19 +448,19 @@ function MS.Knockback(mob, fromPos, dist, power)
 	att.Parent = root
 	local lv = Instance.new("LinearVelocity")
 	lv.Attachment0 = att
-	lv.VelocityConstraintMode = Enum.VelocityConstraintMode.Plane
-	lv.PrimaryTangentAxis = Vector3.xAxis
-	lv.SecondaryTangentAxis = Vector3.zAxis
+	-- v0.25.77 (owner: Smoke Grip threw monsters into the sky): the full velocity is driven, and the vertical part is
+	-- never allowed upward (the plane mode left Y free: an unlimited sideways force on a slope or into a body climbed)
+	lv.VelocityConstraintMode = Enum.VelocityConstraintMode.Vector
 	lv.RelativeTo = Enum.ActuatorRelativeTo.World
 	lv.MaxForce = math.huge
 	local speed = dist / dur * 1.35 -- starts fast, eases out below
-	lv.PlaneVelocity = Vector2.new(dir.X, dir.Z) * speed
+	lv.VectorVelocity = dir * speed
 	lv.Parent = root
 	task.spawn(function()
 		local t0 = os.clock()
 		while os.clock() - t0 < dur and lv.Parent do
 			local k = (os.clock() - t0) / dur
-			lv.PlaneVelocity = Vector2.new(dir.X, dir.Z) * speed * (1 - k) * 1.3
+			lv.VectorVelocity = dir * speed * (1 - k) * 1.3 + Vector3.new(0, math.min(0, root.AssemblyLinearVelocity.Y), 0)
 			task.wait()
 		end
 		lv:Destroy()
@@ -532,6 +533,17 @@ local function cowedBy(mob, pl)
 	end
 	mob.power = mob.power or Formulas.MonsterPower(mob.def)
 	return mob.power < (pl:GetAttribute("Power") or 0) * TokiCfg.Conqueror.Calm
+end
+-- v0.25.77: dazed for `seconds` (Smoke Pellet): stands still, "DAZED"
+function MS.Stun(mob, seconds)
+	if mob.dead or not mob.root then
+		return
+	end
+	mob.knockUntil = math.max(mob.knockUntil or 0, os.clock() + seconds)
+	if mob.hum then
+		mob.hum:MoveTo(mob.root.Position)
+	end
+	Net.FX("Miss", { pos = mob.root.Position + Vector3.new(0, 4, 0), text = "DAZED" }, mob.root.Position, 200)
 end
 -- Conqueror's Roar: frozen in fear for `seconds`, forgets its target
 function MS.Cow(mob, seconds)

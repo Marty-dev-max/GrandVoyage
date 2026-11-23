@@ -118,6 +118,7 @@ add("AmbienceIsland", "Ambience", 0.45, "", { looped = true, id = "rbxassetid://
 add("AmbienceUnderwater", "Ambience", 0.6, "", { looped = true, id = "rbxassetid://9112889917" }) -- Underwater Ambience 1
 add("WaterPlunge", "SFX", 0.6, SPLASH, { id = "rbxassetid://9120585252" }) -- Water Splash Big Water Splash Dive In 1
 add("WaterSurface", "SFX", 0.4, SPLASH, { id = "rbxassetid://9120618797" }) -- Wave Spraying 3
+add("WaterGush", "SFX", 0.6, SPLASH, { id = "rbxassetid://9120560453", rolloff = 500 }) -- Water Hose Gun 3 (ProSoundEffects): Bay Serpent spit
 add("AmbienceNight", "Ambience", 0.4, "", { looped = true, id = "rbxassetid://9112764573" }) -- Crickets Night 3 (ProSoundEffects)
 -- v0.25.8 (owner: music for each situation): Roblox's licensed partner tracks (APMOfficial / DistrokidOfficial,
 -- free for every experience). Picked by Sailing.updateAudio: boss > combat > sea > island night > island day.

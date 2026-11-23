@@ -912,7 +912,7 @@ local function seaAttack(mob, troot, now)
 		local center = Vector3.new(tail.X, wy, tail.Z)
 		local radius = 18
 		sea.until_ = now + 1.8
-		Net.FX("Telegraph", { kind = "circle", pos = center, radius = radius, time = 1.2 }, center, 500)
+		Net.FX("Telegraph", { kind = "circle", pos = center, radius = radius, sea = true, time = 1.2 }, center, 500)
 		Net.FX("SerpentTail", { model = mob.model, time = 1.2 }, center, 500)
 		task.delay(1.2, function()
 			if mob.dead then
@@ -935,7 +935,7 @@ local function seaAttack(mob, troot, now)
 		-- LUNGE: rear, then the head dives along the line onto the ship and bites
 		local to = from + dir * math.min(flat.Magnitude + 8, 46)
 		sea.until_ = now + 2.1
-		Net.FX("Telegraph", { kind = "line", from = from, to = to, width = 11, time = 0.9 }, head, 500)
+		Net.FX("Telegraph", { kind = "line", from = from, to = to, width = 11, sea = true, time = 0.9 }, head, 500)
 		task.delay(0.65, function()
 			if not mob.dead then
 				Anim.Play(mob.hum, "Mon_SerpentBite", { fade = 0.05 })
@@ -969,7 +969,7 @@ local function seaAttack(mob, troot, now)
 		-- WATER SPIT: rear high and blast a jet along the line
 		local to = from + dir * math.min(flat.Magnitude + 10, 70)
 		sea.until_ = now + 2.0
-		Net.FX("Telegraph", { kind = "line", from = from, to = to, width = 8, time = 1.1 }, head, 500)
+		Net.FX("Telegraph", { kind = "line", from = from, to = to, width = 8, sea = true, time = 1.1 }, head, 500)
 		task.delay(0.6, function()
 			if not mob.dead then
 				Anim.Play(mob.hum, "Mon_SerpentSpit", { fade = 0.05 })

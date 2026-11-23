@@ -2121,7 +2121,7 @@ end
 
 -- MENU -> Ships: call the active ship (at the nearest dock, or where you swim) or put it away
 function Panels.SummonShip()
-	local res = req("SummonShip", nil, "Bell")
+	local res = req("SummonShip") -- v0.25.115 (owner): no bell when you set sail
 	if res.ok and not res.msg then
 		UI.Banner("Set Sail!", "W/S sails  •  A/D steer  •  click water to fire cannons", T.Ocean)
 	end

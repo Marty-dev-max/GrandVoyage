@@ -2142,6 +2142,10 @@ local fxSounds = {
 		return "ChestRattle", d.pos
 	end,
 	Telegraph = function(d)
+		-- v0.25.115 (owner: the serpent roaring before every attack was annoying): sea boss wind-ups are silent
+		if d.sea then
+			return nil
+		end
 		return "BossRoar", d.pos
 	end,
 	Cannonball = function(d)
@@ -2175,7 +2179,7 @@ local fxSounds = {
 		return "PunchHeavy", d.to, 0.7
 	end,
 	SerpentSpit = function(d)
-		return "Splash", d.from, 0.8
+		return "WaterGush", d.from -- v0.25.115 (owner): a hard water jet, like a tap opened all the way
 	end,
 	SerpentRise = function(d)
 		return "WaterPlunge", d.pos, 0.6

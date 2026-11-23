@@ -91,6 +91,6 @@
 4. ✅ v0.25.76 Haze (Smoke Fist, Smoke Screen ตีพลาด, Smoke Grip ดึง, White Out ล่องหน + อมตะ)
 5. ✅ v0.25.79 Shield (Channel wall/dome + ปล่อยผลัก, บันไดบาเรีย) — เหลือโมเดล/ไอคอนผลใหม่ (รอ Blender)
 6. ✅ v0.25.82 Split (Rocket Forearm, Phantom Hand, Split Runner, Scatter Storm: ชิ้นส่วนเป็นก๊อปบล็อกตัวจริง)
-7. Slick (ชาร์จย่อตัว, แฮนด์สแตนด์, พื้นมัน, ไถล)
+7. ✅ v0.25.84 Slick (Slick Slide ชาร์จย่อตัว, Slip Away, Slick Spin แฮนด์สแตนด์, Oil Slick แอ่งน้ำมันมอนช้า+ลื่นพลาด, Slick Skate) — ท่า Slick_* ยังไม่อัปโหลด
 
 อนิเมชันใหม่ทุกท่า: เขียนใน `Config/AnimClips.lua` → เรนเดอร์ภาพท่าให้ดูก่อน → อัปโหลด (โควตาอนิเมชันแยกจากเสียง ใช้ได้)

@@ -1276,6 +1276,10 @@ local function startAim(id, slot, src)
 			-- v0.25.77 Inferno: a fireball grows over your head while you hold
 			local ok, stopBall = pcall(require(script.Parent.FruitFX).ChargeBall, c)
 			hold.ballStop = ok and stopBall or nil
+		elseif skill.chargeAnim == "Slick_Crouch" then
+			-- v0.25.84 Slick Slide: oil drips off the fist and spreads under you while you crouch
+			local ok, stopOil = pcall(require(script.Parent.FruitFX).ChargeOil, c)
+			hold.ballStop = ok and stopOil or nil
 		end
 		if id == "F_BarrierBash" then
 			-- v0.25.81 Ward Pistol: a glass ball grows round the fist while you hold

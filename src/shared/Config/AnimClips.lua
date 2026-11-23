@@ -641,6 +641,56 @@ C.Shield_DomeHold = { rig = "R15", loop = true, priority = "Action", length = 0.
 	{ t = 0.6, pose = DOME },
 } }
 
+-- ===== Cursed Fruit: Slick Slick (v0.25.84, phase 7): oil =====
+-- Slick Slide: a sprinter's set (deep crouch, left fingertips on the ground, right fist cocked at the hip) held while
+-- charging, then a long low slide forward on one knee into a straight right punch
+local SLICK_SET = { LowerTorso = { 0, 0, 0, 0, -1, 0.25 }, UpperTorso = { -38, 0, 0 }, Head = { 28, 0, 0 },
+	RightUpperLeg = { 58, 0, 6 }, RightLowerLeg = { -100, 0, 0 }, LeftUpperLeg = { 18, 0, -6 }, LeftLowerLeg = { -72, 0, 0 },
+	RightUpperArm = { -42, 0, 22 }, RightLowerArm = { 105, 0, 0 }, LeftUpperArm = { 62, 0, -8 }, LeftLowerArm = { 8, 0, 0 } }
+local SLICK_SLIDE = { LowerTorso = { 0, 0, 0, 0, -0.95, -0.45 }, UpperTorso = { -28, 8, 0 }, Head = { 20, -6, 0 },
+	RightUpperArm = { 94, 0, 2 }, RightLowerArm = { 0, 0, 0 }, LeftUpperArm = { -48, 0, -24 }, LeftLowerArm = { 20, 0, 0 },
+	RightUpperLeg = { 62, 0, 4 }, RightLowerLeg = { -24, 0, 0 }, LeftUpperLeg = { -22, 0, -4 }, LeftLowerLeg = { -78, 0, 0 } }
+C.Slick_Crouch = { rig = "R15", loop = true, priority = "Action", length = 0.4, keys = {
+	{ t = 0, pose = SLICK_SET },
+	{ t = 0.2, pose = with(SLICK_SET, { UpperTorso = { -40, 0, 0 }, RightUpperArm = { -46, 0, 24 }, LowerTorso = { 0, 0, 0, 0, -1.05, 0.25 } }) },
+	{ t = 0.4, pose = SLICK_SET },
+} }
+C.Slick_SlidePunch = { rig = "R15", priority = "Action", strike = 0.08, keys = {
+	{ t = 0, pose = SLICK_SET },
+	{ t = 0.08, pose = SLICK_SLIDE },
+	{ t = 0.45, pose = with(SLICK_SLIDE, { UpperTorso = { -24, 8, 0 } }) },
+	{ t = 0.7 },
+} }
+-- Slick Spin: drop into a handstand (Sea Cook's HANDSTAND) and spin ONE full turn, legs spread wide
+do
+	local keys = { { t = 0 }, { t = 0.1, pose = HANDSTAND } }
+	for i = 1, 3 do
+		local h = table.clone(HANDSTAND)
+		h.LowerTorso = { 180, i * 120, 0, 0, 2.3, 0 }
+		table.insert(keys, { t = 0.1 + i * 0.11, pose = h })
+	end
+	table.insert(keys, { t = 0.62 })
+	C.Slick_Spin = { rig = "R15", priority = "Action", strike = 0.25, keys = keys }
+end
+-- Oil Slick: a low backhand sweep across the body that flings the oil out at the spot
+C.Slick_Pour = { rig = "R15", priority = "Action", strike = 0.22, keys = {
+	{ t = 0 },
+	{ t = 0.1, pose = with(CROUCH, { RightUpperArm = { 42, 0, -52 }, RightLowerArm = { 40, 0, 0 }, LeftUpperArm = { 10, 0, -30 }, UpperTorso = { -16, -32, 0 }, Head = { 0, 20, 0 } }) },
+	{ t = 0.22, pose = with(CROUCH, { RightUpperArm = { 72, 0, 62 }, RightLowerArm = { 0, 0, 0 }, RightHand = { -40, 0, 0 }, LeftUpperArm = { 20, 0, -40 },
+		UpperTorso = { -22, 34, 0 }, Head = { 0, -24, 0 }, LowerTorso = { 0, 12, 0, 0, -0.4, -0.1 } }) },
+	{ t = 0.5, pose = with(CROUCH, { RightUpperArm = { 66, 0, 66 }, RightLowerArm = { 0, 0, 0 }, UpperTorso = { -18, 30, 0 } }) },
+	{ t = 0.72 },
+} }
+-- Slick Skate (passive, hold Space): side-on surfer stance, knees bent, arms out for balance, a slow sway
+local SKATE = { LowerTorso = { 0, 55, 0, 0, -0.55, 0 }, UpperTorso = { -12, -40, 0 }, Head = { 0, -18, 0 },
+	RightUpperLeg = { 30, 0, 14 }, RightLowerLeg = { -45, 0, 0 }, LeftUpperLeg = { 30, 0, -14 }, LeftLowerLeg = { -45, 0, 0 },
+	RightUpperArm = { 20, 0, 70 }, RightLowerArm = { 15, 0, 0 }, LeftUpperArm = { 20, 0, -70 }, LeftLowerArm = { 15, 0, 0 } }
+C.Slick_Skate = { rig = "R15", loop = true, priority = "Action", length = 1.2, keys = {
+	{ t = 0, pose = SKATE },
+	{ t = 0.6, pose = with(SKATE, { UpperTorso = { -10, -36, 6 }, RightUpperArm = { 24, 0, 62 }, LeftUpperArm = { 16, 0, -78 }, LowerTorso = { 0, 55, 0, 0, -0.6, 0 } }) },
+	{ t = 1.2, pose = SKATE },
+} }
+
 -- weapon -> combo clips (in order), stance, and the clips each skill kind uses
 C.Weapons = {
 	-- freestyle street fighting: jab, cross, body blow, hook, knee, elbow, spinning backfist (the uppercut is a skill now)

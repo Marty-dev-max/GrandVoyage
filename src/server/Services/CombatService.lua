@@ -149,6 +149,36 @@ end
 Combat.MonsterDmgType = monsterDmgType
 local LOGIA = { Blaze = true, Haze = true }
 local smokeZones = {} -- v0.25.76 Smoke Screen clouds { pos, r, untilT }
+local oilZones = {} -- v0.25.84 Oil Slick puddles { pos, r, untilT }: monsters on them are slowed and slip
+local SlickCfg = require(Shared.Config.Fruits).SlickSkate
+local function inOil(pos)
+	local now = os.clock()
+	for i = #oilZones, 1, -1 do
+		local z = oilZones[i]
+		if now > z.untilT then
+			table.remove(oilZones, i)
+		else
+			local flat = (pos - z.pos) * Vector3.new(1, 0, 1)
+			if flat.Magnitude <= z.r and math.abs(pos.Y - z.pos.Y) < 8 then
+				return z
+			end
+		end
+	end
+	return nil
+end
+-- slow a monster to k x its own speed for `secs` (restored from its own speed, so stacking cannot freeze it)
+local function slowMob(mob, k, secs)
+	if not mob.hum or mob.dead then
+		return
+	end
+	mob.hum.WalkSpeed = mob.def.moveSpeed * k
+	mob.slowUntil = math.max(mob.slowUntil or 0, os.clock() + secs)
+	task.delay(secs + 0.05, function()
+		if mob.hum and not mob.dead and os.clock() >= (mob.slowUntil or 0) then
+			mob.hum.WalkSpeed = mob.def.moveSpeed
+		end
+	end)
+end
 local channels = {} -- v0.25.79 held barriers: player -> { skill, t0, shape, radius, mult, magic }
 
 -- a monster blow that a held barrier stops: the Wall covers its holder's front, the Dome everyone inside it from
@@ -254,6 +284,11 @@ function Combat.MonsterHit(mob, player, mult)
 				return
 			end
 		end
+	end
+	-- v0.25.84 Oil Slick: a monster standing in the oil loses its footing on some of its own swings
+	if mob.root and #oilZones > 0 and inOil(mob.root.Position) and math.random() < SlickCfg.OilSlip then
+		Net.FX("Miss", { pos = mob.root.Position + Vector3.new(0, 3, 0), text = "SLIPPED!" }, mob.root.Position, 150)
+		return
 	end
 	local hit = (mob.def.level * 1.8 + 25) * (1 + (mob.def.hitBonus or 0)) -- AGI monsters aim better (Config/Monsters types)
 	if math.random() > Formulas.HitChance(hit, d.flee) then
@@ -390,14 +425,7 @@ local function hitTarget(attacker, target, mult, magic, opts)
 			R.MonsterService.Stun(mob, opts.stun)
 		end
 		if opts.slow and mob.hum and not mob.dead then
-			-- frost: slowed for 2 s (restored from the monster's own speed, so stacking cannot freeze it)
-			mob.hum.WalkSpeed = mob.def.moveSpeed * opts.slow
-			mob.slowUntil = os.clock() + 2
-			task.delay(2.05, function()
-				if mob.hum and not mob.dead and os.clock() >= (mob.slowUntil or 0) then
-					mob.hum.WalkSpeed = mob.def.moveSpeed
-				end
-			end)
+			slowMob(mob, opts.slow, 2) -- frost / dazed: slowed for 2 s
 		end
 		if opts.splash then
 			-- blast: everyone else nearby takes half (no chain explosions)
@@ -1188,8 +1216,14 @@ local function setup()
 			params.FilterType = Enum.RaycastFilterType.Exclude
 			params.FilterDescendantsInstances = { player.Character, workspace:FindFirstChild("Monsters") }
 			params.RespectCanCollide = true
-			local hit = workspace:Raycast(root.Position, dir * skill.range, params)
-			local dist = hit and math.max(0, hit.Distance - 3) or skill.range
+			-- v0.25.84 Slick Slide: a longer charge slides further too (x0.7 tapped .. x1.3 fully charged)
+			local range = skill.range
+			if skill.charge then
+				local c = tonumber(data.charge) or 0
+				range *= 0.7 + 0.6 * math.clamp(c == c and c or 0, 0, 1)
+			end
+			local hit = workspace:Raycast(root.Position, dir * range, params)
+			local dist = hit and math.max(0, hit.Distance - 3) or range
 			local from = root.Position
 			local to = from + dir * dist
 			-- v0.24.14 (playtest: the dash felt like a teleport): the caster's client slides there at DASH_SPEED (it owns
@@ -1257,6 +1291,14 @@ local function setup()
 				table.insert(smokeZones, { pos = pos, r = skill.radius or 14, untilT = os.clock() + skill.smoke })
 				fxData.smoke = skill.smoke
 			end
+			if skill.oil then
+				-- v0.25.84 Oil Slick: the puddle stays (slows + trips monsters, Combat.Start loop + MonsterHit)
+				local landAt = math.max(0.25, strike) + (skill.delay or 0)
+				task.delay(landAt, function()
+					table.insert(oilZones, { pos = pos, r = skill.radius or 14, untilT = os.clock() + skill.oil })
+				end)
+				fxData.oil = skill.oil
+			end
 			-- v0.25.65: `ticks` = a lingering area (Flame Twister) or a delayed chain of bursts (Emberflies `delay`)
 			for i = 1, skill.ticks or 1 do
 				task.delay(math.max(0.25, strike) + (skill.delay or 0) + (i - 1) * (skill.tickEvery or 0.3), function()
@@ -1293,6 +1335,7 @@ local function setup()
 			for _, m in ipairs(targets) do
 				Combat.AddBuff(m, skill.id, stats, skill.duration)
 			end
+			fxData.duration = skill.duration -- v0.25.84: Slip Away keeps the caster glossy this long (FruitFX)
 			if skill.id == "F_GearUp" then
 				-- clients read this to charge faster / show the pumped moves (server time, GetServerTimeNow)
 				player:SetAttribute("PumpUntil", workspace:GetServerTimeNow() + skill.duration)
@@ -1338,6 +1381,27 @@ function Combat.Start()
 		skillCd[pl] = nil
 		lastHurt[pl] = nil
 		combos[pl] = nil
+	end)
+	-- v0.25.84 Oil Slick: monsters standing in a puddle keep sliding about at OilSlow speed
+	task.spawn(function()
+		while true do
+			task.wait(0.4)
+			if #oilZones > 0 then
+				local now = os.clock()
+				for i = #oilZones, 1, -1 do
+					local z = oilZones[i]
+					if now > z.untilT then
+						table.remove(oilZones, i)
+					else
+						for _, mob in ipairs(R.MonsterService.InRadius(z.pos, z.r)) do
+							if not mob.dead and not mob.def.isBoss then
+								slowMob(mob, SlickCfg.OilSlow, 0.6)
+							end
+						end
+					end
+				end
+			end
+		end
 	end)
 	-- HP/SP regen + buff expiry
 	task.spawn(function()

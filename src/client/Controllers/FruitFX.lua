@@ -1981,67 +1981,436 @@ FX.F_SplitFestival = function(d)
 	end)
 end
 
--- ===== Slick Slick =====
-local function oilPuddle(pos, size, life)
-	local p = blk(Vector3.new(size, 0.12, size), C.oil, CFrame.new(ground(pos) + Vector3.new(0, 0.07, 0)) * CFrame.Angles(0, math.random() * 6, 0), false, 0.05)
-	local s = blk(Vector3.new(size * 0.35, 0.13, size * 0.18), C.shine, p.CFrame * CFrame.new(-size * 0.15, 0.01, -size * 0.15), true, 0.35)
-	p.Size = Vector3.new(0.2, 0.12, 0.2)
-	tw(p, 0.25, { Size = Vector3.new(size, 0.12, size) })
-	fade(p, life, 0.6)
-	fade(s, life, 0.6)
+-- ===== Slick Slick (v0.25.84, docs/Plan-Fruits-v2.md phase 7): glossy black-brown oil in voxel tiles =====
+-- Oil is laid as square tiles (SmoothPlastic + Reflectance = the glossy look) with neon shine streaks and white
+-- glints twinkling on top. oilSpots remembers the puddles on this client so Slick Skate speeds up on them.
+local oilSpots = {} -- { pos, r, untilT }
+local OIL_TONES = { C.oil, Color3.fromRGB(58, 46, 26), Color3.fromRGB(36, 28, 16) }
+local function floorAt(pos)
+	local rp = RaycastParams.new()
+	rp.FilterType = Enum.RaycastFilterType.Exclude
+	local skip = { folder }
+	for _, pl in ipairs(game:GetService("Players"):GetPlayers()) do
+		if pl.Character then
+			table.insert(skip, pl.Character)
+		end
+	end
+	local mons = workspace:FindFirstChild("Monsters")
+	if mons then
+		table.insert(skip, mons)
+	end
+	rp.FilterDescendantsInstances = skip
+	local hit = workspace:Raycast(pos + Vector3.new(0, 3, 0), Vector3.new(0, -12, 0), rp)
+	return hit and hit.Position or ground(pos)
+end
+local function oilTile(at, size, life, yaw)
+	local p = blk(Vector3.new(size, 0.1, size), OIL_TONES[math.random(#OIL_TONES)], CFrame.new(at + Vector3.new(0, 0.05 + math.random() * 0.02, 0)) * CFrame.Angles(0, yaw or 0, 0), false, 0)
+	p.Reflectance = 0.35
+	fade(p, life, 0.5)
+	return p
+end
+-- a puddle of tiles that spills out from the middle (tiles pop in by distance), with shine streaks + glints
+local function oilPool(center, r, life, opts)
+	opts = opts or {}
+	local base = floorAt(center)
+	local tile = math.clamp(r / 5, 1.1, 3)
+	local yaw = math.random() * math.pi
+	local rot = CFrame.Angles(0, yaw, 0)
+	local n = math.ceil(r / tile)
+	for ix = -n, n do
+		for iz = -n, n do
+			local off = Vector3.new(ix * tile, 0, iz * tile)
+			local dist = off.Magnitude
+			-- a ragged rim: tiles near the edge drop out at random
+			if dist <= r and (dist < r - tile or math.random() < 0.55) then
+				local at = base + rot * off
+				task.delay((opts.spill or 0.35) * dist / r, function()
+					local t = oilTile(at, tile * 1.02, life - (opts.spill or 0.35) * dist / r, yaw)
+					t.Size = Vector3.new(0.2, 0.1, 0.2)
+					tw(t, 0.12, { Size = Vector3.new(tile * 1.02, 0.1, tile * 1.02) })
+				end)
+			end
+		end
+	end
+	for _ = 1, math.max(2, math.floor(r / 2.5)) do
+		local a, rr = math.random() * math.pi * 2, math.random() * r * 0.7
+		local at = base + Vector3.new(math.cos(a) * rr, 0.13, math.sin(a) * rr)
+		local s = blk(Vector3.new(math.min(3, r * 0.3), 0.04, 0.25), C.shine, CFrame.new(at) * CFrame.Angles(0, yaw + 0.6, 0), true, 0.35)
+		fade(s, life, 0.5)
+	end
+	if opts.glints then
+		task.spawn(function()
+			local t0 = os.clock()
+			while os.clock() - t0 < life do
+				local a, rr = math.random() * math.pi * 2, math.random() * r
+				Voxels.Pixels(base + Vector3.new(math.cos(a) * rr, 0.3, math.sin(a) * rr), { count = 2, colors = { C.white, C.shine }, size = 0.3, speed = 0.6, gravity = 0, life = 0.45, glow = 1, spread = 0.2 })
+				task.wait(0.12)
+			end
+		end)
+	end
+	if opts.remember then
+		table.insert(oilSpots, { pos = base, r = r, untilT = os.clock() + life })
+	end
+	return base
 end
 local function oilDrops(pos, n)
 	Voxels.Blocks(pos, { count = n, colors = { C.oil, C.oil2, C.shine }, size = { 0.2, 0.4 }, speed = 8, up = 6, collide = false, life = 0.5, spread = 1 })
 end
-FX.F_SlickSlide = function(d)
-	local from, to = d.from, d.to or d.from
-	along(from, to, 7, function(p, i)
-		task.delay(i * 0.03, function()
-			oilPuddle(p, 2.4, 1.6)
-		end)
+local function oilSplash(pos, power)
+	power = power or 1
+	oilDrops(pos + Vector3.new(0, 0.5, 0), math.floor(12 * power))
+	Voxels.Pixels(pos + Vector3.new(0, 0.5, 0), { count = math.floor(14 * power), colors = { C.oil2, C.shine, C.white }, size = 0.3, speed = 9 * power, gravity = 14, life = 0.5, spread = 1.5 })
+end
+function FX.OnOil(pos)
+	local now = os.clock()
+	for i = #oilSpots, 1, -1 do
+		local s = oilSpots[i]
+		if now > s.untilT then
+			table.remove(oilSpots, i)
+		elseif ((pos - s.pos) * Vector3.new(1, 0, 1)).Magnitude <= s.r and math.abs(pos.Y - s.pos.Y) < 6 then
+			return true
+		end
+	end
+	return false
+end
+
+-- charging Slick Slide: oil drips off the fists and spreads under your feet while you crouch (Combat startAim)
+function FX.ChargeOil(char)
+	local root = typeof(char) == "Instance" and char:FindFirstChild("HumanoidRootPart")
+	if not root then
+		return function() end
+	end
+	local alive = true
+	task.spawn(function()
+		local n = 0
+		while alive and root.Parent do
+			n += 1
+			local hand = char:FindFirstChild("RightHand") or root
+			Voxels.Pixels(hand.Position, { count = 2, colors = { C.oil, C.oil2, C.shine }, size = 0.25, speed = 1, gravity = 18, life = 0.4, spread = 0.2 })
+			if n % 3 == 0 then
+				local a, rr = math.random() * math.pi * 2, math.min(2.6, 0.6 + n * 0.08)
+				oilTile(floorAt(root.Position) + Vector3.new(math.cos(a) * rr, 0, math.sin(a) * rr), 1.1, 1.2, math.random() * 3)
+			end
+			task.wait(0.06)
+		end
 	end)
-	oilDrops(to, 10)
+	return function()
+		alive = false
+	end
 end
+
+-- 1 Slick Slide: you shoot forward on a fresh streak of oil (the server slides you at 60 studs/s), a spray off your
+-- heels, and the punch at the end throws a splash
+FX.F_SlickSlide = function(d)
+	local char = d.char
+	local from, to = d.from, d.to or d.from
+	local path = (to - from) * Vector3.new(1, 0, 1)
+	local dist = path.Magnitude
+	local dir = dist > 0.1 and path.Unit or Vector3.zAxis
+	local yaw = math.atan2(-dir.X, -dir.Z)
+	local base = floorAt(from)
+	for step = 0, dist, 1.6 do
+		task.delay(step / 60, function()
+			local at = Vector3.new(from.X, base.Y, from.Z) + dir * step
+			at = Vector3.new(at.X, floorAt(at).Y, at.Z)
+			local t = oilTile(at, 1.7, 1.8, yaw)
+			t.Size = Vector3.new(2.4, 0.1, 1.7)
+			if math.random() < 0.35 then
+				Voxels.Pixels(at + Vector3.new(0, 0.4, 0) - dir, { count = 3, colors = { C.oil2, C.shine }, size = 0.25, speed = 5, gravity = 12, life = 0.35, spread = 0.6 })
+			end
+		end)
+	end
+	task.delay(0.08 + dist / 60, function()
+		local r = typeof(char) == "Instance" and char:FindFirstChild("RightHand")
+		local at = r and r.Position or to
+		oilSplash(at, 1)
+		vfx().ImpactSplit(at, dir, C.shine, 4)
+	end)
+	pcall(function()
+		require(script.Parent.Audio).Play("Whoosh", { pos = from, pitch = 1.25 })
+	end)
+end
+
+-- 2 Slip Away: the whole body turns glossy (a gold-white sheen + glints popping off the blocks) for the buff
 FX.F_SlipAway = function(d)
-	local r = charRoot(d)
-	local at = r and r.Position or d.from
-	oilPuddle(at, 5, 2)
-	oilDrops(at, 14)
-	Voxels.Pixels(at, { count = 16, colors = { C.shine, C.white }, size = 0.3, speed = 6, gravity = 0, life = 0.6, glow = 0.8, spread = 2 })
+	local char = d.char
+	local root = typeof(char) == "Instance" and char:FindFirstChild("HumanoidRootPart")
+	if not root then
+		return
+	end
+	local dur = math.clamp(tonumber(d.duration) or 12, 1, 30)
+	local old = char:FindFirstChild("GVSlick")
+	if old then
+		old:Destroy()
+	end
+	local hl = Instance.new("Highlight")
+	hl.Name = "GVSlick"
+	hl.FillColor = Color3.fromRGB(255, 236, 150)
+	hl.FillTransparency = 1
+	hl.OutlineColor = C.white
+	hl.OutlineTransparency = 1
+	hl.DepthMode = Enum.HighlightDepthMode.Occluded
+	hl.Adornee = char
+	hl.Parent = char
+	tw(hl, 0.25, { FillTransparency = 0.72, OutlineTransparency = 0.55 })
+	oilPool(root.Position, 4, 1.6)
+	oilSplash(root.Position, 1.2)
+	local body = voxBody(char)
+	task.spawn(function()
+		local t0 = os.clock()
+		while os.clock() - t0 < dur and hl.Parent do
+			-- glints on random body blocks, and the odd drip falling off
+			local blocks = body and body:GetChildren() or {}
+			local b = blocks[math.random(math.max(1, #blocks))]
+			local at = (b and b:IsA("BasePart")) and b.Position or root.Position + Vector3.new(0, 1, 0)
+			Voxels.Pixels(at, { count = 2, colors = { C.white, C.shine }, size = 0.28, speed = 0.4, gravity = 0, life = 0.35, glow = 1, spread = 0.3 })
+			if math.random() < 0.25 then
+				Voxels.Pixels(at, { count = 1, colors = { C.oil2 }, size = 0.22, speed = 0.5, gravity = 20, life = 0.5, spread = 0.1 })
+			end
+			-- the sheen breathes
+			hl.FillTransparency = 0.7 + math.sin((os.clock() - t0) * 5) * 0.06
+			task.wait(0.1)
+		end
+		if hl.Parent then
+			tw(hl, 0.4, { FillTransparency = 1, OutlineTransparency = 1 })
+			Debris:AddItem(hl, 0.45)
+		end
+	end)
 end
+
+-- 3 Slick Spin: a ring of oil under the handstand, streaks whirl round at leg height for the one turn, and on the
+-- strike a splash ring throws everyone out
 FX.F_SlickSpin = function(d)
-	local at = d.from
-	local r = d.radius or 11
-	local blocks = {}
-	for i = 1, 20 do
-		blocks[i] = blk(Vector3.new(0.9, 0.5, 0.9), i % 4 == 0 and C.shine or C.oil2, CFrame.new(at), i % 4 == 0)
+	local root = charRoot(d)
+	local at = root and root.Position or d.from
+	local r = math.min(d.radius or 11, 16)
+	local strike = math.clamp(tonumber(d.strike) or 0.25, 0, 0.6)
+	local base = floorAt(at)
+	oilPool(at, 3.5, 1.4, { spill = 0.12 })
+	local streaks = {}
+	for i = 1, 10 do
+		streaks[i] = blk(Vector3.new(0.35, 0.35, 2.6), i % 2 == 0 and C.shine or C.oil2, CFrame.new(at), i % 2 == 0, 0.1)
 	end
 	local t0 = os.clock()
 	local conn
-	conn = game:GetService("RunService").RenderStepped:Connect(function()
-		local k = os.clock() - t0
-		for i, b in ipairs(blocks) do
-			local a = i / #blocks * 6.28 + k * 14
-			local rr = r * math.min(1, k * 4)
-			b.CFrame = CFrame.new(ground(at) + Vector3.new(math.cos(a) * rr, 0.8, math.sin(a) * rr))
+	conn = RunService.RenderStepped:Connect(function()
+		local t = os.clock() - t0
+		local k = math.clamp((t - 0.08) / 0.4, 0, 1)
+		local c = root and root.Parent and root.Position or at
+		for i, s in ipairs(streaks) do
+			local a = i / #streaks * math.pi * 2 + k * math.pi * 2.4
+			local rr = 2 + k * 2.5
+			local p = Vector3.new(c.X, base.Y + 2.6 + (i % 3) * 0.6, c.Z) + Vector3.new(math.cos(a) * rr, 0, math.sin(a) * rr)
+			s.CFrame = CFrame.lookAt(p, p + Vector3.new(-math.sin(a), 0, math.cos(a)))
 		end
-		if k > 0.6 then
+		if t > 0.55 then
 			conn:Disconnect()
-			for _, b in ipairs(blocks) do
-				fade(b, 0, 0.2)
+			for _, s in ipairs(streaks) do
+				fade(s, 0, 0.15)
 			end
 		end
 	end)
-	oilDrops(at, 12)
+	task.delay(strike, function()
+		-- the splash ring rolls out to the radius
+		for i = 1, 24 do
+			local a = i / 24 * math.pi * 2
+			local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+			local b = blk(Vector3.new(0.9, 0.5, 0.9), i % 3 == 0 and C.shine or OIL_TONES[1 + i % 3], CFrame.new(base + Vector3.new(0, 0.5, 0) + dir * 2), i % 3 == 0)
+			tw(b, 0.35, { CFrame = CFrame.new(base + Vector3.new(0, 0.3, 0) + dir * r) * CFrame.Angles(0, a, 0) })
+			fade(b, 0.3, 0.25)
+		end
+		oilPool(at, r * 0.55, 2.2, { spill = 0.3, remember = true })
+		oilSplash(at, 1.3)
+		pcall(function()
+			require(script.Parent.Audio).Play("Whoosh", { pos = at, pitch = 0.9 })
+		end)
+	end)
 end
+
+-- 4 Oil Slick: a glob of oil arcs off the hand (the server hits strike + delay later) and floods the spot: a glossy
+-- pool that stays for `oil` seconds, glinting
 FX.F_OilSlick = function(d)
-	local at = d.to or d.from
+	local char = d.char
+	local to = d.to or d.from
 	local r = d.radius or 14
-	oilPuddle(at, r * 1.6, 3)
-	for _ = 1, 6 do
-		oilPuddle(at + Vector3.new((math.random() - 0.5) * r, 0, (math.random() - 0.5) * r), r * 0.5, 2.6)
+	local strike = math.clamp(tonumber(d.strike) or 0.22, 0, 0.6)
+	local travel = math.clamp(tonumber(d.travel) or 0.3, 0.05, 0.8)
+	local life = math.clamp(tonumber(d.oil) or 7, 1, 20)
+	task.delay(strike, function()
+		local hand = typeof(char) == "Instance" and char:FindFirstChild("RightHand")
+		local from = hand and hand.Position or d.from
+		local glob = {}
+		for i = 1, 7 do
+			glob[i] = blk(Vector3.one * (0.5 + math.random() * 0.5), i % 3 == 0 and C.shine or OIL_TONES[1 + i % 3], CFrame.new(from), i % 3 == 0)
+			glob[i].Reflectance = 0.3
+		end
+		local land = floorAt(to)
+		local h = math.clamp((land - from).Magnitude * 0.18, 3, 12)
+		local t0 = os.clock()
+		local conn
+		conn = RunService.RenderStepped:Connect(function()
+			local k = math.min(1, (os.clock() - t0) / travel)
+			local p = from:Lerp(land, k) + Vector3.new(0, math.sin(k * math.pi) * h, 0)
+			for i, g in ipairs(glob) do
+				local a = i * 0.9 + k * 6
+				g.CFrame = CFrame.new(p + Vector3.new(math.cos(a), math.sin(a * 1.3), math.sin(a)) * 0.6 * (1 - k * 0.5)) * CFrame.Angles(a, a, 0)
+			end
+			if math.random() < 0.5 then
+				Voxels.Pixels(p, { count = 1, colors = { C.oil2, C.shine }, size = 0.25, speed = 1, gravity = 18, life = 0.35, spread = 0.3 })
+			end
+			if k >= 1 then
+				conn:Disconnect()
+				for _, g in ipairs(glob) do
+					g:Destroy()
+				end
+				oilPool(land, r, life, { spill = 0.45, glints = true, remember = true })
+				oilSplash(land, 1.6)
+				pcall(function()
+					require(script.Parent.Audio).Play("Splash", { pos = land, pitch = 1.35 })
+				end)
+			end
+		end)
+	end)
+end
+
+-- Slick Skate (passive): jump and keep Space held; once you land you skate along on a streak of oil, steered with the
+-- move keys, faster on Oil Slick puddles, until you let go or hit a wall. Your client drives it (LinearVelocity +
+-- AlignOrientation) and tells the server (SkateState -> char attribute Skating) so everyone sees the streak.
+local function trailTile(at, dir)
+	local t = oilTile(at, 1.5, 1.4, math.atan2(-dir.X, -dir.Z))
+	t.Size = Vector3.new(1.5, 0.1, 2.2)
+	if math.random() < 0.3 then
+		local s = blk(Vector3.new(0.18, 0.04, 1.6), C.shine, t.CFrame * CFrame.new(0.35, 0.06, 0), true, 0.4)
+		fade(s, 1.2, 0.4)
 	end
-	oilDrops(at + Vector3.new(0, 2, 0), 20)
+end
+local function skateLoop()
+	local Players = game:GetService("Players")
+	local UIS = game:GetService("UserInputService")
+	local Shared = game:GetService("ReplicatedStorage").Shared
+	local Net = require(Shared.Modules.Net)
+	local Anim = require(Shared.Modules.Anim)
+	local cfg = require(Shared.Config.Fruits).SlickSkate
+	local me = Players.LocalPlayer
+	local st -- the skate in progress
+	local since -- when Space went down (nil = up)
+	local function stop()
+		if not st then
+			return
+		end
+		local s = st
+		st = nil
+		s.lv:Destroy()
+		s.ao:Destroy()
+		s.att:Destroy()
+		if s.h.Parent then
+			s.h.JumpHeight, s.h.JumpPower, s.h.AutoRotate = s.jh, s.jp, true
+			Anim.Stop(s.h, "Slick_Skate", 0.2)
+		end
+		task.spawn(Net.Request, "SkateState", { on = false })
+	end
+	local function start(h, r)
+		local look = r.CFrame.LookVector * Vector3.new(1, 0, 1)
+		local att = Instance.new("Attachment")
+		att.Name = "SlickSkate"
+		att.Parent = r
+		local lv = Instance.new("LinearVelocity")
+		lv.Attachment0 = att
+		lv.MaxForce = math.huge
+		lv.VelocityConstraintMode = Enum.VelocityConstraintMode.Vector
+		lv.RelativeTo = Enum.ActuatorRelativeTo.World
+		lv.VectorVelocity = Vector3.zero
+		lv.Parent = r
+		local ao = Instance.new("AlignOrientation")
+		ao.Mode = Enum.OrientationAlignmentMode.OneAttachment
+		ao.Attachment0 = att
+		ao.MaxTorque = math.huge
+		ao.Responsiveness = 30
+		ao.Parent = r
+		local flatVel = r.AssemblyLinearVelocity * Vector3.new(1, 0, 1)
+		st = { h = h, att = att, lv = lv, ao = ao, jh = h.JumpHeight, jp = h.JumpPower, heading = look.Magnitude > 0.1 and look.Unit or Vector3.zAxis,
+			speed = math.max(14, flatVel.Magnitude), lastDrop = 0, stuck = 0 }
+		h.JumpHeight, h.JumpPower, h.AutoRotate = 0, 0, false
+		Anim.Play(h, "Slick_Skate", { fade = 0.15 })
+		oilSplash(floorAt(r.Position), 0.8)
+		pcall(function()
+			require(script.Parent.Audio).Play("Whoosh", { pos = r.Position, pitch = 1.4 })
+		end)
+		task.spawn(Net.Request, "SkateState", { on = true })
+	end
+	RunService.Heartbeat:Connect(function(dt)
+		local c = me.Character
+		local h = c and c:FindFirstChildOfClass("Humanoid")
+		local r = c and c:FindFirstChild("HumanoidRootPart")
+		local okNow = h and r and h.Health > 0 and me:GetAttribute("Fruit") == "Slick" and not c:GetAttribute("Downed")
+			and not c:GetAttribute("Flying") and h:GetState() ~= Enum.HumanoidStateType.Swimming and not h.SeatPart
+			and not UIS:GetFocusedTextBox()
+		if not okNow then
+			since = nil
+			stop()
+			return
+		end
+		-- h.Jump = the touch jump button (phones) as well as Space
+		local held = UIS:IsKeyDown(Enum.KeyCode.Space) or UIS:IsGamepadButtonDown(Enum.UserInputType.Gamepad1, Enum.KeyCode.ButtonA) or h.Jump
+		if not held then
+			since = nil
+			stop()
+			return
+		end
+		since = since or os.clock()
+		local grounded = h.FloorMaterial ~= Enum.Material.Air
+		if not st then
+			if grounded and os.clock() - since >= cfg.HoldDelay then
+				start(h, r)
+			end
+			return
+		end
+		-- steer toward the move keys, keep gliding straight without them
+		local want = h.MoveDirection * Vector3.new(1, 0, 1)
+		if want.Magnitude > 0.1 then
+			local k = math.min(1, dt * cfg.Turn)
+			local nh = st.heading:Lerp(want.Unit, k)
+			if nh.Magnitude > 0.05 then
+				st.heading = nh.Unit
+			end
+		end
+		local target = FX.OnOil(r.Position) and cfg.OilSpeed or cfg.Speed
+		st.speed += (target - st.speed) * math.min(1, dt * cfg.Accel)
+		-- keep the body's own vertical speed (falls off ledges, rides up gentle slopes) but never let it climb fast
+		st.lv.VectorVelocity = Vector3.new(st.heading.X * st.speed, math.min(6, r.AssemblyLinearVelocity.Y), st.heading.Z * st.speed)
+		st.ao.CFrame = CFrame.lookAt(Vector3.zero, st.heading)
+		-- ran into a wall: the body cannot keep up with the push
+		local actual = (r.AssemblyLinearVelocity * Vector3.new(1, 0, 1)).Magnitude
+		st.stuck = actual < st.speed * 0.3 and st.stuck + dt or 0
+		if st.stuck > 0.25 then
+			since = os.clock() + 9e9 -- stay off until Space is pressed again
+			stop()
+			return
+		end
+		st.lastDrop += dt
+		if grounded and st.lastDrop >= 0.06 then
+			st.lastDrop = 0
+			trailTile(floorAt(r.Position - st.heading * 0.8), st.heading)
+		end
+	end)
+	-- everyone else's streak (their client skates them; the server attribute says they are)
+	local acc = {}
+	RunService.Heartbeat:Connect(function(dt)
+		for _, pl in ipairs(Players:GetPlayers()) do
+			local c = pl.Character
+			if pl ~= me and c and c:GetAttribute("Skating") then
+				local r = c:FindFirstChild("HumanoidRootPart")
+				acc[pl] = (acc[pl] or 0) + dt
+				if r and acc[pl] >= 0.08 then
+					acc[pl] = 0
+					local v = r.AssemblyLinearVelocity * Vector3.new(1, 0, 1)
+					trailTile(floorAt(r.Position), v.Magnitude > 1 and v.Unit or r.CFrame.LookVector)
+				end
+			else
+				acc[pl] = nil
+			end
+		end
+	end)
 end
 
 
@@ -2153,6 +2522,7 @@ function FX.Start()
 	folder.Name = "FruitFX"
 	folder.Parent = workspace
 	pcall(stepsLoop)
+	pcall(skateLoop)
 	-- v0.25.81 (owner: Haze legs still showed): Roblox's camera transparency controller resets LocalTransparencyModifier
 	-- on your own character's parts whenever the zoom changes, so the hidden limb blocks are re-hidden every frame
 	game:GetService("RunService").RenderStepped:Connect(function()

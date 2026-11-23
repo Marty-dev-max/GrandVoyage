@@ -393,6 +393,15 @@ function FS.Start()
 		end
 		return true
 	end, 0.1)
+	-- v0.25.84 Slick Skate: the client skates itself (it owns its physics); the attribute lets everyone else draw the
+	-- streak of oil and only a Slick user can raise it
+	Net.Handle("SkateState", function(player, data)
+		local c = player.Character
+		if c and type(data) == "table" then
+			c:SetAttribute("Skating", (data.on == true and player:GetAttribute("Fruit") == "Slick") or nil)
+		end
+		return true
+	end, 0.1)
 	Players.PlayerRemoving:Connect(function(player)
 		lastCast[player] = nil
 	end)

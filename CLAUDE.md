@@ -759,6 +759,14 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
   * v0.25.83 (Output errors): Combat.Start's mouse-hold flag is `mouseHeld` (a local named `holding` shadowed the
     module aim state, so skill key-up indexed a boolean and held aims never cast on release). WorldCull.show pcalls
     the re-parent (a stashed part destroyed meanwhile has a locked Parent and aborted the whole island).
+  * v0.25.84 FRUITS v2 phase 7 = Slick (all 6 fruits done): clips Slick_Crouch (charge loop) / SlidePunch / Spin
+    (handstand) / Pour / Skate in AnimClips (NOT uploaded yet: no lune/python on the owner's PC; runtime
+    KeyframeSequenceProvider fallback works in Studio only). Slick Slide charge stretches the Dash range (0.7-1.3x).
+    Oil Slick `oil = 7` -> CombatService oilZones (`inOil`): non-boss mobs inside are slowed (Fruits.SlickSkate OilSlow,
+    `slowMob`) and miss with OilSlip ("SLIPPED!"). FruitFX: oilPool/oilDrops/oilSplash, `ChargeOil` (Combat startAim on
+    chargeAnim Slick_Crouch), GVSlick Highlight for Slip Away. Slick Skate passive = FruitFX skateLoop: jump + hold Space
+    (or Humanoid.Jump on touch) -> LinearVelocity skate (Speed 34, 46 on oil, Y <= 6 so ramps work), stops on walls,
+    oil trail tiles; server "SkateState" -> char attr Skating -> other clients draw the trail.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

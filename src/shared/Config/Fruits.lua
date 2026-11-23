@@ -83,12 +83,13 @@ F.List = {
 		stats = { "AGI", "LUK" }, -- v0.25.69: main / second stat bonus, grows with Fruit Mastery (F.StatBonus)
 		color = Color3.fromRGB(255, 225, 120), swirl = Color3.fromRGB(255, 255, 220), icon = "✨",
 		desc = "Your skin turns slippery: attacks slide right off.",
-		passive = { flee = 15 }, passiveText = "Slick Skate: hold Space to slide forward • +15 FLEE",
+		passive = { flee = 15 }, passiveText = "Slick Skate: jump and keep Space held to skate on a streak of oil (faster on Oil Slick) • +15 FLEE",
 		skills = {
-			{ id = "F_SlickSlide", name = "Slick Slide", kind = "Dash", sp = 10, cd = 5, range = 22, mult = 1.5, charge = true, mastery = 1, fx = "Burst", desc = "Hold to crouch down, release: slide forward into a punch." },
-			{ id = "F_SlipAway", name = "Slip Away", kind = "Buff", sp = 18, cd = 25, duration = 12, buff = { flee = 45 }, mastery = 10, fx = "AuraYellow", desc = "Nothing can grab you: FLEE way up." },
-			{ id = "F_SlickSpin", name = "Slick Spin", kind = "AoE", sp = 18, cd = 8, radius = 11, mult = 1.6, mastery = 25, fx = "Tornado", desc = "Drop into a handstand and spin-kick everything around you." },
-			{ id = "F_OilSlick", name = "Oil Slick", kind = "GroundAoE", sp = 26, cd = 12, range = 40, radius = 15, mult = 1.9, mastery = 50, fx = "Smoke", desc = "Flood the ground with slippery oil." },
+			-- v0.25.84 phase 7 (docs/Plan-Fruits-v2.md): a longer charge also slides further (CombatService: range x 0.7..1.3)
+			{ id = "F_SlickSlide", name = "Slick Slide", kind = "Dash", sp = 10, cd = 5, range = 22, mult = 1.5, charge = true, anim = "Slick_SlidePunch", chargeAnim = "Slick_Crouch", mastery = 1, fx = "None", desc = "Hold to crouch down like a sprinter, release: slide forward on a streak of oil into a punch. The longer you hold, the further and harder." },
+			{ id = "F_SlipAway", name = "Slip Away", kind = "Buff", sp = 18, cd = 25, duration = 12, buff = { flee = 45 }, mastery = 10, fx = "None", desc = "Your whole body turns glossy with oil: blows slide right off (FLEE way up)." },
+			{ id = "F_SlickSpin", name = "Slick Spin", kind = "AoE", sp = 18, cd = 8, radius = 11, mult = 1.6, knockDist = 10, knockPower = 2, anim = "Slick_Spin", mastery = 25, fx = "None", desc = "Drop into a handstand and spin-kick once round on a ring of oil, sending everything around you sliding away." },
+			{ id = "F_OilSlick", name = "Oil Slick", kind = "GroundAoE", sp = 26, cd = 12, range = 40, radius = 15, mult = 1.9, delay = 0.3, oil = 7, anim = "Slick_Pour", mastery = 50, fx = "None", desc = "Fling a wave of oil at the ground: the spot turns glossy for a while. Monsters on it are slowed and slip on their own blows." },
 		},
 	},
 }
@@ -142,6 +143,10 @@ F.Channel = { TapHold = 2.5 } -- Channel skills cast from Auto Battle / a tap st
 -- Barrier Steps (Shield passive): one step under your feet each time you top out a jump with Space held, at most MaxSteps
 -- before you touch the ground again; each fades after Life seconds
 F.BarrierSteps = { MaxSteps = 14, Life = 3.5 }
+-- v0.25.84 Slick Skate (Slick passive): jump and keep Space held; once you land you skate on a streak of oil, steered
+-- with the move keys, until you let go (FruitFX skateLoop; others see it through the char attribute Skating).
+-- Oil Slick zones (CombatService): monsters standing in one walk at OilSlow and miss OilSlip of their blows.
+F.SlickSkate = { Speed = 34, OilSpeed = 46, Accel = 5, Turn = 4, HoldDelay = 0.3, OilSlow = 0.45, OilSlip = 0.4 }
 -- v0.25.80 Glass Stairway (F_GlassStairs): one step every Run studs along the drag, each rising at most Rise; they last Life s
 F.GlassStairs = { Run = 2.4, Rise = 1.3, Width = 5, Life = 12, Reach = 90 }
 F.Slingshot = { Range = 70, MinDist = 8, Cooldown = 2.5, Speed = 95, GrabSeconds = 4,

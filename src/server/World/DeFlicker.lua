@@ -33,7 +33,12 @@ function D.Run(root)
 		breathe()
 		if p.ClassName == "Part" and (p.Shape == nil or p.Shape == Enum.PartType.Block) and p.Transparency < 0.9 and p.Name ~= "Water" then -- (the Lune bake leaves Shape unset = block)
 			local cf, sz, name = p.CFrame, p.Size / 2, p.Name -- (Instance reads are slow: cache once per part)
-			local grass = p.Material == Enum.Material.Grass
+			local mat = p.Material
+			local grass = mat == Enum.Material.Grass
+			-- same material + color looks identical where it overlaps (materials map in world space): no fight to fix,
+			-- and lifting one such piece (a voxelized disc's crossed halves) pushed it into the paving above
+			local col = p.Color
+			local look = string.format("%s%d,%d,%d", mat.Name, col.R * 255 + 0.5, col.G * 255 + 0.5, col.B * 255 + 0.5)
 			local axes = {
 				{ cf.RightVector, sz.X, cf.UpVector * sz.Y, cf.LookVector * sz.Z },
 				{ cf.UpVector, sz.Y, cf.RightVector * sz.X, cf.LookVector * sz.Z },
@@ -57,7 +62,7 @@ function D.Run(root)
 							b = {}
 							buckets[key] = b
 						end
-						table.insert(b, { p = p, name = name, n = n, d = n:Dot(center), grass = grass, u0 = cu - hu, u1 = cu + hu, v0 = cv - hv, v1 = cv + hv, area = hu * hv })
+						table.insert(b, { p = p, name = name, n = n, d = n:Dot(center), grass = grass, look = look, u0 = cu - hu, u1 = cu + hu, v0 = cv - hv, v1 = cv + hv, area = hu * hv })
 					end
 				end
 			end
@@ -107,7 +112,7 @@ function D.Run(root)
 				local c0u, c1u, c0v, c1v = math.floor(A.u0 / CELL), math.floor(A.u1 / CELL), math.floor(A.v0 / CELL), math.floor(A.v1 / CELL)
 				local final = A.d
 				local function test(B)
-					if B.mark ~= A and B.p ~= A.p and math.min(A.u1, B.u1) - math.max(A.u0, B.u0) > 0.02 and math.min(A.v1, B.v1) - math.max(A.v0, B.v0) > 0.02 then
+					if B.mark ~= A and B.p ~= A.p and B.look ~= A.look and math.min(A.u1, B.u1) - math.max(A.u0, B.u0) > 0.02 and math.min(A.v1, B.v1) - math.max(A.v0, B.v0) > 0.02 then
 						final = math.max(final, B.final + STEP)
 					end
 					B.mark = A

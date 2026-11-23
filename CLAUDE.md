@@ -858,6 +858,17 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     skips HUD objects while a window is open and drops the tip when its owner is hidden/removed. Map tiles 110x96 in an
     inner sea frame (labels are tile children, z spread over the farthest island). Studio MCP mouse coords = GUI
     AbsolutePosition (screenshot y - 58 here; window X buttons sit at negative y, clicks there still work).
+  * v0.25.112 (owner): shop NPC walk-in rings: `WorldBuilder.ZONE_ROLES` (Blacksmith white-gray, Shop blue, Tavern pink,
+    Shipwright green; ZONE_RADIUS 7) colors their glow disc, sets model attr ZoneColor and disables their Talk prompt;
+    `Controllers/NpcZones` draws the neon block ring and sends `ZoneEnter` { role } on entering (retries 2 s: the server
+    may still see you outside), server WB.NearNPC check -> shared `talkTo` (QuestService.OnTalk + OpenUI). Interact
+    colors zone NPC plates and keeps their name up from afar. Other NPCs keep the prompt. Tavern Keeper sits 6 studs
+    further from the Shipwright (rings overlapped). `World/DeFlicker.Run(world)` after Voxelize: coplanar same-facing
+    overlapping Part faces get lifted STEP 0.04 per stack level (bigger face stays); ~1 s for the whole map. Keep it fast:
+    Instance reads in hot loops/sort comparators and 16-stud grid cells made it 20 s and hit the server script timeout
+    (Init aborted). Mesa grass caps 0.08 apart per lobe; VoxelChar OverallButton clears the Armor Vest plate.
+    Quest guide = "Rowan"; Daybreak house sign "BLACKSMITH". `musket_ball` pixel icon (gen_pixel_icons lead_ball,
+    IconVoxels) for Ammo_Musket; Blacksmith showcase shows blades as their pixel icon. WORLD_VERSION 26.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

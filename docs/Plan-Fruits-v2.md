@@ -89,7 +89,7 @@
 2. ✅ v0.25.66 Bounce (แขนยืดสีผิว, Recoil Cannon, Balloon/Pump Up FX, Slingshot Launch; ปุ่มมือถือ Slingshot ยังไม่มี)
 3. ✅ v0.25.74 Blaze (Blaze Fist, Flame Twister, Emberflies, Inferno, บิน + แขนขาเป็นไฟ)
 4. ✅ v0.25.76 Haze (Smoke Fist, Smoke Screen ตีพลาด, Smoke Grip ดึง, White Out ล่องหน + อมตะ)
-5. ✅ v0.25.79 Shield (Channel wall/dome + ปล่อยผลัก, บันไดบาเรีย) — เหลือโมเดล/ไอคอนผลใหม่ (รอ Blender)
+5. ✅ v0.25.79 Shield (Channel wall/dome + ปล่อยผลัก, บันไดบาเรีย) — โมเดลผลทรงโล่ใหม่ v0.25.85 (รออัปโหลด), ไอคอนผลยังเป็นแบบเก่า
 6. ✅ v0.25.82 Split (Rocket Forearm, Phantom Hand, Split Runner, Scatter Storm: ชิ้นส่วนเป็นก๊อปบล็อกตัวจริง)
 7. ✅ v0.25.84 Slick (Slick Slide ชาร์จย่อตัว, Slip Away, Slick Spin แฮนด์สแตนด์, Oil Slick แอ่งน้ำมันมอนช้า+ลื่นพลาด, Slick Skate) — ท่า Slick_* ยังไม่อัปโหลด
 

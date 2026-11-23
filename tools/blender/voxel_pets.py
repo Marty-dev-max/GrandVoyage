@@ -365,21 +365,55 @@ def fruit_v2(kind):
             P.tube([(cx + math.cos(a) * 9, cy + math.sin(a) * 9, cz - 6), (cx + math.cos(a + 0.5) * 12, cy + math.sin(a + 0.5) * 12, cz - 10), (cx + math.cos(a + 1) * 10, cy + math.sin(a + 1) * 10, cz - 13)], [2.0, 1.4, 0.6], rgb(214, 214, 228))
         stem(P, cx, cy, top)
     elif kind == "ward":
-        # crystal shell: faceted body, glowing hex barrier lines over pale cyan, a bright core visible at the facets
-        d = np.maximum(g.d_sphere((cx, cy, cz), 12), g.d_box((cx, cy, cz), (11, 11, 11), 0.785) - 1.5)  # round, lightly faceted
+        # v0.25.85 (owner spec, Shield Shield no Mi): a round SHIELD-shaped fruit: flat lens front, rounder back, a deep blue
+        # rim with gold rivets, and raised clear hex plates overlapping on the front (front/back layers alternate)
         rel = g.P - np.array((cx, cy, cz), np.float32)
-        phi = np.arctan2(rel[..., 1], rel[..., 0])
-        th = np.arccos(np.clip(rel[..., 2] / (np.linalg.norm(rel, axis=-1) + 1e-6), -1, 1))
-        u, v = phi * 6 / math.pi, th * 5 / math.pi
-        row = np.floor(v)
-        uu = u + (row % 2) * 0.5
-        hexline = (np.abs(uu - np.round(uu)) < 0.1) | (np.abs(v - np.round(v)) < 0.08)
+        ry = np.where(rel[..., 1] < 0, 5.5, 8.0)
+        q = np.sqrt((rel[..., 0] / 11.5) ** 2 + (rel[..., 1] / ry) ** 2 + (rel[..., 2] / 11.5) ** 2)
+        d = (q - 1) * 5.5
+        up = np.clip(rel[..., 2] / 24 + 0.5, 0, 1)
+        g.add(d, lambda m: (np.array(rgb(70, 160, 225), np.float32) * (0.85 + 0.25 * up[..., None])) * g.noise(0.02)[..., None])
+        # rim: a torus around the edge of the face
+        rho = np.sqrt(rel[..., 0] ** 2 + rel[..., 2] ** 2)
+        drim = np.sqrt((rho - 11.0) ** 2 + (rel[..., 1] + 0.5) ** 2) - 2.2
+        g.add(drim, lambda m: np.array(rgb(40, 80, 175), np.float32) * (0.8 + 0.35 * up[..., None]) * g.noise(0.02)[..., None])
+        for k in range(8):
+            a = k * math.pi / 4 + math.pi / 8
+            P.ball((cx + math.cos(a) * 11, cy - 2.4, cz + math.sin(a) * 11), 1.1, rgb(255, 205, 70), 0.02)
 
-        def col(m):
-            c = np.where(hexline[..., None], np.array(rgb(240, 255, 255), np.float32), np.array(rgb(110, 205, 240), np.float32))
-            return c * g.noise(0.02)[..., None]
-        g.add(d, col)
-        stem(P, cx, cy, top + 1, rgb(80, 170, 200))
+        def hexd(px, pz, r):  # flat top/bottom hexagon, r = apothem (negative inside)
+            px, pz = np.abs(px), np.abs(pz)
+            dot = -0.866025404 * px + 0.5 * pz
+            m = 2 * np.minimum(dot, 0)
+            px, pz = px - m * -0.866025404, pz - m * 0.5
+            px = px - np.clip(px, -0.577350269 * r, 0.577350269 * r)
+            pz = pz - r
+            return np.sqrt(px * px + pz * pz) * np.sign(pz)
+
+        def surf(dx, dz):  # front surface y of the lens at (dx, dz)
+            return -5.5 * math.sqrt(max(0.0, 1 - (dx * dx + dz * dz) / 11.5 ** 2))
+        plates = []
+        for k in range(6):
+            a = math.radians(30 + 60 * k)
+            plates.append((math.cos(a) * 6.0, math.sin(a) * 6.0, 1.0 if k % 2 == 0 else 0.3, k))
+        plates.sort(key=lambda p: p[2])  # back layer first, front layer overwrites where they overlap
+        plates.append((0.0, 0.0, 1.6, 6))
+        tints = [rgb(185, 240, 255), rgb(215, 248, 255), rgb(160, 230, 252)]
+        for px0, pz0, lift, k in plates:
+            hx, hz = rel[..., 0] - px0, rel[..., 2] - pz0
+            dh = hexd(hx, hz, 3.4)
+            front = surf(px0, pz0) - 0.6 - lift
+            dplate = np.maximum(dh, np.maximum(front - rel[..., 1], rel[..., 1] - 0.0))
+            tint = np.array(tints[k % 3], np.float32)
+
+            def col(m, dh=dh, hx=hx, hz=hz, tint=tint):
+                c = tint * np.ones(dh.shape + (1,), np.float32)
+                glint = (np.abs(((hx + hz) % 7.0) - 1.0) < 0.6) & (dh < -1.2)
+                c = np.where(glint[..., None], np.array(rgb(240, 253, 255), np.float32), c)
+                c = np.where((dh > -0.9)[..., None], np.array(rgb(45, 125, 215), np.float32), c)
+                return c * g.noise(0.015)[..., None]
+            g.add(dplate, col)
+        stem(P, cx, cy + 1, cz + 13, rgb(60, 120, 190))
     elif kind == "bounce":
         # rubber bubbles: a squashed ball covered in round bulges; v0.25.33 (owner): purple bulges, pink in the creases
         pts = fib_points(18, 9, (cx, cy, cz), 0.85)
@@ -396,29 +430,39 @@ def fruit_v2(kind):
                 P.ball((x - 1.2, y - 1.2, z + 2.6), 0.9, WHITE, 0)
         stem(P, cx, cy, top - 1)
     elif kind == "split":
-        # three floating slices with gaps; green skin outside, lilac flesh with seeds on the cut faces
-        d0 = g.d_ellipsoid((cx, cy, cz), (11.5, 11.5, 12))
-        z = g.P[..., 2]
-        cuts = ((cz - 12.5, cz - 4.2, 0), (cz - 2.6, cz + 3.4, 2.5), (cz + 5.0, cz + 12.5, -1.5))
-        for z0, z1, dx in cuts:
-            slab = np.maximum(z0 - z, z - z1)
-            sh = g.P - np.array((dx, 0, 0), np.float32)
-            dd = np.maximum(np.linalg.norm((sh - np.array((cx, cy, cz), np.float32)) / np.array((11.5, 11.5, 12), np.float32), axis=-1) - 1, 0) * 11.5
-            dd = np.where(np.linalg.norm((sh - np.array((cx, cy, cz), np.float32)) / np.array((11.5, 11.5, 12), np.float32), axis=-1) < 1, -1.0, dd)
-            dslice = np.maximum(dd, slab)
-            face = (np.abs(z - z0) < 1.1) | (np.abs(z - z1) < 1.1)
-            rim = np.linalg.norm((sh - np.array((cx, cy, cz), np.float32))[..., :2], axis=-1)
+        # v0.25.85 (owner: Split model): a cut fruit coming apart in three slanted slices that drift sideways
+        # (tipped toward the viewer), so the lilac flesh, pale rind, seed ring and core show on the cut faces
+        R = 11.5
 
-            def col(m, face=face, rim=rim):
-                c = np.array(rgb(80, 190, 100), np.float32) * np.ones(rim.shape + (1,), np.float32)
-                inner = face & (rim < 9.5)
-                c = np.where(inner[..., None], np.array(rgb(215, 170, 255), np.float32), c)
-                seeds = inner & ((np.floor(g.P[..., 0]) + np.floor(g.P[..., 1])) % 5 == 0) & (rim < 6)
-                c = np.where(seeds[..., None], np.array(rgb(90, 40, 120), np.float32), c)
-                return c * g.noise(0.02)[..., None]
-            g.add(dslice, col)
-        stem(P, cx - 1.5, cy, top)
-        _ = d0
+        def colour_at(rel):
+            dist = np.linalg.norm(rel, axis=-1)
+            phi = np.arctan2(rel[..., 1], rel[..., 0])
+            band = np.sin(phi * 3 + rel[..., 2] / R * 5.5)
+            c = np.array(rgb(80, 190, 100), np.float32) * np.ones(dist.shape + (1,), np.float32)
+            c = np.where((band > 0.62)[..., None], np.array(rgb(40, 125, 62), np.float32), c)
+            inner = dist < R - 1.3
+            c = np.where(inner[..., None], np.array(rgb(205, 245, 160), np.float32), c)  # rind
+            flesh = dist < R - 2.4
+            c = np.where(flesh[..., None], np.array(rgb(200, 150, 250), np.float32), c)
+            seeds = (np.abs(dist - 6.2) < 1.0) & ((np.floor(rel[..., 0]) + np.floor(rel[..., 1]) + np.floor(rel[..., 2])) % 3 == 0)
+            c = np.where(seeds[..., None], np.array(rgb(80, 30, 120), np.float32), c)
+            c = np.where((dist < 2.6)[..., None], np.array(rgb(250, 225, 255), np.float32), c)
+            return c * g.noise(0.02)[..., None]
+
+        def piece(off, lo, hi):
+            rel = g.P - np.array((cx, cy, cz), np.float32) - np.array(off, np.float32)
+            u = rel @ nrm
+            dsph = np.linalg.norm(rel, axis=-1) - R
+            g.add(np.maximum(dsph, np.maximum(lo - u, u - hi)), lambda m, rel=rel: colour_at(rel))
+        # slices cut along planes tipped toward the viewer, so each slice's cut face shows from the front
+        nrm = np.array((0.0, -0.34, 0.94), np.float32)
+        n3 = tuple(float(v) for v in nrm)
+        piece((2.4 - n3[0] * 2.2, -n3[1] * 2.2, -n3[2] * 2.2), -99, -4.5)
+        piece((-2.6, 0.0, 0.0), -4.5, 3.6)
+        piece((2.2 + n3[0] * 2.8, n3[1] * 2.8, n3[2] * 2.8), 3.6, 99)
+        for x, y, z in ((cx - 10, cy - 6, cz - 2.5), (cx + 9, cy - 7, cz + 6.5), (cx - 6, cy - 9, cz + 7.5)):
+            P.box((x, y, z), (0.7, 0.7, 0.7), rgb(200, 150, 250), 0.02)
+        stem(P, cx + 2.2, cy - 1.0, cz + R + 2.8)
     else:  # slick
         # an oil drop: round bottom, pointed top, dark amber with a bright yellow gloss streak and drips underneath
         d = np.minimum(g.d_sphere((cx, cy, cz - 1), 11), g.d_ellipsoid((cx, cy, cz + 8), (5.5, 5.5, 10)))

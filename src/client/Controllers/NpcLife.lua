@@ -124,6 +124,18 @@ local function step(now, dt)
 	end
 end
 
+-- v0.25.106: put an NPC back in its rest layout right now (UI/ForgeScene clones it and poses the copy itself)
+function NpcLife.Rest(model)
+	local st = states[model]
+	if st then
+		local cfs = table.create(#st.parts)
+		for i, rel in ipairs(st.rel) do
+			cfs[i] = st.root * rel
+		end
+		workspace:BulkMoveTo(st.parts, cfs, Enum.BulkMoveMode.FireCFrameChanged)
+	end
+end
+
 function NpcLife.Start()
 	-- v0.25.50 (owner: only some NPCs turned): every NPC prompt (shops, Job Master...) turns its NPC toward you,
 	-- not only quest dialogs

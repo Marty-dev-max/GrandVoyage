@@ -299,6 +299,10 @@ local function setup()
 		if cur >= cfg.Max then
 			return false, "Already at max refine"
 		end
+		local canEvo, _, need = ItemDB.AscendInfo(entry)
+		if canEvo and cur >= need then
+			return false, "Top of its rarity: EVOLVE it" -- v0.25.106: the track ends at the evolve level
+		end
 		local mat, matQty, beliCost = ItemDB.RefineMaterial(cur)
 		local ok, msg = Inv.Pay(player, { beli = beliCost, [mat] = matQty })
 		if not ok then

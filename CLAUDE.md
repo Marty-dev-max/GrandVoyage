@@ -838,6 +838,12 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     slots +asc): use it instead of ItemDB.Get(entry.id) for bag entries. `ItemDB.AscendInfo`, server `Ascend` (refine -> 0).
     Items GREENS = 2 Uncommon weapons per other class (ItemDB.Greens). Owner: ladder names (Forty Fathoms ...) only in
     the Index; every other screen shows the rarity (Common .. Secret). Dev "New Weapons" (`weapons` cmd) grants them all.
+  * v0.25.106 (owner): no Evolve tab: Forge shows the refine track (pips up to NeedRefine of an evolvable weapon, else
+    Refine.Max) + "then EVOLVE to X"; at the top the button is EVOLVE (server Refine refuses past it). Forge/Cards draw
+    into a 560x600 column with a UIScale fitted to the stage (100-px probe for the window UIScale). No sunburst behind
+    the item. FORGE/EVOLVE play `UI/ForgeScene` (3 s ViewportFrame: still copy of the nearest Blacksmith NPC, tags/
+    prompts stripped, `NpcLife.Rest` first; right arm + block hammer swung around the shoulder, 3 strikes = AnvilClang +
+    neon sparks + shake), the server result shows after it.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

@@ -802,6 +802,10 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
   * v0.25.96 (owner): Menu buildStage remodel: `barrel(cf, k)` (octagon slices bulging in the middle, iron hoops, lid)
     x2 + a keg on its side, rowboat (tapered rows, stripe, flush rails, floor, thwarts, oars, mast + furled sail +
     pennant). Preview without Play: loadstring the block..lookKey chunk of the synced Menu source in Studio Edit.
+  * v0.25.97 (owner): one pixel icon per weapon grade `w_<WeaponType>_<Grade>` (gen_pixel_icons WEAPON_GRADE_ICONS,
+    picked first by UI.ItemIconName for weapons); UI.ModelView("Weapons", "Shoes") returns nil (bare legs, callers fall
+    back to the voxel icon); materials wood_gold / shard_pure / badge. Render a few icons without rewriting the rest:
+    import gen_pixel_icons and call render(name) for just those names.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

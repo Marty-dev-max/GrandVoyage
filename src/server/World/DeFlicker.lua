@@ -38,7 +38,7 @@ function D.Run(root)
 			-- same material + color looks identical where it overlaps (materials map in world space): no fight to fix,
 			-- and lifting one such piece (a voxelized disc's crossed halves) pushed it into the paving above
 			local col = p.Color
-			local look = string.format("%s%d,%d,%d", mat.Name, col.R * 255 + 0.5, col.G * 255 + 0.5, col.B * 255 + 0.5)
+			local look = string.format("%s%d,%d,%d", mat.Name, math.floor(col.R * 255 + 0.5), math.floor(col.G * 255 + 0.5), math.floor(col.B * 255 + 0.5))
 			local axes = {
 				{ cf.RightVector, sz.X, cf.UpVector * sz.Y, cf.LookVector * sz.Z },
 				{ cf.UpVector, sz.Y, cf.RightVector * sz.X, cf.LookVector * sz.Z },

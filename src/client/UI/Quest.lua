@@ -454,12 +454,26 @@ local function paintChests()
 			if prompt then
 				prompt.Enabled = false
 			end
-			local lid = m:FindFirstChild("Lid")
-			if lid then
-				lid.CFrame = lid.CFrame * CFrame.new(0, 0.6, 1.1) * CFrame.Angles(math.rad(-70), 0, 0)
-				local light = lid:FindFirstChildOfClass("PointLight")
-				if light then
-					light.Enabled = false
+			-- v0.25.113: the lid Model swings up around its Hinge, the padlock is gone (VFX ChestOpen animates it first)
+			if not m:GetAttribute("LidOpen") then
+				local lid = m:FindFirstChild("Lid")
+				local hinge = lid and lid:GetAttribute("Hinge")
+				if lid and lid:IsA("Model") and typeof(hinge) == "CFrame" then
+					for _, p in ipairs(lid:GetDescendants()) do
+						if p:IsA("BasePart") then
+							p.CFrame = hinge * CFrame.Angles(math.rad(105), 0, 0) * hinge:ToObjectSpace(p.CFrame)
+						end
+					end
+				end
+				local lock = m:FindFirstChild("Lock")
+				if lock then
+					lock.Parent = nil
+				end
+				m:SetAttribute("LidOpen", true)
+			end
+			for _, l in ipairs(m:GetDescendants()) do
+				if l:IsA("PointLight") then
+					l.Enabled = false
 				end
 			end
 			for _, p in ipairs(m:GetDescendants()) do
@@ -515,7 +529,7 @@ function Quest.OnChest(d)
 	State.profile = State.profile or {}
 	State.profile.chests = State.profile.chests or {}
 	State.profile.chests[d.id] = true
-	paintChests()
+	task.delay(2, paintChests) -- after the ChestOpen FX swung the lid up
 end
 
 function Quest.Start()

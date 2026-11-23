@@ -964,6 +964,49 @@ end
 -- v0.25.13 (owner: windows looked flat): a layer of pixel particles inside `frame`: little squares that drift up
 -- and fade, plus 4-point twinkle stars. opts: float (rise + wrap), z (ZIndex, default frame.ZIndex), star (0..1 share
 -- of stars). One throttled RenderStepped per layer, disconnected when the frame goes away.
+-- v0.25.113 (owner reference: a halftone dot burst behind a portrait / combo counter, but in solid pixel squares):
+-- an N x N grid of squares, big in the middle and shrinking outward, with a slow wave rolling out from the center.
+-- Returns the holder and set(color). Fills its parent (size it with opts.size / opts.pos).
+function UI.Halftone(parent, color, opts)
+	opts = opts or {}
+	local n = opts.cells or 9
+	local holder = New("Frame", { Name = "Halftone", BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), Position = opts.pos or UDim2.fromScale(0.5, 0.5), Size = opts.size or UDim2.fromScale(1, 1), ZIndex = opts.z or parent.ZIndex, Parent = parent })
+	local cells = {}
+	local mid = (n + 1) / 2
+	for x = 1, n do
+		for y = 1, n do
+			local d = math.sqrt((x - mid) ^ 2 + (y - mid) ^ 2) / mid -- 0 center .. ~1.4 corner
+			if d <= 1.05 then
+				local f = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale((x - 0.5) / n, (y - 0.5) / n), Size = UDim2.fromScale(0, 0), BorderSizePixel = 0, BackgroundColor3 = color, ZIndex = holder.ZIndex, Parent = holder })
+				table.insert(cells, { f = f, d = d })
+			end
+		end
+	end
+	local acc, t = 0, 0
+	local conn
+	conn = RunService.RenderStepped:Connect(function(dt)
+		if not holder.Parent then
+			conn:Disconnect()
+			return
+		end
+		acc += dt
+		if acc < 1 / 20 or not holder.Visible then
+			return
+		end
+		t += acc
+		acc = 0
+		for _, c in ipairs(cells) do
+			local k = math.clamp(1 - c.d * 0.85 + 0.22 * math.sin(t * 3 - c.d * 7), 0, 1)
+			c.f.Size = UDim2.fromScale(0.8 * k / n, 0.8 * k / n)
+		end
+	end)
+	return holder, function(c)
+		for _, cell in ipairs(cells) do
+			cell.f.BackgroundColor3 = c
+		end
+	end
+end
+
 function UI.Sparkles(frame, color, n, opts)
 	opts = opts or {}
 	color = color or Color3.new(1, 1, 1)
@@ -2158,6 +2201,8 @@ local barScale = New("UIScale", { Parent = comboBar })
 -- rank letter + name ride beside the fill level; hits and total sit at the bottom
 local letter = UI.Text(comboFrame, "D", 78, Color3.new(1, 1, 1), "Display", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(70, 150), Size = UDim2.fromOffset(140, 90), TextXAlignment = Enum.TextXAlignment.Center, Rotation = -8, ZIndex = 3, TextWrapped = false })
 local letterScale = New("UIScale", { Parent = letter })
+-- v0.25.113 (owner reference): a small halftone burst of pixel squares behind the letter, in the rank color
+local halftone, setHalftone = UI.Halftone(comboFrame, RANKS[1][3], { size = UDim2.fromOffset(130, 130), pos = UDim2.fromOffset(70, 150), z = 1, cells = 9 })
 -- v0.24.6 (owner): just the letter (no rank word); HITS sits right under its number; TOTAL DMG shares the color of its
 -- number, which heats up from gold to orange to red (and a hot crimson past 5,000) as the damage grows
 local rankName = UI.Text(comboFrame, "", 16, Color3.new(1, 1, 1), "Display", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromOffset(70, 192), Size = UDim2.fromOffset(150, 18), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 3, Visible = false })
@@ -2200,6 +2245,7 @@ local function paint(rank)
 	barStroke.Color = rank >= 4 and r[3]:Lerp(T.Edge, 0.35) or T.Edge
 	head.ImageColor3 = r[3]:Lerp(Color3.new(1, 1, 1), 0.4)
 	letter.TextSize = 70 + #r[1] * 4
+	setHalftone(r[3]:Lerp(T.PanelDeep, 0.25))
 end
 
 -- a bubble rising inside the tube
@@ -2320,6 +2366,7 @@ RunService.RenderStepped:Connect(function(dt)
 	letter.Position = UDim2.fromOffset(70, letterY)
 	rankName.Position = UDim2.fromOffset(70, letterY + 40)
 	flames.Position = UDim2.fromOffset(70, letterY + 30)
+	halftone.Position = UDim2.fromOffset(70, letterY)
 	-- on fire from S up: flickering flames behind the letter (SSS flames shift color), the tube glows too
 	if rank >= 5 then
 		flames.ImageTransparency = 0.15 + math.random() * 0.15

@@ -82,7 +82,7 @@ local function open(player, model)
 	end
 	local found, total = countFound(p, islandId)
 	Net.Push(player, "ChestOpened", { id = id, tier = tier, rarity = def.rarity, name = def.name, island = islandId, found = found, total = total })
-	Net.FX("ChestOpen", { pos = model.PrimaryPart.Position, rarity = def.rarity }, model.PrimaryPart.Position, 200)
+	Net.FX("ChestOpen", { pos = model.PrimaryPart.Position, rarity = def.rarity, model = model, id = id, by = player.UserId }, model.PrimaryPart.Position, 200)
 	R.QuestService.Event(player, "Chest", tier)
 	R.PearlService.Earn(player, PearlsCfg.Sources.Chest[tier] or 0, "chest")
 	if found == total and total > 0 then

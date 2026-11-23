@@ -1474,16 +1474,123 @@ handlers.ChestShake = function(d)
 	end)
 	VFX.Sparks(d.pos + Vector3.new(0, 1.5, 0), Color3.fromRGB(255, 220, 120), 4, 3)
 end
+-- v0.25.113 (owner): the padlock flips off and drops, the lid swings up on its hinge and real coins pop out and bounce.
+-- For everyone but the opener the lid closes again (the chest is still unlooted for them).
+local function chestPose(parts, base, hinge, a)
+	local cfs = {}
+	for i, p in ipairs(parts) do
+		cfs[i] = hinge * CFrame.Angles(a, 0, 0) * base[i]
+	end
+	workspace:BulkMoveTo(parts, cfs, Enum.BulkMoveMode.FireCFrameChanged)
+end
+local function chestCoins(top, n)
+	local Debris = game:GetService("Debris")
+	for i = 1, n do
+		local c = Instance.new("Part")
+		c.Name = "ChestCoin"
+		c.Size = Vector3.new(0.5, 0.14, 0.5)
+		c.Color = i % 3 == 0 and Color3.fromRGB(255, 232, 120) or Color3.fromRGB(255, 196, 52)
+		c.Material = Enum.Material.Metal
+		c.CanQuery, c.CanTouch, c.CastShadow = false, false, false
+		c.CFrame = CFrame.new(top + Vector3.new((math.random() - 0.5) * 1.6, 0, (math.random() - 0.5) * 1)) * CFrame.Angles(math.random() * 6, math.random() * 6, 0)
+		c.Parent = workspace
+		local a = math.random() * math.pi * 2
+		c.AssemblyLinearVelocity = Vector3.new(math.cos(a) * (4 + math.random() * 7), 16 + math.random() * 12, math.sin(a) * (4 + math.random() * 7))
+		c.AssemblyAngularVelocity = Vector3.new(math.random(-20, 20), math.random(-20, 20), math.random(-20, 20))
+		task.delay(2.2 + math.random() * 0.6, function()
+			if c.Parent then
+				TweenService:Create(c, TweenInfo.new(0.35), { Size = Vector3.new(0.05, 0.05, 0.05), Transparency = 1 }):Play()
+			end
+		end)
+		Debris:AddItem(c, 3.4)
+	end
+end
 handlers.ChestOpen = function(d)
-	-- treasure! a golden light pillar shoots out of the chest, coins and sparkles burst, a ring rolls out
 	local Rarity = require(game:GetService("ReplicatedStorage").Shared.Modules.Rarity)
 	local c = Rarity.Get(d.rarity).color:Lerp(Color3.fromRGB(255, 215, 90), 0.5)
 	local base = d.pos + Vector3.new(0, 1.5, 0)
-	emit(base, { Texture = Tex.glow, Color = ColorSequence.new(Color3.fromRGB(255, 245, 200), c), Size = seq(3.5, 0.5), Transparency = seq(0, 1), Lifetime = NumberRange.new(0.6, 1.1), Speed = NumberRange.new(28, 45), SpreadAngle = Vector2.new(6, 6), EmissionDirection = Enum.NormalId.Top, Brightness = 2 }, 40, 1.2)
-	emit(base, { Texture = Tex.sparkle, Color = ColorSequence.new(Color3.fromRGB(255, 230, 120)), Size = seq(1.6, 0), Lifetime = NumberRange.new(0.6, 1.2), Speed = NumberRange.new(10, 22), SpreadAngle = Vector2.new(40, 40), EmissionDirection = Enum.NormalId.Top, Acceleration = Vector3.new(0, -30, 0), RotSpeed = NumberRange.new(-300, 300) }, 26, 1.3)
-	VFX.Flash(base, c, 8)
-	VFX.Ring(d.pos - Vector3.new(0, 0.5, 0), 10, c, 0.6)
-	VFX.Focus(base, Color3.fromRGB(255, 240, 200))
+	local m = d.model
+	local lid = typeof(m) == "Instance" and m:FindFirstChild("Lid")
+	local hinge = lid and lid:GetAttribute("Hinge")
+	local mine = d.by == game:GetService("Players").LocalPlayer.UserId
+	if lid and typeof(hinge) == "CFrame" and not m:GetAttribute("LidOpen") then
+		local parts, rel = {}, {}
+		for _, p in ipairs(lid:GetDescendants()) do
+			if p:IsA("BasePart") then
+				table.insert(parts, p)
+				table.insert(rel, hinge:ToObjectSpace(p.CFrame))
+			end
+		end
+		local lock = m:FindFirstChild("Lock")
+		local lparts, lcf = {}, {}
+		if lock then
+			for _, p in ipairs(lock:GetDescendants()) do
+				if p:IsA("BasePart") then
+					table.insert(lparts, p)
+					table.insert(lcf, p.CFrame)
+				end
+			end
+		end
+		if mine or not m:GetAttribute("ShownOpen") then
+			m:SetAttribute("LidOpen", mine)
+		end
+		task.spawn(function()
+			-- 1) the padlock springs: shackle pops, the lock flips forward and tumbles to the ground
+			Audio.Play("BlkTick", { pos = d.pos, volume = 0.7, pitch = 1.4 })
+			local pivot = lock and lock:GetPivot()
+			local fwd = hinge.LookVector -- the chest front is the hinge's -Z (LookVector)
+			local t0 = os.clock()
+			while lock and os.clock() - t0 < 0.55 do
+				local k = (os.clock() - t0) / 0.55
+				local off = CFrame.new(fwd * (k * 1.6) + Vector3.new(0, 0.9 * math.sin(k * math.pi) - k * 1.3, 0))
+				local cfs = {}
+				for i, cf in ipairs(lcf) do
+					cfs[i] = off * pivot * CFrame.Angles(-k * 4, 0, k * 1.2) * pivot:ToObjectSpace(cf)
+				end
+				workspace:BulkMoveTo(lparts, cfs, Enum.BulkMoveMode.FireCFrameChanged)
+				task.wait()
+			end
+			for _, p in ipairs(lparts) do
+				p.LocalTransparencyModifier = 1
+			end
+			-- 2) the lid swings up (eased, a little overshoot) while the coins burst out
+			Audio.Play("ChestOpen", { pos = d.pos })
+			chestCoins(d.pos + Vector3.new(0, 2.4, 0), 16)
+			emit(base + Vector3.new(0, 0.6, 0), { Texture = Tex.sparkle, Color = ColorSequence.new(Color3.fromRGB(255, 230, 120)), Size = seq(1.2, 0), Lifetime = NumberRange.new(0.5, 1), Speed = NumberRange.new(8, 16), SpreadAngle = Vector2.new(40, 40), EmissionDirection = Enum.NormalId.Top, Acceleration = Vector3.new(0, -25, 0), RotSpeed = NumberRange.new(-300, 300) }, 18, 1.1)
+			for i = 1, 5 do
+				task.delay(0.15 + i * 0.12, function()
+					Audio.Play("BlkCoin", { pos = d.pos, volume = 0.5, pitch = 0.9 + i * 0.08 })
+				end)
+			end
+			t0 = os.clock()
+			while os.clock() - t0 < 0.45 do
+				local k = (os.clock() - t0) / 0.45
+				local e = 1 + 2.7 * (k - 1) ^ 3 + 1.7 * (k - 1) ^ 2 -- back-out
+				chestPose(parts, rel, hinge, math.rad(105) * e)
+				task.wait()
+			end
+			chestPose(parts, rel, hinge, math.rad(105))
+			if mine or m:GetAttribute("ShownOpen") then
+				return
+			end
+			-- someone else's loot: close it again and put the padlock back
+			task.wait(3)
+			t0 = os.clock()
+			while os.clock() - t0 < 0.4 do
+				chestPose(parts, rel, hinge, math.rad(105) * (1 - (os.clock() - t0) / 0.4))
+				task.wait()
+			end
+			chestPose(parts, rel, hinge, 0)
+			workspace:BulkMoveTo(lparts, lcf, Enum.BulkMoveMode.FireCFrameChanged)
+			for _, p in ipairs(lparts) do
+				p.LocalTransparencyModifier = 0
+			end
+		end)
+	else
+		chestCoins(d.pos + Vector3.new(0, 2.4, 0), 12)
+	end
+	VFX.Flash(base, c, 5)
+	VFX.Ring(d.pos - Vector3.new(0, 0.5, 0), 8, c, 0.6)
 end
 handlers.JobChange = function(d)
 	for i = 0, 3 do
@@ -2030,9 +2137,6 @@ local fxSounds = {
 		VFX.lastKillAt = now
 		-- kill streaks only nudge the pitch a little (owner: a rising pitch got shrill when killing fast)
 		return d.boss and "BossRoar" or "MonsterDie", d.pos, 1 + math.min(VFX.killStreak, 5) * 0.02
-	end,
-	ChestOpen = function(d)
-		return "ChestOpen", d.pos
 	end,
 	ChestShake = function(d)
 		return "ChestRattle", d.pos

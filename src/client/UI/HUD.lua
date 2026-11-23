@@ -81,13 +81,6 @@ local SEGMENTS = 15
 local RING_SIZE = 148
 local ring -- { frame, scale, base = {segs}, job = {segs}, shown = {base, job}, target = {base, job}, hold, jobColor }
 
-local function segmentAngle(half, i)
-	-- degrees clockwise from the top. half = "base" (left side) | "job" (right side); i = 1 at the bottom
-	local gap, span = 14, 180 - 28
-	local a = 180 - gap - (i - 0.5) * span / SEGMENTS
-	return half == "job" and a or 360 - a
-end
-
 local function buildRing(parent, pos)
 	local frame = New("Frame", { Size = UDim2.fromOffset(RING_SIZE, RING_SIZE), Position = pos, BackgroundTransparency = 1, ZIndex = 3, Parent = parent })
 	local sc = New("UIScale", { Parent = frame })
@@ -101,16 +94,31 @@ local function buildRing(parent, pos)
 		Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.55), NumberSequenceKeypoint.new(0.5, 0.35), NumberSequenceKeypoint.new(1, 0.6) }),
 		Parent = disc,
 	})
-	local c, r = RING_SIZE / 2, RING_SIZE / 2 - 13
+	-- v0.25.113 (owner drew it): the ring is a SQUARE frame of segments around the square portrait. Each half runs
+	-- from the level badge (bottom middle) along the bottom edge, up its side and along the top to the middle.
+	local c, h = RING_SIZE / 2, RING_SIZE / 2 - 13
+	local B0, T0 = 30, 6 -- gap kept clear at the bottom (badge) and at the top middle
+	local function squarePoint(s)
+		-- s along the left half path, 0 = bottom middle
+		if s <= h then
+			return c - s, c + h, 0
+		elseif s <= 3 * h then
+			return c - h, c + h - (s - h), 90
+		end
+		return c - h + (s - 3 * h), c - h, 0
+	end
 	local segs = { base = {}, job = {} }
 	for _, half in ipairs({ "base", "job" }) do
 		for i = 1, SEGMENTS do
-			local a = math.rad(segmentAngle(half, i))
+			local x, y, rot = squarePoint(B0 + (i - 0.5) * (4 * h - B0 - T0) / SEGMENTS)
+			if half == "job" then
+				x = 2 * c - x
+			end
 			local seg = New("Frame", {
 				AnchorPoint = Vector2.new(0.5, 0.5),
-				Position = UDim2.fromOffset(c + r * math.sin(a), c - r * math.cos(a)),
+				Position = UDim2.fromOffset(x, y),
 				Size = UDim2.fromOffset(11, 17),
-				Rotation = math.deg(a),
+				Rotation = rot,
 				BackgroundColor3 = T.PanelDeep,
 				ZIndex = 4,
 				Parent = frame,
@@ -124,6 +132,9 @@ local function buildRing(parent, pos)
 	local face = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(RING_SIZE - 58, RING_SIZE - 58), BackgroundColor3 = T.Ocean, ZIndex = 5, Parent = frame })
 	UI.Corner(face, RING_SIZE)
 	local faceStroke = UI.Stroke(face, T.Gold, 3.5)
+	-- v0.25.113 (owner reference): pixel halftone burst in the class color behind the head
+	local _, setFaceFx = UI.Halftone(face, T.Purple, { z = 5, cells = 9, size = UDim2.fromScale(1.1, 1.1) })
+	face.ClipsDescendants = true
 	local img = New("ImageLabel", { BackgroundTransparency = 1, Size = UDim2.new(1, -6, 1, -6), Position = UDim2.fromOffset(3, 3), ZIndex = 6, Parent = face })
 	UI.Corner(img, RING_SIZE)
 	task.spawn(function()
@@ -144,6 +155,7 @@ local function buildRing(parent, pos)
 		segs = segs,
 		face = face,
 		faceStroke = faceStroke,
+		setFaceFx = setFaceFx,
 		lvl = lvl,
 		shown = { base = 0, job = 0 },
 		target = { base = 0, job = 0 },
@@ -308,7 +320,9 @@ local function buildStatus()
 	statusCard = card
 	buildRing(UI.Root, UDim2.fromOffset(14, 10))
 	local name = UI.Text(card, player.DisplayName, 24, T.Text, "Display", { Position = UDim2.fromOffset(70, 6), Size = UDim2.new(1, -80, 0, 28), TextWrapped = false, Visible = false })
-	local cls = UI.Text(card, "", 18, T.TextSoft, "Bold", { Position = UDim2.fromOffset(70, 6), Size = UDim2.new(1, -80, 0, 22), TextWrapped = false })
+	-- v0.25.113 (owner): class • job and the EXP / JOB readouts are centered over the bars, in the pixel font
+	local cls = UI.Text(card, "", 15, T.TextSoft, "Display", { Position = UDim2.fromOffset(70, 8), Size = UDim2.new(1, -82, 0, 20), TextWrapped = false, TextXAlignment = Enum.TextXAlignment.Center })
+	New("UIStroke", { Color = T.Edge, Thickness = 2, Parent = cls })
 	local holder = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(70, 31), Size = UDim2.new(1, -82, 0, 46), Parent = card })
 	UI.List(holder, nil, 5)
 	bars = {
@@ -319,13 +333,29 @@ local function buildStatus()
 	}
 	-- EXP readouts that match the two ring halves
 	local row = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(70, 80), Size = UDim2.new(1, -82, 0, 18), Parent = card })
-	UI.List(row, Enum.FillDirection.Horizontal, 14)
-	bars.expText = UI.Text(row, "", 15, T.Green, "Display", { Size = UDim2.fromOffset(110, 18), TextWrapped = false })
-	bars.jobText = UI.Text(row, "", 15, T.Purple, "Display", { Size = UDim2.fromOffset(110, 18), TextWrapped = false })
+	UI.List(row, Enum.FillDirection.Horizontal, 18, Enum.HorizontalAlignment.Center)
+	bars.expText = UI.Text(row, "", 14, T.Green, "Display", { Size = UDim2.fromOffset(120, 18), TextWrapped = false, TextXAlignment = Enum.TextXAlignment.Center })
+	bars.jobText = UI.Text(row, "", 14, T.Purple, "Display", { Size = UDim2.fromOffset(120, 18), TextWrapped = false, TextXAlignment = Enum.TextXAlignment.Center })
+	New("UIStroke", { Color = T.Edge, Thickness = 2, Parent = bars.expText })
+	New("UIStroke", { Color = T.Edge, Thickness = 2, Parent = bars.jobText })
 	-- v0.24.12 (owner): Store boost timers (2x EXP / 2x DROP / FRUIT RADAR) sit right under the EXP readouts;
 	-- Controllers/Heritage fills this row
 	HUD.boostRow = New("Frame", { Name = "BoostRow", BackgroundTransparency = 1, Position = UDim2.fromOffset(70, 101), Size = UDim2.new(1, -82, 0, 20), Parent = card })
 	UI.List(HUD.boostRow, Enum.FillDirection.Horizontal, 6)
+	-- v0.25.113 (owner: frame too tall): the card only grows for the boost row while a boost is running
+	local function fitCard()
+		local any = false
+		for _, ch in ipairs(HUD.boostRow:GetChildren()) do
+			if ch:IsA("GuiObject") then
+				any = true
+			end
+		end
+		HUD.cardH = any and 128 or 106
+		card.Size = UDim2.fromOffset(card.Size.X.Offset, HUD.cardH)
+	end
+	HUD.boostRow.ChildAdded:Connect(fitCard)
+	HUD.boostRow.ChildRemoved:Connect(fitCard)
+	fitCard()
 	buffRow = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(170, 158), Size = UDim2.fromOffset(300, 30), Parent = UI.Root })
 	-- v0.24.8 (owner): the party sits right under the player card as one horizontal strip (above the quest tracker):
 	-- member chips with name + HP while in a party, else a PARTY button that opens the Party window
@@ -1165,7 +1195,8 @@ local function refresh()
 	bars.cls.Text = (fruitDef and (fruitDef.icon .. " ") or "") .. (cls and cls.icon or "") .. " " .. UI.Colored(player:GetAttribute("ClassName") or "", cls and cls.color or T.Text)
 		.. "  •  Job Lv." .. (player:GetAttribute("JobLevel") or 1) .. (guild and ("  •  " .. UI.Colored(guild, guildColor)) or "")
 	ring.jobColor = cls and (cls.ringColor or cls.color) or T.Purple
-	ring.face.BackgroundColor3 = cls and cls.color or T.Ocean
+	ring.face.BackgroundColor3 = (cls and cls.color or T.Ocean):Lerp(Color3.fromRGB(10, 10, 20), 0.6)
+	ring.setFaceFx(cls and cls.color or T.Ocean)
 	bars.expText.Text = string.format("EXP %.1f%%", ring.target.base * 100)
 	bars.jobText.Text = string.format("JOB %.1f%%", ring.target.job * 100)
 	bars.jobText.TextColor3 = ring.jobColor
@@ -1386,7 +1417,7 @@ function HUD.Layout()
 	if bottomCard then
 		statusCard.AnchorPoint = Vector2.new(0, 1)
 		statusCard.Position = UDim2.new(0, 100, 1, -14)
-		statusCard.Size = UDim2.fromOffset(420, 128)
+		statusCard.Size = UDim2.fromOffset(420, HUD.cardH or 106)
 		ring.frame.Position = UDim2.new(0, 14, 1, -166)
 		buffRow.AnchorPoint = Vector2.new(0, 1)
 		buffRow.Position = UDim2.new(0, 170, 1, -146)
@@ -1400,7 +1431,7 @@ function HUD.Layout()
 		statusCard.AnchorPoint = Vector2.zero
 		ring.frame.Position = UDim2.fromOffset(14, topY)
 		statusCard.Position = UDim2.fromOffset(100, topY + 12)
-		statusCard.Size = UDim2.fromOffset(compact and 330 or 400, 128)
+		statusCard.Size = UDim2.fromOffset(compact and 330 or 400, HUD.cardH or 106)
 		buffRow.AnchorPoint = Vector2.zero
 		buffRow.Position = UDim2.fromOffset(compact and 356 or 426, topY + 176)
 		if HUD.hotbar then

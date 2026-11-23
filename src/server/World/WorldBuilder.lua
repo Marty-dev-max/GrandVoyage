@@ -223,13 +223,14 @@ local function buildShipyard(island)
 	for i = 0, count - 1 do
 		local x = baseX + i * (w + 10)
 		local origin = CFrame.new(x, 5, platformZ + l / 2)
-		local plotPart = P(Vector3.new(w, 0.2, l), Color3.fromRGB(120, 200, 255), CFrame.new(x + w / 2, 5.05, platformZ), { transparency = 0.6, collide = false, name = "Plot", material = M.Neon, shadow = false })
+		-- v0.25.113 (owner: the build plots were huge glowing cyan slabs at night): a wooden slipway floor + plain rails
+		local plotPart = P(Vector3.new(w, 0.2, l), Color3.fromRGB(196, 160, 112), CFrame.new(x + w / 2, 5.05, platformZ), { collide = false, name = "Plot", material = M.WoodPlanks, shadow = false })
 		plotPart:SetAttribute("Island", island.id)
 		plotPart:SetAttribute("Origin", origin)
 		plotPart:SetAttribute("StandCf", CFrame.new(x + w / 2, 8, platformZ + l / 2 + 6))
 		CollectionService:AddTag(plotPart, "Plot")
 		for _, sx in ipairs({ 0, w }) do
-			P(Vector3.new(0.4, 0.4, l), Color3.new(1, 1, 1), CFrame.new(x + sx, 5.3, platformZ), { material = M.Neon, collide = false, shadow = false })
+			P(Vector3.new(0.6, 0.5, l), Color3.fromRGB(110, 76, 46), CFrame.new(x + sx, 5.3, platformZ), { material = M.Wood, collide = false, shadow = false })
 		end
 		-- crane
 		P(Vector3.new(1.4, 26, 1.4), Color3.fromRGB(240, 190, 60), CFrame.new(x + w + 5, 18, platformZ - l / 2 + 4), { material = M.Metal, decor = true })
@@ -348,20 +349,67 @@ local function chestModel(id, tier, island, pos, yaw)
 	local m = Instance.new("Model")
 	m.Name = "Chest_" .. id
 	local cf = CFrame.new(pos) * CFrame.Angles(0, yaw, 0)
-	local big = tier == "Captain" and 1.35 or 1
-	local body = P(Vector3.new(3.4, 2, 2.3) * big, def.body, cf * CFrame.new(0, 1 * big, 0), { parent = m, material = M.WoodPlanks, name = "Body" })
-	local lid = P(Vector3.new(3.5, 0.9, 2.4) * big, def.body:Lerp(Color3.new(1, 1, 1), 0.08), cf * CFrame.new(0, 2.45 * big, 0), { parent = m, material = M.WoodPlanks, name = "Lid" })
-	for _, x in ipairs({ -1.1, 1.1 }) do
-		P(Vector3.new(0.35, 2.95, 2.45) * big, def.trim, cf * CFrame.new(x * big, 1.5 * big, 0), { parent = m, material = M.Metal })
+	local k = tier == "Captain" and 1.35 or 1
+	-- v0.25.113 (owner references): voxel treasure chest = plank box with frame bands (trim color), corner caps,
+	-- a hinged lid Model (attribute Hinge = its back edge, client opens it), a padlock Model on the front and a gold heap
+	-- inside that shows once the lid swings up
+	local function at(x, y, z)
+		return cf * CFrame.new(x * k, y * k, z * k)
 	end
-	P(Vector3.new(0.6, 0.7, 0.2) * big, def.trim, cf * CFrame.new(0, 1.8 * big, -1.2 * big), { parent = m, material = M.Metal, name = "Lock" })
+	local dark = def.body:Lerp(Color3.new(0, 0, 0), 0.3)
+	local trimDark = def.trim:Lerp(Color3.new(0, 0, 0), 0.25)
+	local body = P(Vector3.new(3.2, 1.9, 2.1) * k, def.body, at(0, 0.95, 0), { parent = m, material = M.WoodPlanks, name = "Body" })
+	for _, y in ipairs({ 0.62, 1.28 }) do
+		P(Vector3.new(3.22, 0.08, 2.12) * k, dark, at(0, y, 0), { parent = m, material = M.Wood, collide = false })
+	end
+	P(Vector3.new(3.36, 0.24, 2.26) * k, def.trim, at(0, 0.12, 0), { parent = m, material = M.Metal, collide = false })
+	P(Vector3.new(3.34, 0.18, 2.24) * k, def.trim, at(0, 1.84, 0), { parent = m, material = M.Metal, collide = false })
+	for _, x in ipairs({ -0.85, 0.85 }) do
+		P(Vector3.new(0.3, 1.96, 2.2) * k, def.trim, at(x, 0.98, 0), { parent = m, material = M.Metal, collide = false })
+	end
+	for _, sx in ipairs({ -1, 1 }) do
+		for _, sz in ipairs({ -1, 1 }) do
+			P(Vector3.new(0.32, 2, 0.32) * k, trimDark, at(sx * 1.5, 1, sz * 0.95), { parent = m, material = M.Metal, collide = false })
+		end
+	end
+	-- the hoard (hidden inside the closed lid)
+	local gold, goldHi = Color3.fromRGB(255, 196, 52), Color3.fromRGB(255, 232, 120)
+	P(Vector3.new(2.9, 0.3, 1.8) * k, gold, at(0, 2.02, 0), { parent = m, material = M.Metal, collide = false, name = "Hoard" })
+	for i, c in ipairs({ { -0.9, -0.3 }, { -0.2, 0.25 }, { 0.6, -0.2 }, { 1.05, 0.35 }, { 0.15, -0.45 }, { -0.7, 0.4 } }) do
+		P(Vector3.new(0.7, 0.22, 0.7) * k, i % 2 == 0 and goldHi or gold, at(c[1], 2.2 + (i % 3) * 0.06, c[2]), { parent = m, material = M.Metal, collide = false })
+	end
+	-- the lid: a Model turned around its back top edge
+	local lidM = Instance.new("Model")
+	lidM.Name = "Lid"
+	lidM.Parent = m
+	P(Vector3.new(3.24, 0.5, 2.14) * k, def.body:Lerp(Color3.new(1, 1, 1), 0.08), at(0, 2.2, 0), { parent = lidM, material = M.WoodPlanks, name = "LidTop" })
+	P(Vector3.new(3.0, 0.3, 1.7) * k, def.body:Lerp(Color3.new(1, 1, 1), 0.12), at(0, 2.58, 0), { parent = lidM, material = M.WoodPlanks, collide = false })
+	P(Vector3.new(3.36, 0.16, 2.28) * k, def.trim, at(0, 2.0, 0), { parent = lidM, material = M.Metal, collide = false })
+	for _, x in ipairs({ -0.85, 0.85 }) do
+		P(Vector3.new(0.3, 0.84, 2.2) * k, def.trim, at(x, 2.34, 0), { parent = lidM, material = M.Metal, collide = false })
+	end
+	for _, sx in ipairs({ -1, 1 }) do
+		P(Vector3.new(0.34, 0.56, 2.22) * k, trimDark, at(sx * 1.5, 2.22, 0), { parent = lidM, material = M.Metal, collide = false })
+	end
+	P(Vector3.new(0.5, 0.42, 0.14) * k, def.trim, at(0, 2.0, -1.12), { parent = lidM, material = M.Metal, collide = false }) -- hasp
+	lidM:SetAttribute("Hinge", at(0, 1.95, 1.07))
+	-- padlock: body + shackle through the hasp
+	local lock = Instance.new("Model")
+	lock.Name = "Lock"
+	lock.Parent = m
+	P(Vector3.new(0.62, 0.54, 0.26) * k, trimDark, at(0, 1.52, -1.24), { parent = lock, material = M.Metal, collide = false, name = "LockBody" })
+	P(Vector3.new(0.14, 0.14, 0.3) * k, Color3.fromRGB(30, 24, 20), at(0, 1.48, -1.26), { parent = lock, collide = false })
+	for _, x in ipairs({ -0.2, 0.2 }) do
+		P(Vector3.new(0.12, 0.34, 0.12) * k, Color3.fromRGB(170, 170, 180), at(x, 1.94, -1.22), { parent = lock, material = M.Metal, collide = false })
+	end
+	P(Vector3.new(0.52, 0.12, 0.12) * k, Color3.fromRGB(170, 170, 180), at(0, 2.12, -1.22), { parent = lock, material = M.Metal, collide = false })
 	-- glow ring + light so chests read from a distance
-	Cyl(0.15, 6 * big, def.trim, pos + Vector3.new(0, 0.1, 0), { parent = m, material = M.Neon, transparency = 0.55, collide = false })
+	Cyl(0.15, 6 * k, def.trim, pos + Vector3.new(0, 0.1, 0), { parent = m, material = M.Neon, transparency = 0.55, collide = false })
 	local light = Instance.new("PointLight")
 	light.Color = def.trim
 	light.Range = 14
 	light.Brightness = 1.4
-	light.Parent = lid
+	light.Parent = body
 	m.PrimaryPart = body
 	m:SetAttribute("ChestId", id)
 	m:SetAttribute("Tier", tier)
@@ -492,25 +540,10 @@ function addBannerAndArena(island, c)
 	t3.TextColor3 = Color3.fromRGB(255, 220, 90)
 	t3:SetAttribute("MinLevel", island.levels[1])
 	t3.Parent = bb
-	-- a sea boss with no arena (v0.23.0, Bay Serpent): only a ring of red buoys and a warning sign over the water
+	-- a sea boss with no arena (v0.23.0, Bay Serpent). v0.25.113 (owner): no buoys and no warning sign any more,
+	-- players find it by sailing out
 	if island.boss and island.boss.atSea and island.boss.sea then
-		local bp = Vector3.new(island.x + island.boss.offset.X, 0, island.boss.offset.Y)
-		for i = 0, 7 do
-			local a = i / 8 * math.pi * 2
-			local p = bp + Vector3.new(math.cos(a) * 95, 0, math.sin(a) * 95)
-			Cyl(5, 3.2, Color3.fromRGB(230, 60, 50), p + Vector3.new(0, 0.6, 0), { collide = false })
-			Ball(1.2, Color3.fromRGB(255, 230, 140), p + Vector3.new(0, 3.6, 0), { material = M.Neon, collide = false, decor = true })
-		end
-		local marker = P(Vector3.new(1, 1, 1), Color3.new(1, 1, 1), CFrame.new(bp + Vector3.new(0, 30, 0)), { transparency = 1, collide = false })
-		local bbb = Instance.new("BillboardGui")
-		bbb.Size = UDim2.fromOffset(320, 50)
-		bbb.MaxDistance = 900
-		bbb.Parent = marker
-		local bt = t:Clone()
-		bt.Size = UDim2.fromScale(1, 1)
-		bt.Text = "☠ SERPENT WATERS"
-		bt.TextColor3 = Color3.fromRGB(255, 110, 110)
-		bt.Parent = bbb
+		local _ = island.boss
 	elseif island.boss and island.boss.atSea then
 		local bp = Vector3.new(island.x + island.boss.offset.X, 0, island.boss.offset.Y)
 		local ar = island.boss.arenaRadius or 42 -- deck radius
@@ -984,7 +1017,7 @@ end
 -- away and rebuilt from code at server start (so the owner's published place updates through Rojo too).
 -- Hand-built content made in Studio goes in workspace.Handmade (never touched by rebuilds). Kit props placed there
 -- (tagged EnvProp/EnvPart) are dressed with the stylized meshes like the generated ones.
-WB.WORLD_VERSION = 26 -- v26 (v0.25.112): DeFlicker pass, hill caps one step apart per lobe; v25 (v0.25.109): no island name signs at the docks; v24 (v0.25.108): Marine Registrar in Conch Bay, no Guild Registrar; v23 (v0.25.107): Tavern Keeper beside the Shipwright; v22 (v0.25.27): shipyards snap to the island side nearest the next island; v21 (v0.25.25): shipyards face the next island, circus ship offshore; v20 (v0.25.24): Marmalade Town hand-laid (World/Marmalade); v19 (v0.25.23): Conch Bay street spawns keep their houses; v18 (v0.25.22): Conch Bay terraced (quay, two terraces, garrison plateau, tapered towers); v17 (v0.25.21): islands turned to face the previous one, Conch Bay stairs; v16 (v0.25.20): Daybreak spawn by Rowan, Conch Bay hand-laid (World/ConchBay); v15 (v0.25.11): islands spread north/south, wider sea, islets; v14 (v0.25.6): Daybreak spawn by the campfire; v13: voxel NPCs; v12: Voxelize pass
+WB.WORLD_VERSION = 27 -- v27 (v0.25.113): no Bay Serpent buoys/sign, wooden shipyard plots, voxel barrels/crates/chests; v26 (v0.25.112): DeFlicker pass, hill caps one step apart per lobe; v25 (v0.25.109): no island name signs at the docks; v24 (v0.25.108): Marine Registrar in Conch Bay, no Guild Registrar; v23 (v0.25.107): Tavern Keeper beside the Shipwright; v22 (v0.25.27): shipyards snap to the island side nearest the next island; v21 (v0.25.25): shipyards face the next island, circus ship offshore; v20 (v0.25.24): Marmalade Town hand-laid (World/Marmalade); v19 (v0.25.23): Conch Bay street spawns keep their houses; v18 (v0.25.22): Conch Bay terraced (quay, two terraces, garrison plateau, tapered towers); v17 (v0.25.21): islands turned to face the previous one, Conch Bay stairs; v16 (v0.25.20): Daybreak spawn by Rowan, Conch Bay hand-laid (World/ConchBay); v15 (v0.25.11): islands spread north/south, wider sea, islets; v14 (v0.25.6): Daybreak spawn by the campfire; v13: voxel NPCs; v12: Voxelize pass
 
 -- Old copies of the map can hide anywhere in Workspace: a renamed or regrouped World, an island dragged into
 -- Handmade, single NPCs / chests / docks pasted from an old bake. They draw on top of the new islands and register

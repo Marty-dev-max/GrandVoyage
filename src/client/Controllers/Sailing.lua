@@ -66,40 +66,57 @@ local zoneInfo = {
 	RedLine = { text = "⛰️ " .. string.upper(Islands.RedLine.name), color = T.Purple },
 }
 
+-- v0.25.113 (owner: the panel hid behind the character card, too much small text): a compact card ABOVE the character
+-- card: name + HP, four big readouts (speed / wind / sails / guns), the zone chip, the reload bar, four buttons
 local function buildHud()
-	local f = New("Frame", { Name = "ShipHUD", AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 16, 1, -16), Size = UDim2.fromOffset(360, 252), BackgroundColor3 = Color3.new(1, 1, 1), Visible = false, Parent = UI.Root })
-	UI.Corner(f, 18)
+	local f = New("Frame", { Name = "ShipHUD", AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 16, 1, -192), Size = UDim2.fromOffset(340, 220), BackgroundColor3 = Color3.new(1, 1, 1), Visible = false, Parent = UI.Root })
+	UI.Corner(f, 14)
 	New("UIGradient", { Color = ColorSequence.new(T.PanelTop, T.PanelDeep), Rotation = 90, Parent = f })
 	UI.Stroke(f, T.Edge, 3)
 	UI.Pad(f, 10)
 	UI.List(f, nil, 6)
-	local name = UI.Text(f, "⛵ Ship", 24, T.Text, "Display")
-	local hp = UI.Bar(f, T.Green, UDim2.new(1, 0, 0, 22), "HP")
-	local zone = New("Frame", { Size = UDim2.new(1, 0, 0, 30), BackgroundColor3 = T.Ocean, Parent = f })
-	UI.Corner(zone, 10)
+	local name = UI.Text(f, "Ship", 18, T.Gold, "Display", { Size = UDim2.new(1, 0, 0, 22), TextWrapped = false, LayoutOrder = 1 })
+	local hp = UI.Bar(f, T.Green, UDim2.new(1, 0, 0, 20), "HP")
+	hp.back.LayoutOrder = 2
+	local stats = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 42), LayoutOrder = 3, Parent = f })
+	UI.List(stats, Enum.FillDirection.Horizontal, 4)
+	local function cell(label, order)
+		local c = New("Frame", { Size = UDim2.new(0.25, -3, 1, 0), BackgroundColor3 = T.PanelDeep, LayoutOrder = order, Parent = stats })
+		UI.Corner(c, 6)
+		UI.Stroke(c, T.Edge, 2)
+		UI.Text(c, label, 10, T.TextSoft, "Display", { Position = UDim2.fromOffset(0, 3), Size = UDim2.new(1, 0, 0, 12), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false })
+		return UI.Text(c, "-", 17, T.Text, "Display", { Position = UDim2.fromOffset(0, 17), Size = UDim2.new(1, 0, 0, 22), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false })
+	end
+	local speedT, windT, sailT, gunT = cell("SPEED", 1), cell("WIND", 2), cell("SAILS", 3), cell("GUNS", 4)
+	local zone = New("Frame", { Size = UDim2.new(1, 0, 0, 24), BackgroundColor3 = T.Ocean, LayoutOrder = 4, Parent = f })
+	UI.Corner(zone, 6)
 	UI.Stroke(zone, T.Edge, 2)
-	local zoneText = UI.Text(zone, "", 16, T.Text, "Bold", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center })
-	local info = UI.Text(f, "", 15, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 40) })
-	local reload = UI.Bar(f, T.Orange, UDim2.new(1, 0, 0, 18), "🔥 READY")
-	local row = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 48), Parent = f })
-	UI.List(row, Enum.FillDirection.Horizontal, 6)
-	UI.Button(row, "▲ Sail", T.Ocean, UDim2.fromOffset(78, 44), function()
-		sailLevel = math.min(3, sailLevel + 1)
-	end)
-	UI.Button(row, "▼ Sail", T.OceanDark, UDim2.fromOffset(78, 44), function()
+	local zoneText = UI.Text(zone, "", 14, T.Text, "Bold", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center })
+	local reload = UI.Bar(f, T.Orange, UDim2.new(1, 0, 0, 18), "READY")
+	reload.back.LayoutOrder = 5
+	local row = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 42), LayoutOrder = 6, Parent = f })
+	UI.List(row, Enum.FillDirection.Horizontal, 4)
+	local function btn(text, color, w, order, fn)
+		local _, holder = UI.Button(row, text, color, UDim2.fromOffset(w, 40), fn)
+		holder.LayoutOrder = order
+	end
+	btn("SAIL -", T.OceanDark, 74, 1, function()
 		sailLevel = math.max(-1, sailLevel - 1)
 	end)
-	UI.Button(row, "🔥 Fire", T.Red, UDim2.fromOffset(86, 44), function()
+	btn("SAIL +", T.Ocean, 74, 2, function()
+		sailLevel = math.min(3, sailLevel + 1)
+	end)
+	btn("🔥 FIRE", T.Red, 80, 3, function()
 		Sailing.FireAtNearest()
 	end)
-	UI.Button(row, "⚓ Dock", T.Green, UDim2.fromOffset(86, 44), function()
+	btn("⚓ DOCK", T.Green, 80, 4, function()
 		local res = Net.Request("DockShip")
 		UI.Toast(res.msg or (res.ok and "Docked" or "Cannot dock"), res.ok and "good" or "bad")
 		if res.ok then
 			Audio.Play("Bell")
 		end
 	end)
-	hud = { frame = f, name = name, hp = hp, zone = zone, zoneText = zoneText, info = info, reload = reload }
+	hud = { frame = f, name = name, hp = hp, zone = zone, zoneText = zoneText, speedT = speedT, windT = windT, sailT = sailT, gunT = gunT, reload = reload }
 end
 
 local function sailText()
@@ -108,7 +125,7 @@ local function sailText()
 	elseif sailLevel == 0 then
 		return "furled"
 	end
-	return string.rep("▮", sailLevel) .. string.rep("▯", 3 - sailLevel)
+	return sailLevel .. "/3" -- (the pixel font has no block glyphs)
 end
 
 local wasVisible = false
@@ -126,19 +143,22 @@ local function updateHud(ship)
 		return
 	end
 	local hp, max = ship:GetAttribute("HP") or 0, ship:GetAttribute("MaxHP") or 1
-	hud.name.Text = "⛵ " .. (ship:GetAttribute("ShipName") or "Ship")
+	hud.name.Text = ship:GetAttribute("ShipName") or "Ship"
 	hud.hp:Set(hp / max, UI.Format(hp) .. " / " .. UI.Format(max))
 	hud.hp:SetColor(hp / max < 0.3 and T.Red or T.Green)
 	local z = zoneInfo[ship:GetAttribute("Zone") or "Lane"] or zoneInfo.Lane
 	hud.zoneText.Text = z.text
 	hud.zone.BackgroundColor3 = z.color
 	local wind = math.floor((ship:GetAttribute("Wind") or 1) * 100)
-	hud.info.Text = string.format("Speed %d / %d  •  Wind %d%%  •  Sails %s\nCrew %d  •  Cannons manned %d / %d", ship:GetAttribute("Speed") or 0, ship:GetAttribute("MaxSpeed") or 0, wind, sailText(), ship:GetAttribute("Crew") or 0, ship:GetAttribute("Manned") or 0, ship:GetAttribute("Cannons") or 0)
+	hud.speedT.Text = tostring(ship:GetAttribute("Speed") or 0)
+	hud.windT.Text = wind .. "%"
+	hud.sailT.Text = sailLevel < 0 and "BACK" or (sailLevel == 0 and "OFF" or sailText())
+	hud.gunT.Text = (ship:GetAttribute("Manned") or 0) .. "/" .. (ship:GetAttribute("Cannons") or 0)
 	local left = (ship:GetAttribute("ReloadEnd") or 0) - workspace:GetServerTimeNow()
 	if left > 0 then
 		hud.reload:Set(1 - left / GameConfig.Ship.ReloadTime, string.format("RELOADING %.1fs", left))
 	else
-		hud.reload:Set(1, "🔥 READY  (helm: click water / F)")
+		hud.reload:Set(1, "READY  •  F / click water")
 	end
 end
 
@@ -329,7 +349,9 @@ local function updateAudio(zone, onIsland)
 	-- scene music (v0.25.8): boss fight > any fight (VFX marks State.lastCombat / lastBoss) > sea > island
 	local now = os.clock()
 	local track
-	if now - (State.lastBoss or -99) < 12 then
+	if now < (State.bossIntroUntil or 0) then
+		track = nil -- v0.25.113: quiet while a boss intro plays (Controllers/BossIntro), the roar comes first
+	elseif now - (State.lastBoss or -99) < 12 then
 		track = "MusicBoss"
 	elseif now - (State.lastCombat or -99) < 8 then
 		track = "MusicBattle"

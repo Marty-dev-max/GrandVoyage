@@ -312,19 +312,44 @@ function Kit.RockCluster(pos, size)
 end
 
 -- ===== town props =====
+-- v0.25.113 (owner: the map barrels were plain blocky posts, make them like the title-menu ones): a bulging voxel
+-- barrel = octagon slices (two crossed blocks each), iron hoops, a plank lid. No rng (keeps every island's stream).
 function Kit.Barrel(pos)
-	Cyl(2.6, 2.2, C.Wood, pos + Vector3.new(0, 1.3, 0), decor({ material = M.Wood }))
-	for _, y in ipairs({ 0.5, 2.1 }) do
-		Cyl(0.25, 2.35, C.DarkStone, pos + Vector3.new(0, y, 0), decor({ material = M.Metal, collide = false }))
+	local k = 1.12
+	local cf = CFrame.new(pos)
+	local staves, hoop = Color3.fromRGB(150, 92, 50), Color3.fromRGB(58, 50, 46)
+	for i, w in ipairs({ 1.45, 1.75, 1.9, 1.9, 1.75, 1.45 }) do
+		local y = (i - 0.5) * 0.4 * k
+		local c = i % 2 == 0 and staves or staves:Lerp(Color3.new(0, 0, 0), 0.1)
+		local solid = i == 3 or i == 4
+		P(Vector3.new(w, 0.4, w * 0.72) * k, c, cf * CFrame.new(0, y, 0), decor({ material = M.WoodPlanks, collide = solid }))
+		P(Vector3.new(w * 0.72, 0.4, w) * k, c, cf * CFrame.new(0, y, 0), decor({ material = M.WoodPlanks, collide = solid }))
 	end
+	for _, y in ipairs({ 0.3, 1.2, 2.1 }) do
+		P(Vector3.new(1.96, 0.16, 1.4) * k, hoop, cf * CFrame.new(0, y * k, 0), decor({ material = M.Metal, collide = false }))
+		P(Vector3.new(1.4, 0.16, 1.96) * k, hoop, cf * CFrame.new(0, y * k, 0), decor({ material = M.Metal, collide = false }))
+	end
+	P(Vector3.new(1.2, 0.1, 1.2) * k, Color3.fromRGB(176, 120, 70), cf * CFrame.new(0, 2.43 * k, 0), decor({ material = M.WoodPlanks, collide = false }))
+	P(Vector3.new(1.2, 0.12, 0.12) * k, Color3.fromRGB(110, 70, 40), cf * CFrame.new(0, 2.47 * k, 0), decor({ material = M.Wood, collide = false }))
 end
 
+-- v0.25.113: crates get a dark frame (corner posts + top and bottom rims) and a plank face, like voxel crates
 function Kit.Crate(pos, size, yaw)
 	size = size or 2.4
 	local cf = CFrame.new(pos + Vector3.new(0, size / 2, 0)) * CFrame.Angles(0, yaw or rng:NextNumber(0, 1.5), 0)
 	P(Vector3.one * size, C.LightWood, cf, decor({ material = M.WoodPlanks }))
-	P(Vector3.new(size + 0.1, 0.3, 0.3), C.DarkWood, cf * CFrame.new(0, 0, -size / 2), decor({ collide = false }))
-	P(Vector3.new(0.3, size + 0.1, 0.3), C.DarkWood, cf * CFrame.new(0, 0, -size / 2), decor({ collide = false }))
+	local h, e = size / 2, 0.32
+	for _, sx in ipairs({ -1, 1 }) do
+		for _, sz in ipairs({ -1, 1 }) do
+			P(Vector3.new(e, size + 0.06, e), C.DarkWood, cf * CFrame.new(sx * (h - e / 2 + 0.04), 0, sz * (h - e / 2 + 0.04)), decor({ material = M.Wood, collide = false }))
+		end
+	end
+	for _, y in ipairs({ -1, 1 }) do
+		P(Vector3.new(size + 0.08, e, e), C.DarkWood, cf * CFrame.new(0, y * (h - e / 2 + 0.03), -h + e / 2 - 0.05), decor({ material = M.Wood, collide = false }))
+		P(Vector3.new(size + 0.08, e, e), C.DarkWood, cf * CFrame.new(0, y * (h - e / 2 + 0.03), h - e / 2 + 0.05), decor({ material = M.Wood, collide = false }))
+		P(Vector3.new(e, e, size + 0.08), C.DarkWood, cf * CFrame.new(-h + e / 2 - 0.05, y * (h - e / 2 + 0.03), 0), decor({ material = M.Wood, collide = false }))
+		P(Vector3.new(e, e, size + 0.08), C.DarkWood, cf * CFrame.new(h - e / 2 + 0.05, y * (h - e / 2 + 0.03), 0), decor({ material = M.Wood, collide = false }))
+	end
 end
 
 function Kit.CrateStack(pos)

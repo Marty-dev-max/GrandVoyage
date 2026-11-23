@@ -50,6 +50,7 @@ local NpcLife = require(script.Controllers.NpcLife)
 local IslandEnter = require(script.Controllers.IslandEnter)
 local NpcZones = require(script.Controllers.NpcZones)
 local BossIntro = require(script.Controllers.BossIntro)
+local PowerBoard = require(script.Controllers.PowerBoard)
 
 pcall(function()
 	StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Health, false)
@@ -364,8 +365,7 @@ local handlers = {
 			Panels.Open(panel, d)
 		end
 	end,
-	Prompt = function(d)
-		Audio.Play("Bell")
+	Prompt = function(d) -- v0.25.118 (owner): no bell on party / duel / crew invites
 		local answer = d.kind == "Duel" and "DuelRespond" or (d.kind == "CrewInvite" and "CrewRespond" or "PartyRespond")
 		UI.Confirm(d.text, function()
 			Net.Request(answer, { accept = true })
@@ -420,7 +420,7 @@ end)
 for _, c in ipairs({
 	{ "Sailing", Sailing }, { "Builder", Builder }, { "VFX", VFX }, { "Readability", Readability }, { "Swim", Swim },
 	{ "Pets", PetsCtl }, { "Titles", Titles }, { "Ocean", Ocean }, { "Atmos", Atmos }, { "GrassField", GrassField },
-	{ "CreatureAnim", CreatureAnim }, { "CharAnim", CharAnim }, { "Interact", Interact }, { "ChartsView", ChartsView }, { "ShipBars", ShipBars }, { "Underwater", Underwater }, { "SerpentBody", SerpentBody }, { "Heritage", Heritage }, { "Flight", Flight }, { "Crosshair", Crosshair }, { "HeritageAnim", HeritageAnim }, { "QuestPath", QuestPath }, { "WorldCull", WorldCull }, { "FruitFX", FruitFX }, { "Footsteps", Footsteps }, { "ShiftLock", ShiftLock }, { "FruitAlert", FruitAlert }, { "NpcLife", NpcLife }, { "Slingshot", Slingshot }, { "TokiFX", TokiFX }, { "Sprint", Sprint }, { "IslandEnter", IslandEnter }, { "NpcZones", NpcZones }, { "BossIntro", BossIntro },
+	{ "CreatureAnim", CreatureAnim }, { "CharAnim", CharAnim }, { "Interact", Interact }, { "ChartsView", ChartsView }, { "ShipBars", ShipBars }, { "Underwater", Underwater }, { "SerpentBody", SerpentBody }, { "Heritage", Heritage }, { "Flight", Flight }, { "Crosshair", Crosshair }, { "HeritageAnim", HeritageAnim }, { "QuestPath", QuestPath }, { "WorldCull", WorldCull }, { "FruitFX", FruitFX }, { "Footsteps", Footsteps }, { "ShiftLock", ShiftLock }, { "FruitAlert", FruitAlert }, { "NpcLife", NpcLife }, { "Slingshot", Slingshot }, { "TokiFX", TokiFX }, { "Sprint", Sprint }, { "IslandEnter", IslandEnter }, { "NpcZones", NpcZones }, { "BossIntro", BossIntro }, { "PowerBoard", PowerBoard },
 }) do
 	task.spawn(start, c[1], c[2])
 end

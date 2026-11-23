@@ -286,13 +286,21 @@ local NPC_STYLE = {
 	{ "Tavern", "Cook Apron", "Long Pants", "Clogs" },
 	{ "Gull", "Sailor Stripes", "Rolled Cuffs", "Sandals" },
 	{ "Shipwright", "Overalls", "Cargo", "Buckle Boots" },
-	{ "Job", "Dojo Gi", "Wide Hakama", "Wraps" },
+	{ "Job", "Captain Coat", "Wide Hakama", "Tall Boots" }, -- v0.25.118: a long coat (see NPC_LOOK)
 	{ "Guild", "Captain Coat", "Long Pants", "Tall Boots" },
 	{ "Bounty", "Open Vest", "Sash Pants", "Boots" },
 	{ "Fruit", "Belted Tunic", "Baggy", "Sandals" },
 	{ "Pet", "Scarf Tee", "Shorts", "Sneakers" },
 	{ "Arena", "Bandage Wrap", "Sash Pants", "Wraps" },
 	{ "Market", "Open Jacket", "Cargo", "Boots" },
+}
+-- v0.25.118 (owner: the Job Master should look sharp and seasoned): fixed looks per title over the hashed ones
+local NPC_LOOK = {
+	["Job Master"] = {
+		hair = "Swept", eyes = "Sharp", mouth = "Smirk", mark = "Scar", hair1 = "E8E8EE", hair2 = "B8BCC8",
+		shirt1 = "8E1C2A", shirt2 = "E8B84A", pants1 = "1C1A22", pants2 = "3A2A30", shoes1 = "1C1A22", shoes2 = "E8B84A",
+		eyes1 = "D8A030", skin = "D6A478",
+	},
 }
 local function nameHash(s, salt)
 	local h = salt or 7
@@ -338,6 +346,12 @@ local function voxelHat(model, kind)
 		for _, side in ipairs({ -1, 1 }) do
 			blk(Vector3.new(0.45, 0.6, 0.3), Color3.fromRGB(40, 35, 45), Vector3.new(side * 0.6, top + 0.3, 0))
 		end
+	elseif kind == "master" then
+		-- crimson headband with two tails flying out the back + a gold plate on the forehead
+		blk(Vector3.new(2.05, 0.32, 2.05), Color3.fromRGB(170, 24, 36), Vector3.new(0, top - 0.55, 0))
+		blk(Vector3.new(0.5, 0.26, 0.12), Color3.fromRGB(232, 184, 74), Vector3.new(0, top - 0.55, -1.06), Enum.Material.Metal)
+		blk(Vector3.new(0.22, 0.2, 1.1), Color3.fromRGB(150, 20, 32), Vector3.new(-0.25, top - 0.75, 1.5))
+		blk(Vector3.new(0.22, 0.2, 0.9), Color3.fromRGB(150, 20, 32), Vector3.new(0.25, top - 0.95, 1.4))
 	elseif kind == "clown" then
 		blk(Vector3.new(0.45, 0.45, 0.45), Color3.fromRGB(255, 40, 40), Vector3.new(0, 5.35, -0.95))
 	end
@@ -372,7 +386,23 @@ function MF.NPC(name, color, hatKind)
 		shoes1 = "462C1E", shoes2 = "1C1A22",
 		skin = skin,
 	}
-	local m = VoxelChar.Preview(Looks.Sanitize(look), nil, 1, nil, { lite = true })
+	local fixed = NPC_LOOK[name]
+	if fixed then
+		for k, v in pairs(fixed) do
+			if k == "hair" then
+				look.hair = idx(Looks.Hair, v)
+			elseif k == "eyes" then
+				look.eyes = idx(Looks.Eyes, v)
+			elseif k == "mouth" then
+				look.mouth = idx(Looks.Mouths, v)
+			elseif k ~= "mark" then
+				look[k] = v
+			end
+		end
+	end
+	local clean = Looks.Sanitize(look)
+	clean.mark = fixed and fixed.mark or nil -- (Sanitize drops it; VoxelChar draws it for monsters and this NPC)
+	local m = VoxelChar.Preview(clean, nil, 1, nil, { lite = true })
 	m.Name = name
 	voxelHat(m, hatKind)
 	for _, p in ipairs(m:GetDescendants()) do

@@ -57,6 +57,7 @@ WB.ZONE_ROLES = {
 	Shop = Color3.fromRGB(70, 190, 255),
 	Tavern = Color3.fromRGB(255, 110, 190),
 	Shipwright = Color3.fromRGB(110, 230, 120),
+	JobMaster = Color3.fromRGB(255, 60, 60), -- v0.25.118 (owner): red ring
 }
 WB.ZONE_RADIUS = 7
 -- face (optional): local X/Z point the NPC looks at (default: the island center)
@@ -107,7 +108,7 @@ local function standardNPCs(ctx)
 	-- v0.25.21 (owner): Bounty Board only on the first and the last island (v0.25.108: the Registrar is the Marine one in Conch Bay)
 	if island.id == "Daybreak" or island.id == "Epilogue" then
 		npc(ctx, "BossBoard", "Bounty Board", Color3.fromRGB(255, 220, 120), nil, r * 0.15, r * 0.7, { SubTitle = "Bosses & Bounties" })
-		npc(ctx, "JobMaster", "Job Master", Color3.fromRGB(120, 200, 140), "marine", r * 0.6, r * 0.45, { SubTitle = "Choose a Class" })
+		npc(ctx, "JobMaster", "Job Master", Color3.fromRGB(142, 28, 42), "master", r * 0.6, r * 0.45, { SubTitle = "Choose a Class" })
 	end
 	if island.dungeon then
 		local d = Dungeons[island.dungeon]
@@ -1017,7 +1018,7 @@ end
 -- away and rebuilt from code at server start (so the owner's published place updates through Rojo too).
 -- Hand-built content made in Studio goes in workspace.Handmade (never touched by rebuilds). Kit props placed there
 -- (tagged EnvProp/EnvPart) are dressed with the stylized meshes like the generated ones.
-WB.WORLD_VERSION = 28 -- v28 (v0.25.115): DeFlicker stacks faces within 0.035 (grass under the plaza paving); v27 (v0.25.113): no Bay Serpent buoys/sign, wooden shipyard plots, voxel barrels/crates/chests; v26 (v0.25.112): DeFlicker pass, hill caps one step apart per lobe; v25 (v0.25.109): no island name signs at the docks; v24 (v0.25.108): Marine Registrar in Conch Bay, no Guild Registrar; v23 (v0.25.107): Tavern Keeper beside the Shipwright; v22 (v0.25.27): shipyards snap to the island side nearest the next island; v21 (v0.25.25): shipyards face the next island, circus ship offshore; v20 (v0.25.24): Marmalade Town hand-laid (World/Marmalade); v19 (v0.25.23): Conch Bay street spawns keep their houses; v18 (v0.25.22): Conch Bay terraced (quay, two terraces, garrison plateau, tapered towers); v17 (v0.25.21): islands turned to face the previous one, Conch Bay stairs; v16 (v0.25.20): Daybreak spawn by Rowan, Conch Bay hand-laid (World/ConchBay); v15 (v0.25.11): islands spread north/south, wider sea, islets; v14 (v0.25.6): Daybreak spawn by the campfire; v13: voxel NPCs; v12: Voxelize pass
+WB.WORLD_VERSION = 29 -- v29 (v0.25.118): Job Master walk-in ring + new look; v28 (v0.25.115): DeFlicker stacks faces within 0.035 (grass under the plaza paving); v27 (v0.25.113): no Bay Serpent buoys/sign, wooden shipyard plots, voxel barrels/crates/chests; v26 (v0.25.112): DeFlicker pass, hill caps one step apart per lobe; v25 (v0.25.109): no island name signs at the docks; v24 (v0.25.108): Marine Registrar in Conch Bay, no Guild Registrar; v23 (v0.25.107): Tavern Keeper beside the Shipwright; v22 (v0.25.27): shipyards snap to the island side nearest the next island; v21 (v0.25.25): shipyards face the next island, circus ship offshore; v20 (v0.25.24): Marmalade Town hand-laid (World/Marmalade); v19 (v0.25.23): Conch Bay street spawns keep their houses; v18 (v0.25.22): Conch Bay terraced (quay, two terraces, garrison plateau, tapered towers); v17 (v0.25.21): islands turned to face the previous one, Conch Bay stairs; v16 (v0.25.20): Daybreak spawn by Rowan, Conch Bay hand-laid (World/ConchBay); v15 (v0.25.11): islands spread north/south, wider sea, islets; v14 (v0.25.6): Daybreak spawn by the campfire; v13: voxel NPCs; v12: Voxelize pass
 
 -- Old copies of the map can hide anywhere in Workspace: a renamed or regrouped World, an island dragged into
 -- Handmade, single NPCs / chests / docks pasted from an old bake. They draw on top of the new islands and register

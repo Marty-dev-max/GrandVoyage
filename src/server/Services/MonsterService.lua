@@ -294,7 +294,7 @@ local function die(mob, killer)
 			R.QuestService.Event(top, "Boss", def.id)
 		end
 	end
-	Net.FX("MobDeath", { pos = mob.root.Position, color = def.style.color, boss = def.isBoss, model = mob.model }, mob.root.Position, 300)
+	Net.FX("MobDeath", { pos = mob.root.Position, color = def.style.color, boss = def.isBoss, model = mob.model, split = mob.splitKill, splitDir = mob.splitDir }, mob.root.Position, 300)
 	if mob.opts.onDeath then
 		task.spawn(mob.opts.onDeath, mob, top)
 	end

@@ -132,6 +132,11 @@ add("MusicSea", "Music", 0.3, "", { looped = true, id = "rbxassetid://1836603880
 -- so until then the client speaks the line with Roblox text-to-speech: Controllers/FruitAlert)
 add("FruitHum", "SFX", 0.5, "", { looped = true, id = "rbxassetid://9116396987" })
 -- v0.25.77 (owner: Blaze flight should sound like a soft crackling campfire / fireplace)
+-- v0.25.77 (owner: blades did not sound like cutting, the hammer had no weight, the cannonball no blast): licensed
+-- ProSoundEffects layers on top of the old hits
+add("SliceCut", "SFX", 0.6, "", { id = "rbxassetid://9116197246" }) -- Knife Slashing Rope 1
+add("HammerThud", "SFX", 0.8, "", { id = "rbxassetid://9114757499", rolloff = 260 }) -- Sledgehammer Impacts 5
+add("CannonBlast", "SFX", 0.9, "", { id = "rbxassetid://9117876319", rolloff = 700 }) -- Power Explosions Big Heavy Searing Boom 1
 add("BlazeFlyLoop", "SFX", 0.55, "", { looped = true, id = "rbxassetid://9112780193" }) -- Fireplace Constant Burning Flame 1 (ProSoundEffects)
 add("HazeFlyLoop", "SFX", 0.35, "", { looped = true, id = "rbxassetid://9114438011" }) -- soft rushing hiss under the smoke trail -- Pixie Dust Twinkles 3 (ProSoundEffects), loops at a spawned fruit
 add("FruitTwinkle", "SFX", 0.7, "", { id = "rbxassetid://9116396069" }) -- Magic Insect Dive Down Pixie Dust Twinkles 2 (ProSoundEffects)

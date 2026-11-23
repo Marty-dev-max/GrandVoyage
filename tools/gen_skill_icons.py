@@ -195,9 +195,14 @@ def wave_slash(s, c=CYAN):
 
 
 def hammer(s):
-    s.line([(9, 27), (19, 13)], WOOD, 3)
-    s.poly([(12, 4), (24, 12), (20, 18), (8, 10)], IRON)
-    s.poly([(13, 6), (22, 12), (21, 13), (12, 7)], STEEL, True)
+    # v0.25.77 (owner: the head looked crooked / off-centre): a big sledge centred in the tile, the head square to
+    # the handle, darker striking faces at both ends and a steel highlight, a wrapped grip at the bottom
+    s.line([(5, 26.5), (17, 13.5)], WOOD, 3)
+    s.line([(5, 26.5), (8, 23.5)], (110, 70, 40), 3)  # grip wrap
+    s.poly([(9.9, 7.3), (14.8, 2.5), (26.1, 13.7), (21.2, 18.6)], IRON)
+    s.poly([(9.9, 7.3), (14.8, 2.5), (16.6, 4.3), (11.7, 9.1)], DARK)  # back face
+    s.poly([(24.3, 11.9), (26.1, 13.7), (21.2, 18.6), (19.4, 16.8)], DARK)  # striking face
+    s.poly([(13.6, 4.7), (14.8, 3.5), (23.6, 12.3), (22.4, 13.5)], STEEL, True)
 
 
 def cannonball(s, cx=15, cy=18, r=8):

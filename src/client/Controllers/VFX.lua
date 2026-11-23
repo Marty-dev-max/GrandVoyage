@@ -828,6 +828,37 @@ SkillFX.Smash = function(d)
 	VFX.Crack(at - Vector3.new(0, 2.4, 0), 6)
 	VFX.Smoke(at - Vector3.new(0, 1.5, 0), Color3.fromRGB(200, 180, 150), 6, 3)
 end
+-- v0.25.77 Cannonball Drop (owner): heaved with both hands (Blaze_BallThrow strike 0.14), arcs over, explodes on the
+-- server's hit (0.6) with a real blast
+SkillFX.CannonThrow = function(d)
+	local to = d.to or d.from
+	local chest = typeof(d.char) == "Instance" and d.char:FindFirstChild("UpperTorso")
+	local from = (chest and chest.Position or d.from) + Vector3.new(0, 3, 0)
+	task.delay(0.14, function()
+		local ball = part(Vector3.new(2, 2, 2), Color3.fromRGB(40, 40, 46), CFrame.new(from), nil, Enum.Material.SmoothPlastic, 0)
+		local fuse = part(Vector3.new(0.3, 0.6, 0.3), Color3.fromRGB(255, 200, 80), CFrame.new(from), nil, Enum.Material.Neon, 0)
+		local t0, T = os.clock(), 0.46
+		local h = math.clamp((to - from).Magnitude * 0.3, 4, 14)
+		local conn
+		conn = game:GetService("RunService").RenderStepped:Connect(function()
+			local k = math.min(1, (os.clock() - t0) / T)
+			local p = from:Lerp(to, k) + Vector3.new(0, math.sin(k * math.pi) * h, 0)
+			ball.CFrame = CFrame.new(p) * CFrame.Angles(k * 8, k * 5, 0)
+			fuse.CFrame = ball.CFrame * CFrame.new(0, 1.1, 0)
+			if math.random() < 0.5 then
+				Voxels.Pixels(fuse.Position, { count = 2, colors = { Color3.fromRGB(255, 220, 90), Color3.fromRGB(255, 140, 40) }, size = 0.2, speed = 3, gravity = 2, life = 0.25, glow = 1, spread = 0.2 })
+			end
+			if k >= 1 then
+				conn:Disconnect()
+				ball:Destroy()
+				fuse:Destroy()
+				VFX.Explosion(to, d.radius or 12)
+				VFX.Ring(to - Vector3.new(0, 1.5, 0), d.radius or 12, Color3.fromRGB(255, 170, 70), 0.5)
+				Audio.Play("CannonBlast", { pos = to })
+			end
+		end)
+	end)
+end
 SkillFX.Explosion = function(d)
 	VFX.Projectile(d.from + Vector3.new(0, 20, 0), d.to, Color3.fromRGB(40, 40, 45), 2.2, 0.25, 0)
 	task.delay(0.25, function()
@@ -1713,6 +1744,12 @@ local fxSounds = {
 		end
 		-- v0.25.16 (owner: hits felt thin): a low thump under every hit, a bright crack on top of crits
 		Audio.Play("ImpactThump", { pos = d.pos, pitch = 0.9 + math.random() * 0.2, volume = d.crit and 1 or 0.7 })
+		-- v0.25.77: a real cut for blades, a heavy sledge thud for the hammer
+		if w == "Sword" then
+			Audio.Play("SliceCut", { pos = d.pos, pitch = 0.95 + math.random() * 0.15 })
+		elseif w == "Hammer" then
+			Audio.Play("HammerThud", { pos = d.pos, pitch = 0.85 + math.random() * 0.1, volume = d.crit and 1 or 0.85 })
+		end
 		if d.crit then
 			Audio.Play("Crit", { pos = d.pos })
 		end

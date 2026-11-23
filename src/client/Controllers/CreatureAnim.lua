@@ -28,6 +28,72 @@ local function flash(model)
 	Debris:AddItem(hl, 0.25)
 end
 
+-- v0.25.77 (owner): a Swordsman skill kill cuts the monster in two: "h" = top and bottom (Tornado Cut, Flying Slash),
+-- "v" = left and right along the blow (Demon Cross). A bright cut line, the halves slide apart and drop, then dissolve.
+function CreatureAnim.SplitDeath(model, color, mode, dir)
+	local ok, bcf, bsize = pcall(model.GetBoundingBox, model)
+	if not ok or not model.Parent then
+		return
+	end
+	local center = bcf.Position
+	dir = (typeof(dir) == "Vector3" and dir.Magnitude > 0.1) and dir.Unit or Vector3.zAxis
+	local side = dir:Cross(Vector3.yAxis).Unit -- the cut plane of a "v" split runs along the blow
+	local halves = { {}, {} }
+	local orig = {}
+	for _, p in ipairs(model:GetDescendants()) do
+		if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" and p.Transparency < 1 then
+			local rel = p.Position - center
+			local a = mode == "v" and (rel:Dot(side) > 0 and 1 or 2) or (rel.Y > bsize.Y * 0.05 and 1 or 2)
+			table.insert(halves[a], p)
+			orig[p] = p.CFrame
+		end
+	end
+	-- the cut: a thin white-hot line through the body
+	local cutCF = mode == "v" and CFrame.lookAt(center, center + side) * CFrame.Angles(0, 0, math.pi / 2) or CFrame.new(center + Vector3.new(0, bsize.Y * 0.05, 0))
+	local line = Instance.new("Part")
+	line.Anchored, line.CanCollide, line.CanQuery, line.CanTouch, line.CastShadow = true, false, false, false, false
+	line.Material = Enum.Material.Neon
+	line.Color = Color3.fromRGB(255, 250, 235)
+	line.Size = mode == "v" and Vector3.new(bsize.Y * 1.3, 0.12, math.max(bsize.X, bsize.Z) * 1.3) or Vector3.new(math.max(bsize.X, bsize.Z) * 1.4, 0.12, math.max(bsize.X, bsize.Z) * 1.4)
+	line.CFrame = cutCF
+	line.Parent = workspace
+	TweenService:Create(line, TweenInfo.new(0.25), { Transparency = 1, Size = line.Size * Vector3.new(1.2, 0.2, 1.2) }):Play()
+	Debris:AddItem(line, 0.3)
+	-- the halves: top slides off along the blow and tips over / the two sides fall apart
+	local t0 = os.clock()
+	local conn
+	conn = RunService.RenderStepped:Connect(function()
+		local t = os.clock() - t0
+		local k = math.min(1, t / 0.6)
+		local e = k * k
+		for i, list in ipairs(halves) do
+			local cf
+			if mode == "v" then
+				local away = side * (i == 1 and 1 or -1)
+				local axis = Vector3.yAxis:Cross(away).Unit
+				cf = CFrame.new(center) * CFrame.new(away * e * 1.4 - Vector3.new(0, e * bsize.Y * 0.3, 0)) * CFrame.fromAxisAngle(axis, e * math.rad(80)) * CFrame.new(-center)
+			elseif i == 1 then
+				local axis = Vector3.yAxis:Cross(dir).Unit
+				cf = CFrame.new(center) * CFrame.new(dir * e * 2.2 - Vector3.new(0, e * bsize.Y * 0.45, 0)) * CFrame.fromAxisAngle(axis, e * math.rad(70)) * CFrame.new(-center)
+			else
+				cf = CFrame.new(center) * CFrame.new(0, -e * 0.3, 0) * CFrame.new(-center)
+			end
+			for _, p in ipairs(list) do
+				if p.Parent then
+					p.CFrame = cf * orig[p]
+				end
+			end
+		end
+		if t > 1.3 then
+			conn:Disconnect()
+			if model.Parent then
+				CreatureAnim.Shatter(model, color or Color3.fromRGB(220, 220, 220), false)
+			end
+		end
+	end)
+	Voxels.Pixels(center, { count = 26, colors = { Color3.fromRGB(255, 250, 235), Color3.fromRGB(200, 40, 50) }, size = 0.3, speed = 12, gravity = 10, life = 0.5, spread = 1 })
+end
+
 -- death: the voxel body breaks into tumbling cubes
 local function shatter(model, color, boss)
 	local parts = {}
@@ -73,6 +139,8 @@ end
 -- death (v0.24.0, owner): the monster does not vanish at once. It topples over to the ground (gravity ease + a small
 -- bounce), lies there for a beat and blinks, then breaks apart into voxel blocks and pixel dust in its own colors.
 -- The server keeps the (anchored) body ~2.6 s for this; every move here is local to this client.
+CreatureAnim.Shatter = shatter
+
 local function deathFall(model, color, boss)
 	if not model.Parent then
 		return
@@ -282,7 +350,11 @@ function CreatureAnim.Start()
 			CreatureAnim.Stats.hits += 1
 			flash(d.model) -- the server sends damage on the attacker's strike frame
 		elseif kind == "MobDeath" then
-			deathFall(d.model, d.color, d.boss)
+			if d.split and typeof(d.model) == "Instance" then
+				CreatureAnim.SplitDeath(d.model, d.color, d.split, d.splitDir)
+			else
+				deathFall(d.model, d.color, d.boss)
+			end
 		end
 	end)
 	task.spawn(function()

@@ -325,6 +325,13 @@ local function hitTarget(attacker, target, mult, magic, opts)
 		bonus *= MonsterTypes.Mult(classType(attacker), mob.def.mtype)
 		local mdef = opts.ignoreDef and 0 or (magic and mob.def.def * 0.5 or mob.def.def)
 		local dmg, isCrit = Formulas.Damage(atk, mdef, mult * bonus, magic and 0 or crit)
+		if opts.split and not mob.def.isBoss then
+			local ar = R.PlayerService.Root(attacker)
+			mob.splitKill = opts.split
+			mob.splitDir = ar and (mob.root.Position - ar.Position) * Vector3.new(1, 0, 1) or nil
+		else
+			mob.splitKill = nil
+		end
 		R.MonsterService.Damage(mob, dmg, attacker, isCrit, opts.element)
 		R.PetService.OnOwnerHit(attacker, mob)
 		-- knockback on the hits that should feel heavy (combo finisher, Heavy Attack, strong skills; crits a little)
@@ -769,6 +776,10 @@ local function setup()
 		if skill.stun then
 			skillOpts = skillOpts or {}
 			skillOpts.stun = skill.stun -- v0.25.77 Smoke Pellet: lost in the smoke
+		end
+		if skill.split then
+			skillOpts = skillOpts or {}
+			skillOpts.split = skill.split -- v0.25.77 Swordsman: a kill by this skill cuts the monster in two
 		end
 		-- knockback (v0.24.12): damage skills shove on their LAST hit; power = the skill's multiplier (Heavy Attack 2.2+)
 		local knockPower = skill.knockPower or (skill.heavy and math.max(2.2, mult)) or mult

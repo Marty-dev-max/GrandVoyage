@@ -50,9 +50,9 @@ local Classes = {
 		ringColor = Color3.fromRGB(60, 215, 235), -- Job EXP ring half (green is taken by Base EXP)
 		icon = "⚔️",
 		skills = {
-			{ id = "OniSlash", name = "Demon Cross", kind = "Melee", sp = 12, cd = 4, range = 10, mult = 2.4, maxLevel = 10, fx = "CrossSlash", desc = "Two crossing cuts." },
-			{ id = "TornadoCut", name = "Tornado Cut", kind = "AoE", sp = 20, cd = 8, range = 0, radius = 14, mult = 1.7, maxLevel = 10, fx = "Tornado", desc = "Spin and slash everything nearby." },
-			{ id = "FlyingSlash", name = "Flying Slash", kind = "Ranged", sp = 15, cd = 5.5, range = 40, mult = 1.9, maxLevel = 10, fx = "WaveSlash", desc = "Launch a blade wave." },
+			{ id = "OniSlash", name = "Demon Cross", split = "v", kind = "Melee", sp = 12, cd = 4, range = 10, mult = 2.4, maxLevel = 10, fx = "CrossSlash", desc = "Two crossing cuts." },
+			{ id = "TornadoCut", name = "Tornado Cut", split = "h", kind = "AoE", sp = 20, cd = 8, range = 0, radius = 14, mult = 1.7, maxLevel = 10, fx = "Tornado", desc = "Spin and slash everything nearby." },
+			{ id = "FlyingSlash", name = "Flying Slash", split = "h", kind = "Ranged", sp = 15, cd = 5.5, range = 40, mult = 1.9, maxLevel = 10, fx = "WaveSlash", desc = "Launch a blade wave." },
 			{ id = "IronBody", name = "Iron Body", kind = "Buff", sp = 25, cd = 30, duration = 15, buff = { def = 0.35 }, maxLevel = 5, fx = "AuraGreen", desc = "Harden your body: DEF up." },
 		},
 	},
@@ -143,7 +143,7 @@ local Classes = {
 		passive = { refineBonus = 0.05, stallSlots = true, cannonDamage = 0.05 },
 		skills = {
 			{ id = "HammerSmash", name = "Hammer Smash", kind = "Melee", sp = 12, cd = 5, range = 9, mult = 2.8, maxLevel = 10, fx = "Smash", desc = "A crushing overhead blow." },
-			{ id = "CannonDrop", name = "Cannonball Drop", kind = "GroundAoE", sp = 22, cd = 9, range = 40, radius = 13, mult = 2.2, maxLevel = 10, fx = "Explosion", desc = "Drop a live cannonball." },
+			{ id = "CannonDrop", name = "Cannonball Drop", kind = "GroundAoE", anim = "Blaze_BallThrow", delay = 0.35, sp = 22, cd = 9, range = 40, radius = 13, mult = 2.2, maxLevel = 10, fx = "CannonThrow", desc = "Heave a live cannonball with both hands at the spot you pick: it explodes where it lands." },
 			{ id = "FieldRepair", name = "Field Repair", kind = "ShipRepair", sp = 30, cd = 20, power = 0.12, maxLevel = 5, fx = "Repair", desc = "Repair the ship you stand on." },
 			{ id = "SteelFrame", name = "Steel Frame", kind = "Buff", sp = 25, cd = 30, duration = 20, buff = { def = 0.25, atk = 0.1 }, maxLevel = 5, fx = "AuraGreen", desc = "DEF and ATK up." },
 		},

@@ -711,6 +711,11 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     was the "black things"), sparks leave the chest and cling to monsters near the spot. Haze flight (Flight.Allow
     "haze"); FruitFX dressFire(kind) = Haze smoke legs + smoke line trail; fly loops BlazeFlyLoop (9112780193
     fireplace) / HazeFlyLoop.
+  * v0.25.78 (owner): skill `split` ("h"/"v": OniSlash v, TornadoCut + FlyingSlash h) -> hitTarget sets mob.splitKill /
+    splitDir -> MobDeath FX split -> CreatureAnim.SplitDeath (cut line, halves slide apart, then CreatureAnim.Shatter).
+    Sounds SliceCut (Sword hits), HammerThud (Hammer hits), CannonBlast (ProSoundEffects ids; our audio upload quota is
+    spent until 6 Dec). CannonDrop = two-hand throw (Blaze_BallThrow, delay 0.35, SkillFX.CannonThrow). Hammer icon
+    redrawn centred (gen_skill_icons.hammer, shared by the pixel icon).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

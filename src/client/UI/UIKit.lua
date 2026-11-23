@@ -1444,11 +1444,13 @@ function UI.TabBar(parent, tabs, current, onPick, height)
 	height = height or 38
 	local bar = New("Frame", { Name = "TabBar", BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, height + 6), Parent = parent })
 	UI.List(bar, Enum.FillDirection.Horizontal, 6)
+	local total = 6 * (#tabs - 1)
 	for i, t in ipairs(tabs) do
 		local on = t[1] == current
 		-- v0.25.99 (labels were ~6 px on screen): bigger text; the pixel font is square, so a label is #text x size wide
 		local tsz = math.max(9, math.floor(height * 0.42))
 		local w = (t[2] ~= "" and 42 or 20) + utf8.len(t[3]) * tsz -- icon 30 + padding 8 + slack
+		total += w
 		local btn, holder = UI.Button(bar, t[2] ~= "" and (t[2] .. " " .. t[3]) or t[3], on and (t[4] or T.Orange) or T.Grey, UDim2.fromOffset(w, height), function()
 			onPick(t[1])
 		end)
@@ -1459,6 +1461,25 @@ function UI.TabBar(parent, tabs, current, onPick, height)
 			btn.TextColor3 = Color3.fromRGB(215, 212, 235)
 		end
 	end
+	-- v0.25.110 (owner: tabs ran off the panel): shrink the whole row to fit its parent's width
+	local fit = New("UIScale", { Parent = bar })
+	local function refit()
+		pcall(function()
+			local h = bar.Size.Y.Offset
+			if h <= 0 or bar.AbsoluteSize.Y <= 0 then
+				return
+			end
+			local s = bar.AbsoluteSize.Y / (h * fit.Scale) -- screen px per design px from the ancestors
+			fit.Scale = math.clamp(parent.AbsoluteSize.X / (total * s), 0.5, 1)
+		end)
+	end
+	pcall(function() -- (the Lune UI harness has no AbsoluteSize / Destroying)
+		local conn = parent:GetPropertyChangedSignal("AbsoluteSize"):Connect(refit)
+		bar.Destroying:Connect(function()
+			conn:Disconnect()
+		end)
+	end)
+	task.defer(refit)
 	return bar
 end
 
@@ -1802,8 +1823,19 @@ New("UIGradient", { Color = ColorSequence.new(T.PanelTop, T.PanelDeep), Rotation
 local tipStroke = UI.Stroke(tip, T.Gold, 2.5)
 UI.Pad(tip, 10)
 local tipText = UI.Text(tip, "", 16, T.Text, "Semi", { AutomaticSize = Enum.AutomaticSize.Y, Size = UDim2.new(1, 0, 0, 0), ZIndex = 61 })
+local tipOwner
 function UI.Tooltip(obj, fn)
 	obj.MouseEnter:Connect(function()
+		-- HUD buttons under an open window still get MouseEnter: no HUD tips over windows
+		if next(openWindows) ~= nil then
+			local a = obj
+			while a and not (a:IsA("Frame") and a.Name:sub(1, 4) == "Win_") do
+				a = a.Parent
+			end
+			if not a then
+				return
+			end
+		end
 		local text, color = fn()
 		if not text then
 			return
@@ -1811,12 +1843,17 @@ function UI.Tooltip(obj, fn)
 		tipText.Text = text
 		tipStroke.Color = color or T.Gold
 		tip.Visible = true
+		tipOwner = obj
 	end)
 	obj.MouseLeave:Connect(function()
 		tip.Visible = false
 	end)
 end
 RunService.RenderStepped:Connect(function()
+	-- a tile redrawn or a window closed under the pointer never sends MouseLeave: drop its tip
+	if tip.Visible and not (tipOwner and tipOwner.Visible and tipOwner:IsDescendantOf(game)) then
+		tip.Visible = false
+	end
 	if tip.Visible then
 		local m = UserInputService:GetMouseLocation()
 		tip.Position = UDim2.fromOffset(m.X / rootScale.Scale + 18, m.Y / rootScale.Scale - 10)

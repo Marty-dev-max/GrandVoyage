@@ -178,7 +178,8 @@ function ForgeScene.Play(parent, def, onDone)
 	cam.FieldOfView = 38
 	cam.Parent = vp
 	vp.CurrentCamera = cam
-	local camCF = CFrame.lookAt(Vector3.new(4.2, 4.9, -7.2), Vector3.new(-0.6, 2.7, 0.4))
+	-- v0.25.110: pulled back so the whole smith (about 7 studs with the hat) and the anvil fit (the head was cut off)
+	local camCF = CFrame.lookAt(Vector3.new(5.6, 6.4, -11.2), Vector3.new(-0.5, 3.5, 0.6))
 
 	-- forge corner: stone floor, anvil (foot, waist, face, horn), a glowing hearth behind
 	local iron, dark = Color3.fromRGB(92, 96, 112), Color3.fromRGB(62, 64, 78)

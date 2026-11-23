@@ -853,6 +853,11 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     and on joining. No Guild Registrar NPC any more. WORLD_VERSION 24.
   * v0.25.109 (owner): no island name signs (dock signs removed, floating banner already off); `Controllers/IslandEnter`
     shows UI.Banner(name, subtitle + level range) when your character enters an island radius (again after 90 s away).
+  * v0.25.110 (UI audit in Play): HUD.MENU entry = { icon, panelId, color, key, label }: Crew is { "🏴", "Guild", ..., "Crew" }
+    (108 swapped them: tile + G opened nothing). UI.TabBar fits its row to the parent width (UIScale, 0.5..1). UI.Tooltip
+    skips HUD objects while a window is open and drops the tip when its owner is hidden/removed. Map tiles 110x96 in an
+    inner sea frame (labels are tile children, z spread over the farthest island). Studio MCP mouse coords = GUI
+    AbsolutePosition (screenshot y - 58 here; window X buttons sit at negative y, clicks there still work).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

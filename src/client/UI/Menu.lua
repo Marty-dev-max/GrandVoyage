@@ -335,7 +335,7 @@ local function stepCamera(dt)
 			img.Parent, sg.Parent, board.Parent = sg, board, stage
 		end
 		board.SurfaceGui.Enabled = camMode == "title" and screens.title ~= nil and screens.title.Visible
-		board.CFrame = STAGE_CF * CFrame.new(1.4, 11.2 + math.sin(t * 1.3) * 0.25, 10) * CFrame.Angles(0, 0, math.sin(t * 0.9) * 0.015)
+		board.CFrame = STAGE_CF * CFrame.new(1.4, 11.9 + math.sin(t * 1.3) * 0.25, 10) * CFrame.Angles(0, 0, math.sin(t * 0.9) * 0.015)
 	end
 	if preview then
 		local bob = math.sin(t * 2.2) * 0.04

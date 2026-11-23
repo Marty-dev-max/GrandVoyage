@@ -3486,7 +3486,7 @@ function Panels.Pets()
 		-- evolution line: small static models (current stage highlighted), names underneath
 		if UI.ModelAsset("Pets", sp.id .. "_1") then
 			local evo = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 58), Parent = right })
-			New("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 6), Parent = evo })
+			New("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = evo })
 			for st = 1, 3 do
 				local cell = New("Frame", { BackgroundColor3 = st == pet.stage and sp.color or T.Panel, BackgroundTransparency = st == pet.stage and 0.55 or 0.4, Size = UDim2.fromOffset(56, 56), LayoutOrder = st * 2, Parent = evo })
 				UI.Corner(cell, 10)
@@ -3696,7 +3696,7 @@ function Panels.PearlShop(args)
 
 	local function detail(panel, e)
 		clear(panel)
-		UI.Pad(panel, 14)
+		UI.Pad(panel, 20) -- v0.25.101: inside the bevel ring
 		UI.List(panel, nil, 10, Enum.HorizontalAlignment.Center)
 		-- frameless stage (owner reference): the item floats in a soft color glow with twinkles (v0.25.41: no rays)
 		-- v0.25.101 (owner: buttons + notes fell out of the frame): the stage takes whatever height is left (flex fill),

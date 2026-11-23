@@ -780,6 +780,21 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
   * v0.25.89 (owner): `Controllers/Sprint` double-tap W (GameConfig.Sprint), WalkSpeed = player attr BaseSpeed
     (PlayerService) x Mult; Swim restores to BaseSpeed. F_SlickSpin = 8 ticks (Slick_Spin clip 8 x 120 deg).
     Slip Away buff: CombatService fruitBody ignores non-boss "blunt" monster blows ("SLIPPED OFF").
+  * v0.25.90 (owner): TCG card face = `UI/CardArt.lua` (Build / Fitted; POWER = Formulas.MonsterPower, MonsterTypes
+    badge, manga panel `Textures.card_manga` from tools/gen_card_art.py tinted by rarity, `UI.MonsterView` = the real
+    voxel MonsterLooks model, effect box + slot, foil sweep), used by CardReveal and the Bag card detail.
+  * v0.25.91 (owner): monster faces by kind: gen_faces.py eyes Thug/Stern/Beady/Crazed/Feral, mouths Snarl/Scowl/
+    Painted, full-face `mark` overlays (Scar/Stubble/ClownPaint/WarPaint/Gills/Whiskers, Config/FaceImages mark*);
+    MonsterLooks per-id eyes/mouth/mark/eyes1/eyes2; VoxelChar keeps look.mark through Looks.Sanitize. Re-running
+    gen_faces.py rewrites old PNG bytes: `git checkout -- assets/faces` and keep only the new files.
+  * v0.25.92 (owner): `UI/ItemReveal.lua`: Rare+ drops (Epic+ for Material/Consumable/Ammo, never cards) play a
+    full-screen "<RARITY> GET!" (rarity wash, rays, 3D preview, CardBass + Rarity<id>), queued, tap skips; HUD.Loot.
+  * v0.25.93 (owner): shipyard = `Controllers/Builder.lua` rewrite: own ScreenGui GVShipyard, UI.Root hidden, Scriptable
+    free camera (RMB drag / wheel / WASD QE, clamped around the plot; CAS sinks movement + skill keys), left panel with
+    HP / SPEED / CANNON / CREW (no weight), PLACE / DELETE modes (R rotate, X delete), category icon tabs, part cards
+    (UI.ModelViewOf of ShipModel.BuildPart + cost chips, red = short), MATERIALS owned. Client canPlace mirrors
+    BuildPlace for the ghost color + reason; delete = red Highlight on the `Index` model inside Build_<name>, click ->
+    BuildRemove. Right click never deletes. GameConfig.Ship.WeightDrag 0.04 (was 0.085: sails matter more).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

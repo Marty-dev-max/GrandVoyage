@@ -22,6 +22,7 @@ for id, c in pairs(Cards) do
 		price = 5000,
 		isBossCard = mon ~= nil and mon.isBoss == true,
 		monster = c.monster,
+		mtype = mon and mon.mtype, -- v0.25.95: card icon by monster type (card_STR ...)
 	}
 end
 

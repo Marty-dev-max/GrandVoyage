@@ -645,6 +645,9 @@ function UI.ItemIconName(def)
 	if Icons["acc_" .. def.id] then
 		return "acc_" .. def.id
 	end
+	if def.kind == "Card" and def.mtype and Icons["card_" .. def.mtype] then
+		return "card_" .. def.mtype
+	end
 	return ITEM_ICON[def.id]
 		or (def.fruit and ("fruit_" .. string.lower(def.fruit)))
 		or (def.weaponType and WEAPON_ICON[def.weaponType])

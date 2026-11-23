@@ -123,6 +123,38 @@ def card(s):
         s.line([(10, y), (22, y)], (150, 140, 120), 1, True)
 
 
+# v0.25.95 (owner): card icons by monster type (Config/MonsterTypes colors): cream card, art window in the type color
+# with the type's sign (STR fist, AGI wind, DEX crosshair, INT orb), type-colored footer band.
+TYPE_COL = {'STR': (230, 60, 55), 'AGI': (70, 200, 90), 'DEX': (60, 140, 240), 'INT': (170, 80, 230)}
+
+
+def type_card(t):
+    def draw(s):
+        c = TYPE_COL[t]
+        s.rect(7, 3, 25, 28, (250, 245, 230))
+        s.rect(9, 5, 23, 19, c)
+        s.rect(9, 5, 23, 6, lerp(c, WHITE, 0.35))
+        if t == 'STR':
+            fist(s, 16, 13, 0.62)
+        elif t == 'AGI':
+            for y, x0 in ((9, 11), (12, 13), (15, 10)):
+                s.line([(x0, y + 1), (x0 + 10, y - 1)], WHITE, 1, True)
+            s.poly([(18, 8), (22, 10), (19, 12)], WHITE)
+        elif t == 'DEX':
+            s.oval(16, 12, 5, 5, WHITE)
+            s.oval(16, 12, 3, 3, c)
+            s.oval(16, 12, 1, 1, RED if c != RED else WHITE)
+            s.line([(16, 5), (16, 8)], WHITE, 1, True)
+            s.line([(16, 16), (16, 19)], WHITE, 1, True)
+        else:
+            s.oval(16, 12, 4, 4, lerp(c, WHITE, 0.55))
+            s.oval(15, 11, 1, 1, WHITE)
+            star(s, 21, 7, 2, 1, 4, YEL, fx=True)
+        s.rect(9, 22, 23, 26, c)
+        s.line([(11, 24), (21, 24)], lerp(c, WHITE, 0.5), 1, True)
+    return draw
+
+
 def book(s, c=(70, 110, 200)):
     s.rect(6, 6, 25, 27, c)
     s.rect(9, 6, 25, 25, (245, 240, 225))
@@ -991,7 +1023,7 @@ ICONS = {
     'dash': dash, 'flame': flame_icon, 'calm': calm_icon, 'auto': auto, 'manual': manual,
     'graphics': monitor, 'audio': speaker, 'interface': window_ui, 'autobattle': robot, 'developer': dev_tools, 'keyboard': keyboard,
     # items
-    'egg': egg, 'golden_egg': gold_egg, 'card': card, 'book': book, 'ship': ship, 'charm': charm, 'wood': logs,
+    'egg': egg, 'golden_egg': gold_egg, 'card': card, 'card_STR': type_card('STR'), 'card_AGI': type_card('AGI'), 'card_DEX': type_card('DEX'), 'card_INT': type_card('INT'), 'book': book, 'ship': ship, 'charm': charm, 'wood': logs,
     'cloth': cloth, 'ore': lambda s: rock(s, (140, 140, 155), (200, 210, 230)), 'shard': crystal, 'potion': bottle,
     'meat_s': meat_size('S'), 'meat_m': meat_size('M'), 'meat_l': meat_size('L'),
     'grog_s': lambda s: (grog_s(s), size_disc(s, 'S')), 'grog_m': lambda s: (grog_m(s), size_disc(s, 'M')),

@@ -797,6 +797,8 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     BuildRemove. Right click never deletes. GameConfig.Ship.WeightDrag 0.04 (was 0.085: sails matter more).
   * v0.25.94 (owner): Knuckles previews = `UI.FistModel()` (bare fist + tape wraps in blocks; UI.ModelView intercepts
     Weapons/Knuckles). The Wep_Knuckles glove mesh is no longer shown anywhere.
+  * v0.25.95 (owner): card icons by monster type: gen_pixel_icons `type_card` -> card_STR/AGI/DEX/INT (Config/Icons);
+    ItemDB card items carry `mtype`, UI.ItemIconName returns card_<mtype> for cards.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

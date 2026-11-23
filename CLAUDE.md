@@ -880,6 +880,9 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     voxel box + trim bands, `Lid` Model with attribute Hinge (back top edge), `Lock` Model, gold `Hoard` inside; FX
     ChestOpen { model, id, by } -> VFX: padlock tumbles off, lid swings 105 deg, 16 local physics coins; non-openers see it
     close again; Quest.paintChests snaps the open pose after 2 s unless LidOpen. WORLD_VERSION 27.
+    v0.25.114: sea bosses carry model attribute SeaState (hidden/rising/fight/diving, MonsterService seaInit/seaStep);
+    BossIntro plays for them on rising/fight within SEA_NEAR 320 (flat), a failed intro (pcall) never leaves the music
+    muted; the intro root frame is anchored top-center (its UIScale shrank toward the top-left = name off-center).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

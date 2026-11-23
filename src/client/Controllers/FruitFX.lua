@@ -97,70 +97,197 @@ local function fireBurst(pos, power)
 	Voxels.Blocks(pos, { count = math.floor(10 * power), colors = { C.fire1, C.fire2, C.fire3 }, size = { 0.3, 0.7 }, speed = 10 * power, up = 10, neon = true, collide = false, life = 0.6, spread = 1.2 })
 	Voxels.Pixels(pos, { count = math.floor(30 * power), colors = { C.fire1, C.fire2, C.fire3 }, size = 0.35, speed = 14 * power, gravity = -6, life = 0.7, glow = 1, spread = 2 })
 end
+-- v0.25.74 Blaze phase 3 (docs/Plan-Fruits-v2.md): timings follow the server (strike of each Blaze_* clip + travel)
+local EMBER = Color3.fromRGB(120, 255, 110) -- Emberflies drift green, then burst orange
+local EMBER2 = Color3.fromRGB(210, 255, 170)
+-- the caster's arm wrapped in flame for a moment (pixel flames off the hand block)
+local function armFlame(char, side, seconds)
+	local hand = typeof(char) == "Instance" and char:FindFirstChild((side or "Right") .. "Hand")
+	if not hand then
+		return
+	end
+	local t0 = os.clock()
+	task.spawn(function()
+		while os.clock() - t0 < seconds and hand.Parent do
+			Voxels.Pixels(hand.Position, { count = 5, colors = { C.fire1, C.fire2, C.fire3 }, size = 0.32, speed = 2.5, gravity = -9, life = 0.4, glow = 1, spread = 0.7 })
+			task.wait(0.05)
+		end
+	end)
+end
+FX.ArmFlame = armFlame
+
+-- Blaze Fist: the arm bursts into flame, a GIANT fist of fire flies (server: strike 0.08 + 0.2 travel), explodes
 FX.F_FireFist = function(d)
-	local from, to = d.from + Vector3.new(0, 1, 0), d.to or d.from
-	local dir = (to - from)
+	local to = d.to or d.from
+	local from = d.from + Vector3.new(0, 1, 0)
+	local hand = typeof(d.char) == "Instance" and d.char:FindFirstChild("RightHand")
+	if hand then
+		from = hand.Position
+	end
+	local dir = to - from
 	if dir.Magnitude < 0.5 then
 		return
 	end
-	local fromCF = CFrame.lookAt(from, to)
-	local parts = fistBlocks(fromCF, { C.fire2, C.fire1 }, 1.8, true)
-	table.insert(parts, blk(Vector3.new(2.6, 2.6, 2.6), C.fire3, fromCF * CFrame.new(0, 0, 0.8), true, 0.45))
-	local t = math.clamp(dir.Magnitude / 90, 0.12, 0.5)
-	moveAll(parts, fromCF, CFrame.lookAt(to, to + dir.Unit), t)
-	for k = 1, 6 do
-		task.delay(t * k / 6, function()
-			Voxels.Pixels(from:Lerp(to, k / 6), { count = 10, colors = { C.fire1, C.fire2, C.fire3 }, size = 0.4, speed = 3, gravity = -8, life = 0.5, glow = 1, spread = 1.5 })
-		end)
-	end
-	for _, p in ipairs(parts) do
-		fade(p, t, 0.2)
-	end
-	task.delay(t, function()
-		fireBurst(to, 1.4)
+	armFlame(d.char, "Right", 0.45)
+	task.delay(0.08, function()
+		local fromCF = CFrame.lookAt(from, to)
+		local parts = fistBlocks(fromCF, { C.fire2, C.fire1 }, 2.6, true)
+		table.insert(parts, blk(Vector3.new(3.6, 3.6, 3.6), C.fire3, fromCF * CFrame.new(0, 0, 1.2), true, 0.45))
+		table.insert(parts, blk(Vector3.new(2.4, 2.4, 4.5), C.fire1, fromCF * CFrame.new(0, 0, 2.6), true, 0.55))
+		moveAll(parts, fromCF, CFrame.lookAt(to, to + dir.Unit), 0.2)
+		for k = 1, 8 do
+			task.delay(0.2 * k / 8, function()
+				Voxels.Pixels(from:Lerp(to, k / 8), { count = 14, colors = { C.fire1, C.fire2, C.fire3 }, size = 0.45, speed = 4, gravity = -10, life = 0.55, glow = 1, spread = 2 })
+			end)
+		end
+		for _, p in ipairs(parts) do
+			fade(p, 0.2, 0.15)
+		end
+	end)
+	task.delay(0.28, function()
+		fireBurst(to, 2)
+		local V = require(script.Parent.VFX)
+		V.Shockwave(to, dir, C.fire2, 9)
+		V.Ring(ground(to) + Vector3.new(0, 0.3, 0), 10, C.fire2, 0.4)
 	end)
 end
+
+-- Flame Twister: a tornado of fire blocks spins up from the ground and keeps turning while the server ticks
+-- (5 hits, 0.35 s apart from 0.3 s)
 FX.F_FlamePillar = function(d)
 	local at = ground(d.to or d.from)
-	local r = math.min(d.radius or 12, 16)
-	for i = 0, 7 do
-		task.delay(i * 0.05, function()
-			local s = r * (1 - i * 0.08)
-			local ring = blk(Vector3.new(s, 2.2, s), i % 2 == 0 and C.fire2 or C.fire3, CFrame.new(at + Vector3.new(0, 1 + i * 2.2, 0)) * CFrame.Angles(0, i * 0.4, 0), true, 0.25)
-			tw(ring, 0.5, { Size = Vector3.new(s * 0.4, 2.2, s * 0.4), CFrame = ring.CFrame * CFrame.new(0, 6, 0) })
-			fade(ring, 0.35, 0.3)
-		end)
+	local r = math.min(d.radius or 14, 16) * 0.6
+	local blocks = {}
+	for i = 1, 46 do
+		local h = (i / 46) * 18
+		local c = h < 5 and C.fire3 or (h < 11 and C.fire2 or C.fire1)
+		blocks[i] = { b = blk(Vector3.one * (1.4 - h * 0.035), c, CFrame.new(at), true, 0.1), a = math.random() * 6.28, h = h }
 	end
-	Voxels.Pixels(at + Vector3.new(0, 3, 0), { count = 60, colors = { C.fire1, C.fire2 }, size = 0.4, speed = 18, gravity = -14, life = 1, glow = 1, spread = r })
-	fireBurst(at + Vector3.new(0, 1, 0), 1.6)
-end
-FX.F_FireDash = function(d)
-	local from, to = d.from, d.to or d.from
-	along(from, to, 8, function(p, i)
-		task.delay(i * 0.03, function()
-			Voxels.Pixels(ground(p) + Vector3.new(0, 0.6, 0), { count = 12, colors = { C.fire1, C.fire2, C.fire3 }, size = 0.4, speed = 4, gravity = -10, life = 0.8, glow = 1, spread = 2 })
-			local b = blk(Vector3.new(1.4, 0.3, 1.4), C.fire2, CFrame.new(ground(p) + Vector3.new(0, 0.15, 0)), true, 0.2)
-			fade(b, 0.4, 0.5)
-		end)
-	end)
-	fireBurst(to, 1)
-end
-FX.F_Inferno = function(d)
-	local at = ground(d.from)
-	local r = d.radius or 18
-	for ring = 1, 3 do
-		task.delay(ring * 0.1, function()
-			local n = 14 + ring * 6
-			for i = 1, n do
-				local a = i / n * math.pi * 2
-				local p = at + Vector3.new(math.cos(a), 0, math.sin(a)) * (r * ring / 3)
-				local b = blk(Vector3.new(1.2, 1.2, 1.2), ring == 1 and C.fire1 or (ring == 2 and C.fire2 or C.fire3), CFrame.new(p + Vector3.new(0, 0.6, 0)), true)
-				tw(b, 0.5, { CFrame = b.CFrame * CFrame.new(0, 3 + math.random() * 3, 0) * CFrame.Angles(math.random(), math.random(), 0) })
-				fade(b, 0.3, 0.3)
+	local t0 = os.clock() + 0.25
+	local life = 1.75
+	local conn
+	conn = game:GetService("RunService").RenderStepped:Connect(function()
+		local t = os.clock() - t0
+		if t < 0 then
+			return
+		end
+		local grow = math.min(1, t / 0.25)
+		local shrink = t > life and math.max(0, 1 - (t - life) / 0.3) or 1
+		for _, e in ipairs(blocks) do
+			local rr = (r * 0.25 + r * (e.h / 18)) * grow * shrink -- a funnel, wide at the top
+			local a = e.a + t * (9 - e.h * 0.2)
+			e.b.CFrame = CFrame.new(at + Vector3.new(math.cos(a) * rr, e.h * grow, math.sin(a) * rr)) * CFrame.Angles(a, a * 0.7, 0)
+			e.b.Transparency = 0.1 + (1 - shrink) * 0.9
+		end
+		if t > life + 0.3 then
+			conn:Disconnect()
+			for _, e in ipairs(blocks) do
+				e.b:Destroy()
 			end
+		end
+	end)
+	for k = 0, 6 do
+		task.delay(0.3 + k * 0.25, function()
+			Voxels.Pixels(at + Vector3.new(0, 2, 0), { count = 26, colors = { C.fire1, C.fire2, C.fire3 }, size = 0.4, speed = 14, gravity = -16, life = 0.9, glow = 1, spread = r })
 		end)
 	end
-	fireBurst(at + Vector3.new(0, 2, 0), 2.4)
+	task.delay(0.3, function()
+		require(script.Parent.VFX).Ring(at + Vector3.new(0, 0.3, 0), r * 1.6, C.fire2, 0.5)
+	end)
+end
+
+-- Emberflies: green sparks drift off the finger to spots around the target, hover, then burst orange one by one
+-- (server: delay 1.0 after the 0.2 strike, then 4 bursts 0.18 apart)
+FX.F_Emberflies = function(d)
+	local to = d.to or d.from
+	local r = math.min(d.radius or 12, 14)
+	local hand = typeof(d.char) == "Instance" and d.char:FindFirstChild("RightHand")
+	local start = hand and hand.Position or (d.from + Vector3.new(0, 1, 0))
+	local flies = {}
+	for i = 1, 9 do
+		local a = i / 9 * math.pi * 2 + math.random()
+		local spot = to + Vector3.new(math.cos(a) * r * (0.2 + math.random() * 0.6), 1 + math.random() * 2.5, math.sin(a) * r * (0.2 + math.random() * 0.6))
+		local core = blk(Vector3.new(0.5, 0.5, 0.5), EMBER2, CFrame.new(start), true, 0)
+		local halo = blk(Vector3.new(1.1, 1.1, 1.1), EMBER, CFrame.new(start), true, 0.55)
+		flies[i] = { core = core, halo = halo, spot = spot, seed = math.random() * 10 }
+	end
+	local t0 = os.clock() + 0.2
+	local conn
+	conn = game:GetService("RunService").RenderStepped:Connect(function()
+		local t = os.clock() - t0
+		if t < 0 then
+			return
+		end
+		for _, f in ipairs(flies) do
+			if f.core.Parent then
+				local k = math.min(1, t / 0.55)
+				local ease = 1 - (1 - k) ^ 2
+				-- a lazy curve out, then a firefly hover
+				local p = start:Lerp(f.spot, ease) + Vector3.new(0, math.sin(ease * math.pi) * 3, 0)
+				p += Vector3.new(math.sin(t * 5 + f.seed), math.sin(t * 7 + f.seed) * 0.6, math.cos(t * 4 + f.seed)) * 0.35 * k
+				local pulse = 1 + math.sin(t * 14 + f.seed) * 0.2
+				f.core.CFrame = CFrame.new(p)
+				f.halo.CFrame = CFrame.new(p)
+				f.halo.Size = Vector3.one * 1.1 * pulse
+			end
+		end
+		if t > 2 then
+			conn:Disconnect()
+		end
+	end)
+	for i, f in ipairs(flies) do
+		local tick = (i - 1) % 4
+		task.delay(1.2 + tick * 0.18 + math.random() * 0.05, function()
+			local p = f.core.Parent and f.core.Position or f.spot
+			f.core:Destroy()
+			f.halo:Destroy()
+			fireBurst(p, 0.9)
+			local b = blk(Vector3.new(1, 1, 1), C.fire1, CFrame.new(p), true, 0.2)
+			tw(b, 0.22, { Size = Vector3.new(5, 5, 5), Transparency = 1 })
+			Debris:AddItem(b, 0.25)
+		end)
+	end
+end
+
+-- Inferno: the arms fling wide and a sea of fire floods out around you, flames standing for a moment
+-- (server: one hit at strike 0.35)
+FX.F_Inferno = function(d)
+	local root = charRoot(d)
+	local at = ground(root and root.Position or d.from)
+	local r = d.radius or 20
+	armFlame(d.char, "Right", 0.5)
+	armFlame(d.char, "Left", 0.5)
+	task.delay(0.3, function()
+		local V = require(script.Parent.VFX)
+		V.Ring(at + Vector3.new(0, 0.3, 0), r, C.fire2, 0.5)
+		V.Shockwave(at + Vector3.new(0, 2, 0), Vector3.yAxis, C.fire1, r * 0.8)
+		fireBurst(at + Vector3.new(0, 2, 0), 2.6)
+		-- the floor of fire: blocks race out in rings, then rise as flames and die down
+		for ring = 1, 4 do
+			task.delay(ring * 0.06, function()
+				local n = 10 + ring * 7
+				for i = 1, n do
+					local a = i / n * math.pi * 2 + ring * 0.4
+					local p = at + Vector3.new(math.cos(a), 0, math.sin(a)) * (r * ring / 4) * (0.85 + math.random() * 0.3)
+					local h = 1 + math.random() * 2.5
+					local c = ring <= 1 and C.fire1 or (ring <= 2 and C.fire2 or C.fire3)
+					local b = blk(Vector3.new(1.3, 0.2, 1.3), c, CFrame.new(p + Vector3.new(0, 0.1, 0)), true, 0.05)
+					tw(b, 0.25, { Size = Vector3.new(1.3, h, 1.3), CFrame = CFrame.new(p + Vector3.new(0, h / 2, 0)) }, Enum.EasingStyle.Back)
+					task.delay(0.5 + math.random() * 0.5, function()
+						if b.Parent then
+							tw(b, 0.35, { Size = Vector3.new(0.4, h * 1.6, 0.4), CFrame = CFrame.new(p + Vector3.new(0, h * 1.4, 0)), Transparency = 1 })
+						end
+					end)
+					Debris:AddItem(b, 1.5)
+				end
+			end)
+		end
+		for k = 0, 4 do
+			task.delay(0.1 + k * 0.2, function()
+				Voxels.Pixels(at + Vector3.new(0, 1.5, 0), { count = 36, colors = { C.fire1, C.fire2, C.fire3 }, size = 0.45, speed = 18, gravity = -12, life = 0.9, glow = 1, spread = r * 0.8 })
+			end)
+		end
+	end)
 end
 
 -- ===== Haze Haze =====
@@ -914,7 +1041,6 @@ end
 
 -- v0.25.65 fruit v2: new skills borrow the closest existing look until their own pass (docs/Plan-Fruits-v2.md)
 FX.F_SmokeFist = FX.F_SmokeGrip
-FX.F_Emberflies = FX.F_FireDash
 FX.F_SplitRunner = FX.F_SplitEscape
 
 function FX.Play(d)
@@ -927,10 +1053,84 @@ function FX.Play(d)
 	end
 end
 
+-- ===== Blaze Flight (v0.25.74): while a Blaze user flies, the forearms and lower legs turn to fire (every client) =====
+-- Flight tells the server (FlyState -> char attribute Flying); here the voxel blocks of those limbs hide locally and
+-- pixel flames pour off the R15 parts underneath.
+local FIRE_LIMBS = { "LeftLowerArm", "LeftHand", "RightLowerArm", "RightHand", "LeftLowerLeg", "LeftFoot", "RightLowerLeg", "RightFoot" }
+local fireDressed = setmetatable({}, { __mode = "k" })
+local function flameEmitter(parent, big)
+	local Textures = require(game:GetService("ReplicatedStorage").Shared.Config.Textures)
+	local e = Instance.new("ParticleEmitter")
+	e.Name = "BlazeLimb"
+	e.Texture = Textures.px_flame or Textures.flame or ""
+	e.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, C.fire1), ColorSequenceKeypoint.new(0.45, C.fire2), ColorSequenceKeypoint.new(1, C.fire3) })
+	e.LightEmission, e.LightInfluence = 1, 0
+	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, big and 1.3 or 0.9), NumberSequenceKeypoint.new(1, 0.1) })
+	e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.05), NumberSequenceKeypoint.new(1, 1) })
+	e.Lifetime = NumberRange.new(0.25, 0.45)
+	e.Speed = NumberRange.new(1, 3)
+	e.SpreadAngle = Vector2.new(35, 35)
+	e.Acceleration = Vector3.new(0, 7, 0)
+	e.Rate = big and 45 or 30
+	e.Parent = parent
+	return e
+end
+local function dressFire(char, on)
+	local st = fireDressed[char]
+	if on and not st then
+		st = { emitters = {}, blocks = {} }
+		fireDressed[char] = st
+		local limbs = {}
+		for _, n in ipairs(FIRE_LIMBS) do
+			local p = char:FindFirstChild(n)
+			if p then
+				limbs[p] = true
+				table.insert(st.emitters, flameEmitter(p, string.find(n, "Lower") ~= nil))
+			end
+		end
+		local body = char:FindFirstChild("VoxelBody")
+		for _, b in ipairs(body and body:GetChildren() or {}) do
+			local w = b:FindFirstChildOfClass("WeldConstraint")
+			if w and limbs[w.Part0] then
+				b.LocalTransparencyModifier = 1
+				table.insert(st.blocks, b)
+			end
+		end
+	elseif not on and st then
+		fireDressed[char] = nil
+		for _, e in ipairs(st.emitters) do
+			e.Enabled = false
+			Debris:AddItem(e, 0.5)
+		end
+		for _, b in ipairs(st.blocks) do
+			if b.Parent then
+				b.LocalTransparencyModifier = 0
+			end
+		end
+	end
+end
+
 function FX.Start()
 	folder = Instance.new("Folder")
 	folder.Name = "FruitFX"
 	folder.Parent = workspace
+	task.spawn(function()
+		local Players = game:GetService("Players")
+		while true do
+			for _, pl in ipairs(Players:GetPlayers()) do
+				local c = pl.Character
+				if c then
+					dressFire(c, pl:GetAttribute("Fruit") == "Blaze" and c:GetAttribute("Flying") == true)
+				end
+			end
+			for c in pairs(fireDressed) do
+				if not c.Parent then
+					fireDressed[c] = nil
+				end
+			end
+			task.wait(0.2)
+		end
+	end)
 end
 
 return FX

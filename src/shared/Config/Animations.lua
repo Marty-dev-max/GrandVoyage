@@ -2,6 +2,11 @@
 return {
 	Baton_Stance = 113694728123108,
 	Baton_Strike = 113150741446246,
+	Blaze_Ember = 82048315280098,
+	Blaze_Fist = 99443269262696,
+	Blaze_Inferno = 123096076078853,
+	Blaze_Twister = 132192836772781,
+	Blaze_Wind = 76976914749872,
 	Bounce_Balloon = 96455268769208,
 	Bounce_Cannon = 100215850542117,
 	Bounce_Gatling = 111300818492210,

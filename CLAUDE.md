@@ -678,6 +678,12 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     are built once per render: a click only re-highlights (rim) + redraws the detail panel (the old full re-render
     jumped the scroll to the top); `relayout()` sizes cells from the scroll's real width (100-px probe for the UIScales)
     on every AbsoluteSize change (first measure during the open tween gave 2 columns). Owned Toki colors: CHANGE COLOR.
+  * v0.25.74 FRUITS v2 phase 3 = Blaze: AnimClips Blaze_Wind/Fist/Twister/Ember/Inferno (uploaded; Fist charge like
+    Bounce), FruitFX F_FireFist (giant fist on the server's strike+travel), F_FlamePillar = spinning block funnel for
+    the 5 ticks, F_Emberflies = 9 green fireflies that hover then burst orange per tick, F_Inferno = rising rings of
+    fire blocks, `ArmFlame`. Blaze Flight: Flight.Allow("blaze") when Fruit == Blaze; Flight start/stop -> server
+    "FlyState" (FruitService) -> char attr Flying; FruitFX.Start loop `dressFire` hides the lower-limb voxel blocks and
+    adds px_flame emitters on every client.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

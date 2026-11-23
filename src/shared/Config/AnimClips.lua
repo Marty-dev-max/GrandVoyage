@@ -469,6 +469,52 @@ C.Bounce_SlingFly = { rig = "R15", loop = true, priority = "Action", length = 0.
 	{ t = 0.4, pose = SLING_FLY },
 } }
 
+-- ===== Cursed Fruit: Blaze Blaze (v0.25.74, docs/Plan-Fruits-v2.md phase 3) =====
+local BLAZE_WIND = with(WIND_R, { RightUpperArm = { -42, 0, 32 }, RightLowerArm = { 105, 0, 0 }, UpperTorso = { -12, -52, 0 }, Head = { 0, 40, 0 },
+	LeftUpperArm = { 70, 0, -14 }, LeftLowerArm = { 25, 0, 0 }, LowerTorso = { 0, -16, 0, 0, -0.45, 0.15 } })
+local BLAZE_PUNCH = with(PISTOL, { UpperTorso = { -16, 46, 0 }, LowerTorso = { 0, 18, 0, 0, -0.4, -0.45 }, RightUpperLeg = { -26, 0, 4 }, LeftUpperLeg = { 44, 0, -4 }, LeftLowerLeg = { -40, 0, 0 } })
+C.Blaze_Wind = { rig = "R15", loop = true, priority = "Action", length = 0.3, keys = {
+	{ t = 0, pose = BLAZE_WIND },
+	{ t = 0.15, pose = with(BLAZE_WIND, { UpperTorso = { -12, -56, 0 }, RightUpperArm = { -46, 0, 34 } }) },
+	{ t = 0.3, pose = BLAZE_WIND },
+} }
+C.Blaze_Fist = { rig = "R15", priority = "Action", strike = 0.08, keys = {
+	{ t = 0, pose = BLAZE_WIND },
+	{ t = 0.08, pose = BLAZE_PUNCH },
+	{ t = 0.4, pose = with(BLAZE_PUNCH, { UpperTorso = { -12, 40, 0 } }) },
+	{ t = 0.62 },
+} }
+-- Flame Twister: a crouch, then the right hand thrust up at the sky (the twister rises from the ground)
+local SKY = { RightUpperArm = { 178, 0, 8 }, RightLowerArm = { 0, 0, 0 }, LeftUpperArm = { 25, 0, -55 }, LeftLowerArm = { 30, 0, 0 },
+	UpperTorso = { 12, 0, 0 }, Head = { 24, 0, 0 }, RightUpperLeg = { 0, 0, 10 }, LeftUpperLeg = { 0, 0, -10 } }
+C.Blaze_Twister = { rig = "R15", priority = "Action", strike = 0.3, keys = {
+	{ t = 0 },
+	{ t = 0.16, pose = with(CROUCH, { RightUpperArm = { -20, 0, 20 }, LeftUpperArm = { -20, 0, -20 }, UpperTorso = { -18, 0, 0 } }) },
+	{ t = 0.3, pose = SKY },
+	{ t = 0.75, pose = with(SKY, { RightUpperArm = { 174, 0, 12 } }) },
+	{ t = 0.95 },
+} }
+-- Emberflies: a finger pointed at the enemy (the sparks drift off it)
+local POINT = { RightUpperArm = { 88, 0, -2 }, RightLowerArm = { 0, 0, 0 }, RightHand = { 0, 0, 0 }, LeftUpperArm = { -10, 0, -18 }, LeftLowerArm = { 30, 0, 0 },
+	UpperTorso = { -4, 28, 0 }, Head = { 0, -22, 0 }, LowerTorso = { 0, 10, 0 } }
+C.Blaze_Ember = { rig = "R15", priority = "Action", strike = 0.2, keys = {
+	{ t = 0 },
+	{ t = 0.12, pose = with(POINT, { RightUpperArm = { 70, 0, -2 } }) },
+	{ t = 0.2, pose = POINT },
+	{ t = 0.6, pose = POINT },
+	{ t = 0.8 },
+} }
+-- Inferno: arms crossed in front, then flung wide as the sea of fire bursts out
+local FLUNG = { RightUpperArm = { 30, 0, 115 }, LeftUpperArm = { 30, 0, -115 }, RightLowerArm = { 10, 0, 0 }, LeftLowerArm = { 10, 0, 0 },
+	UpperTorso = { 16, 0, 0 }, Head = { 22, 0, 0 }, RightUpperLeg = { 0, 0, 16 }, LeftUpperLeg = { 0, 0, -16 }, LowerTorso = { 0, 0, 0, 0, -0.15, 0 } }
+C.Blaze_Inferno = { rig = "R15", priority = "Action", strike = 0.35, keys = {
+	{ t = 0 },
+	{ t = 0.2, pose = with(CROUCH, { RightUpperArm = { 62, 0, -38 }, LeftUpperArm = { 62, 0, 38 }, RightLowerArm = { 95, 0, 0 }, LeftLowerArm = { 95, 0, 0 }, UpperTorso = { -22, 0, 0 } }) },
+	{ t = 0.35, pose = FLUNG },
+	{ t = 0.85, pose = FLUNG },
+	{ t = 1.05 },
+} }
+
 -- weapon -> combo clips (in order), stance, and the clips each skill kind uses
 C.Weapons = {
 	-- freestyle street fighting: jab, cross, body blow, hook, knee, elbow, spinning backfist (the uppercut is a skill now)

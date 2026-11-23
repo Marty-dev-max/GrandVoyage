@@ -29,10 +29,10 @@ F.List = {
 		desc = "Become fire itself. Attacks often pass right through you.",
 		passive = { flee = 25, atkPct = 0.05 }, passiveText = "Flame Body (Logia): monsters without Toki pass right through you • Blaze Flight: hold Space • +25 FLEE, +5% ATK",
 		skills = {
-			{ id = "F_FireFist", name = "Blaze Fist", kind = "Ranged", sp = 14, cd = 4, range = 48, mult = 2.6, charge = true, mastery = 1, fx = "Firebird", desc = "Hold: the arm bursts into flame. Release: a giant fist of fire." },
-			{ id = "F_FlamePillar", name = "Flame Twister", kind = "GroundAoE", sp = 22, cd = 8, range = 45, radius = 14, mult = 0.6, ticks = 5, tickEvery = 0.35, mastery = 10, fx = "Tornado", desc = "A twister of fire spins up from the ground, burning again and again." },
-			{ id = "F_Emberflies", name = "Emberflies", kind = "GroundAoE", sp = 18, cd = 9, range = 40, radius = 12, mult = 0.7, ticks = 4, tickEvery = 0.18, delay = 1.0, mastery = 25, fx = "Explosion", desc = "Green sparks drift onto your foes, then burst into fire, hit after hit." },
-			{ id = "F_Inferno", name = "Inferno", kind = "AoE", sp = 40, cd = 20, radius = 20, mult = 3.0, mastery = 50, fx = "Explosion", desc = "Explode into a sea of fire." },
+			{ id = "F_FireFist", name = "Blaze Fist", kind = "Ranged", sp = 14, cd = 4, range = 48, mult = 2.6, charge = true, anim = "Blaze_Fist", chargeAnim = "Blaze_Wind", mastery = 1, fx = "Firebird", desc = "Hold: the arm bursts into flame. Release: a giant fist of fire." },
+			{ id = "F_FlamePillar", name = "Flame Twister", kind = "GroundAoE", sp = 22, cd = 8, range = 45, radius = 14, mult = 0.6, ticks = 5, tickEvery = 0.35, anim = "Blaze_Twister", mastery = 10, fx = "Tornado", desc = "A twister of fire spins up from the ground, burning again and again." },
+			{ id = "F_Emberflies", name = "Emberflies", kind = "GroundAoE", sp = 18, cd = 9, range = 40, radius = 12, mult = 0.7, ticks = 4, tickEvery = 0.18, delay = 1.0, anim = "Blaze_Ember", mastery = 25, fx = "Explosion", desc = "Green sparks drift onto your foes, then burst into fire, hit after hit." },
+			{ id = "F_Inferno", name = "Inferno", kind = "AoE", sp = 40, cd = 20, radius = 20, mult = 3.0, anim = "Blaze_Inferno", mastery = 50, fx = "Explosion", desc = "Explode into a sea of fire." },
 		},
 	},
 	{

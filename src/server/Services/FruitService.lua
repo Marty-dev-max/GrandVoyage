@@ -385,6 +385,14 @@ function FS.Init(registry)
 end
 
 function FS.Start()
+	-- v0.25.74: the flying state of a character (client Flight), so every client can dress it (Blaze fire limbs)
+	Net.Handle("FlyState", function(player, data)
+		local c = player.Character
+		if c and type(data) == "table" then
+			c:SetAttribute("Flying", data.on == true or nil)
+		end
+		return true
+	end, 0.1)
 	Players.PlayerRemoving:Connect(function(player)
 		lastCast[player] = nil
 	end)

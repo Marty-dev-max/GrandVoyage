@@ -12,6 +12,7 @@ local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
 local Looks = require(ReplicatedStorage.Shared.Config.Looks)
+local Net = require(ReplicatedStorage.Shared.Modules.Net)
 
 local Flight = {}
 local player = Players.LocalPlayer
@@ -61,6 +62,7 @@ local function stop()
 		end
 	end
 	lv, ao, att = nil, nil, nil
+	task.spawn(Net.Request, "FlyState", { on = false })
 	local _, h = char()
 	if h then
 		h.PlatformStand = false
@@ -76,6 +78,7 @@ local function start()
 	end
 	flying = true
 	startedAt = os.clock()
+	task.spawn(Net.Request, "FlyState", { on = true })
 	h.PlatformStand = true
 	att = Instance.new("Attachment")
 	att.Name = "FlightAtt"
@@ -104,11 +107,14 @@ function Flight.Start()
 	local function refresh()
 		local h = Looks.HeritageById[player:GetAttribute("Heritage") or ""]
 		Flight.Allow("heritage", h ~= nil and h.fly == true)
+		-- v0.25.74 Blaze Flight (Blaze Blaze no Mi passive): hold Space in the air, the lower limbs turn to fire (FruitFX)
+		Flight.Allow("blaze", player:GetAttribute("Fruit") == "Blaze")
 		if not Flight.CanFly() then
 			stop()
 		end
 	end
 	player:GetAttributeChangedSignal("Heritage"):Connect(refresh)
+	player:GetAttributeChangedSignal("Fruit"):Connect(refresh)
 	refresh()
 	player.CharacterAdded:Connect(function()
 		flying = false

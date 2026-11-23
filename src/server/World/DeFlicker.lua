@@ -7,7 +7,8 @@ local D = {}
 
 local STEP = 0.04 -- studs per level; enough for the depth buffer at ~150 studs, too small to see as a lip
 local MAX_LEVEL = 4
-local CELL, BIG = 16, 256 -- plane grid cell (studs); a face covering more cells than BIG is checked against all
+local CELL, BIG = 64, 64 -- plane grid cell (studs); a face covering more cells than BIG is checked against all
+-- (16-stud cells meant 2M cell entries and a 21 s pass; 64 brings it to a fraction)
 
 local function q(x, s)
 	return math.floor(x / s + 0.5)
@@ -77,12 +78,12 @@ function D.Run(root)
 				end
 				local A = b[i]
 				local c0u, c1u, c0v, c1v = math.floor(A.u0 / CELL), math.floor(A.u1 / CELL), math.floor(A.v0 / CELL), math.floor(A.v1 / CELL)
-				local level, seen = 0, {}
+				local level = 0
 				local function test(B)
-					if not seen[B] and B.p ~= A.p and math.min(A.u1, B.u1) - math.max(A.u0, B.u0) > 0.02 and math.min(A.v1, B.v1) - math.max(A.v0, B.v0) > 0.02 then
+					if B.mark ~= A and B.p ~= A.p and math.min(A.u1, B.u1) - math.max(A.u0, B.u0) > 0.02 and math.min(A.v1, B.v1) - math.max(A.v0, B.v0) > 0.02 then
 						level = math.max(level, B.level + 1)
 					end
-					seen[B] = true
+					B.mark = A
 				end
 				for _, B in ipairs(big) do
 					test(B)

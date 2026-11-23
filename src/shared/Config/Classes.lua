@@ -32,10 +32,10 @@ local Classes = {
 		mtype = "STR", role = "Street Fighter", build = { STR = 5, AGI = 3, VIT = 3, DEX = 1 },
 		icon = "👊",
 		skills = {
-			{ id = "JabRush", name = "Jab Rush", anim = "Brawler_Flurry", kind = "Melee", sp = 8, cd = 3, range = 9, mult = 1.9, maxLevel = 10, fx = "Burst", desc = "A flurry of quick jabs." },
-			{ id = "RisingUppercut", name = "Rising Uppercut", anim = "Brawler_Uppercut", kind = "Melee", sp = 14, cd = 5, range = 9, mult = 2.6, maxLevel = 10, fx = "Smash", desc = "Launch the enemy skyward." },
-			{ id = "GroundPound", name = "Ground Pound", kind = "AoE", sp = 18, cd = 8, range = 0, radius = 12, mult = 1.7, maxLevel = 10, fx = "Explosion", desc = "Punch the ground: shockwave around you." },
-			{ id = "IronFist", name = "Iron Fist", kind = "Buff", sp = 22, cd = 30, duration = 15, buff = { atk = 0.2, aspd = 0.15 }, maxLevel = 5, fx = "AuraFire", desc = "ATK and attack speed up." },
+			{ id = "JabRush", name = "Jab Rush", anim = "Brawler_Flurry", kind = "Melee", sp = 8, cd = 2.5, range = 9, mult = 1.9, maxLevel = 10, fx = "Burst", desc = "A flurry of quick jabs." },
+			{ id = "RisingUppercut", name = "Rising Uppercut", anim = "Brawler_Uppercut", kind = "Melee", sp = 14, cd = 4.5, range = 9, mult = 2.6, maxLevel = 10, fx = "Smash", desc = "Launch the enemy skyward." },
+			{ id = "GroundPound", name = "Ground Pound", kind = "AoE", sp = 18, cd = 7, range = 0, radius = 12, mult = 1.7, maxLevel = 10, fx = "Explosion", desc = "Punch the ground: shockwave around you." },
+			{ id = "IronFist", name = "Iron Fist", kind = "Buff", sp = 22, cd = 25, duration = 15, buff = { atk = 0.2, aspd = 0.15 }, maxLevel = 5, fx = "AuraFire", desc = "ATK and attack speed up." },
 		},
 	},
 	Swordsman = {
@@ -52,7 +52,7 @@ local Classes = {
 		skills = {
 			{ id = "OniSlash", name = "Demon Cross", kind = "Melee", sp = 12, cd = 4, range = 10, mult = 2.4, maxLevel = 10, fx = "CrossSlash", desc = "Two crossing cuts." },
 			{ id = "TornadoCut", name = "Tornado Cut", kind = "AoE", sp = 20, cd = 8, range = 0, radius = 14, mult = 1.7, maxLevel = 10, fx = "Tornado", desc = "Spin and slash everything nearby." },
-			{ id = "FlyingSlash", name = "Flying Slash", kind = "Ranged", sp = 15, cd = 5, range = 40, mult = 1.9, maxLevel = 10, fx = "WaveSlash", desc = "Launch a blade wave." },
+			{ id = "FlyingSlash", name = "Flying Slash", kind = "Ranged", sp = 15, cd = 5.5, range = 40, mult = 1.9, maxLevel = 10, fx = "WaveSlash", desc = "Launch a blade wave." },
 			{ id = "IronBody", name = "Iron Body", kind = "Buff", sp = 25, cd = 30, duration = 15, buff = { def = 0.35 }, maxLevel = 5, fx = "AuraGreen", desc = "Harden your body: DEF up." },
 		},
 	},
@@ -68,10 +68,10 @@ local Classes = {
 		icon = "🎯",
 		passive = { cannonDamage = 0.15 },
 		skills = {
-			{ id = "LeadPellet", name = "Lead Pellet", kind = "Ranged", sp = 8, cd = 2.5, range = 55, mult = 1.7, maxLevel = 10, fx = "Bullet", desc = "A fast, heavy shot." },
-			{ id = "BlazeShot", name = "Blaze Shot", kind = "Ranged", sp = 22, cd = 7, range = 60, mult = 2.6, maxLevel = 10, fx = "Firebird", desc = "A shot that bursts into a flaming bird." },
-			{ id = "SmokePellet", name = "Smoke Pellet", kind = "GroundAoE", sp = 18, cd = 10, range = 45, radius = 15, mult = 1.3, maxLevel = 10, fx = "Smoke", desc = "Choking cloud on the ground." },
-			{ id = "EagleEye", name = "Eagle Eye", kind = "Buff", sp = 25, cd = 30, duration = 20, buff = { crit = 20 }, maxLevel = 5, fx = "AuraYellow", desc = "CRIT up." },
+			{ id = "LeadPellet", name = "Lead Pellet", kind = "Ranged", sp = 8, cd = 2, range = 55, mult = 1.7, maxLevel = 10, fx = "Bullet", desc = "A fast, heavy shot." },
+			{ id = "BlazeShot", name = "Blaze Shot", kind = "Ranged", sp = 22, cd = 6, range = 60, mult = 2.6, maxLevel = 10, fx = "Firebird", desc = "A shot that bursts into a flaming bird." },
+			{ id = "SmokePellet", name = "Smoke Pellet", kind = "GroundAoE", sp = 18, cd = 9, range = 45, radius = 15, mult = 1.3, maxLevel = 10, fx = "Smoke", desc = "Choking cloud on the ground." },
+			{ id = "EagleEye", name = "Eagle Eye", kind = "Buff", sp = 25, cd = 28, duration = 20, buff = { crit = 20 }, maxLevel = 5, fx = "AuraYellow", desc = "CRIT up." },
 		},
 	},
 	Cook = {
@@ -86,7 +86,7 @@ local Classes = {
 		icon = "🍳",
 		skills = {
 			{ id = "HookKick", name = "Hook Kick", kind = "Melee", sp = 10, cd = 3, range = 9, mult = 2.1, maxLevel = 10, fx = "Kick", desc = "A snapping kick to the neck." },
-			{ id = "BanquetKick", name = "Banquet Spin", kind = "AoE", sp = 18, cd = 7, range = 0, radius = 13, mult = 1.6, maxLevel = 10, fx = "SpinKick", desc = "Handstand spin kick." },
+			{ id = "BanquetKick", name = "Banquet Spin", kind = "AoE", sp = 18, cd = 6.5, range = 0, radius = 13, mult = 1.6, maxLevel = 10, fx = "SpinKick", desc = "Handstand spin kick." },
 			{ id = "HeatedLeg", name = "Searing Leg", kind = "Buff", sp = 25, cd = 30, duration = 15, buff = { atk = 0.25 }, maxLevel = 5, fx = "AuraFire", desc = "ATK up." },
 			{ id = "HeartyMeal", name = "Hearty Meal", kind = "PartyHeal", sp = 30, cd = 20, radius = 30, power = 120, maxLevel = 5, fx = "Food", desc = "Feed the crew nearby." },
 		},
@@ -105,9 +105,9 @@ local Classes = {
 		icon = "🧭",
 		passive = { shipSpeed = 0.1 },
 		skills = {
-			{ id = "BatonFlurry", name = "Baton Flurry", kind = "Melee", sp = 10, cd = 4, range = 9, mult = 0.75, hits = 3, slow = 0.6, magic = true, maxLevel = 10, fx = "Burst", desc = "Three quick raps with the folding baton. Dazed enemies slow down." },
-			{ id = "TrickVault", name = "Trick Vault", kind = "Dash", sp = 12, cd = 7, range = 18, mult = 1.6, magic = true, maxLevel = 10, fx = "Burst", desc = "Plant the baton and vault forward, kicking through everything in your way." },
-			{ id = "MirageVeil", name = "Mirage Veil", kind = "Buff", sp = 20, cd = 30, duration = 15, buff = { flee = 40 }, maxLevel = 5, fx = "AuraBlue", desc = "FLEE up." },
+			{ id = "BatonFlurry", name = "Baton Flurry", kind = "Melee", sp = 10, cd = 3, range = 9, mult = 0.75, hits = 3, slow = 0.6, magic = true, maxLevel = 10, fx = "Burst", desc = "Three quick raps with the folding baton. Dazed enemies slow down." },
+			{ id = "TrickVault", name = "Trick Vault", kind = "Dash", sp = 12, cd = 5, range = 18, mult = 1.6, magic = true, maxLevel = 10, fx = "Burst", desc = "Plant the baton and vault forward, kicking through everything in your way." },
+			{ id = "MirageVeil", name = "Mirage Veil", kind = "Buff", sp = 20, cd = 25, duration = 15, buff = { flee = 40 }, maxLevel = 5, fx = "AuraBlue", desc = "FLEE up." },
 			{ id = "Tailwind", name = "Tailwind", kind = "ShipBuff", sp = 30, cd = 60, duration = 30, buff = { shipSpeed = 0.25 }, maxLevel = 5, fx = "Wind", desc = "Ship speed +25%." },
 		},
 	},
@@ -122,10 +122,10 @@ local Classes = {
 		mtype = "INT", role = "Field Medic", build = { INT = 5, VIT = 3, DEX = 2 },
 		icon = "💉",
 		skills = {
-			{ id = "Heal", name = "Field Medicine", kind = "PartyHeal", sp = 18, cd = 4, radius = 35, power = 160, maxLevel = 10, fx = "Heal", desc = "Heal nearby crew." },
+			{ id = "Heal", name = "Field Medicine", kind = "PartyHeal", sp = 18, cd = 5, radius = 35, power = 160, maxLevel = 10, fx = "Heal", desc = "Heal nearby crew." },
 			{ id = "Scalpel", name = "Scalpel Toss", kind = "Ranged", sp = 8, cd = 2.5, range = 40, mult = 1.5, maxLevel = 10, fx = "Bullet", desc = "Throw a scalpel." },
 			{ id = "Adrenaline", name = "Adrenaline Shot", kind = "PartyBuff", sp = 35, cd = 40, radius = 35, duration = 30, buff = { aspd = 0.2, atk = 0.1 }, maxLevel = 5, fx = "AuraPink", desc = "Party attack speed and ATK up." },
-			{ id = "BurstTonic", name = "Burst Tonic", kind = "AoE", sp = 25, cd = 10, radius = 12, mult = 1.8, maxLevel = 10, fx = "Burst", desc = "An explosive flask." },
+			{ id = "BurstTonic", name = "Burst Tonic", kind = "AoE", sp = 25, cd = 9, radius = 12, mult = 1.8, maxLevel = 10, fx = "Burst", desc = "An explosive flask." },
 		},
 	},
 	Shipwright = {
@@ -141,8 +141,8 @@ local Classes = {
 		icon = "🔨",
 		passive = { refineBonus = 0.05, stallSlots = true, cannonDamage = 0.05 },
 		skills = {
-			{ id = "HammerSmash", name = "Hammer Smash", kind = "Melee", sp = 12, cd = 4, range = 9, mult = 2.3, maxLevel = 10, fx = "Smash", desc = "A crushing overhead blow." },
-			{ id = "CannonDrop", name = "Cannonball Drop", kind = "GroundAoE", sp = 22, cd = 8, range = 40, radius = 13, mult = 1.9, maxLevel = 10, fx = "Explosion", desc = "Drop a live cannonball." },
+			{ id = "HammerSmash", name = "Hammer Smash", kind = "Melee", sp = 12, cd = 5, range = 9, mult = 2.8, maxLevel = 10, fx = "Smash", desc = "A crushing overhead blow." },
+			{ id = "CannonDrop", name = "Cannonball Drop", kind = "GroundAoE", sp = 22, cd = 9, range = 40, radius = 13, mult = 2.2, maxLevel = 10, fx = "Explosion", desc = "Drop a live cannonball." },
 			{ id = "FieldRepair", name = "Field Repair", kind = "ShipRepair", sp = 30, cd = 20, power = 0.12, maxLevel = 5, fx = "Repair", desc = "Repair the ship you stand on." },
 			{ id = "SteelFrame", name = "Steel Frame", kind = "Buff", sp = 25, cd = 30, duration = 20, buff = { def = 0.25, atk = 0.1 }, maxLevel = 5, fx = "AuraGreen", desc = "DEF and ATK up." },
 		},

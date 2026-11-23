@@ -37,17 +37,83 @@ local function turnTo(r, point)
 	r.CFrame = CFrame.lookAt(r.Position, point)
 end
 
-local function m1Ready(interval)
-	local M1 = GameConfig.M1
-	local inString = os.clock() - m1.at < M1.Reset
-	local gap = interval * ((inString and m1.n >= M1.Hits) and M1.End or M1.Quick)
-	return os.clock() - lastAttack >= gap
+-- v0.25.75 (owner: manual first, the M1 rhythm matters): each weapon has its own tempo (WeaponInfo.M1) and a click
+-- that lands right as the next hit becomes ready (WeaponInfo.Rhythm.Window) is PERFECT (+20%); a whole string of
+-- perfect hits ends in a FLAWLESS finisher. Clicking too early (mashing) spoils the next hit; holding the button
+-- still swings on its own, just never perfect.
+local function m1Prof()
+	local wi = require(Shared.Modules.WeaponInfo)
+	return wi.M1Of(wi.TypeOf(State.profile)), wi.Rhythm
 end
-local function m1Swing()
-	local M1 = GameConfig.M1
-	m1.n = (os.clock() - m1.at < M1.Reset) and (m1.n % M1.Hits) + 1 or 1
+local function m1Gap(interval)
+	local m = m1Prof()
+	local inString = os.clock() - m1.at < m.reset
+	return interval * ((inString and m1.n >= GameConfig.M1.Hits) and m.finish or m.quick)
+end
+local function m1Ready(interval)
+	return os.clock() - lastAttack >= m1Gap(interval)
+end
+-- a fresh press of the attack button / mouse (not the hold-repeat)
+function Combat.NotePress()
+	local d = State.derived
+	local interval = d and d.attackInterval or 1.2
+	if lastAttack > 0 and not m1Ready(interval) then
+		m1.early = true -- mashing before the beat
+	end
+	m1.pressAt = os.clock()
+end
+-- returns perfect (this hit), flawless (the finisher of an all-perfect string)
+local function m1Swing(interval)
+	local m, rh = m1Prof()
+	local readyAt = lastAttack + m1Gap(interval or 1.2)
+	local inString = os.clock() - m1.at < m.reset
+	m1.n = inString and (m1.n % GameConfig.M1.Hits) + 1 or 1
 	m1.at = os.clock()
 	lastAttack = os.clock()
+	local fresh = m1.pressAt and os.clock() - m1.pressAt < 0.15
+	local perfect = m1.n > 1 and fresh and not m1.early and m1.pressAt >= readyAt - 0.06 and m1.pressAt <= readyAt + rh.Window
+	m1.early = false
+	if m1.n == 1 then
+		m1.perfects = 0
+	elseif perfect then
+		m1.perfects = (m1.perfects or 0) + 1
+	end
+	local flawless = perfect and m1.n == GameConfig.M1.Hits and m1.perfects == GameConfig.M1.Hits - 1
+	if perfect then
+		pcall(function()
+			require(script.Parent.Audio).Play("BlkTick", { volume = 0.7, pitch = 1.2 + m1.n * 0.12 })
+			Combat.RhythmPop(flawless and "FLAWLESS!" or "PERFECT", flawless and Color3.fromRGB(255, 120, 230) or Color3.fromRGB(255, 220, 90))
+		end)
+	end
+	return perfect, flawless
+end
+-- a short word that pops above the hotbar (PERFECT / FLAWLESS / LINK)
+function Combat.RhythmPop(text, color)
+	local root_ = UI.Root
+	if not root_ then
+		return
+	end
+	local TweenService = game:GetService("TweenService")
+	local t = Instance.new("TextLabel")
+	t.Name = "RhythmPop"
+	t.BackgroundTransparency = 1
+	t.AnchorPoint = Vector2.new(0.5, 0.5)
+	t.Position = UDim2.new(0.5, (math.random() - 0.5) * 60, 1, -230)
+	t.Size = UDim2.fromOffset(320, 40)
+	t.Font = Enum.Font.Arcade
+	t.Text = text
+	t.TextSize = #text > 8 and 34 or 26
+	t.TextColor3 = color
+	t.TextStrokeTransparency = 0
+	t.TextStrokeColor3 = Color3.fromRGB(30, 20, 40)
+	t.ZIndex = 40
+	t.Parent = root_
+	local s = Instance.new("UIScale")
+	s.Scale = 1.6
+	s.Parent = t
+	TweenService:Create(s, TweenInfo.new(0.16, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+	TweenService:Create(t, TweenInfo.new(0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Position = t.Position - UDim2.fromOffset(0, 40), TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
+	game:GetService("Debris"):AddItem(t, 0.6)
 end
 local anchor -- where Auto Battle was started
 local busy = false
@@ -397,7 +463,7 @@ function Combat.ManualAttack(screenPos)
 		if not m1Ready(d and d.attackInterval or 1.2) then
 			return
 		end
-		m1Swing()
+		m1Swing(d and d.attackInterval or 1.2)
 		-- an NPC hull in reach takes the blow (v0.25.42, owner: wreck ships by hand, not only with cannons)
 		for _, s in ipairs(workspace:FindFirstChild("Ships") and workspace.Ships:GetChildren() or {}) do
 			if s:GetAttribute("NPC") and s.PrimaryPart and (s:GetAttribute("HP") or 0) > 0 and Reach.Gap(r.Position, s) <= attackReach() then
@@ -434,13 +500,13 @@ function Combat.ManualAttack(screenPos)
 	if not m1Ready(interval) then
 		return
 	end
-	m1Swing()
+	local perfect = m1Swing(interval)
 	local tpos = target.PrimaryPart.Position
 	local lookAt = Vector3.new(tpos.X, r.Position.Y, tpos.Z)
 	if (lookAt - r.Position).Magnitude > 0.5 then
 		turnTo(r, lookAt)
 	end
-	task.spawn(Net.Request, "Attack", { target = target })
+	task.spawn(Net.Request, "Attack", { target = target, perfect = perfect or nil })
 end
 
 function Combat.ClickAt(screenPos)
@@ -518,7 +584,7 @@ local function engage(target, useSkills)
 	local d = State.derived
 	local interval = d and d.attackInterval or 1.2
 	if m1Ready(interval) then
-		m1Swing()
+		m1Swing(interval)
 		local look = Vector3.new(tpos.X, r.Position.Y, tpos.Z)
 		if (look - r.Position).Magnitude > 0.5 then
 			turnTo(r, look)
@@ -1065,6 +1131,9 @@ end
 
 function Combat.Start()
 	Net.OnPush("SkillDash", skillDash)
+	Net.OnPush("Link", function()
+		Combat.RhythmPop("LINK!", Color3.fromRGB(120, 230, 255))
+	end)
 	Net.OnPush("Knock", knocked)
 	-- Left click: attack (manual) / pick a target (Auto). Holding the button keeps swinging in manual mode.
 	local holding, holdPos = false, nil
@@ -1081,6 +1150,7 @@ function Combat.Start()
 				return
 			end
 			holding, holdPos = true, input.Position
+			Combat.NotePress()
 			Combat.ClickAt(input.Position)
 		else
 			-- quick items: F1-F8 (skills, Dash, Auto, Tab target go through Hotkeys below)
@@ -1160,6 +1230,7 @@ function Combat.Start()
 				State.heldFruit.choose()
 				return
 			end
+			Combat.NotePress()
 			Combat.ClickAt(pos)
 		end
 	end)
@@ -1200,6 +1271,7 @@ end
 -- Mobile attack button: swing at the closest monster in reach (manual), or pick the nearest one for Auto Battle
 function Combat.AttackNearest()
 	if not State.auto then
+		Combat.NotePress()
 		Combat.ManualAttack(nil)
 		return
 	end

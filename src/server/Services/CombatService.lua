@@ -373,28 +373,30 @@ local function hitLater(delay, attacker, target, mult, magic, opts)
 end
 
 -- the wait before the next basic attack: quick inside a 4-hit string, end-lag after the finisher (GameConfig.M1)
+-- v0.25.75: each weapon's own tempo (WeaponInfo.M1: quick / finish / reset), same numbers as the client
 local function m1Gap(player, d)
 	local c = combos[player]
-	local M1 = GameConfig.M1
-	if not c or os.clock() - c.last >= M1.Reset then
-		return d.attackInterval * M1.Quick
+	local m = WeaponInfo.M1Of(weaponType(player))
+	if not c or os.clock() - c.last >= m.reset then
+		return d.attackInterval * m.quick
 	end
-	return d.attackInterval * (c.n >= M1.Hits and M1.End or M1.Quick)
+	return d.attackInterval * (c.n >= GameConfig.M1.Hits and m.finish or m.quick)
 end
 
 -- which combo hit this basic attack is (the clients play the same clip: it is sent in the FX), and how fast to play
 -- it: a swing longer than the attack interval is sped up to fit, so fast attackers never queue swings that lag behind
 local function comboStep(player, wType)
 	local w = AnimClips.Weapons[wType] or AnimClips.Weapons.Fists
+	local m = WeaponInfo.M1Of(wType)
 	local c = combos[player] or { n = 0, last = 0 }
 	combos[player] = c
 	local now = os.clock()
-	c.n = (now - c.last < GameConfig.M1.Reset) and (c.n % #w.combo) + 1 or 1
+	c.n = (now - c.last < m.reset) and (c.n % #w.combo) + 1 or 1
 	c.last = now
 	local clip = AnimClips[w.combo[c.n]]
 	local d = R.PlayerService.Derived(player)
 	local length = clip and clip.keys[#clip.keys].t or 0.3
-	local speed = math.clamp(length / math.max(0.15, (d and d.attackInterval or 0.6) * GameConfig.M1.Quick * 0.9), 1, 2.5)
+	local speed = math.clamp(length / math.max(0.15, (d and d.attackInterval or 0.6) * m.quick * 0.9), 1, 2.5)
 	return c.n, (clip and clip.strike or 0.12) / speed, speed
 end
 
@@ -458,7 +460,9 @@ local function setup()
 		end
 		local d = R.PlayerService.Derived(player)
 		local now = os.clock()
-		if lastAttack[player] and now - lastAttack[player] < m1Gap(player, d) * 0.9 then
+		local gap = m1Gap(player, d)
+		local since = lastAttack[player] and now - lastAttack[player] or math.huge
+		if since < gap * 0.9 then
 			return false
 		end
 		local target = resolveTarget(player, data.target)
@@ -489,7 +493,22 @@ local function setup()
 			end
 			mult = ammo.mult
 		end
-		Net.FX("BasicAttack", { from = root.Position, to = target.pos, weapon = wType, char = player.Character, combo = n, speed = speed, ammo = ammo and ammo.id }, root.Position, 250)
+		-- v0.25.75 rhythm: the weapon's damage shape for hit n, PERFECT timing (+20%, the client saw the click land on the
+		-- beat; the server checks it came right after the gap), FLAWLESS finisher after three perfect hits
+		local rh = WeaponInfo.Rhythm
+		mult *= WeaponInfo.M1Mult(wType, n)
+		local c = combos[player]
+		local perfect = data.perfect == true and n > 1 and since <= gap + rh.Window + 0.35
+		if n == 1 then
+			c.perfects = 0
+		elseif perfect then
+			c.perfects = (c.perfects or 0) + 1
+		end
+		local flawless = perfect and n == 4 and c.perfects == 3
+		if perfect then
+			mult *= rh.Perfect * (flawless and rh.Flawless or 1)
+		end
+		Net.FX("BasicAttack", { from = root.Position, to = target.pos, weapon = wType, char = player.Character, combo = n, speed = speed, ammo = ammo and ammo.id, perfect = perfect or nil, flawless = flawless or nil }, root.Position, 250)
 		local hopts = ammo and { critBonus = ammo.critBonus, ignoreDef = ammo.ignoreDef, slow = ammo.slow, splash = ammo.splash, element = ammo.element, dot = ammo.dot } or {}
 		if wType == "MedKit" then
 			-- the Doctor's stinging powder: a little poison on every throw
@@ -499,6 +518,9 @@ local function setup()
 		local comboLen = #((AnimClips.Weapons[wType] or AnimClips.Weapons.Fists).combo)
 		if n == comboLen and comboLen > 1 then
 			hopts.knock, hopts.knockPower = 5, 1
+			if flawless then
+				hopts.knock, hopts.knockPower = 9, 2.4
+			end
 		end
 		hitLater(strike + (SHOT_FLIGHT[wType] or 0), player, target, mult, magic, hopts)
 		return true
@@ -668,6 +690,15 @@ local function setup()
 		if skill.charge then
 			local c = tonumber(data.charge) or 0
 			mult *= 1 + CHARGE_BONUS * math.clamp(c == c and c or 0, 0, 1)
+		end
+		-- v0.25.75 LINK: a damage skill right after your M1 finisher hits harder (weave skills into the strings)
+		do
+			local c = combos[player]
+			local rh = WeaponInfo.Rhythm
+			if c and c.n == 4 and now - c.last <= rh.LinkWindow and skill.mult then
+				mult *= rh.Link
+				Net.Push(player, "Link", {})
+			end
 		end
 		local magic = skill.magic == true
 		if skill.fruit then

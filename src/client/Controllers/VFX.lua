@@ -1021,6 +1021,15 @@ handlers.BasicAttack = function(d)
 		-- shots leave on the release frame of the draw / throw
 		task.delay(math.max(0, strike - 0.02), weaponFX[weapon], d, n)
 	end
+	-- v0.25.75 rhythm: a PERFECT hit flashes gold on the target, a FLAWLESS finisher bursts pink-gold (everyone sees it)
+	if d.perfect and typeof(d.to) == "Vector3" then
+		task.delay(strike + (MELEE[weapon] and 0 or 0.18), function()
+			local c = d.flawless and Color3.fromRGB(255, 120, 230) or Color3.fromRGB(255, 220, 90)
+			VFX.Flash(d.to, c, d.flawless and 9 or 5)
+			VFX.Shockwave(d.to, d.to - d.from, c, d.flawless and 10 or 5)
+			Voxels.Pixels(d.to, { count = d.flawless and 30 or 12, colors = { c, Color3.new(1, 1, 1) }, size = 0.3, speed = 12, gravity = 0, life = 0.35, glow = 1, spread = 1 })
+		end)
+	end
 end
 handlers.Skill = function(d)
 	local f = SkillFX[d.fx]

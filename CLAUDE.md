@@ -684,6 +684,14 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     fire blocks, `ArmFlame`. Blaze Flight: Flight.Allow("blaze") when Fruit == Blaze; Flight start/stop -> server
     "FlyState" (FruitService) -> char attr Flying; FruitFX.Start loop `dressFire` hides the lower-limb voxel blocks and
     adds px_flame emitters on every client.
+  * v0.25.75 (owner: manual first, M1 rhythm matters): `WeaponInfo.M1[wType]` = { quick, finish, reset, shape }
+    (norm makes plain-mashing DPS equal for every weapon: 1.1 x interval), `M1Mult(wType, n)`, `Rhythm` { Window 0.28,
+    Perfect 1.2, Flawless 1.5, Link 1.25, LinkWindow 0.7 }. Server m1Gap/comboStep use the weapon's tempo; Attack
+    `perfect` (client claims, server checks the hit came within gap + Window + 0.35) and FLAWLESS (perfect hits 2-4 ->
+    finisher x1.5, knock 9 / power 2.4); BasicAttack FX perfect/flawless -> gold/pink flash for all. Client
+    Combat.NotePress (fresh click / tap / attack button; an early press = no perfect next) + m1Swing(interval) returns
+    perfect, flawless + `Combat.RhythmPop`; hold-repeat swings never perfect. CastSkill LINK: damage skill within
+    LinkWindow after the 4th hit -> mult x1.25 + push "Link". Class skill cooldowns retuned (Classes.lua).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

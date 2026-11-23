@@ -319,6 +319,24 @@ local function stepCamera(dt)
 	camAt = camAt and camAt:Lerp(wantAt, k) or wantAt
 	cam.CFrame = CFrame.lookAt(camPos, camAt)
 	cam.FieldOfView += (c.fov - cam.FieldOfView) * k
+	-- v0.25.87 (owner): the logo floats in the scene BEHIND the character (GameConfig.LogoImage, tools/gen_logo.py)
+	if stage and GameConfig.LogoImage then
+		local board = stage:FindFirstChild("LogoBoard")
+		if not board then
+			board = Instance.new("Part")
+			board.Name = "LogoBoard"
+			board.Anchored, board.CanCollide, board.CanQuery, board.Transparency = true, false, false, 1
+			board.Size = Vector3.new(15, 15 * 372 / 832, 0.1)
+			local sg = Instance.new("SurfaceGui")
+			sg.Face, sg.LightInfluence, sg.PixelsPerStud = Enum.NormalId.Front, 0, 56
+			local img = Instance.new("ImageLabel")
+			img.BackgroundTransparency, img.Size, img.Image = 1, UDim2.fromScale(1, 1), "rbxassetid://" .. GameConfig.LogoImage
+			img.ResampleMode = Enum.ResamplerMode.Pixelated
+			img.Parent, sg.Parent, board.Parent = sg, board, stage
+		end
+		board.SurfaceGui.Enabled = camMode == "title" and screens.title ~= nil and screens.title.Visible
+		board.CFrame = STAGE_CF * CFrame.new(1.4, 11.2 + math.sin(t * 1.3) * 0.25, 10) * CFrame.Angles(0, 0, math.sin(t * 0.9) * 0.015)
+	end
 	if preview then
 		local bob = math.sin(t * 2.2) * 0.04
 		preview:PivotTo(STAGE_CF * CFrame.new(0, bob, 0) * CFrame.Angles(0, camMode == "edit" and 0 or yaw, 0))
@@ -398,7 +416,7 @@ local function buildTitle()
 	local f = New("Frame", { Name = "Title", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Parent = gui })
 	screens.title = f
 	-- logo: GameConfig.LogoLines (LARPTALES / VOXEL SEAS) in chunky pixel letters with a hard shadow
-	local logo = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 70), Size = UDim2.fromOffset(760, 170), Parent = f })
+	local logo = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 70), Size = UDim2.fromOffset(760, 170), Visible = GameConfig.LogoImage == nil, Parent = f })
 	for i, word in ipairs(GameConfig.LogoLines or { string.upper(GameConfig.GameName) }) do
 		local size = i == 1 and 64 or 52
 		local y = i == 1 and 0 or 78

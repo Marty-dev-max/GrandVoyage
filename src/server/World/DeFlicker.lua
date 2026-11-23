@@ -7,7 +7,7 @@ local D = {}
 
 local STEP = 0.04 -- studs per level; enough for the depth buffer at ~150 studs, too small to see as a lip
 local MAX_LIFT = 0.32 -- deep stacks (plaza paths over paths over grass) need room
-local GAP = 0.035 -- v0.25.115: faces closer than this along the normal belong to one stack (they still z-fight)
+local GAP = 0.12 -- v0.25.115: faces closer than this along the normal belong to one stack (lifts can reach them)
 local CELL, BIG = 64, 64 -- plane grid cell (studs); a face covering more cells than BIG is checked against all
 -- (16-stud cells meant 2M cell entries and a 21 s pass; 64 brings it to a fraction)
 
@@ -110,10 +110,10 @@ function D.Run(root)
 				end
 				local A = b[i]
 				local c0u, c1u, c0v, c1v = math.floor(A.u0 / CELL), math.floor(A.u1 / CELL), math.floor(A.v0 / CELL), math.floor(A.v1 / CELL)
-				local final = A.d
+				local hits = {}
 				local function test(B)
 					if B.mark ~= A and B.p ~= A.p and B.look ~= A.look and math.min(A.u1, B.u1) - math.max(A.u0, B.u0) > 0.02 and math.min(A.v1, B.v1) - math.max(A.v0, B.v0) > 0.02 then
-						final = math.max(final, B.final + STEP)
+						table.insert(hits, B.final)
 					end
 					B.mark = A
 				end
@@ -133,6 +133,15 @@ function D.Run(root)
 					-- a wide face can't use the grid: test every earlier one
 					for j = 1, i - 1 do
 						test(b[j])
+					end
+				end
+				-- climb past every covered face that sits within STEP of where this one would end up (sorted sweep: a
+				-- lift must not land on another covered face either)
+				table.sort(hits)
+				local final = A.d
+				for _, f in ipairs(hits) do
+					if f > final - STEP + 0.001 and f < final + STEP then
+						final = f + STEP
 					end
 				end
 				A.final = math.min(final, A.d + MAX_LIFT)

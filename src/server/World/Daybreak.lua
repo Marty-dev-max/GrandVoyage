@@ -414,7 +414,7 @@ local function houses(ctx)
 		if a == -0.62 then
 			w, d, opts = 26, 16, { floors = 2, sign = "SUNRISE TAVERN" }
 		elseif a == 1.35 then
-			opts.sign = "ROWAN'S RIGGING"
+			opts.sign = "BLACKSMITH" -- v0.25.112 (owner): the Blacksmith stands by this house
 		end
 		timberHouse(ctx, x, z, w, d, opts, PLAZA)
 		local dir2 = (PLAZA - Vector2.new(x, z)).Unit

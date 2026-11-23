@@ -611,7 +611,7 @@ local function buildAll(look, heritage, variant, mode, place, emit)
 			block("UpperTorso", Vector3.new(1.3, ut.Y * 0.55, 0.08), CFrame.new(0, -ut.Y * 0.22, front - 0.03), p1, "Bib")
 			for _, sx in ipairs({ -1, 1 }) do
 				block("UpperTorso", Vector3.new(0.22, ut.Y + 0.04, ut.Z + 0.1), CFrame.new(sx * 0.5, 0.02, 0), p1, "OverallStrap")
-				block("UpperTorso", Vector3.new(0.16, 0.16, 0.08), CFrame.new(sx * 0.5, ut.Y * 0.05, front - 0.09), p2, "OverallButton")
+				block("UpperTorso", Vector3.new(0.16, 0.16, 0.08), CFrame.new(sx * 0.5, ut.Y * 0.05, front - (SH == 14 and 0.17 or 0.09)), p2, "OverallButton") -- in front of an armor plate, not in its face (flicker)
 			end
 		end
 	end

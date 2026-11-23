@@ -661,7 +661,7 @@ function Kit.Mesa(base, radius, h, grass, rock, rim, opts)
 		local a = rng:NextNumber(0, math.pi * 2)
 		table.insert(lobes, { math.cos(a) * radius * 0.35, math.sin(a) * radius * 0.35, radius * rng:NextNumber(0.62, 0.78) })
 	end
-	for _, l in ipairs(lobes) do
+	for li, l in ipairs(lobes) do
 		local c = Vector3.new(base.X + l[1], 0, base.Z + l[2])
 		-- collision body (visible fallback, hidden once dressed: same MesaId)
 		mesaCount += 1
@@ -683,15 +683,16 @@ function Kit.Mesa(base, radius, h, grass, rock, rim, opts)
 			CollectionService:AddTag(slab, "EnvPart")
 		end
 		-- the grass layer on top (-> GrassCap_n mesh): flush with the rock rim (owner, v0.23.0: the overhanging grass
-		-- stuck out past the cliff); no rng change, so every island keeps its layout
+		-- stuck out past the cliff); no rng change, so every island keeps its layout. v0.25.112: each lobe's cap sits
+		-- 0.08 above the one before (overlapping caps at one height z-fought = the flicker on the hills)
 		local half = l[3] + 0.9
 		local capH = 3.2
-		local cap = P(Vector3.new(half * 2, capH, half * 2), grass, CFrame.new(c.X, top + 1.0 - capH / 2, c.Z) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0), { material = M.Grass, collide = false, transparency = 1, shadow = false })
+		local cap = P(Vector3.new(half * 2, capH, half * 2), grass, CFrame.new(c.X, top + 1.0 + (li - 1) * 0.08 - capH / 2, c.Z) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0), { material = M.Grass, collide = false, transparency = 1, shadow = false })
 		cap.CanQuery = false
 		cap:SetAttribute("Kind", "GrassCap")
 		cap:SetAttribute("MesaId", mesaCount)
 		CollectionService:AddTag(cap, "EnvPart")
-		Cyl(2.2, l[3] * 2 + 1, grass, c + Vector3.new(0, top - 0.1, 0), { material = M.Grass }):SetAttribute("MesaId", mesaCount)
+		Cyl(2.2, l[3] * 2 + 1, grass, c + Vector3.new(0, top - 0.1 + (li - 1) * 0.08, 0), { material = M.Grass }):SetAttribute("MesaId", mesaCount)
 	end
 	for i = 1, math.floor(radius / 5) do
 		local a = rng:NextNumber(0, math.pi * 2)

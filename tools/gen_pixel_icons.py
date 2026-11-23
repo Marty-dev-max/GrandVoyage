@@ -1236,6 +1236,24 @@ def w_hammer(g):
     return draw
 
 
+# v0.25.112 (owner): the Musket Ball as it flies in game = a chunky lead BLOCK ball (cube with stepped corners), lit
+# top-left like every icon; (a flight streak read as a pencil tip).
+def lead_ball(s, cx, cy, r):
+    lt, md, dk = (132, 130, 146), (78, 76, 88), (46, 44, 52)
+    c = max(1, r // 3)  # stepped corner = voxel look, not a smooth circle
+    s.rect(cx - r, cy - r + c, cx + r, cy + r - c, md)
+    s.rect(cx - r + c, cy - r, cx + r - c, cy + r, md)
+    s.rect(cx - r + c, cy + r - c, cx + r, cy + r, dk)        # shade bottom
+    s.rect(cx + r - c, cy - r + c, cx + r, cy + r - c, dk)    # shade right
+    s.rect(cx - r + c, cy - r, cx + r - c - 1, cy - r + c, lt)  # lit top
+    s.rect(cx - r, cy - r + c, cx - r + c, cy + r - c - 1, lt)  # lit left
+    s.rect(cx - r + c, cy - r + c, cx - r + 2 * c, cy - r + 2 * c, WHITE)  # glint
+
+
+def musket_ball(s):
+    lead_ball(s, 16, 16, 10)
+
+
 WEAPON_GRADE_ICONS = {}
 for _wt, _fn in (('Sword', w_sword), ('Slingshot', w_sling), ('Shoes', w_leg), ('Knuckles', w_fist),
                  ('StormBaton', w_baton), ('MedKit', w_pouch), ('Hammer', w_hammer)):
@@ -1293,7 +1311,7 @@ ICONS = {
     'ingot': ingot, 'gunpowder': powder_keg, 'scale': scale_icon, 'compass': compass, 'poster': poster,
 }
 ICONS.update(WEAPON_GRADE_ICONS)
-ICONS.update({'acc_SailorVest': sailor_vest, 'wood_gold': logs_gold, 'shard_pure': crystal_pure, 'badge': marine_badge})
+ICONS.update({'musket_ball': musket_ball, 'acc_SailorVest': sailor_vest, 'wood_gold': logs_gold, 'shard_pure': crystal_pure, 'badge': marine_badge})
 
 
 def render(name):

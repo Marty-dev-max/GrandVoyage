@@ -23,7 +23,7 @@
 local Q = {}
 
 Q.Guide = {
-	Daybreak = "Old Salt Rowan",
+	Daybreak = "Rowan", -- v0.25.112 (owner): short and easy to remember (was Old Salt Rowan)
 	ConchBay = "Lieutenant Pell",
 	Marmalade = "Mayor Biscuit",
 	Honeyslope = "Nanny Clove",
@@ -39,7 +39,7 @@ Q.Main = {
 	{
 		id = "T01", island = "Daybreak", title = "Ahoy, Greenhorn!",
 		dialog = { "Easy now, you washed up half-drowned. Name's Rowan. Thirty years at sea, and this jungle camp is where I fish strays out of the surf.", "Want to sail the Azure East? Then you'll need muscle, a crew and a ship. Talk to me and we'll get you started." },
-		goal = { kind = "Talk", target = "Guide" }, text = "Talk to Old Salt Rowan",
+		goal = { kind = "Talk", target = "Guide" }, text = "Talk to Rowan",
 		hint = "Walk up to the glowing NPC by the campfire and press E (tap Talk on phones).",
 		at = { npc = "Guide" }, reward = { beli = 100, exp = 20, job = 10 },
 	},

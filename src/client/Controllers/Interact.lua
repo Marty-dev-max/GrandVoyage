@@ -1,6 +1,6 @@
 -- Interact (client): our own look for every "press E" ProximityPrompt and for NPC nameplates.
 --  * Prompts: Roblox's default grey prompt is replaced (Style = Custom) by a slanted game-styled card that slides in:
---    a key cap (E, or a tap icon on touch screens) + the action ("Talk") in the display font + what it is ("Old Salt Rowan").
+--    a key cap (E, or a tap icon on touch screens) + the action ("Talk") in the display font + what it is ("Rowan").
 --    Touch / click on the card triggers it too. Keyboard E keeps working through ProximityPromptService.
 --  * NPC nameplates (BillboardGui "Nameplate" made on the server): restyled here into a big outlined title with a role
 --    chip and a dark ribbon subtitle, so the baked map does not need a rebuild.
@@ -167,6 +167,11 @@ local function styleNameplate(model)
 	local title = titleL and titleL.Text or model.Name
 	local sub = subL and subL.Text or nil
 	local color = titleL and titleL.TextColor3 or T.Gold
+	-- v0.25.112 (owner: every NPC looked the same yellow): shop NPCs wear their ring color and show their name from afar
+	local zone = model:GetAttribute("ZoneColor")
+	if typeof(zone) == "Color3" then
+		color = zone
+	end
 	for _, c in ipairs(bb:GetChildren()) do
 		if c:IsA("GuiObject") then
 			c.Visible = false
@@ -178,7 +183,7 @@ local function styleNameplate(model)
 	-- toward the NPC's head instead of toward the billboard's top-left corner
 	local holder = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.fromScale(0.5, 1), Size = UDim2.fromScale(1, 1), Parent = bb })
 	bb.MaxDistance = 160
-	local entry = { sc = New("UIScale", { Parent = holder }) }
+	local entry = { sc = New("UIScale", { Parent = holder }), zone = typeof(zone) == "Color3" }
 	plates[bb] = entry
 	local row = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 48), Parent = holder })
 	entry.row = row
@@ -238,11 +243,12 @@ function Interact.Start()
 					if a and a:IsA("BasePart") then
 						local dist = (a.Position - cam.CFrame.Position).Magnitude
 						local near = root ~= nil and (a.Position - root.Position).Magnitude < NEAR
+						local named = near or e.zone -- shop NPCs keep their name up from afar
 						-- far = icon only: never below ~30 px, and it drops to the bottom row = right over the head
 						e.sc.Scale = math.clamp(28 / math.max(dist, 1), near and 0.3 or 0.65, 1.1)
 						e.row.Position = near and UDim2.new() or UDim2.new(0, 0, 1, -48)
 						if e.text then
-							e.text.Visible = near
+							e.text.Visible = named
 						end
 						if e.ribbon then
 							e.ribbon.Visible = near

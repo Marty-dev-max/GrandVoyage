@@ -50,6 +50,15 @@ local function foam(pos, diameter)
 end
 
 -- ===== NPCs =====
+-- v0.25.112 (owner): walk-in ring colors per shop role (Blacksmith white-gray, General Store blue, Tavern pink,
+-- Shipwright green); the client draws the rings from the same table (Controllers/NpcZones reads Role + ZoneColor)
+WB.ZONE_ROLES = {
+	Blacksmith = Color3.fromRGB(225, 230, 240),
+	Shop = Color3.fromRGB(70, 190, 255),
+	Tavern = Color3.fromRGB(255, 110, 190),
+	Shipwright = Color3.fromRGB(110, 230, 120),
+}
+WB.ZONE_RADIUS = 7
 -- face (optional): local X/Z point the NPC looks at (default: the island center)
 local function npc(ctx, role, title, color, hat, x, z, extra, face)
 	local island = ctx.island
@@ -67,7 +76,8 @@ local function npc(ctx, role, title, color, hat, x, z, extra, face)
 		end
 	end
 	Cyl(1, 7, Color3.fromRGB(255, 230, 170), Vector3.new(pos.X, ground + 0.3, pos.Z), { material = M.Sand })
-	Cyl(0.3, 8, Color3.fromRGB(255, 210, 90), Vector3.new(pos.X, ground + 0.85, pos.Z), { material = M.Neon, transparency = 0.5, collide = false, decor = true })
+	-- v0.25.112 (owner): shop NPCs glow in their own color (and get a walk-in ring, Controllers/NpcZones); the rest stay yellow
+	Cyl(0.3, 8, WB.ZONE_ROLES[role] or Color3.fromRGB(255, 210, 90), Vector3.new(pos.X, ground + 0.85, pos.Z), { material = M.Neon, transparency = 0.5, collide = false, decor = true })
 	ModelFactory.Billboard(m.PrimaryPart, title, extra and extra.SubTitle or nil, Color3.fromRGB(255, 230, 120), 5.5)
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.ActionText = "Talk"
@@ -76,6 +86,11 @@ local function npc(ctx, role, title, color, hat, x, z, extra, face)
 	prompt.MaxActivationDistance = 12
 	prompt.RequiresLineOfSight = false
 	prompt.Parent = m.PrimaryPart
+	if WB.ZONE_ROLES[role] then
+		-- the ring replaces the "Talk" prompt (walk in = open); ZoneColor tells the client to draw it
+		m:SetAttribute("ZoneColor", WB.ZONE_ROLES[role])
+		prompt.Enabled = false
+	end
 	CollectionService:AddTag(m, "NPC")
 	m.Parent = Kit.parent
 	ctx.reserve(x, z, 8)
@@ -969,7 +984,7 @@ end
 -- away and rebuilt from code at server start (so the owner's published place updates through Rojo too).
 -- Hand-built content made in Studio goes in workspace.Handmade (never touched by rebuilds). Kit props placed there
 -- (tagged EnvProp/EnvPart) are dressed with the stylized meshes like the generated ones.
-WB.WORLD_VERSION = 25 -- v25 (v0.25.109): no island name signs at the docks; v24 (v0.25.108): Marine Registrar in Conch Bay, no Guild Registrar; v23 (v0.25.107): Tavern Keeper beside the Shipwright; v22 (v0.25.27): shipyards snap to the island side nearest the next island; v21 (v0.25.25): shipyards face the next island, circus ship offshore; v20 (v0.25.24): Marmalade Town hand-laid (World/Marmalade); v19 (v0.25.23): Conch Bay street spawns keep their houses; v18 (v0.25.22): Conch Bay terraced (quay, two terraces, garrison plateau, tapered towers); v17 (v0.25.21): islands turned to face the previous one, Conch Bay stairs; v16 (v0.25.20): Daybreak spawn by Rowan, Conch Bay hand-laid (World/ConchBay); v15 (v0.25.11): islands spread north/south, wider sea, islets; v14 (v0.25.6): Daybreak spawn by the campfire; v13: voxel NPCs; v12: Voxelize pass
+WB.WORLD_VERSION = 26 -- v26 (v0.25.112): DeFlicker pass, hill caps one step apart per lobe; v25 (v0.25.109): no island name signs at the docks; v24 (v0.25.108): Marine Registrar in Conch Bay, no Guild Registrar; v23 (v0.25.107): Tavern Keeper beside the Shipwright; v22 (v0.25.27): shipyards snap to the island side nearest the next island; v21 (v0.25.25): shipyards face the next island, circus ship offshore; v20 (v0.25.24): Marmalade Town hand-laid (World/Marmalade); v19 (v0.25.23): Conch Bay street spawns keep their houses; v18 (v0.25.22): Conch Bay terraced (quay, two terraces, garrison plateau, tapered towers); v17 (v0.25.21): islands turned to face the previous one, Conch Bay stairs; v16 (v0.25.20): Daybreak spawn by Rowan, Conch Bay hand-laid (World/ConchBay); v15 (v0.25.11): islands spread north/south, wider sea, islets; v14 (v0.25.6): Daybreak spawn by the campfire; v13: voxel NPCs; v12: Voxelize pass
 
 -- Old copies of the map can hide anywhere in Workspace: a renamed or regrouped World, an island dragged into
 -- Handmade, single NPCs / chests / docks pasted from an old bake. They draw on top of the new islands and register
@@ -1091,9 +1106,25 @@ function WB.Build()
 	if not okVox then
 		warn("[WorldBuilder] voxelize failed:", voxErr)
 	end
+	-- v0.25.112 (owner): lift pieces off coplanar faces so nothing z-fights (World/DeFlicker)
+	local okDf, dfErr = pcall(require(script.Parent.DeFlicker).Run, world)
+	if not okDf then
+		warn("[WorldBuilder] deflicker failed:", dfErr)
+	end
 	setupLighting()
 	WB.RemoveStaleMaps(world)
 	return world
+end
+
+local function talkTo(player, entry)
+	local Net = require(Shared.Modules.Net)
+	-- quest NPCs (and quest steps that say "talk to X") get first say
+	if R and R.QuestService then
+		R.QuestService.OnTalk(player, entry.role, entry.island)
+	end
+	if entry.role ~= "Guide" then
+		Net.Push(player, "OpenUI", { panel = entry.role, island = entry.island, dungeonId = entry.model:GetAttribute("DungeonId") })
+	end
 end
 
 local function register()
@@ -1104,14 +1135,7 @@ local function register()
 		table.insert(npcs, entry)
 		if prompt then
 			prompt.Triggered:Connect(function(player)
-				local Net = require(Shared.Modules.Net)
-				-- quest NPCs (and quest steps that say "talk to X") get first say
-				if R and R.QuestService then
-					R.QuestService.OnTalk(player, entry.role, entry.island)
-				end
-				if entry.role ~= "Guide" then
-					Net.Push(player, "OpenUI", { panel = entry.role, island = entry.island, dungeonId = m:GetAttribute("DungeonId") })
-				end
+				talkTo(player, entry)
 			end)
 		end
 	end
@@ -1135,6 +1159,20 @@ function WB.Init(registry)
 	R = registry
 	WB.Build()
 	register()
+	-- v0.25.112 (owner): shop NPCs stand in a glowing ring; walking into it opens their window (client
+	-- Controllers/NpcZones asks, the server checks the player really stands in that NPC's ring)
+	require(Shared.Modules.Net).Handle("ZoneEnter", function(player, data)
+		local role = type(data) == "table" and data.role
+		if type(role) ~= "string" or not WB.ZONE_ROLES[role] then
+			return false
+		end
+		local ok, n = WB.NearNPC(player, role, WB.ZONE_RADIUS + 3)
+		if not ok then
+			return false
+		end
+		talkTo(player, n)
+		return true
+	end, 0.5)
 end
 
 function WB.Start() end

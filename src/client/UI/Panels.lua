@@ -1592,11 +1592,12 @@ function Panels.Refine(opts)
 		UI.Corner(ring, size)
 		UI.Stroke(ring, tier.color:Lerp(Color3.new(1, 1, 1), 0.3), 4)
 		New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.glow, ImageColor3 = tier.color, ImageTransparency = 0.3, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(1, 1), Parent = holder })
-		local view = def.weaponType and UI.WeaponView(holder, def, math.floor(size * 0.8), 0.7, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5) })
+		-- v0.25.112 (owner): blades show their pixel art here (the thin 3D katana read badly on the stage)
+		local view = def.weaponType and not def.blade and UI.WeaponView(holder, def, math.floor(size * 0.8), 0.7, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5) })
 		if not view then
 			local img = UI.ItemIconId(def)
 			if img then
-				New("ImageLabel", { BackgroundTransparency = 1, Image = img, ScaleType = Enum.ScaleType.Fit, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.6, 0.6), Parent = holder })
+				New("ImageLabel", { BackgroundTransparency = 1, Image = img, ScaleType = Enum.ScaleType.Fit, ResampleMode = Enum.ResamplerMode.Pixelated, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.6, 0.6), Parent = holder })
 			end
 		end
 		return holder

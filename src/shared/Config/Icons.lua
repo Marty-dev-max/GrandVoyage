@@ -181,4 +181,5 @@ return {
 	wood_gold = "rbxassetid://106989729470762",
 	shard_pure = "rbxassetid://140209349568637",
 	badge = "rbxassetid://131220570425607",
+	musket_ball = "rbxassetid://92810275221058", -- v0.25.112
 }

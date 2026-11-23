@@ -645,6 +645,7 @@ local ITEM_ICON = {
 	SailCloth = "cloth", SteelOre = "ore", TidecoreShard = "shard", PureTidecore = "shard_pure",
 	TreasureMap = "map", WantedPoster = "poster", MarineBadge = "badge", CompassCharm = "charm",
 	TangerinePin = "charm", SharkToothNecklace = "charm",
+	Ammo_Musket = "musket_ball", -- v0.25.112 (owner): the lead block ball you fire
 	-- v0.25.3: monster materials get their own pixel icons
 	CrabShell = "crabshell", MonkeyFur = "monkeyfur", TigerPelt = "tigerpelt", BoarTusk = "boartusk", ClownPaint = "clownpaint",
 	CatClaw = "catclaw", ArmorRivet = "rivet", SharkfolkFin = "sharkfin", IronIngot = "ingot", Gunpowder = "gunpowder",

@@ -724,6 +724,22 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     attr gone; taps/Auto hold Fruits.Channel.TapHold). FruitFX dressBarrier (every client, from the attrs), release FX,
     Barrier Steps = local collidable "BarrierStep" panes under the feet at each jump apex while Space is held
     (Fruits.BarrierSteps MaxSteps/Life) + server "BarrierStep" -> FX for others. Clips Shield_Hold / Shield_DomeHold.
+  * v0.25.80 (owner playtest): Skill FX get `strike` / `travel` (Ranged flight or GroundAoE `delay`) / `splash` from the
+    server, so projectiles land with the hit. Sharpshooter musket SkillFX Musket / MusketBlast (BlazeShot splash 10) /
+    MusketSmoke (SmokePellet delay 0.25); sound MusketShot. Doctor M1 = thrown voxel powder pouch (weaponFX.MedKit);
+    Adrenaline halo of blocks = range (fxData.radius). SkillFX.Tempest (Tabletop Tempest wind). CombatService applyDot
+    -> FX "Burning" (flames / green fumes on the mob for the dot). HeritageAnim BlkFlap only for real wings and never
+    while a Blaze/Haze user flies. Haze flight hides the whole legs; Smoke Screen = Blaze_Fist punch + delay 0.3, cloud
+    on landing. Emberflies heat green -> orange before each burst; Inferno ball ~2.4x, splash 18. Split deaths =
+    LOCAL physics halves (one invisible box collider per half on its side of the cut, visible clones welded massless),
+    originals hidden, fade at 2.4 s (no shatter). Shield: F_BarrierBash = "Ward Pistol" (glass orb + rings on the
+    fist, knock 12); F_BarrierCrash -> F_GlassStairs "Glass Stairway" kind "Stairs" (Combat.StairsStart: hold + drag
+    the pointer, local collidable steps via FruitFX.StairStep, batches -> server StairsStart/StairStep validate chain +
+    reach -> FX F_GlassStairs_Step = everyone builds collidable copies; Fruits.GlassStairs Run/Rise/Width/Life/Reach;
+    DataService RENAMED). Never "Barrier Crash"/"Barrierbility" (One Piece). Barrier = clear Glass panes + glinting
+    diagonal streaks (FruitFX clearPane); Dome = hemisphere on the ground, full sphere in the air; server shoves
+    non-boss mobs out of the dome every 0.25 s. Conqueror's Roar: 2.5 s aura (bolts, pixels, light) + RoarBurst1-4 by
+    UserId % 4 + RoarArcLoop. Hammer icon drawn from the handle direction, fully inside the tile.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

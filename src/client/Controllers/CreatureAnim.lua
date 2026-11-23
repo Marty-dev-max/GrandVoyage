@@ -30,7 +30,7 @@ end
 
 -- v0.25.77 (owner): a Swordsman skill kill cuts the monster in two: "h" = top and bottom (Tornado Cut, Flying Slash),
 -- "v" = left and right along the blow (Demon Cross). A bright cut line, the halves slide apart and drop, then dissolve.
-function CreatureAnim.SplitDeath(model, color, mode, dir)
+function CreatureAnim.SplitDeath(model, _color, mode, dir)
 	local ok, bcf, bsize = pcall(model.GetBoundingBox, model)
 	if not ok or not model.Parent then
 		return
@@ -59,36 +59,101 @@ function CreatureAnim.SplitDeath(model, color, mode, dir)
 	line.Parent = workspace
 	TweenService:Create(line, TweenInfo.new(0.25), { Transparency = 1, Size = line.Size * Vector3.new(1.2, 0.2, 1.2) }):Play()
 	Debris:AddItem(line, 0.3)
-	-- the halves: top slides off along the blow and tips over / the two sides fall apart
-	local t0 = os.clock()
-	local conn
-	conn = RunService.RenderStepped:Connect(function()
-		local t = os.clock() - t0
-		local k = math.min(1, t / 0.6)
-		local e = k * k
-		for i, list in ipairs(halves) do
-			local cf
+	-- v0.25.80 (owner: the halves floated and the shatter lagged): each half becomes a LOCAL physics copy (the real
+	-- parts hide) that falls, tumbles and lands on the ground, then fades. One invisible box collider per half (cut at
+	-- the plane, so the two never overlap and explode apart); the visible blocks are welded to it, massless, no collision.
+	local keep = { SpecialMesh = true, Decal = true, Texture = true, SurfaceAppearance = true }
+	for i, list in ipairs(halves) do
+		if #list > 0 then
+			-- this half's world box
+			local lo, hi = Vector3.one * math.huge, -Vector3.one * math.huge
+			for _, p in ipairs(list) do
+				local h = p.Size / 2
+				lo = lo:Min(p.Position - h)
+				hi = hi:Max(p.Position + h)
+			end
+			local cut = center + Vector3.new(0, bsize.Y * 0.05, 0)
+			if mode == "v" then
+				-- keep the collider on its own side of the cut plane
+				local away = side * (i == 1 and 1 or -1)
+				local mid = (lo + hi) / 2
+				local d0 = (mid - center):Dot(away)
+				if d0 < 0.3 then
+					lo, hi = lo + away * (0.3 - d0), hi + away * (0.3 - d0)
+				end
+			elseif i == 1 then
+				lo = Vector3.new(lo.X, math.max(lo.Y, cut.Y + 0.1), lo.Z)
+			else
+				hi = Vector3.new(hi.X, math.min(hi.Y, cut.Y - 0.1), hi.Z)
+			end
+			local size = (hi - lo):Max(Vector3.one * 0.6)
+			local box = Instance.new("Part")
+			box.Name = "SplitHalf"
+			box.Transparency = 1
+			box.Size = size * 0.85
+			box.CFrame = CFrame.new((lo + hi) / 2)
+			box.CanQuery, box.CanTouch, box.CastShadow = false, false, false
+			box.CustomPhysicalProperties = PhysicalProperties.new(2, 0.6, 0.2)
+			local copies = {}
+			for _, p in ipairs(list) do
+				local was = p.Archivable
+				p.Archivable = true
+				local c = p:Clone()
+				p.Archivable = was
+				if c then
+					for _, ch in ipairs(c:GetChildren()) do
+						if not keep[ch.ClassName] then
+							ch:Destroy()
+						end
+					end
+					c.Anchored = false
+					c.CanCollide, c.CanQuery, c.CanTouch = false, false, false
+					c.Massless = true
+					c.CFrame = p.CFrame
+					c.LocalTransparencyModifier = 0
+					local w = Instance.new("WeldConstraint")
+					w.Part0, w.Part1 = box, c
+					w.Parent = c
+					c.Parent = box
+					table.insert(copies, c)
+				end
+				p.LocalTransparencyModifier = 1
+			end
+			box.Parent = workspace
+			-- the push: the top slides off along the blow and tips over / the two sides fall apart
+			local push, spin
 			if mode == "v" then
 				local away = side * (i == 1 and 1 or -1)
-				local axis = Vector3.yAxis:Cross(away).Unit
-				cf = CFrame.new(center) * CFrame.new(away * e * 1.4 - Vector3.new(0, e * bsize.Y * 0.3, 0)) * CFrame.fromAxisAngle(axis, e * math.rad(80)) * CFrame.new(-center)
+				push = away * 9 + Vector3.new(0, 6, 0)
+				spin = Vector3.yAxis:Cross(away).Unit * 3.5
 			elseif i == 1 then
-				local axis = Vector3.yAxis:Cross(dir).Unit
-				cf = CFrame.new(center) * CFrame.new(dir * e * 2.2 - Vector3.new(0, e * bsize.Y * 0.45, 0)) * CFrame.fromAxisAngle(axis, e * math.rad(70)) * CFrame.new(-center)
+				push = dir * 10 + Vector3.new(0, 9, 0)
+				spin = Vector3.yAxis:Cross(dir).Unit * 4
 			else
-				cf = CFrame.new(center) * CFrame.new(0, -e * 0.3, 0) * CFrame.new(-center)
+				push = -dir * 1.5
+				spin = Vector3.yAxis:Cross(-dir).Unit * 1.5
 			end
-			for _, p in ipairs(list) do
-				if p.Parent then
-					p.CFrame = cf * orig[p]
+			box.AssemblyLinearVelocity = push
+			box.AssemblyAngularVelocity = spin
+			task.delay(2.4, function()
+				for _, c in ipairs(copies) do
+					if c.Parent then
+						TweenService:Create(c, TweenInfo.new(0.5), { Transparency = 1 }):Play()
+					end
+				end
+				Debris:AddItem(box, 0.55)
+			end)
+		end
+	end
+	-- keep the real model hidden until the server removes it
+	task.spawn(function()
+		while model.Parent do
+			for _, list in ipairs(halves) do
+				for _, p in ipairs(list) do
+					p.LocalTransparencyModifier = 1
 				end
 			end
-		end
-		if t > 1.3 then
-			conn:Disconnect()
-			if model.Parent then
-				CreatureAnim.Shatter(model, color or Color3.fromRGB(220, 220, 220), false)
-			end
+			task.wait(0.1)
 		end
 	end)
 	Voxels.Pixels(center, { count = 26, colors = { Color3.fromRGB(255, 250, 235), Color3.fromRGB(200, 40, 50) }, size = 0.3, speed = 12, gravity = 10, life = 0.5, spread = 1 })

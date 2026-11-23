@@ -360,11 +360,123 @@ function Combat.ChannelEnd()
 	end
 end
 
+-- ===== v0.25.80 Glass Stairway (Shield): hold the key and drag the pointer; steps build out toward it =====
+-- The steps are built HERE first (local, collidable, instant), then sent to the server in batches so every other
+-- client builds the same ones (FruitFX.F_GlassStairs_Step). Without a held key (tap / touch) the stairs draw toward
+-- the aimed spot for 1.5 s.
+State.drawing = nil
+function Combat.StairsStart(id, keyCode)
+	local skill = ClassesCfg.SkillById[id]
+	if not skill or State.drawing or (State.cooldowns[id] or 0) > os.clock() then
+		return false
+	end
+	if (player:GetAttribute("SP") or 0) < skill.sp then
+		UI.Toast("Not enough SP", "bad")
+		return false
+	end
+	local r = root()
+	if not r then
+		return false
+	end
+	local cfg = require(Shared.Config.Fruits).GlassStairs
+	local FruitFX = require(script.Parent.FruitFX)
+	local dr = { id = id }
+	State.drawing = dr
+	State.cooldowns[id] = os.clock() + skill.cd
+	State.Fire("cooldown")
+	task.spawn(function()
+		local res = Net.Request("StairsStart", { skillId = id })
+		if not res.ok then
+			if State.drawing == dr then
+				State.drawing = nil
+			end
+			dr.dead = true
+			State.cooldowns[id] = 0
+			State.Fire("cooldown")
+			if res.msg and res.msg ~= "On cooldown" then
+				UI.Toast(res.msg, "bad")
+			end
+		end
+	end)
+	local h = hum()
+	if h then
+		Anim.Play(h, "Shield_Hold", { fade = 0.08 })
+	end
+	task.spawn(function()
+		local cam = workspace.CurrentCamera
+		-- the first step: just ahead of your feet, facing where you point
+		local dir0 = aimInfo() or r.CFrame.LookVector
+		local last = r.Position - Vector3.new(0, (h and h.HipHeight or 2) + r.Size.Y / 2 - 0.25, 0) + dir0 * 2
+		local lastDir = dir0
+		local n, pending, lastSend, lastStep = 0, {}, os.clock(), 0
+		local t0 = os.clock()
+		local fixedAim = keyCode == nil and select(2, aimInfo()) or nil
+		local params = RaycastParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		local function addStep(pos, dir)
+			n += 1
+			FruitFX.StairStep(pos, dir, true)
+			table.insert(pending, pos)
+			last, lastDir = pos, dir
+		end
+		addStep(last, dir0)
+		while State.drawing == dr and not dr.dead do
+			local now = os.clock()
+			if now - t0 > (keyCode and (skill.maxHold or 5) or 1.5) or n >= (skill.maxSteps or 32) then
+				break
+			end
+			if keyCode and not UserInputService:IsKeyDown(keyCode) then
+				break
+			end
+			-- where the pointer is: the spot it touches, or (the sky / far away) a point as far out as the stairs' end
+			local target = fixedAim
+			if not target then
+				local vp = cam.ViewportSize
+				local pt = UserInputService.MouseEnabled and UserInputService:GetMouseLocation() or Vector2.new(vp.X / 2, vp.Y / 2)
+				local ray = cam:ViewportPointToRay(pt.X, pt.Y)
+				params.FilterDescendantsInstances = { char(), workspace:FindFirstChild("ClientFX"), workspace:FindFirstChild("VoxelFX"), workspace:FindFirstChild("GVStairs") }
+				local reach = (last - ray.Origin).Magnitude + 10
+				local hit = workspace:Raycast(ray.Origin, ray.Direction * math.min(reach, 400), params)
+				target = hit and hit.Position or (ray.Origin + ray.Direction * reach)
+			end
+			local off = target - last
+			local flat = off * Vector3.new(1, 0, 1)
+			if off.Magnitude > cfg.Run and now - lastStep > 0.045 then
+				local dir = flat.Magnitude > 0.3 and flat.Unit or lastDir
+				local runs = math.max(1, flat.Magnitude / cfg.Run)
+				local rise = math.clamp(off.Y / runs, -cfg.Rise, cfg.Rise)
+				addStep(last + dir * cfg.Run + Vector3.new(0, rise, 0), dir)
+				lastStep = now
+			end
+			if #pending > 0 and (now - lastSend > 0.12) then
+				local batch = pending
+				pending = {}
+				lastSend = now
+				task.spawn(Net.Request, "StairStep", { pts = batch })
+			end
+			RunService.Heartbeat:Wait()
+		end
+		if #pending > 0 then
+			task.spawn(Net.Request, "StairStep", { pts = pending })
+		end
+		if State.drawing == dr then
+			State.drawing = nil
+		end
+		if h then
+			Anim.Stop(h, "Shield_Hold", 0.15)
+		end
+	end)
+	return true
+end
+
 -- charge (v0.25.65, docs/Plan-Fruits-v2.md): 0..1 for skills with `charge = true` (how long the key was held)
 function Combat.CastSkill(skillId, targetModel, aim, charge)
 	local skill = ClassesCfg.SkillById[skillId]
 	if not skill then
 		return false
+	end
+	if skill.kind == "Stairs" then
+		return Combat.StairsStart(skillId)
 	end
 	if skill.kind == "Channel" then
 		-- a tap / Auto Battle: hold it for a moment, then release
@@ -662,7 +774,7 @@ local function engage(target, useSkills)
 		for _, id in ipairs(ids) do
 			do
 				local s = ClassesCfg.SkillById[id]
-				if s and (State.cooldowns[id] or 0) <= os.clock() and (player:GetAttribute("SP") or 0) >= s.sp then
+				if s and s.kind ~= "Stairs" and (State.cooldowns[id] or 0) <= os.clock() and (player:GetAttribute("SP") or 0) >= s.sp then
 					local srange = s.range or 0
 					if s.kind == "AoE" or s.kind == "Roar" then
 						srange = (s.radius or 10) - 2
@@ -1298,7 +1410,9 @@ function Combat.Start()
 			local id = State.profile and Combat.BarId(i)
 			if id and id ~= "" then
 				local skill = ClassesCfg.SkillById[id]
-				if skill and skill.kind == "Channel" then
+				if skill and skill.kind == "Stairs" then
+					Combat.StairsStart(id, key and Enum.KeyCode[key]) -- drawn while the key is held
+				elseif skill and skill.kind == "Channel" then
 					Combat.ChannelStart(id, key and Enum.KeyCode[key]) -- held until the key comes up (OnRelease below)
 				elseif skill and AIM_KINDS[skill.kind] and (not State.auto or onShip()) then
 					if holding then -- another skill key while aiming: the held one goes first

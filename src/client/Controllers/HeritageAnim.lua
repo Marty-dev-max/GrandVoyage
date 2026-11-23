@@ -46,6 +46,11 @@ local function build(char)
 	if #rig.pieces == 0 then
 		return nil
 	end
+	for _, pc in ipairs(rig.pieces) do
+		if pc.kind == "wing" then
+			rig.hasWing = true
+		end
+	end
 	-- hinge points (in the host's space): wings at the spine, tail at its base, ears/fins where they sit
 	for _, pc in ipairs(rig.pieces) do
 		local r = pc.rel.Position
@@ -94,8 +99,11 @@ local function pose(rig, t)
 	local beatRate = flying and 9 or (air and 7 or 1.6)
 	local beatAmp = flying and 0.75 or (air and 0.55 or 0.12)
 	local wingA = math.sin(t * beatRate + rig.phase) * beatAmp + (air and 0.15 or -0.05)
-	-- a whoosh on each down stroke (only when actually beating)
-	if beatAmp > 0.4 then
+	-- a whoosh on each down stroke (only real wings, and not while a fruit carries you: v0.25.80 owner, Blaze / Haze
+	-- flight has its own crackle / hiss loop)
+	local owner = Players:GetPlayerFromCharacter(char)
+	local fruitFly = owner and (owner:GetAttribute("Fruit") == "Blaze" or owner:GetAttribute("Fruit") == "Haze")
+	if beatAmp > 0.4 and rig.hasWing and not fruitFly then
 		local cyc = math.floor((t * beatRate + rig.phase) / (2 * math.pi))
 		if cyc ~= rig.lastBeat then
 			rig.lastBeat = cyc

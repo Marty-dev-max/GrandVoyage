@@ -137,10 +137,52 @@ local function roar(d)
 			end
 		end)
 	end
+	-- v0.25.80 (owner): every roarer has their own voice (one of 4 bursts, picked by UserId) + the crackle of the aura
+	local owner = Players:GetPlayerFromCharacter(char)
+	local variant = owner and (owner.UserId % 4) + 1 or math.random(1, 4)
+	local arc
 	pcall(function()
 		local Audio = require(script.Parent.Audio)
-		Audio.Play("ThunderCrack", { pos = at })
+		Audio.Play("RoarBurst" .. variant, { pos = at })
+		Audio.Play("ThunderCrack", { pos = at, volume = 0.6 })
 		Audio.Play("FinisherBoom", { pos = at })
+		arc = Audio.Attach("RoarArcLoop", root, 80)
+	end)
+	-- v0.25.80 (owner): the aura HANGS ON for 2.5 s: bolts keep crackling round the body, colored pixels rise off it and
+	-- the light around them pulses in the Toki color, then it all fades out
+	local AURA = 2.5
+	local light = Instance.new("PointLight")
+	light.Color = color
+	light.Range = 14
+	light.Brightness = 3
+	light.Parent = root
+	local t0 = os.clock()
+	local lastBolt = 0
+	local conn
+	conn = RunService.Heartbeat:Connect(function()
+		local t = os.clock() - t0
+		if t > AURA or not root.Parent then
+			conn:Disconnect()
+			light:Destroy()
+			if arc then
+				TweenService:Create(arc, TweenInfo.new(0.4), { Volume = 0 }):Play()
+				Debris:AddItem(arc, 0.45)
+			end
+			return
+		end
+		local fadeK = t > AURA - 0.6 and (AURA - t) / 0.6 or 1
+		light.Brightness = (2 + math.sin(t * 22) * 1.2) * fadeK
+		if os.clock() - lastBolt > 0.09 and math.random() < 0.85 * fadeK + 0.1 then
+			lastBolt = os.clock()
+			local p = root.Position
+			local a = math.random() * math.pi * 2
+			local from = p + Vector3.new(math.cos(a) * 1.2, math.random() * 4 - 2.5, math.sin(a) * 1.2)
+			local b = math.random() * math.pi * 2
+			bolt(from, p + Vector3.new(math.cos(b) * (3 + math.random() * 3), math.random() * 5 - 2, math.sin(b) * (3 + math.random() * 3)), color, core, 0.15)
+		end
+		if math.random() < 0.5 * fadeK then
+			Voxels.Pixels(root.Position - Vector3.new(0, 2, 0), { count = 3, colors = { color, core }, size = 0.3, speed = 2, gravity = -14, life = 0.6, glow = 1, spread = 1.6 })
+		end
 	end)
 	-- the roarer's own pose (it replicates)
 	if char == Players.LocalPlayer.Character then

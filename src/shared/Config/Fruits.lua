@@ -33,7 +33,7 @@ F.List = {
 			{ id = "F_FlamePillar", name = "Flame Twister", kind = "GroundAoE", sp = 22, cd = 8, range = 45, radius = 14, mult = 0.6, ticks = 5, tickEvery = 0.35, anim = "Blaze_Twister", mastery = 10, fx = "Tornado", desc = "A twister of fire spins up from the ground, burning again and again." },
 			{ id = "F_Emberflies", name = "Emberflies", kind = "GroundAoE", sp = 18, cd = 9, range = 40, radius = 12, mult = 0.7, ticks = 4, tickEvery = 0.18, delay = 1.0, anim = "Blaze_Ember", mastery = 25, fx = "None", desc = "Green sparks drift onto your foes, then burst into fire, hit after hit." },
 			-- v0.25.77 (owner): both arms up, a giant fireball grows (hold), then hurled the way you aim; bursts into a sea of fire
-			{ id = "F_Inferno", name = "Inferno", kind = "Ranged", sp = 40, cd = 20, range = 50, mult = 2.4, splash = 14, travel = 0.4, charge = true, anim = "Blaze_BallThrow", chargeAnim = "Blaze_BallCharge", mastery = 50, fx = "None", desc = "Hold: a giant fireball grows over your head. Release: hurl it, and it bursts into a sea of fire." },
+			{ id = "F_Inferno", name = "Inferno", kind = "Ranged", sp = 40, cd = 20, range = 50, mult = 2.4, splash = 18, travel = 0.4, charge = true, anim = "Blaze_BallThrow", chargeAnim = "Blaze_BallCharge", mastery = 50, fx = "None", desc = "Hold: a giant fireball grows over your head. Release: hurl it, and it bursts into a sea of fire." },
 		},
 	},
 	{
@@ -44,7 +44,7 @@ F.List = {
 		passive = { flee = 25 }, passiveText = "Smoke Body (Logia): monsters without Toki pass right through you • Smoke Flight: hold Space in the air • +25 FLEE",
 		skills = {
 			{ id = "F_SmokeFist", name = "Smoke Fist", kind = "Ranged", sp = 12, cd = 4, range = 44, mult = 2.4, charge = true, anim = "Blaze_Fist", chargeAnim = "Blaze_Wind", mastery = 1, fx = "Smoke", desc = "Hold to gather smoke in your fist, release: a heavy fist of smoke." },
-			{ id = "F_SmokeScreen", name = "Smoke Screen", kind = "GroundAoE", sp = 20, cd = 9, range = 40, radius = 16, mult = 1.5, smoke = 6, anim = "Haze_Screen", mastery = 10, fx = "Smoke", desc = "A choking cloud: for 6 s monsters inside it miss half their blows." },
+			{ id = "F_SmokeScreen", name = "Smoke Screen", kind = "GroundAoE", sp = 20, cd = 9, range = 40, radius = 16, mult = 1.5, smoke = 6, delay = 0.3, anim = "Blaze_Fist", mastery = 10, fx = "None", desc = "Punch a fist of smoke at the spot you pick: it bursts into a choking cloud: for 6 s monsters inside it miss half their blows." },
 			{ id = "F_SmokeGrip", name = "Smoke Grip", kind = "Ranged", sp = 16, cd = 7, range = 36, mult = 2.0, pull = true, anim = "Haze_Grip", mastery = 25, fx = "Smoke", desc = "A long arm of smoke coils around the enemy and drags it to you." },
 			{ id = "F_WhiteOut", name = "White Out", kind = "AoE", sp = 38, cd = 20, radius = 18, mult = 0.55, ticks = 6, tickEvery = 0.4, vanish = 2.6, anim = "Haze_Vanish", mastery = 50, fx = "Tornado", desc = "You vanish into a whirling tornado of smoke: nothing can hit you while it spins." },
 		},
@@ -57,11 +57,11 @@ F.List = {
 		desc = "Create unbreakable barriers to shield your crew.",
 		passive = { defPct = 0.12 }, passiveText = "Barrier Steps: jump and keep holding Space to build stairs of barrier under your feet • +12% DEF",
 		skills = {
-			{ id = "F_BarrierBash", name = "Barrier Bash", kind = "Melee", sp = 10, cd = 3, range = 10, mult = 2.2, mastery = 1, fx = "Smash", desc = "Ram a barrier into the enemy." },
+			{ id = "F_BarrierBash", name = "Ward Pistol", kind = "Melee", sp = 10, cd = 3, range = 12, mult = 2.4, knockDist = 12, knockPower = 2.2, anim = "Blaze_Fist", mastery = 1, fx = "None", desc = "Wrap a ball of barrier round your fist and punch: the glass hits like a wall and throws the enemy back." },
 			-- v0.25.79 Channel skills (owner): HOLD the key = the barrier stands and SP drains each second; let go (or run out of
 			-- SP / time) = it bursts outward. Auto / a tap holds it for TapHold seconds.
 			{ id = "F_BarrierWall", name = "Barrier Wall", kind = "Channel", shape = "Wall", sp = 8, spPerSec = 7, maxHold = 6, cd = 10, mult = 1.8, pushRadius = 9, anim = "Shield_Hold", releaseAnim = "Bounce_Cannon", mastery = 10, fx = "None", desc = "Hold: a wall of barrier in front of you blocks every blow from that side (SP drains). Let go: it slams forward and knocks enemies back." },
-			{ id = "F_BarrierCrash", name = "Barrier Crash", kind = "Ranged", sp = 16, cd = 6, range = 34, mult = 2.4, mastery = 25, fx = "Bullet", desc = "Launch a barrier like a battering ram." },
+			{ id = "F_GlassStairs", name = "Glass Stairway", kind = "Stairs", sp = 16, cd = 12, maxSteps = 32, maxHold = 5, mastery = 25, fx = "None", desc = "Hold and drag the pointer: barrier steps build out wherever you drag (up into the sky, over the sea). Anyone can walk on them for a while." },
 			{ id = "F_BarrierDome", name = "Barrier Dome", kind = "Channel", shape = "Dome", radius = 14, sp = 12, spPerSec = 10, maxHold = 8, cd = 25, mult = 0.8, anim = "Shield_DomeHold", releaseAnim = "Skill_PowerUp", mastery = 50, fx = "None", desc = "Hold: a glass dome closes over you and your crew; nothing outside can hit anyone inside (SP drains). Let go: it bursts outward." },
 		},
 	},
@@ -142,6 +142,8 @@ F.Channel = { TapHold = 2.5 } -- Channel skills cast from Auto Battle / a tap st
 -- Barrier Steps (Shield passive): one step under your feet each time you top out a jump with Space held, at most MaxSteps
 -- before you touch the ground again; each fades after Life seconds
 F.BarrierSteps = { MaxSteps = 14, Life = 3.5 }
+-- v0.25.80 Glass Stairway (F_GlassStairs): one step every Run studs along the drag, each rising at most Rise; they last Life s
+F.GlassStairs = { Run = 2.4, Rise = 1.3, Width = 5, Life = 12, Reach = 90 }
 F.Slingshot = { Range = 70, MinDist = 8, Cooldown = 2.5, Speed = 95, GrabSeconds = 4,
 	-- pumped (Pump Up running, v0.25.69): a straight rocket at PumpSpeed that ends PumpLift studs above the spot (so you
 	-- do not slam into it) and keeps flying a little; everything in the way takes PumpMult x your attack

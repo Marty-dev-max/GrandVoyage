@@ -311,6 +311,10 @@ local function applyDot(attacker, mob, kind, perTick, ticks)
 	dots[mob] = dots[mob] or {}
 	local token = (dots[mob][kind] or 0) + 1
 	dots[mob][kind] = token
+	-- v0.25.80 (owner): you SEE it burn / sicken (flames or green fumes on the body for the whole dot)
+	if mob.model and mob.root then
+		Net.FX("Burning", { model = mob.model, kind = kind, seconds = ticks * 0.6 + 0.2 }, mob.root.Position, 250)
+	end
 	task.spawn(function()
 		for _ = 1, ticks do
 			task.wait(0.6)
@@ -791,6 +795,21 @@ local function setup()
 					break
 				end
 				player:SetAttribute("SP", left)
+				-- v0.25.80 (owner): nothing walks INTO the dome: monsters inside its radius are shoved back out
+				if ch.shape == "Dome" then
+					local root = R.PlayerService.Root(player)
+					if root then
+						for _, mob in ipairs(R.MonsterService.InRadius(root.Position, ch.radius)) do
+							if not mob.dead and mob.root and not mob.def.isBoss and not mob.def.isLeviathan then
+								local off = (mob.root.Position - root.Position) * Vector3.new(1, 0, 1)
+								local dist = off.Magnitude
+								if dist < ch.radius then
+									R.MonsterService.Knockback(mob, root.Position, ch.radius - dist + 3, 1.2, 0.2)
+								end
+							end
+						end
+					end
+				end
 			end
 		end)
 		return true
@@ -816,14 +835,69 @@ local function setup()
 		return true
 	end, 0.12)
 
+	-- v0.25.80 Glass Stairway (Shield, owner): StairsStart pays and opens a short drawing window; the drawing client
+	-- builds its steps locally (instant, collidable) and sends them in batches; every other client builds the same
+	-- collidable steps from the FX, so anyone can climb them. Steps must chain (<= Run + Rise apart) and stay near you.
+	local stairs = {}
+	Net.Handle("StairsStart", function(player, data)
+		local skill = ClassesCfg.SkillById[type(data) == "table" and data.skillId or ""]
+		if not skill or skill.kind ~= "Stairs" or not alive(player) then
+			return false
+		end
+		local lv, why = R.FruitService.SkillLevel(player, skill)
+		if not lv then
+			return false, why
+		end
+		skillCd[player] = skillCd[player] or {}
+		if skillCd[player][skill.id] and os.clock() < skillCd[player][skill.id] then
+			return false, "On cooldown"
+		end
+		local sp = player:GetAttribute("SP") or 0
+		if sp < skill.sp then
+			return false, "Not enough SP"
+		end
+		player:SetAttribute("SP", sp - skill.sp)
+		skillCd[player][skill.id] = os.clock() + skill.cd
+		stairs[player] = { t0 = os.clock(), n = 0, max = skill.maxSteps or 32, hold = skill.maxHold or 5 }
+		R.FruitService.OnCast(player)
+		return true
+	end, 0.2)
+	Net.Handle("StairStep", function(player, data)
+		local st = stairs[player]
+		local root = R.PlayerService.Root(player)
+		local cfg = FruitsCfg.GlassStairs
+		if not st or not root or type(data) ~= "table" or type(data.pts) ~= "table" or os.clock() - st.t0 > st.hold + 1.5 then
+			return false
+		end
+		local ok = {}
+		for i, pt in ipairs(data.pts) do
+			if i > 12 or st.n >= st.max or typeof(pt) ~= "Vector3" or pt ~= pt then
+				break
+			end
+			if (pt - root.Position).Magnitude > cfg.Reach then
+				break
+			end
+			if st.last and (pt - st.last).Magnitude > cfg.Run + cfg.Rise + 0.6 then
+				break
+			end
+			st.last = pt
+			st.n += 1
+			table.insert(ok, pt)
+		end
+		if #ok > 0 then
+			Net.FX("Skill", { skill = "F_GlassStairs_Step", from = ok[1], to = ok[#ok], pts = ok, first = st.n == #ok, stepper = player.UserId }, root.Position, 500)
+		end
+		return true
+	end, 0.05)
+
 	Net.Handle("CastSkill", function(player, data)
 		if not alive(player) or player:GetAttribute("Vending") then
 			return false
 		end
 		local p = R.DataService.Get(player)
 		local skill = ClassesCfg.SkillById[data.skillId]
-		if skill and skill.kind == "Channel" then
-			return false -- held barriers go through ChannelStart / ChannelEnd
+		if skill and (skill.kind == "Channel" or skill.kind == "Stairs") then
+			return false -- held barriers go through ChannelStart / ChannelEnd, Glass Stairway through StairsStart
 		end
 		local lv
 		if skill and skill.fruit then
@@ -895,6 +969,10 @@ local function setup()
 			fxData.pumped = true
 			fxData.speed = PUMP_SPEED
 		end
+		-- v0.25.80: clients time projectiles with the server (strike frame, then the flight / delay)
+		fxData.strike = strike
+		fxData.travel = kind == "Ranged" and travel or skill.delay
+		fxData.splash = skill.splash
 		local skillOpts = nil
 		if skill.fruit then
 			local el = FRUIT_ELEMENT[skill.fruit]
@@ -1130,6 +1208,7 @@ local function setup()
 			if skill.syringe then
 				-- v0.25.77 Adrenaline Shot: a syringe flies into every crewmate it reaches (FX)
 				fxData.allies = {}
+				fxData.radius = skill.radius or 30 -- v0.25.80: the halo on the ground shows how far it reaches
 				for _, m in ipairs(targets) do
 					if m ~= player and m.Character then
 						table.insert(fxData.allies, m.Character)

@@ -702,6 +702,80 @@ SkillFX.Bullet = function(d)
 		VFX.Burst(d.to, 2.5, Color3.fromRGB(255, 230, 120), 0.2)
 	end)
 end
+-- v0.25.80 (owner): Sharpshooter skills fire MUSKET balls: a dark iron ball in a white-hot streak with a gunsmoke
+-- trail, a muzzle flash + smoke puff at the hand, and a heavy hit at the end. timed with the server (strike frame,
+-- then `travel` seconds of flight: d.strike / d.travel). onHit(pos, dir) adds the skill's own ending.
+local function musketShot(d, ballSize, streak, onHit)
+	local strike = math.clamp(tonumber(d.strike) or 0.13, 0, 0.6)
+	local travel = math.clamp(tonumber(d.travel) or 0.15, 0.04, 0.6)
+	task.delay(strike, function()
+		local hand = typeof(d.char) == "Instance" and (d.char:FindFirstChild("RightHand") or d.char:FindFirstChild("HumanoidRootPart"))
+		local to = d.to or d.from
+		local from = hand and hand.Position or d.from
+		local dir = (to - from).Magnitude > 0.1 and (to - from).Unit or Vector3.zAxis
+		local muzzle = from + dir * 1.4
+		-- muzzle: flash + a puff of gunsmoke + sparks thrown forward
+		VFX.Flash(muzzle, Color3.fromRGB(255, 220, 140), 3.2)
+		VFX.Smoke(muzzle, Color3.fromRGB(205, 200, 195), 5, 2.2)
+		Voxels.Pixels(muzzle, { count = 10, colors = { Color3.fromRGB(255, 230, 150), Color3.fromRGB(255, 160, 60) }, size = 0.22, speed = 22, gravity = 10, life = 0.25, glow = 1, spread = 0.4 })
+		Audio.Play("MusketShot", { pos = muzzle })
+		-- the ball: a dark block core inside a bright streak
+		local ball = part(Vector3.one * ballSize, Color3.fromRGB(46, 44, 50), CFrame.lookAt(muzzle, to), nil, Enum.Material.Metal, 0)
+		local glow = part(Vector3.new(ballSize * 0.7, ballSize * 0.7, ballSize * 4), streak, ball.CFrame, nil, Enum.Material.Neon, 0.25)
+		local t0 = os.clock()
+		local lastPuff = 0
+		local conn
+		conn = game:GetService("RunService").RenderStepped:Connect(function()
+			local k = math.min(1, (os.clock() - t0) / travel)
+			local p = muzzle:Lerp(to, k)
+			local cf = CFrame.lookAt(p, p + dir)
+			ball.CFrame = cf
+			glow.CFrame = cf * CFrame.new(0, 0, ballSize * 2)
+			if os.clock() - lastPuff > 0.03 then
+				lastPuff = os.clock()
+				Voxels.Pixels(p, { count = 2, colors = { Color3.fromRGB(190, 186, 182) }, size = 0.3, speed = 1, gravity = -2, life = 0.45, drag = 4 })
+			end
+			if k >= 1 then
+				conn:Disconnect()
+				ball:Destroy()
+				glow:Destroy()
+				onHit(to, dir)
+			end
+		end)
+	end)
+end
+
+-- a heavy ball hitting home: split impact + dust + iron chips + a short jolt for the shooter
+local function musketImpact(pos, dir, d, size)
+	VFX.ImpactSplit(pos, dir, Color3.fromRGB(255, 215, 120), size)
+	VFX.Focus(pos, Color3.fromRGB(255, 240, 200))
+	Voxels.Blocks(pos, { count = 8, colors = { Color3.fromRGB(70, 66, 72), Color3.fromRGB(150, 140, 130) }, size = 0.3, speed = 14, up = 8, life = 0.6, collide = false })
+	VFX.Smoke(pos, Color3.fromRGB(180, 170, 160), 4, 2.6)
+	if d.char == game:GetService("Players").LocalPlayer.Character then
+		pcall(VFX.ImpactFrame)
+	end
+end
+
+SkillFX.Musket = function(d)
+	musketShot(d, 0.7, Color3.fromRGB(255, 240, 190), function(pos, dir)
+		musketImpact(pos, dir, d, 5.5)
+	end)
+end
+SkillFX.MusketBlast = function(d)
+	musketShot(d, 0.85, Color3.fromRGB(255, 150, 60), function(pos, dir)
+		musketImpact(pos, dir, d, 5)
+		VFX.Explosion(pos, d.splash or 10)
+		VFX.Flames(pos, Color3.fromRGB(255, 130, 40), 18, 5)
+		VFX.Ring(pos - Vector3.new(0, 1.5, 0), d.splash or 10, Color3.fromRGB(255, 160, 70), 0.45)
+		Audio.Play("CannonBlast", { pos = pos, volume = 0.7 })
+	end)
+end
+SkillFX.MusketSmoke = function(d)
+	musketShot(d, 0.6, Color3.fromRGB(230, 230, 235), function(pos, dir)
+		VFX.ImpactSplit(pos, dir, Color3.fromRGB(230, 230, 235), 3.5)
+		SkillFX.Smoke(d)
+	end)
+end
 SkillFX.Firebird = function(d)
 	VFX.Flames(d.from, Color3.fromRGB(255, 140, 40), 8, 3)
 	VFX.Projectile(d.from, d.to, Color3.fromRGB(255, 120, 40), 2.4, 0.35, 4, Color3.fromRGB(255, 220, 60))
@@ -765,6 +839,39 @@ end
 SkillFX.SpinKick = function(d)
 	VFX.Ring(d.from - Vector3.new(0, 1.5, 0), d.radius or 12, Color3.fromRGB(255, 170, 60), 0.35, 1.2)
 	VFX.Ring(d.from - Vector3.new(0, 0.5, 0), (d.radius or 12) * 0.7, Color3.fromRGB(255, 230, 120), 0.3, 0.8)
+end
+-- v0.25.80 (owner): Tabletop Tempest = a whirlwind round the spinning legs: wind arcs whirling round the cook, dust
+-- kicked off the ground and a "whup whup" for every turn (8 ticks of 0.1 s)
+SkillFX.Tempest = function(d)
+	local char = d.char
+	local r = d.radius or 12
+	local strike = math.clamp(tonumber(d.strike) or 0.1, 0, 0.5)
+	local turns = 8
+	for i = 0, turns - 1 do
+		task.delay(strike + i * 0.1, function()
+			local root = typeof(char) == "Instance" and char:FindFirstChild("HumanoidRootPart")
+			local c = root and root.Position or d.from
+			local base = i * 1.3
+			-- three curved wind blades sweeping round at leg height
+			for b = 0, 2 do
+				local a0 = base + b * (math.pi * 2 / 3)
+				for seg = 0, 4 do
+					local a = a0 + seg * 0.22
+					local rad = r * (0.45 + seg * 0.07)
+					local p = c + Vector3.new(math.cos(a) * rad, -1.6 + seg * 0.25, math.sin(a) * rad)
+					local tangent = Vector3.new(-math.sin(a), 0, math.cos(a))
+					local w = part(Vector3.new(0.22, 0.22, 2.4 - seg * 0.3), Color3.fromRGB(235, 245, 255), CFrame.lookAt(p, p + tangent), nil, Enum.Material.Neon, 0.35 + seg * 0.1)
+					tween(w, 0.18, { Transparency = 1, Size = Vector3.new(0.1, 0.1, 3.2) })
+					Debris:AddItem(w, 0.2)
+				end
+			end
+			Voxels.Pixels(c - Vector3.new(0, 2.4, 0), { count = 6, colors = { Color3.fromRGB(200, 185, 160), Color3.fromRGB(240, 240, 240) }, size = 0.3, speed = r * 1.1, gravity = 6, life = 0.4, drag = 3, spread = r * 0.3 })
+			if i % 2 == 0 then
+				Audio.Play("Whoosh", { pos = c, pitch = 0.85 + (i / turns) * 0.3, volume = 0.6 })
+			end
+		end)
+	end
+	VFX.Ring(d.from - Vector3.new(0, 1.5, 0), r, Color3.fromRGB(230, 240, 255), 0.5, 1.2)
 end
 SkillFX.Food = function(d)
 	VFX.Aura(d.char, Color3.fromRGB(255, 200, 120), 0.7, true)
@@ -835,6 +942,9 @@ SkillFX.CannonThrow = function(d)
 	local chest = typeof(d.char) == "Instance" and d.char:FindFirstChild("UpperTorso")
 	local from = (chest and chest.Position or d.from) + Vector3.new(0, 3, 0)
 	task.delay(0.14, function()
+		-- v0.25.80 (owner: the blast came late): the long searing boom starts as the ball leaves the hands, so its
+		-- peak lands with the explosion
+		Audio.Play("CannonBlast", { pos = to })
 		local ball = part(Vector3.new(2, 2, 2), Color3.fromRGB(40, 40, 46), CFrame.new(from), nil, Enum.Material.SmoothPlastic, 0)
 		local fuse = part(Vector3.new(0.3, 0.6, 0.3), Color3.fromRGB(255, 200, 80), CFrame.new(from), nil, Enum.Material.Neon, 0)
 		local t0, T = os.clock(), 0.46
@@ -854,7 +964,6 @@ SkillFX.CannonThrow = function(d)
 				fuse:Destroy()
 				VFX.Explosion(to, d.radius or 12)
 				VFX.Ring(to - Vector3.new(0, 1.5, 0), d.radius or 12, Color3.fromRGB(255, 170, 70), 0.5)
-				Audio.Play("CannonBlast", { pos = to })
 			end
 		end)
 	end)
@@ -985,14 +1094,46 @@ local weaponFX = {
 			VFX.Crack(at - Vector3.new(0, 2.6, 0), 4)
 		end
 	end,
-	MedKit = function(d)
-		-- a pinch of medicinal powder: a glittering puff arcs over and bursts into a colored dust cloud
+	MedKit = function(d, n)
+		-- v0.25.80 (owner): the Doctor THROWS A POUCH of medicinal powder: a little tied voxel bag tumbles over in an
+		-- arc, trailing dust, and bursts into a colored cloud on the target (the 4th throw is a bigger pouch)
 		local dust = ({ Color3.fromRGB(150, 235, 170), Color3.fromRGB(255, 170, 210), Color3.fromRGB(190, 170, 255) })[math.random(1, 3)]
-		VFX.Projectile(d.from + Vector3.new(0, 1, 0), d.to, dust, 0.45, 0.2, 2.5, dust:Lerp(Color3.new(1, 1, 1), 0.4))
-		task.delay(0.2, function()
-			VFX.Smoke(d.to, dust, 9, 3.2)
-			VFX.Sparks(d.to, dust:Lerp(Color3.new(1, 1, 1), 0.3), 10, 6)
-			VFX.Flash(d.to, dust, 3)
+		local big = (n or 1) >= 4
+		local hand = typeof(d.char) == "Instance" and d.char:FindFirstChild("RightHand")
+		local from = hand and hand.Position or d.from + Vector3.new(0, 1, 0)
+		local to = d.to
+		local k0 = big and 1.4 or 1
+		local cloth = Color3.fromRGB(214, 190, 150)
+		local bag = part(Vector3.new(0.9, 0.8, 0.9) * k0, cloth, CFrame.new(from), nil, Enum.Material.Fabric, 0)
+		local neck = part(Vector3.new(0.45, 0.35, 0.45) * k0, cloth:Lerp(Color3.new(0, 0, 0), 0.2), CFrame.new(from), nil, Enum.Material.Fabric, 0)
+		local tie = part(Vector3.new(0.55, 0.12, 0.55) * k0, Color3.fromRGB(180, 60, 60), CFrame.new(from), nil, Enum.Material.SmoothPlastic, 0)
+		local mark = part(Vector3.new(0.92, 0.3, 0.3) * k0, dust, CFrame.new(from), nil, Enum.Material.Neon, 0)
+		local t, h = 0.2, math.clamp((to - from).Magnitude * 0.18, 1.5, 5)
+		local t0 = os.clock()
+		local lastPuff = 0
+		local conn
+		conn = game:GetService("RunService").RenderStepped:Connect(function()
+			local k = math.min(1, (os.clock() - t0) / t)
+			local p = from:Lerp(to, k) + Vector3.new(0, math.sin(k * math.pi) * h, 0)
+			local cf = CFrame.new(p) * CFrame.Angles(k * 9, k * 4, 0)
+			bag.CFrame = cf
+			neck.CFrame = cf * CFrame.new(0, 0.55 * k0, 0)
+			tie.CFrame = cf * CFrame.new(0, 0.42 * k0, 0)
+			mark.CFrame = cf * CFrame.new(0, 0, -0.32 * k0)
+			if os.clock() - lastPuff > 0.035 then
+				lastPuff = os.clock()
+				Voxels.Pixels(p, { count = 2, colors = { dust, Color3.new(1, 1, 1) }, size = 0.2, speed = 1.5, gravity = 3, life = 0.35, glow = 1 })
+			end
+			if k >= 1 then
+				conn:Disconnect()
+				for _, q in ipairs({ bag, neck, tie, mark }) do
+					q:Destroy()
+				end
+				VFX.Smoke(to, dust, big and 14 or 9, big and 4.5 or 3.2)
+				VFX.Sparks(to, dust:Lerp(Color3.new(1, 1, 1), 0.3), 10, 6)
+				VFX.Flash(to, dust, big and 4.5 or 3)
+				Voxels.Blocks(to, { count = big and 7 or 4, colors = { cloth, dust }, size = { 0.2, 0.35 }, speed = 8, up = 6, collide = false, life = 0.45 })
+			end
 		end)
 	end,
 }
@@ -1110,9 +1251,95 @@ handlers.BasicAttack = function(d)
 		end)
 	end
 end
+-- v0.25.80 (owner): a burning / poisoned monster shows it: pixel flames (or green fumes) + a flickering light on its
+-- body for as long as the dot lasts (a new dot refreshes the timer)
+local burning = {}
+handlers.Burning = function(d)
+	local m = d.model
+	if typeof(m) ~= "Instance" or not m.Parent then
+		return
+	end
+	local key = m
+	local untilT = os.clock() + math.clamp(tonumber(d.seconds) or 2, 0.5, 8)
+	local e = burning[key]
+	if e then
+		e.untilT = math.max(e.untilT, untilT)
+		return
+	end
+	local body = m.PrimaryPart or m:FindFirstChild("HumanoidRootPart")
+	if not body then
+		return
+	end
+	local fire = d.kind ~= "poison"
+	local ext = m:GetExtentsSize()
+	local host = Instance.new("Part")
+	host.Name = "GVBurn"
+	host.Anchored, host.CanCollide, host.CanQuery, host.CanTouch = true, false, false, false
+	host.Transparency = 1
+	host.Size = Vector3.new(math.max(1, ext.X * 0.7), math.max(1, ext.Y * 0.6), math.max(1, ext.Z * 0.7))
+	host.Parent = workspace
+	local pe = Instance.new("ParticleEmitter")
+	pe.Texture = Tex.flame or Tex.glow
+	pe.Color = fire and ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 245, 180)), ColorSequenceKeypoint.new(0.4, Color3.fromRGB(255, 140, 40)), ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 40, 20)) })
+		or ColorSequence.new(Color3.fromRGB(150, 255, 110), Color3.fromRGB(70, 160, 60))
+	pe.LightEmission = fire and 1 or 0.4
+	local s = math.clamp(ext.X * 0.35, 1, 4)
+	pe.Size = NumberSequence.new(s, s * 0.2)
+	pe.Transparency = NumberSequence.new(0.1, 1)
+	pe.Lifetime = NumberRange.new(0.35, 0.7)
+	pe.Speed = NumberRange.new(2, 5)
+	pe.Acceleration = Vector3.new(0, fire and 12 or 5, 0)
+	pe.SpreadAngle = Vector2.new(15, 15)
+	pe.Rate = fire and 28 or 16
+	pe.Shape = Enum.ParticleEmitterShape.Box
+	pe.Parent = host
+	local light
+	if fire then
+		light = Instance.new("PointLight")
+		light.Color = Color3.fromRGB(255, 150, 60)
+		light.Range = 10
+		light.Parent = host
+	end
+	e = { untilT = untilT }
+	burning[key] = e
+	local conn
+	conn = game:GetService("RunService").Heartbeat:Connect(function()
+		local b = m.Parent and (m.PrimaryPart or m:FindFirstChild("HumanoidRootPart"))
+		if not b or os.clock() > e.untilT then
+			conn:Disconnect()
+			burning[key] = nil
+			pe.Enabled = false
+			Debris:AddItem(host, 0.8)
+			return
+		end
+		host.CFrame = CFrame.new(b.Position)
+		if light then
+			light.Brightness = 1.6 + math.random() * 1.4
+		end
+	end)
+end
 handlers.Skill = function(d)
 	-- v0.25.77 Adrenaline Shot: a syringe flies from the Doctor into every crewmate it buffs
 	if type(d.allies) == "table" then
+		-- v0.25.80 (owner): a pink halo of blocks on the ground marks how far the shot reaches, then fades
+		local root = typeof(d.char) == "Instance" and d.char:FindFirstChild("HumanoidRootPart")
+		local r = math.min(tonumber(d.radius) or 30, 60)
+		if root then
+			local feet = root.Position - Vector3.new(0, 2.8, 0)
+			local nB = math.clamp(math.floor(r * 2.2), 24, 110)
+			local pink, pale = Color3.fromRGB(255, 110, 170), Color3.fromRGB(255, 220, 235)
+			for i = 1, nB do
+				local a = i / nB * math.pi * 2
+				local p0 = feet + Vector3.new(math.cos(a) * r, 0.25, math.sin(a) * r)
+				local b = part(Vector3.new(0.9, 0.35, 0.9), i % 4 == 0 and pale or pink, CFrame.new(feet + Vector3.new(math.cos(a), 0.25, math.sin(a)) * 1) * CFrame.Angles(0, -a, 0), nil, Enum.Material.Neon, 0.2)
+				tween(b, 0.28, { CFrame = CFrame.new(p0) * CFrame.Angles(0, -a, 0) }, Enum.EasingStyle.Quart)
+				task.delay(0.9, function()
+					tween(b, 0.5, { Transparency = 1, Size = Vector3.new(0.9, 1.6, 0.9) })
+				end)
+				Debris:AddItem(b, 1.45)
+			end
+			VFX.Ring(feet, r, pink, 0.6)
+		end
 		local hand = typeof(d.char) == "Instance" and d.char:FindFirstChild("RightHand")
 		local from = hand and hand.Position or d.from
 		for _, ally in ipairs(d.allies) do

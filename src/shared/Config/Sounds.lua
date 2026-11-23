@@ -137,6 +137,13 @@ add("FruitHum", "SFX", 0.5, "", { looped = true, id = "rbxassetid://9116396987" 
 add("SliceCut", "SFX", 0.6, "", { id = "rbxassetid://9116197246" }) -- Knife Slashing Rope 1
 add("HammerThud", "SFX", 0.8, "", { id = "rbxassetid://9114757499", rolloff = 260 }) -- Sledgehammer Impacts 5
 add("CannonBlast", "SFX", 0.9, "", { id = "rbxassetid://9117876319", rolloff = 700 }) -- Power Explosions Big Heavy Searing Boom 1
+add("MusketShot", "SFX", 0.7, "", { id = "rbxassetid://9112912191", rolloff = 500 }) -- ProSoundEffects 12 Gauge Shotgun 2 (v0.25.80 Sharpshooter musket)
+-- v0.25.80 Conqueror's Roar: one burst per player (picked by UserId) + an electric crackle while the aura hangs on
+add("RoarBurst1", "SFX", 0.85, "", { id = "rbxassetid://9114315023", rolloff = 600 }) -- ProSoundEffects Energy Burst Growl 1
+add("RoarBurst2", "SFX", 0.85, "", { id = "rbxassetid://9114315137", rolloff = 600 }) -- Energy Burst Growl 3
+add("RoarBurst3", "SFX", 0.85, "", { id = "rbxassetid://9114315138", rolloff = 600 }) -- Energy Burst Growl 5
+add("RoarBurst4", "SFX", 0.85, "", { id = "rbxassetid://9114315272", rolloff = 600 }) -- Energy Burst Growl 7
+add("RoarArcLoop", "SFX", 0.45, "", { id = "rbxassetid://9114237976" }) -- Electric Arcing 1 (looped under the aura)
 add("ShieldBlock", "SFX", 0.6, "", { id = "rbxassetid://9119072660" }) -- Shield Clang As Hit Metal Sword Hubcap 1 (v0.25.79 barrier blocks)
 add("BlazeFlyLoop", "SFX", 0.55, "", { looped = true, id = "rbxassetid://9112780193" }) -- Fireplace Constant Burning Flame 1 (ProSoundEffects)
 add("HazeFlyLoop", "SFX", 0.35, "", { looped = true, id = "rbxassetid://9114438011" }) -- soft rushing hiss under the smoke trail -- Pixie Dust Twinkles 3 (ProSoundEffects), loops at a spawned fruit

@@ -195,14 +195,22 @@ def wave_slash(s, c=CYAN):
 
 
 def hammer(s):
-    # v0.25.77 (owner: the head looked crooked / off-centre): a big sledge centred in the tile, the head square to
-    # the handle, darker striking faces at both ends and a steel highlight, a wrapped grip at the bottom
-    s.line([(5, 26.5), (17, 13.5)], WOOD, 3)
-    s.line([(5, 26.5), (8, 23.5)], (110, 70, 40), 3)  # grip wrap
-    s.poly([(9.9, 7.3), (14.8, 2.5), (26.1, 13.7), (21.2, 18.6)], IRON)
-    s.poly([(9.9, 7.3), (14.8, 2.5), (16.6, 4.3), (11.7, 9.1)], DARK)  # back face
-    s.poly([(24.3, 11.9), (26.1, 13.7), (21.2, 18.6), (19.4, 16.8)], DARK)  # striking face
-    s.poly([(13.6, 4.7), (14.8, 3.5), (23.6, 12.3), (22.4, 13.5)], STEEL, True)
+    # v0.25.80 (owner: still crooked): the whole sledge sits INSIDE the tile, centred: the head is a rectangle exactly
+    # square to the handle (built from the handle direction), darker striking faces at both ends, a steel highlight,
+    # a wrapped grip at the bottom
+    import math
+    hx, hy = 1 / math.sqrt(2), -1 / math.sqrt(2)      # handle direction (bottom-left -> top-right)
+    ax, ay = -hy, hx                                   # head axis, square to the handle
+    cx, cy = 18.6, 12.6                                # head centre
+    L, W = 7.2, 3.3                                    # half length / half width of the head
+    def pt(u, v):
+        return (cx + ax * u + hx * v, cy + ay * u + hy * v)
+    s.line([(7, 27), pt(0, -W + 0.5)], WOOD, 3)
+    s.line([(7, 27), (10, 24)], (110, 70, 40), 3)  # grip wrap
+    s.poly([pt(-L, -W), pt(L, -W), pt(L, W), pt(-L, W)], IRON)
+    s.poly([pt(-L, -W), pt(-L + 2.2, -W), pt(-L + 2.2, W), pt(-L, W)], DARK)  # back face
+    s.poly([pt(L - 2.2, -W), pt(L, -W), pt(L, W), pt(L - 2.2, W)], DARK)      # striking face
+    s.poly([pt(-L + 2.6, W - 1.4), pt(L - 2.6, W - 1.4), pt(L - 2.6, W - 0.4), pt(-L + 2.6, W - 0.4)], STEEL, True)
 
 
 def cannonball(s, cx=15, cy=18, r=8):
@@ -415,9 +423,10 @@ SKILLS = {
     'F_SmokeBody': R('Haze', lambda s: (smoke(s, 16, 20, 1.0), s.oval(16, 9, 5, 5, SMOKE2), s.oval(16, 9, 3, 3, SMOKE1, True))),
     'F_WhiteOut': R('Haze', lambda s: (tornado(s, 16, 4, 28, SMOKE1), sparkle(s, 6, 8, WHITE, 2))),
     # Ward
-    'F_BarrierBash': R('Ward', lambda s: (hexwall(s, CYAN, 0.8, 18, 16), fist(s, 9, 20, 0.6), speed_lines(s, 2, 8, 9, 8, 2))),
+    'F_BarrierBash': R('Ward', lambda s: (s.oval(18, 15, 9, 9, lerp(CYAN, WHITE, 0.3)), s.oval(18, 15, 7, 7, CYAN), fist(s, 18, 15, 0.6), s.line([(11, 6), (25, 24)], WHITE, 1, True), speed_lines(s, 2, 8, 7, 8, 2))),
     'F_BarrierWall': R('Ward', lambda s: (s.rect(5, 4, 27, 28, CYAN), s.rect(8, 7, 24, 25, lerp(CYAN, WHITE, 0.5)), s.line([(16, 4), (16, 28)], WHITE, 1, True), s.line([(5, 16), (27, 16)], WHITE, 1, True))),
-    'F_BarrierCrash': R('Ward', lambda s: (hexwall(s, CYAN, 0.6, 21, 16), speed_lines(s, 2, 16, 12, 16, 4, CYAN, 3))),
+    # v0.25.80: Glass Stairway = glass steps climbing to the top right with a shine on each
+    'F_GlassStairs': R('Ward', lambda s: [(s.rect(3 + i * 5, 25 - i * 4, 9 + i * 5, 28 - i * 4, CYAN), s.line([(3 + i * 5, 25 - i * 4), (9 + i * 5, 25 - i * 4)], WHITE, 1, True)) for i in range(5)]),
     'F_BarrierDome': R('Ward', lambda s: (dome(s, CYAN), sparkle(s, 16, 16, WHITE, 2))),
     # Split
     'F_SplitCannon': R('Split', lambda s: (fist(s, 21, 15, 0.8), s.rect(2, 13, 10, 17, SKIN), s.line([(11, 13), (11, 17)], PURP, 1, True), speed_lines(s, 2, 22, 11, 22, 2, WHITE, 3))),

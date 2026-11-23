@@ -242,6 +242,10 @@ FX.F_Emberflies = function(d)
 				local pulse = 1 + math.sin(t * 16 + f.seed) * 0.25
 				f.core.CFrame = CFrame.new(p) * CFrame.Angles(t * 4, t * 3, 0)
 				f.halo.CFrame = CFrame.new(p)
+				-- v0.25.80 (owner): green turns orange just before each one bursts
+				local heat = math.clamp((t - (f.burst - 0.45)) / 0.45, 0, 1)
+				f.core.Color = EMBER2:Lerp(C.fire1, heat)
+				f.halo.Color = EMBER:Lerp(C.fire2, heat)
 				f.halo.Size = Vector3.one * 1.2 * pulse
 				if k > 0 and k < 1 and math.random() < 0.4 then
 					Voxels.Pixels(p, { count = 2, colors = { EMBER, EMBER2 }, size = 0.25, speed = 1, gravity = -3, life = 0.3, glow = 1, spread = 0.2 })
@@ -253,7 +257,10 @@ FX.F_Emberflies = function(d)
 		end
 	end)
 	for i, f in ipairs(flies) do
-		task.delay(1.2 + ((i - 1) % 4) * 0.18 + math.random() * 0.04, function()
+		f.burst = 1.2 + ((i - 1) % 4) * 0.18 + math.random() * 0.04
+	end
+	for _, f in ipairs(flies) do
+		task.delay(f.burst, function()
 			local p = f.core.Parent and f.core.Position or f.spot
 			f.core:Destroy()
 			f.halo:Destroy()
@@ -278,7 +285,7 @@ function FX.ChargeBall(char)
 	conn = game:GetService("RunService").RenderStepped:Connect(function()
 		local t = os.clock() - t0
 		local s = math.min(1, t / 1.2)
-		local size = 1 + s * 4.5
+		local size = 1 + s * 11 -- v0.25.80 (owner): 2-3x bigger
 		local p = head.Position + Vector3.new(0, 2 + size * 0.55, 0)
 		core.Size = Vector3.one * size * 0.7
 		shell.Size = Vector3.one * size * (1 + math.sin(t * 14) * 0.05)
@@ -300,11 +307,11 @@ end
 FX.F_Inferno = function(d)
 	local to = d.to or d.from
 	local head = typeof(d.char) == "Instance" and d.char:FindFirstChild("UpperTorso")
-	local from = (head and head.Position or d.from) + Vector3.new(0, 5, 0)
-	local r = 14
+	local from = (head and head.Position or d.from) + Vector3.new(0, 9, 0)
+	local r = d.splash or 18
 	task.delay(0.14, function()
-		local core = blk(Vector3.one * 3.6, C.fire1, CFrame.new(from), true, 0)
-		local shell = blk(Vector3.one * 5.4, C.fire2, CFrame.new(from), true, 0.35)
+		local core = blk(Vector3.one * 8.5, C.fire1, CFrame.new(from), true, 0)
+		local shell = blk(Vector3.one * 12, C.fire2, CFrame.new(from), true, 0.35)
 		local t0 = os.clock()
 		local conn
 		conn = game:GetService("RunService").RenderStepped:Connect(function()
@@ -312,7 +319,7 @@ FX.F_Inferno = function(d)
 			local p = from:Lerp(to, k) + Vector3.new(0, math.sin(k * math.pi) * 3, 0)
 			core.CFrame = CFrame.new(p) * CFrame.Angles(k * 9, k * 7, 0)
 			shell.CFrame = CFrame.new(p) * CFrame.Angles(-k * 6, k * 4, k * 3)
-			Voxels.Pixels(p, { count = 5, colors = { C.fire1, C.fire2, C.fire3 }, size = 0.5, speed = 3, gravity = -6, life = 0.5, glow = 1, spread = 2 })
+			Voxels.Pixels(p, { count = 8, colors = { C.fire1, C.fire2, C.fire3 }, size = 0.8, speed = 4, gravity = -6, life = 0.6, glow = 1, spread = 5 })
 			if k >= 1 then
 				conn:Disconnect()
 				core:Destroy()
@@ -325,7 +332,7 @@ FX.F_Inferno = function(d)
 		local V = require(script.Parent.VFX)
 		V.Ring(at + Vector3.new(0, 0.3, 0), r, C.fire2, 0.5)
 		V.Shockwave(at + Vector3.new(0, 2, 0), Vector3.yAxis, C.fire1, r * 0.8)
-		fireBurst(at + Vector3.new(0, 2, 0), 2.6)
+		fireBurst(at + Vector3.new(0, 2, 0), 4)
 		for ring = 1, 4 do
 			task.delay(ring * 0.06, function()
 				local n = 10 + ring * 7
@@ -391,13 +398,38 @@ FX.F_SmokeFist = function(d)
 		require(script.Parent.VFX).Shockwave(to, dir, C.smoke1, 8)
 	end)
 end
--- Smoke Screen: the cloud rolls out of the sweep and hangs there as long as it blinds (server `smoke` seconds)
+-- Smoke Screen (v0.25.80, owner): PUNCH a fist of smoke at the chosen spot (Blaze_Fist strike, then `delay` of flight
+-- = d.travel); it bursts there into the cloud, which hangs as long as it blinds (server `smoke` seconds)
 FX.F_SmokeScreen = function(d)
 	local at = ground(d.to or d.from) + Vector3.new(0, 2, 0)
 	local r = d.radius or 14
 	local last = tonumber(d.smoke) or 6
+	local strike = math.clamp(tonumber(d.strike) or 0.08, 0, 0.5)
+	local land = strike + math.clamp(tonumber(d.travel) or 0.3, 0.05, 0.8)
 	local banks = {}
-	task.delay(0.28, function()
+	local hand = typeof(d.char) == "Instance" and d.char:FindFirstChild("RightHand")
+	local from = hand and hand.Position or (d.from + Vector3.new(0, 1, 0))
+	if (at - from).Magnitude > 1 then
+		task.delay(strike, function()
+			local fromCF = CFrame.lookAt(from, at)
+			local parts = fistBlocks(fromCF, { C.smoke1, C.smoke2 }, 2.2, false)
+			table.insert(parts, blk(Vector3.new(3, 3, 3), C.smoke2, fromCF * CFrame.new(0, 0, 1.1), false, 0.5))
+			moveAll(parts, fromCF, CFrame.lookAt(at, at + (at - from).Unit), land - strike)
+			for k = 1, 6 do
+				task.delay((land - strike) * k / 6, function()
+					smokePuff(from:Lerp(at, k / 6), 8, 1.2, 0.8)
+				end)
+			end
+			for _, p in ipairs(parts) do
+				fade(p, land - strike, 0.15)
+			end
+		end)
+	end
+	task.delay(land, function()
+		-- the burst: a shockwave of smoke blocks, then the banks swell
+		smokePuff(at, 60, r * 0.5, 1.4)
+		Voxels.Blocks(at, { count = 16, colors = { C.smoke1, C.smoke2, C.smoke3 }, size = { 0.6, 1.2 }, speed = 18, up = 5, collide = false, life = 0.8, spread = 2 })
+		require(script.Parent.VFX).Ring(at - Vector3.new(0, 1.7, 0), r, C.smoke1, 0.5)
 		for _ = 1, 12 do
 			local off = Vector3.new(math.random() - 0.5, math.random() * 0.4, math.random() - 0.5) * r * 1.5
 			local b = blk(Vector3.new(1, 1, 1), math.random() < 0.5 and C.smoke1 or C.smoke2, CFrame.new(at + off), false, 0.3)
@@ -407,11 +439,11 @@ FX.F_SmokeScreen = function(d)
 	end)
 	-- puffs keep rolling while it lasts
 	for k = 0, math.floor(last / 0.5) do
-		task.delay(0.28 + k * 0.5, function()
+		task.delay(land + 0.3 + k * 0.5, function()
 			smokePuff(at + Vector3.new((math.random() - 0.5) * r, 0, (math.random() - 0.5) * r), 22, r * 0.9, 1.6)
 		end)
 	end
-	task.delay(0.28 + last, function()
+	task.delay(land + last, function()
 		for _, b in ipairs(banks) do
 			if b.Parent then
 				tw(b, 0.8, { Transparency = 1, Size = b.Size * 1.3 })
@@ -574,21 +606,6 @@ local function pane(cf, w, h, life)
 	fade(edge, life, 0.3)
 	return p, edge
 end
-local function shatter(pos, n)
-	Voxels.Blocks(pos, { count = n or 14, colors = { C.ward1, C.ward2, C.white }, size = { 0.3, 0.7 }, speed = 12, up = 6, neon = true, collide = false, life = 0.6, spread = 1.5 })
-end
-FX.F_BarrierBash = function(d)
-	local from, to = d.from, d.to or d.from
-	local dir = Vector3.new(to.X - from.X, 0, to.Z - from.Z)
-	dir = dir.Magnitude > 0.1 and dir.Unit or Vector3.zAxis
-	local cf = CFrame.lookAt(from + dir * 2, from + dir * 3)
-	local p, e = pane(cf, 5, 6, 0.35)
-	tw(p, 0.18, { CFrame = cf * CFrame.new(0, 0, -5) })
-	tw(e, 0.18, { CFrame = cf * CFrame.new(0, 0, -4.85) })
-	task.delay(0.2, function()
-		shatter(from + dir * 7, 16)
-	end)
-end
 FX.F_BarrierWall = function(d)
 	local r = charRoot(d)
 	local at = r and r.Position or d.from
@@ -601,20 +618,6 @@ FX.F_BarrierWall = function(d)
 		tw(p, 0.25, { Size = Vector3.new(4.5, 6, 0.4) }, Enum.EasingStyle.Back)
 		tw(e, 0.25, { Size = Vector3.new(4.8, 6.3, 0.2) }, Enum.EasingStyle.Back)
 	end
-end
-FX.F_BarrierCrash = function(d)
-	local from, to = d.from + Vector3.new(0, 1, 0), d.to or d.from
-	if (to - from).Magnitude < 0.5 then
-		return
-	end
-	local cf = CFrame.lookAt(from, to)
-	local p, e = pane(cf, 4, 4, 0.5)
-	local t = math.clamp((to - from).Magnitude / 80, 0.1, 0.45)
-	tw(p, t, { CFrame = CFrame.lookAt(to, to + (to - from).Unit) }, Enum.EasingStyle.Linear)
-	tw(e, t, { CFrame = CFrame.lookAt(to, to + (to - from).Unit) * CFrame.new(0, 0, 0.15) }, Enum.EasingStyle.Linear)
-	task.delay(t, function()
-		shatter(to, 22)
-	end)
 end
 FX.F_BarrierDome = function(d)
 	local r = charRoot(d)
@@ -647,6 +650,25 @@ local function glassPane(size, cf, transp)
 end
 -- the barrier a channeling character holds up (every client sees it): a 3x3 wall of panes in front, or a dome
 local barriers = setmetatable({}, { __mode = "k" })
+-- v0.25.80 (owner reference): the barrier is CLEAR GLASS, not a snowy glow: see-through panes (Glass material) with thin
+-- pale edges and bright diagonal shine streaks that glint as a light band sweeps across
+local function clearPane(size, cf)
+	local p = blk(size, Color3.fromRGB(205, 245, 255), cf, false, 0.8)
+	p.Material = Enum.Material.Glass
+	p.Reflectance = 0.15
+	local rim = blk(size + Vector3.new(0.18, 0.18, -size.Z + 0.05), Color3.fromRGB(170, 235, 255), cf, true, 0.55)
+	return p, rim
+end
+FX.ClearPane = clearPane
+local function streak(cf, len)
+	return blk(Vector3.new(0.22, len, 0.05), Color3.new(1, 1, 1), cf, true, 0.2)
+end
+local function grounded(char, root)
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { char, folder }
+	return workspace:Raycast(root.Position, Vector3.new(0, -6, 0), params) ~= nil
+end
 local function dressBarrier(char, shape, radius)
 	local st = barriers[char]
 	if st and st.shape ~= shape then
@@ -667,48 +689,83 @@ local function dressBarrier(char, shape, radius)
 		return
 	end
 	local parts = {}
-	local layout = {} -- { offset CFrame in root space, size }
+	local layout = {} -- { offset CFrame in root space, size, world-aligned }
 	if shape == "Wall" then
 		for x = -1, 1 do
 			for y = -1, 1 do
-				table.insert(layout, { CFrame.new(x * 2.6, 1 + y * 2.6, -4), Vector3.new(2.45, 2.45, 0.3) })
+				table.insert(layout, { CFrame.new(x * 2.6, 1 + y * 2.6, -4), Vector3.new(2.5, 2.5, 0.25) })
 			end
 		end
 	else
+		-- a hemisphere on the ground, a full sphere when you are up in the air
 		local r = math.min(radius or 14, 18)
-		for ring = 0, 3 do
-			local el = ring / 4 * math.pi / 2
+		local sphere = not grounded(char, root)
+		local cy = sphere and 0 or -2.6
+		local ringsUp = 5
+		for ring = sphere and -ringsUp + 1 or 0, ringsUp - 1 do
+			local el = ring / ringsUp * math.pi / 2
 			local rr = math.cos(el) * r
-			local n = math.max(6, math.floor(rr * 0.55))
+			local n = math.max(6, math.floor(rr * 2 * math.pi / 3))
+			local w = rr * 2 * math.pi / n + 0.15
+			local hgt = r * math.pi / 2 / ringsUp + 0.15
 			for i = 1, n do
 				local a = i / n * math.pi * 2 + ring * 0.2
-				local pos = Vector3.new(math.cos(a) * rr, math.sin(el) * r - 2.6, math.sin(a) * rr)
-				table.insert(layout, { CFrame.lookAt(pos, Vector3.new(0, -2.6, 0)), Vector3.new(3.2, 3.2, 0.25), true })
+				local pos = Vector3.new(math.cos(a) * rr, math.sin(el) * r + cy, math.sin(a) * rr)
+				table.insert(layout, { CFrame.lookAt(pos, Vector3.new(0, cy, 0)), Vector3.new(w, hgt, 0.2), true })
 			end
 		end
-		table.insert(layout, { CFrame.new(0, r - 2.6, 0) * CFrame.Angles(math.pi / 2, 0, 0), Vector3.new(3.2, 3.2, 0.25), true })
+		table.insert(layout, { CFrame.new(0, r + cy, 0) * CFrame.Angles(math.pi / 2, 0, 0), Vector3.new(3.2, 3.2, 0.2), true })
+		if sphere then
+			table.insert(layout, { CFrame.new(0, -r + cy, 0) * CFrame.Angles(-math.pi / 2, 0, 0), Vector3.new(3.2, 3.2, 0.2), true })
+		end
 	end
 	for i, l in ipairs(layout) do
-		local p, rim = glassPane(Vector3.new(0.1, 0.1, 0.1), root.CFrame * l[1])
-		parts[i] = { p = p, rim = rim, off = l[1], size = l[2], world = l[3] }
+		local p, rim = clearPane(Vector3.new(0.1, 0.1, 0.1), root.CFrame * l[1])
+		local e = { p = p, rim = rim, off = l[1], size = l[2], world = l[3], phase = (l[1].Position.X + l[1].Position.Y) * 0.25 }
+		-- every other pane carries one or two diagonal shine streaks
+		if i % 2 == 0 or shape == "Wall" then
+			e.streaks = {}
+			local len = math.min(l[2].X, l[2].Y) * 0.95
+			for k = 1, (i % 4 == 0) and 2 or 1 do
+				table.insert(e.streaks, { part = streak(p.CFrame, len), off = CFrame.new((k - 1.5) * l[2].X * 0.3, 0, -0.13) * CFrame.Angles(0, 0, 0.7), len = len * (k == 2 and 0.6 or 1) })
+			end
+		end
+		parts[i] = e
 	end
 	local t0 = os.clock()
 	local conn = game:GetService("RunService").RenderStepped:Connect(function()
 		if not root.Parent then
 			return
 		end
-		local k = math.min(1, (os.clock() - t0) / 0.18)
+		local now = os.clock()
+		local k = math.min(1, (now - t0) / 0.18)
 		local base = root.CFrame
+		local moved, cfs = {}, {}
 		for i, e in ipairs(parts) do
-			local kk = math.clamp(k * 1.6 - i * 0.02, 0, 1)
+			local kk = math.clamp(k * 1.6 - i * 0.01, 0, 1)
 			-- the dome stays level around you (no tilting with the body), the wall turns with you
 			local cf = e.world and (CFrame.new(base.Position) * e.off) or (base * e.off)
-			e.p.CFrame = cf
-			e.rim.CFrame = cf * CFrame.new(0, 0, 0.05)
-			e.p.Size = e.size * kk
-			e.rim.Size = (e.size + Vector3.new(0.25, 0.25, -e.size.Z + 0.06)) * kk
-			e.p.Transparency = 0.6 + math.sin(os.clock() * 4 + i) * 0.06
+			table.insert(moved, e.p)
+			table.insert(cfs, cf)
+			table.insert(moved, e.rim)
+			table.insert(cfs, cf * CFrame.new(0, 0, 0.04))
+			if kk < 1 or e.sized ~= true then
+				e.p.Size = e.size * kk
+				e.rim.Size = (e.size + Vector3.new(0.18, 0.18, -e.size.Z + 0.05)) * kk
+				e.sized = kk >= 1
+			end
+			if e.streaks then
+				-- a light band sweeps over the glass: the streaks glint as it passes
+				local glint = (math.sin(now * 2.2 - e.phase) + 1) / 2
+				for _, sk in ipairs(e.streaks) do
+					table.insert(moved, sk.part)
+					table.insert(cfs, cf * sk.off)
+					sk.part.Size = Vector3.new(0.22, sk.len * kk, 0.05)
+					sk.part.Transparency = 0.75 - glint ^ 3 * 0.7
+				end
+			end
 		end
+		workspace:BulkMoveTo(moved, cfs, Enum.BulkMoveMode.FireCFrameChanged)
 	end)
 	st = { shape = shape }
 	function st.stop()
@@ -717,6 +774,9 @@ local function dressBarrier(char, shape, radius)
 		for _, e in ipairs(parts) do
 			fade(e.p, 0, 0.2)
 			fade(e.rim, 0, 0.2)
+			for _, sk in ipairs(e.streaks or {}) do
+				fade(sk.part, 0, 0.2)
+			end
 		end
 	end
 	barriers[char] = st
@@ -830,14 +890,144 @@ local function stepsLoop()
 end
 FX.StepsLoop = stepsLoop
 
--- ===== Bounce Bounce (v0.25.66, docs/Plan-Fruits-v2.md phase 2) =====
--- The rubber arms are real voxel blocks in the character's own skin color (read from its hand block): a chain of
--- cubes from the elbow to the fist that stretches out, holds, and snaps back with a wobble. The real forearm + hand
--- hide (LocalTransparencyModifier, on every client) while the rubber arm is out.
+-- ===== v0.25.80 (owner) Ward Pistol + Glass Stairway =====
 local RunService = game:GetService("RunService")
 local function vfx()
 	return require(script.Parent.VFX)
 end
+-- Ward Pistol: a ball of glass panes + spinning light rings closes round the right fist during the wind-up, then the
+-- punch: the ball smashes into the target (flash, shockwave, glass and rock chips flying)
+FX.F_BarrierBash = function(d)
+	local char = d.char
+	local hand = typeof(char) == "Instance" and char:FindFirstChild("RightHand")
+	local strike = math.clamp(tonumber(d.strike) or 0.1, 0.02, 0.5)
+	local to = d.to or d.from
+	local orb = {}
+	if hand then
+		for _, face in ipairs({ CFrame.new(0, 0, -0.9), CFrame.new(0, 0, 0.9), CFrame.new(0.9, 0, 0) * CFrame.Angles(0, math.pi / 2, 0), CFrame.new(-0.9, 0, 0) * CFrame.Angles(0, math.pi / 2, 0), CFrame.new(0, 0.9, 0) * CFrame.Angles(math.pi / 2, 0, 0), CFrame.new(0, -0.9, 0) * CFrame.Angles(math.pi / 2, 0, 0) }) do
+			local p, rim = clearPane(Vector3.new(1.8, 1.8, 0.12), hand.CFrame * face)
+			table.insert(orb, { p = p, off = face })
+			table.insert(orb, { p = rim, off = face * CFrame.new(0, 0, 0.03) })
+		end
+		-- two spinning light rings round the ball: thin square frames of 4 bars (voxel look)
+		for k = 1, 2 do
+			for e = 0, 3 do
+				local bar = blk(Vector3.new(2.6, 0.14, 0.14), Color3.fromRGB(230, 252, 255), hand.CFrame, true, 0.1)
+				table.insert(orb, { p = bar, off = CFrame.Angles(0, k * 1.1, 0) * CFrame.Angles(0, 0, e * math.pi / 2) * CFrame.new(0, 1.3, 0), spin = k })
+			end
+		end
+	end
+	local t0 = os.clock()
+	local conn
+	conn = RunService.RenderStepped:Connect(function()
+		local t = os.clock() - t0
+		if not hand or not hand.Parent or t > strike + 0.08 then
+			conn:Disconnect()
+			for _, e in ipairs(orb) do
+				e.p:Destroy()
+			end
+			return
+		end
+		local grow = math.min(1, t / 0.08)
+		for _, e in ipairs(orb) do
+			local spin = e.spin and CFrame.Angles(t * 14 * e.spin, t * 9, 0) or CFrame.identity
+			e.p.CFrame = hand.CFrame * spin * e.off
+			if grow < 1 then
+				e.p.Transparency = math.max(e.p.Transparency, 1 - grow)
+			end
+		end
+	end)
+	task.delay(strike, function()
+		local VFX = vfx()
+		local from = hand and hand.Position or d.from
+		local dir = (to - from).Magnitude > 0.1 and (to - from).Unit or Vector3.zAxis
+		local at = to - dir * 1.2
+		-- the glass ball flies the last bit and bursts
+		local ball = blk(Vector3.new(2.4, 2.4, 2.4), Color3.fromRGB(205, 245, 255), CFrame.new(from), false, 0.6)
+		ball.Material = Enum.Material.Glass
+		tw(ball, 0.06, { CFrame = CFrame.new(at) }, Enum.EasingStyle.Linear)
+		Debris:AddItem(ball, 0.07)
+		task.delay(0.06, function()
+			VFX.Flash(at, Color3.new(1, 1, 1), 7)
+			VFX.ImpactSplit(at, dir, Color3.fromRGB(190, 245, 255), 7)
+			VFX.Shockwave(at, dir, Color3.fromRGB(220, 250, 255), 9)
+			shatterGlass(at, 22)
+			Voxels.Blocks(ground(at) + Vector3.new(0, 0.5, 0), { count = 10, colors = { Color3.fromRGB(196, 180, 150), Color3.fromRGB(140, 128, 110) }, size = { 0.5, 1.1 }, speed = 14, up = 14, collide = false, life = 0.8, spread = 2 })
+			VFX.Crack(ground(at), 4)
+			pcall(function()
+				require(script.Parent.Audio).Play("ShieldBlock", { pos = at, pitch = 0.7 })
+				require(script.Parent.Audio).Play("PunchHeavy", { pos = at })
+			end)
+		end)
+	end)
+end
+
+-- Glass Stairway: one clear glass step (collidable, everyone builds their own copy), shine streak, fades after Life
+local stairsFolder
+local function stairsRoot()
+	if not stairsFolder or not stairsFolder.Parent then
+		stairsFolder = Instance.new("Folder")
+		stairsFolder.Name = "GVStairs"
+		stairsFolder.Parent = workspace
+	end
+	return stairsFolder
+end
+function FX.StairStep(pos, dir, mine)
+	local cfg = require(game:GetService("ReplicatedStorage").Shared.Config.Fruits).GlassStairs
+	dir = (dir and dir.Magnitude > 0.1) and Vector3.new(dir.X, 0, dir.Z).Unit or Vector3.zAxis
+	local cf = CFrame.lookAt(pos, pos + dir)
+	local size = Vector3.new(cfg.Width, 0.45, cfg.Run + 0.35)
+	local p = blk(size, Color3.fromRGB(205, 245, 255), cf, false, 0.7)
+	p.Material = Enum.Material.Glass
+	p.Reflectance = 0.15
+	p.Name = "BarrierStep"
+	p.CanCollide = true
+	p.CanQuery = true
+	p.Parent = stairsRoot()
+	local edge = blk(Vector3.new(cfg.Width + 0.1, 0.12, 0.14), Color3.fromRGB(200, 245, 255), cf * CFrame.new(0, 0.2, -size.Z / 2), true, 0.15)
+	edge.Parent = stairsRoot()
+	local sh = blk(Vector3.new(0.2, 0.05, size.Z * 0.9), Color3.new(1, 1, 1), cf * CFrame.new(-cfg.Width * 0.2 + math.random() * 0.8, 0.24, 0) * CFrame.Angles(0, 0.6, 0), true, 0.25)
+	sh.Parent = stairsRoot()
+	-- pops in from nothing
+	for _, q in ipairs({ p, edge, sh }) do
+		local full = q.Size
+		q.Size = full * Vector3.new(0.2, 1, 0.2)
+		tw(q, 0.12, { Size = full }, Enum.EasingStyle.Back)
+		fade(q, cfg.Life, 0.5)
+	end
+	Voxels.Pixels(pos, { count = 6, colors = { Color3.fromRGB(190, 245, 255), Color3.new(1, 1, 1) }, size = 0.25, speed = 4, gravity = 2, life = 0.3, glow = 1, spread = 1.5 })
+	if mine then
+		pcall(function()
+			require(script.Parent.Audio).Play("ShieldBlock", { pos = pos, volume = 0.25, pitch = 1.4 + math.random() * 0.3 })
+		end)
+	end
+	task.delay(cfg.Life + 0.3, function()
+		if p.Parent then
+			Voxels.Blocks(pos, { count = 4, colors = { Color3.fromRGB(190, 245, 255), Color3.new(1, 1, 1) }, size = { 0.25, 0.5 }, speed = 6, up = 3, neon = true, collide = false, life = 0.5 })
+		end
+	end)
+	return p
+end
+local lastStairPt = {}
+FX.F_GlassStairs_Step = function(d)
+	if d.stepper == game:GetService("Players").LocalPlayer.UserId or type(d.pts) ~= "table" then
+		return
+	end
+	local prev = (not d.first) and lastStairPt[d.stepper] or nil
+	for _, pt in ipairs(d.pts) do
+		if typeof(pt) == "Vector3" then
+			local dir = prev and (pt - prev) or nil
+			FX.StairStep(pt, dir, false)
+			prev = pt
+		end
+	end
+	lastStairPt[d.stepper] = prev
+end
+
+-- ===== Bounce Bounce (v0.25.66, docs/Plan-Fruits-v2.md phase 2) =====
+-- The rubber arms are real voxel blocks in the character's own skin color (read from its hand block): a chain of
+-- cubes from the elbow to the fist that stretches out, holds, and snaps back with a wobble. The real forearm + hand
+-- hide (LocalTransparencyModifier, on every client) while the rubber arm is out.
 local function voxBody(char)
 	return typeof(char) == "Instance" and char:FindFirstChild("VoxelBody")
 end
@@ -1490,7 +1680,8 @@ local function smokeEmitter(parent, trail)
 	e.Parent = parent
 	return e
 end
-local SMOKE_LIMBS = { "LeftLowerLeg", "LeftFoot", "RightLowerLeg", "RightFoot" }
+-- v0.25.80 (owner): the WHOLE legs are gone (upper body flies on a tail of smoke)
+local SMOKE_LIMBS = { "LeftUpperLeg", "LeftLowerLeg", "LeftFoot", "RightUpperLeg", "RightLowerLeg", "RightFoot" }
 local dressFire
 dressFire = function(char, on, kind)
 	local st = fireDressed[char]

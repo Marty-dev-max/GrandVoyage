@@ -1,10 +1,12 @@
 r"""Python mirror of Shared/Modules/BladeModel.lua (preview only): reads blade specs from Items.lua, writes parts JSON
-for tools/blender/render_parts.py. Usage: blades_json.py out.json [sheathed]"""
+for tools/blender/render_parts.py. Usage: python tools/blade_preview.py out.json [sheathed], then
+blender -b -P tools/blender/render_parts.py -- out.json out.png front 1800 1100. Keep in sync with BladeModel.lua."""
 import json, math, re, sys
 import numpy as np
 
-ROOT = r'C:\Users\DomToad\Documents\Codex\2026-11-15\roblox\GrandVoyage\.claude\worktrees\funny-rubin-f83106'
-src = open(ROOT + r'\src\shared\Config\Items.lua', encoding='utf-8').read()
+import os
+ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
+src = open(os.path.join(ROOT, 'src', 'shared', 'Config', 'Items.lua'), encoding='utf-8').read()
 
 def parse_spec(t):
     return {k: (v.strip('"') if v.startswith('"') else (v == 'true')) for k, v in re.findall(r'(\w+) = ("[^"]*"|true)', t)}

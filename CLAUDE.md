@@ -825,6 +825,13 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     sword_sheathed(). Models can be uploaded through Studio MCP `open_cloud_invoke` POST /assets/v1/assets (files
     fileContent .glb, then poll GET /assets/v1/operations/<id>); the owner approved assets/models3d (v0.25.103: new
     Wep_Sword / Wep_SwordSheathed + Fruit_Ward / Fruit_Split ids in Config/Models).
+  * v0.25.104 (owner, docs/Plan-Weapons-v2.md = weapon ladder + roles spec): swords are BLOCK models built at runtime
+    by `Shared/Modules/BladeModel` from the item's `blade` spec (form Katana/Cutlass/Wooden, shape, hilt = guard style,
+    colors) in the old Wep_Sword frame (length Z, tip -Z, edge -Y, grip pivot; sheathed/scabbard center pivot).
+    WeaponService mounts them (char attr WeaponItem), UI.WeaponView / Bag tiles / CharacterView show them. Items:
+    `blade(id, name, tier, spec)` tiers Fathom (green, Forty Fathoms) / Tide (blue, Twenty Tides, boss drops) /
+    Awakened (purple, Whitevow only); ItemDB.Blades[tier] lists ids. Never One Piece blade/grade names. Offline
+    preview: tools/blade_preview.py (Python mirror, keep in sync) + render_parts.py.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

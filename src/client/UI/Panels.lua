@@ -311,7 +311,7 @@ function Panels.Inventory(args)
 	New("UIGradient", { Color = ColorSequence.new(T.PanelTop, T.PanelDeep), Rotation = 90, Parent = titleBtn })
 	local titleStroke = UI.Stroke(titleBtn, T.Gold, 3)
 	local titleText = UI.Text(titleBtn, "", 18, T.Text, "Display", { Size = UDim2.new(1, -40, 1, 0), Position = UDim2.fromOffset(10, 0), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 6, TextWrapped = false })
-	UI.Text(titleBtn, "✎", 18, T.TextSoft, "Display", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 0), Size = UDim2.fromOffset(20, 44), ZIndex = 6 })
+	UI.Icon(titleBtn, "scroll", 22, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), ZIndex = 6 }) -- v0.25.99: the pixel font has no ✎
 	UI.Tactile(titleBtn)
 	UI.Tooltip(titleBtn, function()
 		return "Your title: shown above your head and in chat. Tap to change it.", T.Gold

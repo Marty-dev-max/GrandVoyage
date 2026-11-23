@@ -515,6 +515,38 @@ C.Blaze_Inferno = { rig = "R15", priority = "Action", strike = 0.35, keys = {
 	{ t = 1.05 },
 } }
 
+-- ===== Cursed Fruit: Haze Haze (v0.25.76, phase 4). Smoke Fist reuses Blaze_Wind / Blaze_Fist =====
+-- Smoke Grip: the arm shoots out at the target, then yanks back hard (the smoke arm drags the enemy in)
+local REACH = { RightUpperArm = { 92, 0, -4 }, RightLowerArm = { 0, 0, 0 }, RightHand = { -20, 0, 0 }, LeftUpperArm = { 20, 0, -30 }, LeftLowerArm = { 60, 0, 0 },
+	UpperTorso = { -14, 30, 0 }, Head = { 0, -24, 0 }, LowerTorso = { 0, 12, 0, 0, -0.2, -0.3 }, RightUpperLeg = { -14, 0, 0 }, LeftUpperLeg = { 30, 0, 0 }, LeftLowerLeg = { -30, 0, 0 } }
+local YANK = { RightUpperArm = { 20, 0, 30 }, RightLowerArm = { 120, 0, 0 }, RightHand = { 40, 0, 0 }, LeftUpperArm = { 40, 0, -20 }, LeftLowerArm = { 70, 0, 0 },
+	UpperTorso = { 10, -30, 0 }, Head = { 6, 20, 0 }, LowerTorso = { 0, -14, 0, 0, -0.3, 0.35 }, RightUpperLeg = { 30, 0, 0 }, RightLowerLeg = { -50, 0, 0 }, LeftUpperLeg = { -14, 0, 0 } }
+C.Haze_Grip = { rig = "R15", priority = "Action", strike = 0.12, keys = {
+	{ t = 0 },
+	{ t = 0.12, pose = REACH },
+	{ t = 0.34, pose = REACH },
+	{ t = 0.46, pose = YANK },
+	{ t = 0.7, pose = YANK },
+	{ t = 0.9 },
+} }
+-- Smoke Screen: a wide sweep of both arms (the cloud rolls out)
+C.Haze_Screen = { rig = "R15", priority = "Action", strike = 0.28, keys = {
+	{ t = 0 },
+	{ t = 0.14, pose = { RightUpperArm = { 60, 0, -50 }, LeftUpperArm = { 60, 0, 50 }, RightLowerArm = { 40, 0, 0 }, LeftLowerArm = { 40, 0, 0 }, UpperTorso = { -10, 0, 0 } } },
+	{ t = 0.28, pose = { RightUpperArm = { 70, 0, 80 }, LeftUpperArm = { 70, 0, -80 }, RightLowerArm = { 0, 0, 0 }, LeftLowerArm = { 0, 0, 0 }, UpperTorso = { -6, 0, 0 }, LowerTorso = { 0, 0, 0, 0, -0.25, 0 },
+		RightUpperLeg = { 14, 0, 12 }, LeftUpperLeg = { 14, 0, -12 }, RightLowerLeg = { -22, 0, 0 }, LeftLowerLeg = { -22, 0, 0 } } },
+	{ t = 0.6, pose = { RightUpperArm = { 60, 0, 85 }, LeftUpperArm = { 60, 0, -85 }, UpperTorso = { -4, 0, 0 } } },
+	{ t = 0.8 },
+} }
+-- White Out: arms crossed tight, a spin as the body dissolves into the twister
+C.Haze_Vanish = { rig = "R15", priority = "Action", strike = 0.25, keys = {
+	{ t = 0 },
+	{ t = 0.12, pose = with(CROUCH, { RightUpperArm = { 70, 0, -45 }, LeftUpperArm = { 70, 0, 45 }, RightLowerArm = { 110, 0, 0 }, LeftLowerArm = { 110, 0, 0 }, UpperTorso = { -20, 0, 0 } }) },
+	{ t = 0.25, pose = { LowerTorso = { 0, -180, 0, 0, 0.3, 0 }, RightUpperArm = { 20, 0, 70 }, LeftUpperArm = { 20, 0, -70 }, Head = { 15, 0, 0 } } },
+	{ t = 0.4, pose = { LowerTorso = { 0, -359, 0, 0, 0.3, 0 }, RightUpperArm = { 20, 0, 70 }, LeftUpperArm = { 20, 0, -70 } } },
+	{ t = 0.6 },
+} }
+
 -- weapon -> combo clips (in order), stance, and the clips each skill kind uses
 C.Weapons = {
 	-- freestyle street fighting: jab, cross, body blow, hook, knee, elbow, spinning backfist (the uppercut is a skill now)

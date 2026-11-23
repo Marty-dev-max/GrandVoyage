@@ -144,6 +144,7 @@ local function monsterDmgType(def)
 end
 Combat.MonsterDmgType = monsterDmgType
 local LOGIA = { Blaze = true, Haze = true }
+local smokeZones = {} -- v0.25.76 Smoke Screen clouds { pos, r, untilT }
 
 -- true = the blow was absorbed by the victim's fruit body (Logia passes through, rubber bounces bullets back,
 -- a split body lets blades through)
@@ -198,6 +199,22 @@ function Combat.MonsterHit(mob, player, mult)
 	end
 	if fruitBody(mob, player, mult) then
 		return
+	end
+	-- v0.25.76 Smoke Screen: a monster blinded by the cloud swings at nothing half the time
+	if mob.root and #smokeZones > 0 then
+		local now = os.clock()
+		for i = #smokeZones, 1, -1 do
+			local z = smokeZones[i]
+			if now > z.untilT then
+				table.remove(smokeZones, i)
+			elseif (mob.root.Position - z.pos).Magnitude <= z.r and math.random() < 0.5 then
+				local root = R.PlayerService.Root(player)
+				if root then
+					Net.FX("Miss", { pos = root.Position + Vector3.new(0, 3, 0), text = "LOST IN SMOKE" }, root.Position, 150)
+				end
+				return
+			end
+		end
 	end
 	local hit = (mob.def.level * 1.8 + 25) * (1 + (mob.def.hitBonus or 0)) -- AGI monsters aim better (Config/Monsters types)
 	if math.random() > Formulas.HitChance(hit, d.flee) then
@@ -870,6 +887,17 @@ local function setup()
 			if skill.ticks then
 				-- v0.25.65: lingering storms (White Out, Split Festival) hit again every tickEvery seconds, around you
 				fxData.vanish = skill.vanish
+				if skill.vanish then
+					-- v0.25.76 White Out: you ARE the smoke while it spins: nothing can hit you
+					local stamp = os.clock()
+					player:SetAttribute("Invulnerable", true)
+					player:SetAttribute("VanishAt", stamp)
+					task.delay(strike + skill.vanish, function()
+						if player:GetAttribute("VanishAt") == stamp then
+							player:SetAttribute("Invulnerable", nil)
+						end
+					end)
+				end
 				for i = 1, skill.ticks do
 					task.delay(strike + (skill.delay or 0) + (i - 1) * (skill.tickEvery or 0.3), function()
 						local r = R.PlayerService.Root(player)
@@ -897,6 +925,11 @@ local function setup()
 			fxData.to = pos
 			fxData.radius = skill.radius
 			shipCircle(pos, skill.radius or 10)
+			if skill.smoke then
+				-- v0.25.76 Smoke Screen: monsters inside the cloud miss half their blows for `smoke` seconds
+				table.insert(smokeZones, { pos = pos, r = skill.radius or 14, untilT = os.clock() + skill.smoke })
+				fxData.smoke = skill.smoke
+			end
 			-- v0.25.65: `ticks` = a lingering area (Flame Twister) or a delayed chain of bursts (Emberflies `delay`)
 			for i = 1, skill.ticks or 1 do
 				task.delay(math.max(0.25, strike) + (skill.delay or 0) + (i - 1) * (skill.tickEvery or 0.3), function()

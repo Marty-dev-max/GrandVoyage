@@ -42,10 +42,10 @@ F.List = {
 		desc = "Become smoke. Choke, blind and slip away.",
 		passive = { flee = 25 }, passiveText = "Smoke Body (Logia): monsters without Toki pass right through you • +25 FLEE",
 		skills = {
-			{ id = "F_SmokeFist", name = "Smoke Fist", kind = "Ranged", sp = 12, cd = 4, range = 44, mult = 2.4, charge = true, mastery = 1, fx = "Smoke", desc = "Hold to gather smoke in your fist, release: a heavy fist of smoke." },
-			{ id = "F_SmokeScreen", name = "Smoke Screen", kind = "GroundAoE", sp = 20, cd = 9, range = 40, radius = 16, mult = 1.5, mastery = 10, fx = "Smoke", desc = "A choking cloud." },
-			{ id = "F_SmokeGrip", name = "Smoke Grip", kind = "Ranged", sp = 16, cd = 7, range = 36, mult = 2.0, pull = true, mastery = 25, fx = "Smoke", desc = "A long arm of smoke coils around the enemy and drags it to you." },
-			{ id = "F_WhiteOut", name = "White Out", kind = "AoE", sp = 38, cd = 20, radius = 18, mult = 0.55, ticks = 6, tickEvery = 0.4, vanish = 2.6, mastery = 50, fx = "Tornado", desc = "You become a whirling tornado of smoke." },
+			{ id = "F_SmokeFist", name = "Smoke Fist", kind = "Ranged", sp = 12, cd = 4, range = 44, mult = 2.4, charge = true, anim = "Blaze_Fist", chargeAnim = "Blaze_Wind", mastery = 1, fx = "Smoke", desc = "Hold to gather smoke in your fist, release: a heavy fist of smoke." },
+			{ id = "F_SmokeScreen", name = "Smoke Screen", kind = "GroundAoE", sp = 20, cd = 9, range = 40, radius = 16, mult = 1.5, smoke = 6, anim = "Haze_Screen", mastery = 10, fx = "Smoke", desc = "A choking cloud: for 6 s monsters inside it miss half their blows." },
+			{ id = "F_SmokeGrip", name = "Smoke Grip", kind = "Ranged", sp = 16, cd = 7, range = 36, mult = 2.0, pull = true, anim = "Haze_Grip", mastery = 25, fx = "Smoke", desc = "A long arm of smoke coils around the enemy and drags it to you." },
+			{ id = "F_WhiteOut", name = "White Out", kind = "AoE", sp = 38, cd = 20, radius = 18, mult = 0.55, ticks = 6, tickEvery = 0.4, vanish = 2.6, anim = "Haze_Vanish", mastery = 50, fx = "Tornado", desc = "You vanish into a whirling tornado of smoke: nothing can hit you while it spins." },
 		},
 	},
 	{

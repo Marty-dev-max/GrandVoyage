@@ -294,69 +294,218 @@ end
 local function smokePuff(pos, n, spread, life)
 	Voxels.Pixels(pos, { count = n, colors = { C.smoke1, C.smoke2, C.smoke3 }, size = 0.7, speed = 2, gravity = -1, life = life or 1.2, glow = 0, spread = spread })
 end
-FX.F_SmokeGrip = function(d)
-	local from, to = d.from + Vector3.new(0, 1, 0), d.to or d.from
-	along(from, to, 7, function(p, i)
-		task.delay(i * 0.035, function()
-			smokePuff(p, 8, 1.5, 0.7)
-		end)
-	end)
-	task.delay(0.25, function()
-		-- a big smoke hand closing on the target
-		local cf = CFrame.lookAt(to + Vector3.new(0, 2, 0), from)
-		for i = -2, 2 do
-			local f = blk(Vector3.new(0.7, 2.6, 0.7), C.smoke1, cf * CFrame.new(i * 0.8, 1.2, 0), false, 0.15)
-			tw(f, 0.25, { CFrame = cf * CFrame.new(i * 0.35, 0.3, -0.6) * CFrame.Angles(-0.9, 0, 0) })
-			fade(f, 0.6, 0.4)
-		end
-		smokePuff(to + Vector3.new(0, 2, 0), 30, 3, 1)
-	end)
-end
-FX.F_SmokeScreen = function(d)
-	local at = ground(d.to or d.from) + Vector3.new(0, 2, 0)
-	local r = d.radius or 14
-	for k = 0, 5 do
-		task.delay(k * 0.3, function()
-			smokePuff(at, 40, r * 1.6, 1.6)
-		end)
-	end
-	for _ = 1, 10 do
-		local off = Vector3.new(math.random() - 0.5, 0, math.random() - 0.5) * r * 1.4
-		local b = blk(Vector3.new(4, 3, 4), C.smoke2, CFrame.new(at + off), false, 0.35)
-		tw(b, 1.6, { Size = Vector3.new(6, 4.5, 6), Transparency = 0.6 })
-		fade(b, 1.6, 0.6)
-	end
-end
 FX.F_SmokeBody = function(d)
 	local r = charRoot(d)
 	local p = r and r.Position or d.from
 	smokePuff(p, 60, 3, 1.4)
 	Voxels.Blocks(p, { count = 10, colors = { C.smoke1, C.smoke2 }, size = { 0.4, 0.8 }, speed = 5, up = 4, collide = false, life = 0.8, spread = 1.5 })
 end
-FX.F_WhiteOut = function(d)
-	local at = ground(d.from)
-	local r = d.radius or 18
-	local blocks = {}
-	for i = 1, 36 do
-		local b = blk(Vector3.new(1, 1, 1) * (0.6 + math.random() * 0.8), i % 3 == 0 and C.smoke2 or C.smoke1, CFrame.new(at), false, 0.1)
-		blocks[i] = { b = b, a = math.random() * 6.28, h = math.random() * 14, rr = r * (0.3 + math.random() * 0.7) }
+-- v0.25.76 Haze phase 4 (docs/Plan-Fruits-v2.md): timings follow the server (strike of each clip + travel)
+-- Smoke Fist: a heavy fist of white smoke (Blaze_Fist pose: strike 0.08 + 0.2 travel), bursting into a cloud
+FX.F_SmokeFist = function(d)
+	local to = d.to or d.from
+	local hand = typeof(d.char) == "Instance" and d.char:FindFirstChild("RightHand")
+	local from = hand and hand.Position or (d.from + Vector3.new(0, 1, 0))
+	local dir = to - from
+	if dir.Magnitude < 0.5 then
+		return
+	end
+	task.delay(0.08, function()
+		local fromCF = CFrame.lookAt(from, to)
+		local parts = fistBlocks(fromCF, { C.smoke1, C.smoke2 }, 2.4, false)
+		for _, p in ipairs(parts) do
+			p.Transparency = 0.1
+		end
+		table.insert(parts, blk(Vector3.new(3.4, 3.4, 3.4), C.smoke2, fromCF * CFrame.new(0, 0, 1.1), false, 0.5))
+		moveAll(parts, fromCF, CFrame.lookAt(to, to + dir.Unit), 0.2)
+		for k = 1, 7 do
+			task.delay(0.2 * k / 7, function()
+				smokePuff(from:Lerp(to, k / 7), 10, 1.4, 0.8)
+			end)
+		end
+		for _, p in ipairs(parts) do
+			fade(p, 0.2, 0.25)
+		end
+	end)
+	task.delay(0.28, function()
+		smokePuff(to, 50, 3.5, 1.3)
+		Voxels.Blocks(to, { count = 14, colors = { C.smoke1, C.smoke2, C.smoke3 }, size = { 0.5, 1 }, speed = 14, up = 6, collide = false, life = 0.7, spread = 1.5 })
+		require(script.Parent.VFX).Shockwave(to, dir, C.smoke1, 8)
+	end)
+end
+-- Smoke Screen: the cloud rolls out of the sweep and hangs there as long as it blinds (server `smoke` seconds)
+FX.F_SmokeScreen = function(d)
+	local at = ground(d.to or d.from) + Vector3.new(0, 2, 0)
+	local r = d.radius or 14
+	local last = tonumber(d.smoke) or 6
+	local banks = {}
+	task.delay(0.28, function()
+		for _ = 1, 12 do
+			local off = Vector3.new(math.random() - 0.5, math.random() * 0.4, math.random() - 0.5) * r * 1.5
+			local b = blk(Vector3.new(1, 1, 1), math.random() < 0.5 and C.smoke1 or C.smoke2, CFrame.new(at + off), false, 0.3)
+			tw(b, 0.6, { Size = Vector3.new(5 + math.random() * 3, 3 + math.random() * 2, 5 + math.random() * 3), Transparency = 0.45 })
+			table.insert(banks, b)
+		end
+	end)
+	-- puffs keep rolling while it lasts
+	for k = 0, math.floor(last / 0.5) do
+		task.delay(0.28 + k * 0.5, function()
+			smokePuff(at + Vector3.new((math.random() - 0.5) * r, 0, (math.random() - 0.5) * r), 22, r * 0.9, 1.6)
+		end)
+	end
+	task.delay(0.28 + last, function()
+		for _, b in ipairs(banks) do
+			if b.Parent then
+				tw(b, 0.8, { Transparency = 1, Size = b.Size * 1.3 })
+				Debris:AddItem(b, 0.85)
+			end
+		end
+	end)
+end
+-- Smoke Grip: a long arm of smoke snakes out of the hand (strike 0.12 + 0.2), coils round the enemy, then hauls it
+-- back to you (the server drags the monster in at the same moment)
+FX.F_SmokeGrip = function(d)
+	local to = d.to or d.from
+	local char = d.char
+	local function handPos()
+		local h = typeof(char) == "Instance" and char:FindFirstChild("RightHand")
+		return h and h.Position or (d.from + Vector3.new(0, 1, 0))
+	end
+	local N = 16
+	local segs = {}
+	for i = 1, N do
+		segs[i] = blk(Vector3.one * (1.1 - i * 0.025), i % 3 == 0 and C.smoke2 or C.smoke1, CFrame.new(handPos()), false, 0.15)
+	end
+	local coil = {}
+	for i = 1, 8 do
+		coil[i] = blk(Vector3.new(0.9, 0.9, 0.9), C.smoke1, CFrame.new(to), false, 1)
 	end
 	local t0 = os.clock()
 	local conn
 	conn = game:GetService("RunService").RenderStepped:Connect(function()
-		local k = os.clock() - t0
-		for _, e in ipairs(blocks) do
-			local a = e.a + k * 6
-			e.b.CFrame = CFrame.new(at + Vector3.new(math.cos(a) * e.rr, 1 + e.h * math.min(1, k * 1.5), math.sin(a) * e.rr)) * CFrame.Angles(a, a * 0.5, 0)
+		local t = os.clock() - t0
+		local base = handPos()
+		local reach -- 0..1 how far the arm is out
+		local tip = to
+		if t < 0.12 then
+			reach = 0
+		elseif t < 0.32 then
+			reach = (t - 0.12) / 0.2
+		elseif t < 0.46 then
+			reach = 1
+		else
+			-- haul back: the tip comes home with the enemy
+			local k = math.min(1, (t - 0.46) / 0.3)
+			tip = to:Lerp(base + (to - base).Unit * 4, k * k)
+			reach = 1
 		end
-		if k > 1.2 then
+		local path = tip - base
+		local side = path.Magnitude > 0.1 and path.Unit:Cross(Vector3.yAxis) or Vector3.xAxis
+		side = side.Magnitude > 0.05 and side.Unit or Vector3.xAxis
+		for i, b in ipairs(segs) do
+			local a = i / N
+			local shown = a <= reach
+			local wave = side * math.sin(a * math.pi * 3 - t * 18) * 1.1 * math.sin(a * math.pi) + Vector3.new(0, math.cos(a * math.pi * 2 - t * 14) * 0.5, 0)
+			b.CFrame = CFrame.new(base + path * (a * math.max(reach, 0.001)) + wave) * CFrame.Angles(t * 3 + i, t * 2, 0)
+			b.Transparency = shown and 0.15 or 1
+		end
+		-- the coil round the enemy (0.32 .. 0.76)
+		local coiled = t > 0.3 and t < 0.76
+		for i, b in ipairs(coil) do
+			local a = i / #coil * math.pi * 2 + t * 10
+			b.CFrame = CFrame.new(tip + Vector3.new(math.cos(a) * 2.2, 1 + math.sin(t * 6 + i) * 0.8, math.sin(a) * 2.2))
+			b.Transparency = coiled and 0.2 or 1
+		end
+		if t > 0.8 then
 			conn:Disconnect()
-			for _, e in ipairs(blocks) do
-				fade(e.b, 0, 0.3)
+			for _, b in ipairs(segs) do
+				smokePuff(b.Position, 2, 0.5, 0.5)
+				b:Destroy()
+			end
+			for _, b in ipairs(coil) do
+				b:Destroy()
 			end
 		end
 	end)
-	smokePuff(at + Vector3.new(0, 4, 0), 50, r, 1.4)
+	task.delay(0.32, function()
+		smokePuff(to + Vector3.new(0, 2, 0), 26, 2.5, 0.9)
+	end)
+end
+-- the caster turns invisible on EVERY client for `seconds` (White Out)
+local function vanishChar(char, seconds)
+	if typeof(char) ~= "Instance" then
+		return
+	end
+	local hidden = {}
+	for _, p in ipairs(char:GetDescendants()) do
+		if p:IsA("BasePart") and p.LocalTransparencyModifier < 1 then
+			p.LocalTransparencyModifier = 1
+			table.insert(hidden, p)
+		elseif p:IsA("Decal") and p.Transparency < 1 then
+			table.insert(hidden, p)
+			p:SetAttribute("GVVanishT", p.Transparency)
+			p.Transparency = 1
+		end
+	end
+	task.delay(seconds, function()
+		for _, p in ipairs(hidden) do
+			if p.Parent then
+				if p:IsA("Decal") then
+					p.Transparency = p:GetAttribute("GVVanishT") or 0
+				else
+					p.LocalTransparencyModifier = 0
+				end
+			end
+		end
+	end)
+end
+-- White Out: you dissolve into a tornado of smoke that follows you around (6 hits, 0.4 s apart from 0.25)
+FX.F_WhiteOut = function(d)
+	local root = charRoot(d)
+	if not root then
+		return
+	end
+	local r = math.min(d.radius or 18, 20)
+	local dur = tonumber(d.vanish) or 2.6
+	task.delay(0.2, function()
+		smokePuff(root.Position, 60, 3, 1.2)
+		vanishChar(d.char, dur)
+	end)
+	local blocks = {}
+	for i = 1, 40 do
+		local h = math.random() * 12
+		blocks[i] = { b = blk(Vector3.one * (0.6 + math.random() * 0.9), i % 3 == 0 and C.smoke2 or C.smoke1, CFrame.new(root.Position), false, 0.15), a = math.random() * 6.28, h = h, rr = 1.2 + h * 0.35 }
+	end
+	local t0 = os.clock() + 0.2
+	local conn
+	conn = game:GetService("RunService").RenderStepped:Connect(function()
+		local t = os.clock() - t0
+		local at = root.Parent and ground(root.Position) or ground(d.from)
+		local grow = math.clamp(t / 0.25, 0, 1)
+		local fadeK = t > dur - 0.3 and math.max(0, (dur - t) / 0.3) or 1
+		for _, e in ipairs(blocks) do
+			local a = e.a + t * (8 - e.h * 0.25)
+			local rr = e.rr * grow * (0.7 + 0.3 * fadeK) * (r / 18)
+			e.b.CFrame = CFrame.new(at + Vector3.new(math.cos(a) * rr, 0.5 + e.h * grow, math.sin(a) * rr)) * CFrame.Angles(a, a * 0.5, 0)
+			e.b.Transparency = 0.15 + (1 - fadeK) * 0.85
+		end
+		if t > dur then
+			conn:Disconnect()
+			for _, e in ipairs(blocks) do
+				e.b:Destroy()
+			end
+			if root.Parent then
+				smokePuff(root.Position, 40, 2.5, 1)
+			end
+		end
+	end)
+	for k = 0, math.floor(dur / 0.4) do
+		task.delay(0.25 + k * 0.4, function()
+			if root.Parent then
+				smokePuff(ground(root.Position) + Vector3.new(0, 3, 0), 18, r * 0.7, 1.2)
+			end
+		end)
+	end
 end
 
 -- ===== Ward Ward =====
@@ -1040,7 +1189,6 @@ FX.F_OilSlick = function(d)
 end
 
 -- v0.25.65 fruit v2: new skills borrow the closest existing look until their own pass (docs/Plan-Fruits-v2.md)
-FX.F_SmokeFist = FX.F_SmokeGrip
 FX.F_SplitRunner = FX.F_SplitEscape
 
 function FX.Play(d)

@@ -692,6 +692,10 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     Combat.NotePress (fresh click / tap / attack button; an early press = no perfect next) + m1Swing(interval) returns
     perfect, flawless + `Combat.RhythmPop`; hold-repeat swings never perfect. CastSkill LINK: damage skill within
     LinkWindow after the 4th hit -> mult x1.25 + push "Link". Class skill cooldowns retuned (Classes.lua).
+  * v0.25.76 FRUITS v2 phase 4 = Haze: clips Haze_Grip / Haze_Screen / Haze_Vanish (uploaded; Smoke Fist uses Blaze_*).
+    Smoke Screen `smoke = 6` -> CombatService smokeZones (MonsterHit: a mob inside misses 50%, "LOST IN SMOKE").
+    White Out (AoE `vanish`) sets player attr Invulnerable for the vanish (VanishAt stamp) and FruitFX vanishChar hides
+    the caster on every client while a smoke twister follows the root. Smoke Grip FX = a snaking block arm + coil.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

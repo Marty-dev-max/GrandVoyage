@@ -84,7 +84,8 @@ function Ocean.Start()
 		folder.Name = "OceanFX"
 		folder.Parent = workspace
 		for _, isl in ipairs(Islands.List) do
-			if type(isl) == "table" and isl.x and isl.radius then
+			-- v0.25.134: shaped islands carry their own voxel surf (World/IslandShape); rings only for round rafts
+			if type(isl) == "table" and isl.x and isl.radius and isl.floating then
 				local c = Vector3.new(isl.x, 0, isl.z or 0)
 				shoreRing(c, isl.radius, folder, false)
 				shoreRing(c, isl.radius, folder, true)

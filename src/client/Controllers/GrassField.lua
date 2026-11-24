@@ -3,11 +3,18 @@
 -- flowers...). Here only the plants near the camera sway in the wind, all moved in one workspace:BulkMoveTo call.
 -- (A dense carpet of 3D grass patches was tried in v0.10.1 and lagged; the ground is the painted GV_Grass texture.)
 local RunService = game:GetService("RunService")
+local CollectionService = game:GetService("CollectionService")
 
 local GrassField = {}
 
 local RANGE = 48 -- studs around the camera that sway
 local base = {} -- part -> { cf = original CFrame, phase, amp }
+-- v0.25.134 (owner): trees + bushes sway too (dressed EnvProp models), slower and smaller than the plants, the
+-- whole tree leaning from its foot (Base attribute); the invisible Collider part never moves
+local TREE_RANGE = 170
+local TREE_MAX = 260
+local TREE_AMP = { RoundTree = 0.022, BroadTree = 0.018, PineTree = 0.016, Pine = 0.016, Palm = 0.03, Bush = 0.035 }
+local treeBase = {} -- part -> { cf, rel = foot:Inverse() * cf, foot, phase, amp }
 
 function GrassField.Start()
 	task.spawn(function()
@@ -16,6 +23,8 @@ function GrassField.Start()
 			return
 		end
 		local near = {}
+		local trees = {}
+		local treeAcc = 1
 		local scanAcc, swayAcc = 0, 0
 		RunService.Heartbeat:Connect(function(dt)
 			scanAcc += dt
@@ -49,8 +58,53 @@ function GrassField.Start()
 					end
 				end
 			end
-			if swayAcc >= 1 / 20 and #near > 0 then
+			-- every 1 s: dressed trees near the camera (parts parented to nil by WorldCull are skipped)
+			treeAcc += dt
+			if treeAcc >= 1 then
+				treeAcc = 0
+				trees = {}
+				if focus.Y < 220 then
+					for _, m in ipairs(CollectionService:GetTagged("EnvProp")) do
+						local foot = m:GetAttribute("Base")
+						local amp = TREE_AMP[m:GetAttribute("Kind") or ""]
+						if amp and foot and m:GetAttribute("Dressed") and m.Parent then
+							local dx, dz = foot.X - focus.X, foot.Z - focus.Z
+							if dx * dx + dz * dz < TREE_RANGE * TREE_RANGE then
+								local phase = (foot.X * 0.13 + foot.Z * 0.29) % 6.28
+								for _, p in ipairs(m:GetChildren()) do
+									if p:IsA("BasePart") and not p:GetAttribute("Collider") then
+										local e = treeBase[p]
+										if not e then
+											local f = CFrame.new(foot)
+											e = { foot = f, rel = f:Inverse() * p.CFrame, phase = phase, amp = amp }
+											treeBase[p] = e
+										end
+										table.insert(trees, p)
+									end
+								end
+								if #trees >= TREE_MAX then
+									break
+								end
+							end
+						end
+					end
+				end
+			end
+			local tick = swayAcc >= 1 / 20
+			if tick then
 				swayAcc = 0
+			end
+			if tick and #trees > 0 then
+				local t = os.clock()
+				local cfs = table.create(#trees)
+				for i, p in ipairs(trees) do
+					local e = treeBase[p]
+					local gust = 0.55 + 0.45 * math.sin(t * 0.45 + e.phase * 0.5)
+					cfs[i] = e.foot * CFrame.Angles(math.sin(t * 1.1 + e.phase) * e.amp * gust, 0, math.cos(t * 0.8 + e.phase) * e.amp * 0.7 * gust) * e.rel
+				end
+				workspace:BulkMoveTo(trees, cfs, Enum.BulkMoveMode.FireCFrameChanged)
+			end
+			if tick and #near > 0 then
 				local t = os.clock()
 				local cfs = table.create(#near)
 				for i, p in ipairs(near) do

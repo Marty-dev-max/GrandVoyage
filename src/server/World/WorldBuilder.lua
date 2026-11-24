@@ -260,6 +260,8 @@ local function lobeAngles()
 	return { 1.2, 1.9, 2.6, 3.3, 4.0, 4.7, 5.3 }
 end
 
+local IslandShape = require(script.Parent.IslandShape)
+
 local function buildBase(island, c, r)
 	local pal = island.palette
 	if island.floating then
@@ -272,23 +274,12 @@ local function buildBase(island, c, r)
 		foam(c + Vector3.new(0, 0.1, 0), r * 2 + 10)
 		return
 	end
-	Cyl(40, r * 2 + 40, pal.sand:Lerp(Color3.fromRGB(90, 140, 150), 0.5), c + Vector3.new(0, -24, 0), { material = M.Sand })
-	-- shallow lagoon visible through the water
-	Cyl(2, r * 2 + 130, Color3.fromRGB(110, 226, 214), c + Vector3.new(0, -6, 0), { material = M.Sand, shadow = false, collide = false })
-	Cyl(14, r * 2, pal.sand, c + Vector3.new(0, -3, 0), { material = M.Sand })
-	foam(c + Vector3.new(0, 0.1, 0), r * 2 + 6)
-	for _, a in ipairs(lobeAngles()) do
-		local lr = r * rng:NextNumber(0.28, 0.4)
-		local d = r - lr * 0.45
-		local lp = c + Vector3.new(math.cos(a) * d, 0, math.sin(a) * d)
-		Cyl(14, lr * 2, pal.sand, lp + Vector3.new(0, -3, 0), { material = M.Sand })
-		Cyl(2, lr * 2 + 70, Color3.fromRGB(110, 226, 214), lp + Vector3.new(0, -6, 0), { material = M.Sand, shadow = false, collide = false })
-		foam(lp + Vector3.new(0, 0.12, 0), lr * 2 + 6)
+	-- v0.25.134 (owner): organic voxel outline (World/IslandShape) instead of stacked discs. The lobe draws stay so
+	-- the shared rng stream (and every later island) is unchanged.
+	for _ in ipairs(lobeAngles()) do
+		rng:NextNumber(0.28, 0.4)
 	end
-	-- layer-cake edge: brown dirt band under a grass cap
-	Cyl(5.5, r * 2 - 32, pal.dirt, c + Vector3.new(0, 3.75, 0), { material = M.Ground })
-	Cyl(1.6, r * 2 - 28, pal.grass, c + Vector3.new(0, 6.7, 0), { material = M.Grass })
-	Cyl(6, r * 2 - 34, pal.grass, c + Vector3.new(0, 4.5, 0), { material = M.Grass })
+	IslandShape.Build(island, c, r, Kit.parent, pal)
 	-- gentle hills away from the town
 	for i = 1, 5 do
 		local a = rng:NextNumber(0, math.pi * 2)
@@ -318,7 +309,9 @@ local function makeCtx(island, c, r, g)
 		table.insert(reserved, { x = x, z = z, r = radius })
 	end
 	function ctx.free(x, z, radius)
-		if math.sqrt(x * x + z * z) > r - 12 then
+		-- v0.25.134: the organic outline (never smaller than r - 14) decides where land ends
+		local limit = island.floating and r - 12 or IslandShape.Radius(island, r, math.atan2(z, x)) - 12
+		if math.sqrt(x * x + z * z) > limit then
 			return false
 		end
 		for _, rr in ipairs(reserved) do
@@ -1022,7 +1015,7 @@ end
 -- away and rebuilt from code at server start (so the owner's published place updates through Rojo too).
 -- Hand-built content made in Studio goes in workspace.Handmade (never touched by rebuilds). Kit props placed there
 -- (tagged EnvProp/EnvPart) are dressed with the stylized meshes like the generated ones.
-WB.WORLD_VERSION = 36 -- v36 (v0.25.133): Epilogue Town hand-laid; v35 v35 (v0.25.132): Mikan Isles hand-laid; v34 (v0.25.131): Barracuda Bistro hand-laid (World/Barracuda); v33 (v0.25.130): Honeyslope hand-laid (World/Honeyslope); v32 (v0.25.129): the Brig (jail cell) at the Conch Bay garrison; v31 (v0.25.120): Power board is a map piece in front of the west house; v30 (v0.25.119): Bounty Board moved to the west street house; v29 (v0.25.118): Job Master walk-in ring + new look; v28 (v0.25.115): DeFlicker stacks faces within 0.035 (grass under the plaza paving); v27 (v0.25.113): no Bay Serpent buoys/sign, wooden shipyard plots, voxel barrels/crates/chests; v26 (v0.25.112): DeFlicker pass, hill caps one step apart per lobe; v25 (v0.25.109): no island name signs at the docks; v24 (v0.25.108): Marine Registrar in Conch Bay, no Guild Registrar; v23 (v0.25.107): Tavern Keeper beside the Shipwright; v22 (v0.25.27): shipyards snap to the island side nearest the next island; v21 (v0.25.25): shipyards face the next island, circus ship offshore; v20 (v0.25.24): Marmalade Town hand-laid (World/Marmalade); v19 (v0.25.23): Conch Bay street spawns keep their houses; v18 (v0.25.22): Conch Bay terraced (quay, two terraces, garrison plateau, tapered towers); v17 (v0.25.21): islands turned to face the previous one, Conch Bay stairs; v16 (v0.25.20): Daybreak spawn by Rowan, Conch Bay hand-laid (World/ConchBay); v15 (v0.25.11): islands spread north/south, wider sea, islets; v14 (v0.25.6): Daybreak spawn by the campfire; v13: voxel NPCs; v12: Voxelize pass
+WB.WORLD_VERSION = 37 -- v37 (v0.25.134): organic voxel island outlines (IslandShape); v36 v36 (v0.25.133): Epilogue Town hand-laid; v35 v35 (v0.25.132): Mikan Isles hand-laid; v34 (v0.25.131): Barracuda Bistro hand-laid (World/Barracuda); v33 (v0.25.130): Honeyslope hand-laid (World/Honeyslope); v32 (v0.25.129): the Brig (jail cell) at the Conch Bay garrison; v31 (v0.25.120): Power board is a map piece in front of the west house; v30 (v0.25.119): Bounty Board moved to the west street house; v29 (v0.25.118): Job Master walk-in ring + new look; v28 (v0.25.115): DeFlicker stacks faces within 0.035 (grass under the plaza paving); v27 (v0.25.113): no Bay Serpent buoys/sign, wooden shipyard plots, voxel barrels/crates/chests; v26 (v0.25.112): DeFlicker pass, hill caps one step apart per lobe; v25 (v0.25.109): no island name signs at the docks; v24 (v0.25.108): Marine Registrar in Conch Bay, no Guild Registrar; v23 (v0.25.107): Tavern Keeper beside the Shipwright; v22 (v0.25.27): shipyards snap to the island side nearest the next island; v21 (v0.25.25): shipyards face the next island, circus ship offshore; v20 (v0.25.24): Marmalade Town hand-laid (World/Marmalade); v19 (v0.25.23): Conch Bay street spawns keep their houses; v18 (v0.25.22): Conch Bay terraced (quay, two terraces, garrison plateau, tapered towers); v17 (v0.25.21): islands turned to face the previous one, Conch Bay stairs; v16 (v0.25.20): Daybreak spawn by Rowan, Conch Bay hand-laid (World/ConchBay); v15 (v0.25.11): islands spread north/south, wider sea, islets; v14 (v0.25.6): Daybreak spawn by the campfire; v13: voxel NPCs; v12: Voxelize pass
 
 -- Old copies of the map can hide anywhere in Workspace: a renamed or regrouped World, an island dragged into
 -- Handmade, single NPCs / chests / docks pasted from an old bake. They draw on top of the new islands and register

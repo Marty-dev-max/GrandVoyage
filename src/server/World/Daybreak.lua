@@ -785,14 +785,8 @@ local function base(ctx)
 	local c, r, pal = ctx.c, ctx.r, ctx.pal
 	-- shallow turquoise lagoon all around, sand shelf below (v0.22.9: deeper and darker; the pale one read as white
 	-- water between the docks under the glassy sea surface)
-	Cyl(2, r * 2 + 150, Color3.fromRGB(34, 168, 186), c + Vector3.new(0, -9, 0), { material = M.Sand, shadow = false, collide = false })
-	Cyl(40, r * 2 + 40, pal.sand:Lerp(Color3.fromRGB(90, 140, 150), 0.5), c + Vector3.new(0, -24, 0), { material = M.Sand })
-	-- island body: earth under a grass cap
-	Cyl(12, (r - 4) * 2, Color3.fromRGB(150, 120, 90), c + Vector3.new(0, -2, 0), { material = M.Ground })
-	Cyl(5.5, r * 2 - 32, pal.dirt, c + Vector3.new(0, 3.75, 0), { material = M.Ground })
-	Cyl(6, r * 2 - 34, pal.grass, c + Vector3.new(0, 4.5, 0), { material = M.Grass })
-	Cyl(1.6, r * 2 - 28, pal.grass, c + Vector3.new(0, 6.7, 0), { material = M.Grass })
-	ctx.foam(c + Vector3.new(0, 0.1, 0), r * 2 + 8)
+	-- v0.25.134 (owner): organic voxel outline instead of discs (World/IslandShape)
+	require(script.Parent.IslandShape).Build(ctx.island, c, r, Kit.parent, pal)
 	-- jungle floor: deeper green over the west half (thin, walk-through; plants still grow on it)
 	for _, j in ipairs({ { -150, 0, 95 }, { -110, 130, 70 }, { -110, -135, 70 }, { -60, 0, 50 } }) do
 		Cyl(0.25, j[3] * 2, Color3.fromRGB(92, 176, 72), Vector3.new(c.X + j[1], 7.56, j[2]), { material = M.Grass, collide = false, shadow = false })
@@ -805,12 +799,11 @@ local function base(ctx)
 		local rel = math.atan2(math.sin(a), math.cos(a))
 		if math.abs(rel) > HARBOR_ARC + 0.02 then
 			local dir = Vector3.new(math.cos(a), 0, math.sin(a))
-			local hh = rng:NextNumber(12, 17)
-			local center = c + dir * (r - 7 + rng:NextNumber(-1.5, 2)) + Vector3.new(0, -7 + hh / 2, 0)
-			local tone = rng:NextNumber() > 0.4 and ROCK or Color3.fromRGB(150, 120, 96)
-			local slab = P(Vector3.new(13.5, hh, 8), tone, CFrame.lookAt(center, center + dir) * CFrame.Angles(0, rng:NextNumber(-0.15, 0.15), 0), { material = M.Rock })
-			slab:SetAttribute("Kind", "Cliff" .. Kit.RockTone(tone))
-			CollectionService:AddTag(slab, "EnvPart")
+			local _ = dir
+			rng:NextNumber(12, 17)
+			rng:NextNumber(-1.5, 2)
+			rng:NextNumber()
+			rng:NextNumber(-0.15, 0.15) -- v0.25.134: round cliff ring gone (IslandShape has cliffs), draws kept
 		end
 	end
 	-- rocks in the surf (the harbor mouth stays clear for ships)

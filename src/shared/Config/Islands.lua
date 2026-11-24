@@ -138,6 +138,7 @@ local Islands = {
 		levels = { 60, 70 },
 		palette = { sand = Color3.fromRGB(235, 222, 192), grass = Color3.fromRGB(138, 190, 118), dirt = Color3.fromRGB(140, 110, 84), accent = Color3.fromRGB(196, 62, 58), wall = Color3.fromRGB(240, 230, 210) },
 		theme = "HarborCity",
+		layout = "Epilogue", -- v0.25.133: hand-laid (World/Epilogue.lua)
 		townRadius = 130,
 		arena = { offset = Vector2.new(-160, -160), radius = 55 },
 		spawns = {

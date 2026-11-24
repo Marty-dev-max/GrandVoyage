@@ -10,14 +10,15 @@ OUT = os.path.join(os.path.dirname(__file__), '..', 'assets', 'sfx')
 # v0.25.64 (owner: "deep voice chad, meme-y, Gigachad"): Adam (premade, dominant + firm; the library trailer voices
 # need a paid plan) pitched ~2.5 semitones down, a touch slower, bass-boosted, with a short echo (DEEPEN below)
 VOICE = 'pNInz6obpgDQGcFmaJgB'  # Adam - Dominant, Firm (was George JBFqnCBsd6RMkjVDRZzb)
-DEEPEN = 'asetrate=44100*0.86,aresample=44100,atempo=1.08,bass=g=7:f=110,aecho=0.8:0.6:60:0.18,'
+# v0.25.144 (owner: deep is fine, words hard to make out): less pitch drop, lighter bass + echo, a presence lift
+DEEPEN = 'asetrate=44100*0.93,aresample=44100,atempo=1.04,bass=g=4:f=110,equalizer=f=2800:t=q:w=1.2:g=5,aecho=0.8:0.4:40:0.08,'
 API = f'https://api.elevenlabs.io/v1/text-to-speech/{VOICE}?output_format=mp3_44100_128'
 ISLANDS = {
     'Daybreak': 'Daybreak Island', 'ConchBay': 'Conch Bay', 'Marmalade': 'Marmalade Town', 'Honeyslope': 'Honeyslope Village',
     'Barracuda': 'Barracuda Bistro', 'Mikan': 'the Mikan Isles', 'Epilogue': 'Epilogue Town', 'FortWest': 'Fort Driftwood',
     'FortMid': 'Fort Tidebreak', 'FortEast': 'Fort Gullwatch',
 }
-LINES = {f'Narr_Fruit{k}': f'Yes. A Cursed Fruit has appeared... on {v}. Go get it.' for k, v in ISLANDS.items()}
+LINES = {f'Narr_Fruit{k}': f'Yes. A Cursed Fruit has appeared on {v}. Go get it.' for k, v in ISLANDS.items()}
 
 
 def gen(name, text):

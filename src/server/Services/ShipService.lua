@@ -775,6 +775,7 @@ end
 -- level = the area's island level (SeaZones segment) + 5 per ship tier; stats copied from the closest normal
 -- monster of that level so balance follows the rest of the game.
 local Monsters = require(Shared.Config.Monsters)
+local Waves = require(Shared.Modules.Waves)
 local function crewDef(shipDef, pos)
 	local isl = Islands.List[SeaZones.Segment(pos.X)] or Islands.List[1]
 	local level = isl.levels[2] + ((shipDef.tier or 1) - 1) * 5
@@ -1323,12 +1324,21 @@ local function stepShip(ship, dt, now)
 			end
 		end
 	end
-	local targetY = GameConfig.SeaLevel - G * 0.5 + 1
+	-- v0.25.144: ride the shared voxel waves (Shared/Modules/Waves, same surface the clients draw): heave with the
+	-- height under the hull, pitch / roll with the slope between bow-stern and port-starboard samples
+	local wt = Waves.Now()
+	local damp = Waves.Damp(pos.X, pos.Z)
+	local fwd = Vector3.new(-math.sin(ship.yaw), 0, -math.cos(ship.yaw))
+	local right = Vector3.new(-fwd.Z, 0, fwd.X)
+	local function hAt(v)
+		return Waves.Height(pos.X + v.X, pos.Z + v.Z, wt, damp)
+	end
+	local hBow, hStern, hR, hL = hAt(fwd * 8), hAt(fwd * -8), hAt(right * 4), hAt(right * -4)
+	local targetY = GameConfig.SeaLevel - G * 0.5 + 1 + (hBow + hStern + hR + hL) / 4
 	local vy = math.clamp((targetY - pos.Y) * 4, -25, 25)
 	ship.lv.VectorVelocity = vel + Vector3.new(0, vy, 0)
-	local t = now + ship.id
-	local roll = math.sin(t * 1.2) * 0.025 + ship.steer * -0.05 * math.clamp(ship.speed / 40, 0, 1)
-	local pitch = math.sin(t * 0.8) * 0.018
+	local roll = math.clamp(math.atan2(hR - hL, 8) * 0.7, -0.12, 0.12) + ship.steer * -0.05 * math.clamp(ship.speed / 40, 0, 1)
+	local pitch = math.clamp(math.atan2(hBow - hStern, 16) * 0.7, -0.1, 0.1)
 	ship.ao.CFrame = CFrame.Angles(0, ship.yaw, 0) * CFrame.Angles(pitch, 0, roll)
 end
 

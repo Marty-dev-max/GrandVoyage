@@ -21,11 +21,12 @@ local function speak(text)
 		local tts = Instance.new("AudioTextToSpeech")
 		tts.Text = text
 		tts.VoiceId = "1"
-		tts.Volume = 1.6
-		-- v0.25.64 (owner: a deep meme "gigachad" voice): pitched down and a bit slower until the ElevenLabs lines are up
+		tts.Volume = 2
+		-- v0.25.64 (owner: a deep meme "gigachad" voice); v0.25.144 (owner: deep is fine but the words were hard to
+		-- make out): only a little lower, normal speed
 		pcall(function()
-			tts.Pitch = -6
-			tts.Speed = 0.9
+			tts.Pitch = -2.5
+			tts.Speed = 0.95
 		end)
 		local out = Instance.new("AudioDeviceOutput")
 		local wire = Instance.new("Wire")
@@ -354,7 +355,7 @@ function FruitAlert.Start()
 			if def and def.id and def.id ~= "" then
 				Audio.Play(key)
 			else
-				speak("Yes. A Cursed Fruit has appeared... on " .. tostring(d.name) .. ". Go get it.")
+				speak("Yes. A Cursed Fruit has appeared on " .. tostring(d.name) .. ". Go get it.")
 			end
 		end)
 		if typeof(d.pos) == "Vector3" then

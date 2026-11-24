@@ -21,6 +21,7 @@ local Swim = require(script.Controllers.Swim)
 local PetsCtl = require(script.Controllers.Pets)
 local Titles = require(script.Controllers.Titles)
 local Ocean = require(script.Controllers.Ocean)
+local VoxelSea = require(script.Controllers.VoxelSea)
 local Atmos = require(script.Controllers.Atmos)
 local GrassField = require(script.Controllers.GrassField)
 local CreatureAnim = require(script.Controllers.CreatureAnim)
@@ -420,7 +421,7 @@ end)
 -- the rest (visuals, world feel) in parallel
 for _, c in ipairs({
 	{ "Sailing", Sailing }, { "Builder", Builder }, { "VFX", VFX }, { "Readability", Readability }, { "Swim", Swim },
-	{ "Pets", PetsCtl }, { "Titles", Titles }, { "Ocean", Ocean }, { "Atmos", Atmos }, { "GrassField", GrassField },
+	{ "Pets", PetsCtl }, { "Titles", Titles }, { "Ocean", Ocean }, { "VoxelSea", VoxelSea }, { "Atmos", Atmos }, { "GrassField", GrassField },
 	{ "CreatureAnim", CreatureAnim }, { "CharAnim", CharAnim }, { "Interact", Interact }, { "ChartsView", ChartsView }, { "ShipBars", ShipBars }, { "Underwater", Underwater }, { "SerpentBody", SerpentBody }, { "Heritage", Heritage }, { "Flight", Flight }, { "Crosshair", Crosshair }, { "HeritageAnim", HeritageAnim }, { "QuestPath", QuestPath }, { "WorldCull", WorldCull }, { "FruitFX", FruitFX }, { "Footsteps", Footsteps }, { "ShiftLock", ShiftLock }, { "FruitAlert", FruitAlert }, { "NpcLife", NpcLife }, { "RecruitLife", RecruitLife }, { "Slingshot", Slingshot }, { "TokiFX", TokiFX }, { "Sprint", Sprint }, { "IslandEnter", IslandEnter }, { "NpcZones", NpcZones }, { "BossIntro", BossIntro }, { "PowerBoard", PowerBoard },
 }) do
 	task.spawn(start, c[1], c[2])

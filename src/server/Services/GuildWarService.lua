@@ -207,6 +207,42 @@ function GW.Start()
 				end
 			end)
 			return true, "Race: " .. h.name
+		elseif data.cmd == "role" then
+			-- v0.25.129: "FourTempests" / "SevenPrivateers" / "none", optionally ":PlayerName" (beta top pirates)
+			local role, who = string.match(tostring(data.value or ""), "^(%a+):?(.*)$")
+			local target = player
+			if who and who ~= "" then
+				target = nil
+				for _, pl in ipairs(Players:GetPlayers()) do
+					if string.lower(pl.Name) == string.lower(who) or string.lower(pl.DisplayName) == string.lower(who) then
+						target = pl
+					end
+				end
+				if not target then
+					return false, "No player " .. who .. " in this server"
+				end
+			end
+			local tp = R.PlayerService.Profile(target)
+			if not tp then
+				return false, "Not loaded"
+			end
+			tp.titles = tp.titles or {}
+			for _, id in ipairs({ "FourTempests", "SevenPrivateers" }) do
+				tp.titles[id] = nil
+				if tp.title == id then
+					tp.title = ""
+				end
+			end
+			if role ~= "none" then
+				if role ~= "FourTempests" and role ~= "SevenPrivateers" then
+					return false, "Unknown role " .. tostring(role)
+				end
+				R.TitleService.Grant(target, role)
+				tp.title = role
+			end
+			R.PlayerService.MarkDirty(target)
+			R.TitleService.Refresh(target, true)
+			return true, "Role " .. tostring(role) .. " -> " .. target.Name
 		elseif data.cmd == "toki" then
 			-- v0.25.70: "Conqueror" / "none" on yourself, or "Conqueror:PlayerName" / "none:PlayerName" (beta top players)
 			local kind, who = string.match(tostring(data.value or ""), "^(%a+):?(.*)$")

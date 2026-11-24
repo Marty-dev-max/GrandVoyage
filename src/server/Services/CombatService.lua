@@ -120,8 +120,10 @@ function Combat.DamagePlayer(player, amount, info)
 	if player:GetAttribute("Invulnerable") or R.KnockdownService.IsDowned(player) then
 		return
 	end
-	-- v0.25.14: a lethal monster hit knocks you DOWN (KnockdownService); PvP (info.killer) still kills
-	if hum.Health - amount <= 0 and not (info and info.killer) and GameConfig.Knockdown.Enabled then
+	-- v0.25.14: a lethal monster hit knocks you DOWN (KnockdownService); PvP (info.killer) still kills,
+	-- v0.25.129: except a Marine with Seastone gear on a Pirate: down, so they can be cuffed (MarineService)
+	local cuff = info and info.killer and R.MarineService.CanCuff(info.killer, player)
+	if hum.Health - amount <= 0 and (cuff or not (info and info.killer)) and GameConfig.Knockdown.Enabled then
 		Net.FX("Damage", { pos = root.Position + Vector3.new(0, 3, 0), amount = amount, crit = info and info.crit, toPlayer = true, char = player.Character }, root.Position, 200)
 		R.KnockdownService.Down(player)
 		return

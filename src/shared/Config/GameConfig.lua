@@ -4,7 +4,7 @@ return {
 	LogoLines = { "LARPTALES", "VOXEL SEAS" },
 	LogoImage = 133908417032160, -- v0.25.87: pixel logo board floating behind the menu character (tools/gen_logo.py); nil = text logo
 	-- bump on every change: shown bottom-right in game and printed in Output, so you can tell which code is running
-	Version = "0.25.128",
+	Version = "0.25.129",
 	SagaName = "Azure East Saga",
 	-- title menu UPDATE LOG lines (newest first, keep 3-4 short ones)
 	UpdateNotes = {
@@ -87,6 +87,15 @@ return {
 	-- This update stops at Rare (blue); MaxRarity moves up with the next updates.
 	-- v0.25.123 (owner, Plan-Weapons-v2 section 0): the General Store shows ONE random blade for a small fee, you BUY or
 	-- PASS without being told its tier (only its color). Mostly Forty Fathoms (green), sometimes Twenty Tides (blue).
+	-- v0.25.129 (owner): Marines are paid (Salary[rank + 1], rank = Marine titles met by merit) and cuff downed pirates
+	-- with Seastone gear into the Conch Bay Brig (MarineService)
+	Marine = {
+		SalaryEvery = 600,
+		Salary = { 300, 450, 650, 900, 1200, 1600, 2100, 2800, 3600, 4600, 6000, 8000, 10000 },
+		CuffHold = 2,
+		JailBase = 60, JailPerBounty = 1 / 5000, JailMax = 300, -- seconds in the Brig: 60 + bounty / 5000, max 5 min
+		ArrestMerit = 25, ArrestBountyShare = 0.1,
+	},
 	BladeRoll = { Fee = 250, TideChance = 0.06, Seconds = 120 },
 	-- v0.25.124: random blade drops (Plan-Weapons-v2): green from monsters of MobLevel+, blue from MVP bosses
 	BladeDrop = { MobChance = 0.002, MobLevel = 8, BossChance = 0.12 },

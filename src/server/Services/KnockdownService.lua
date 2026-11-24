@@ -68,6 +68,9 @@ local function unragdoll(char, hum)
 end
 
 local function standUp(player, hpRatio)
+	if not KD.IsDowned(player) then
+		return
+	end
 	local char = player.Character
 	local hum = R.PlayerService.Humanoid(player)
 	local root = R.PlayerService.Root(player)
@@ -94,6 +97,10 @@ function KD.WillChance(player)
 end
 
 -- called by CombatService.DamagePlayer when a monster hit would bring HP to 0
+KD.StandUp = function(player, hpRatio)
+	standUp(player, hpRatio)
+end
+
 function KD.Down(player)
 	local char = player.Character
 	local hum = R.PlayerService.Humanoid(player)
@@ -118,6 +125,7 @@ function KD.Down(player)
 	prompt.RequiresLineOfSight = false
 	prompt:SetAttribute("Will", KD.WillChance(player)) -- the downed player's own card shows it (Interact)
 	prompt.Parent = root
+	R.MarineService.OnDowned(player, root) -- v0.25.129: Marines can cuff a downed Pirate
 	prompt.Triggered:Connect(function(helper)
 		if helper == player then
 			-- one try per knockdown

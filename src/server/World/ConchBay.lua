@@ -180,6 +180,28 @@ local function garrison(ctx)
 	-- 84 tall: from the quay its top clears the single-storey front row of terrace 1
 	taperedTower(ctx, 0, -58, TOP, 84, 36, 18)
 	taperedTower(ctx, 44, -40, TOP, 48, 24, 13)
+	-- v0.25.129 (owner): the Brig, an iron-barred cell against the short tower's west side. Its floor (tag JailCell)
+	-- is where MarineService holds captured pirates. Bars every 1.4 studs on all four sides, no door (teleport).
+	local IRON = Color3.fromRGB(58, 62, 72)
+	local cx, cz, w, hh = 24, -40, 12, 9
+	local base = ctx.c + Vector3.new(cx, TOP, cz)
+	local floor = P(Vector3.new(w, 0.6, w), Color3.fromRGB(120, 112, 100), CFrame.new(base + Vector3.new(0, 0.3, 0)), { material = M.Cobblestone })
+	floor.Name = "JailCell"
+	game:GetService("CollectionService"):AddTag(floor, "JailCell")
+	P(Vector3.new(w + 1, 1, w + 1), IRON, CFrame.new(base + Vector3.new(0, hh + 0.5, 0)), { material = M.Metal })
+	for k = 0, 8 do
+		local o = -w / 2 + 0.4 + k * (w - 0.8) / 8
+		for _, at in ipairs({ Vector3.new(-w / 2, 0, o), Vector3.new(w / 2, 0, o), Vector3.new(o, 0, -w / 2), Vector3.new(o, 0, w / 2) }) do
+			P(Vector3.new(0.5, hh, 0.5), IRON, CFrame.new(base + at + Vector3.new(0, hh / 2, 0)), { material = M.Metal })
+		end
+	end
+	for _, y in ipairs({ 1.2, hh - 1.2 }) do
+		P(Vector3.new(w, 0.4, 0.4), IRON, CFrame.new(base + Vector3.new(0, y, w / 2)), Kit.decor({ material = M.Metal }))
+		P(Vector3.new(w, 0.4, 0.4), IRON, CFrame.new(base + Vector3.new(0, y, -w / 2)), Kit.decor({ material = M.Metal }))
+		P(Vector3.new(0.4, 0.4, w), IRON, CFrame.new(base + Vector3.new(-w / 2, y, 0)), Kit.decor({ material = M.Metal }))
+	end
+	Kit.Sign("BRIG", CFrame.new(base + Vector3.new(0, hh + 2.2, w / 2 + 0.2)) * CFrame.Angles(0, math.pi, 0), Vector2.new(6, 1.8), Color3.fromRGB(255, 240, 190))
+	ctx.reserve(cx, cz, w)
 end
 
 -- the waterfront: quay paving, seawall, bollards, lamps, two groups of stalls, the T pier

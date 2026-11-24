@@ -33,6 +33,7 @@ local order = {
 	"PetService",
 	"ProgressService",
 	"TitleService",
+	"MarineService",
 }
 for _, name in ipairs(order) do
 	registry[name] = require(Services[name])

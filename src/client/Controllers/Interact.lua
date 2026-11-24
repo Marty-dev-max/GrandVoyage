@@ -30,6 +30,12 @@ local function buildPrompt(prompt, inputType)
 	if not gui then
 		return
 	end
+	-- v0.25.129: faction-only prompts (Arrest = Marines) are switched off locally for everyone else
+	local only = prompt:GetAttribute("OnlyFaction")
+	if only and player:GetAttribute("Faction") ~= only then
+		prompt.Enabled = false
+		return
+	end
 	-- v0.25.33 (owner): your own Revive prompt while downed = WILL POWER, one try per knockdown (KnockdownService)
 	local char = player.Character
 	local mine = prompt.Name == "RevivePrompt" and char ~= nil and prompt:IsDescendantOf(char)

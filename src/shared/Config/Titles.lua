@@ -81,6 +81,9 @@ end
 
 -- ===== Special (granted, never grinded) =====
 add("Founder", "Founding Crew", "Legendary", "Special", { granted = true }, "Sailed in the first friends' playtest.")
+-- v0.25.129 (owner): the beta's top pirates. Our own names (never the source's emperor / warlord titles).
+add("FourTempests", "Four Tempests", "Mythic", "Special", { granted = true }, "One of the four pirates the whole sea fears.")
+add("SevenPrivateers", "Seven Privateers", "Legendary", "Special", { granted = true }, "A licensed pirate: the navy looks the other way.")
 add("Developer", "Shipwright of Worlds", "Secret", "Special", { granted = true }, "Built this sea.")
 
 -- ===== Feats: every achievement title (ids = achievement ids, so old saves keep their equipped title) =====

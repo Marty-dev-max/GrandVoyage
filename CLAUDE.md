@@ -921,6 +921,14 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     v0.25.127: Panels.Index (MENU entry "Index"): tabs Blades (ItemDB.Blades by tier, FOUND = p.index.blades or in
     the bag) / Monsters / Bosses (Islands spawns + boss, p.index.kills from MonsterService die). Profile push sends
     `index`. No onProfile re-render (kills would rebuild every viewport).
+    v0.25.128: Index blade cells = UI.WeaponView with ImageColor3 black until found (no stats shown).
+    v0.25.129 (owner, Plan-Weapons-v2 sec 0 roles): Special titles FourTempests / SevenPrivateers (Admin cmd `role`
+    "Id[:Player]" | "none[:Player]", Dev tab Role). `Services/MarineService`: salary every Marine.SalaryEvery
+    (Salary[Rank+1], Rank = Marine titles met by merit); CombatService.DamagePlayer downs instead of kills when
+    MarineService.CanCuff(killer, victim) (Marine with any equipped `seastone` item vs Faction Pirate); KD.Down ->
+    MS.OnDowned adds "ArrestPrompt" (F, OnlyFaction = Marine: Interact disables it locally for others) -> MS.Jail:
+    p.jailUntil (os.time, saved) + attr JailUntil, KD.StandUp, held in the Brig (ConchBay garrison cell, floor part
+    tagged JailCell, WORLD_VERSION 32) by a 0.5 s loop + CharacterAdded; released in front of the bars.
     If Studio is already in Play when you start_stop_play, that is the OWNER's session: do not stop it or change its UI.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).

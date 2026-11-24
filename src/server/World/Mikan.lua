@@ -234,7 +234,7 @@ local function village(ctx)
 end
 
 -- green hills in the empty corners (layered cliffs + grass caps), palms on top
-local HILLS = { { 192, -192, 46, 18 }, { -196, -206, 42, 22 }, { 200, 204, 40, 14 } }
+local HILLS = { { 175, -175, 40, 18 }, { -178, -180, 38, 22 }, { 185, 185, 32, 14 } } -- grass ends ~230 out: keep x/z + r within 218
 local function hills(ctx)
 	local specs = {}
 	for _, h in ipairs(HILLS) do

@@ -124,7 +124,7 @@ local Islands = {
 		spawns = {
 			{ offset = Vector2.new(-135, 120), radius = 44, monster = "SharkfolkBrawler", count = 6 },
 			{ offset = Vector2.new(135, 120), radius = 44, monster = "SawfolkRaider", count = 5 },
-			{ offset = Vector2.new(-150, -120), radius = 44, monster = "OctofolkBrute", count = 4 },
+			{ offset = Vector2.new(-90, -120), radius = 40, monster = "OctofolkBrute", count = 4 },
 		},
 		boss = { id = "SawtoothOverlord", offset = Vector2.new(20, -140), respawn = 45 * 60 }, -- the palace courtyard
 		dungeon = "SawtoothDepths",

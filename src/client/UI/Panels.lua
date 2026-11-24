@@ -2150,7 +2150,7 @@ function Panels.Tavern()
 		UI.Corner(row, 8)
 		UI.Text(row, (prof.icon or "") .. " " .. r.name, 16, T.Text, "Display", { Position = UDim2.fromOffset(10, 4), Size = UDim2.new(0.6, 0, 0, 20) })
 		UI.Text(row, (r.race or "") .. "  •  " .. (prof.name or "") .. "  " .. string.rep("*", r.stars or 1) .. "  •  " .. Recruits.EffectText(r), 13, T.TextSoft, "Semi", { Position = UDim2.fromOffset(10, 26), Size = UDim2.new(0.75, 0, 0, 18) })
-		local btn = UI.Button(row, "DISMISS", T.Panel, UDim2.fromOffset(110, 36), function()
+		local _, btn = UI.Button(row, "DISMISS", T.Panel, UDim2.fromOffset(110, 36), function()
 			if req("DismissRecruit", { seed = r.seed }).ok then
 				win:Destroy()
 				Panels.Tavern()
@@ -2201,7 +2201,7 @@ function Panels.Recruit(c)
 	local st = ShipStats.Compute(design, p.crew)
 	line("Bunks: " .. p.crew .. " / " .. st.crewCap, 14, T.TextSoft, "Semi", 244)
 	local ok = not c.have and canGive(c.want) and p.crew < st.crewCap
-	local btn = UI.Button(win.body, c.have and "IN YOUR CREW" or "RECRUIT", ok and T.Green or T.Red, UDim2.fromOffset(260, 52), function()
+	local _, btn = UI.Button(win.body, c.have and "IN YOUR CREW" or "RECRUIT", ok and T.Green or T.Red, UDim2.fromOffset(260, 52), function()
 		if c.have then
 			return
 		end
@@ -2210,7 +2210,7 @@ function Panels.Recruit(c)
 		end
 	end)
 	btn.Position = UDim2.new(0, x, 0, 290)
-	local bye = UI.Button(win.body, "LATER", T.Panel, UDim2.fromOffset(140, 52), function()
+	local _, bye = UI.Button(win.body, "LATER", T.Panel, UDim2.fromOffset(140, 52), function()
 		win:Destroy()
 	end)
 	bye.Position = UDim2.new(0, x + 272, 0, 290)

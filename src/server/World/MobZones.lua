@@ -19,8 +19,8 @@ local THEME = {
 	GuardWolf = "den", SharkfolkBrawler = "camp", SawfolkRaider = "camp", OctofolkBrute = "camp",
 }
 local GROUND = {
-	camp = Color3.fromRGB(196, 150, 100), den = Color3.fromRGB(178, 150, 112), grove = Color3.fromRGB(150, 160, 90),
-	wallow = Color3.fromRGB(160, 120, 80),
+	camp = Color3.fromRGB(176, 132, 88), den = Color3.fromRGB(160, 134, 100), grove = Color3.fromRGB(140, 148, 84),
+	wallow = Color3.fromRGB(146, 108, 72),
 }
 local OK_MAT = { [M.Grass] = true, [M.Ground] = true, [M.Sand] = true, [M.Mud] = true, [M.LeafyGrass] = true, [M.Slate] = true, [M.Rock] = true }
 

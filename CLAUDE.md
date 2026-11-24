@@ -1021,7 +1021,7 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     >= 12 (sp.lair = false skips one, e.g. Daybreak Bandit Hill which has its own camp): 4-stud worn tiles on ground
     materials, a border open toward the island middle (camp stakes / rocks + bones), a lair at the back by THEME
     (camp tents+fire+flag for humanoids, den rock cave, grove giant stump for monkeys, wallow mud + broken fence for
-    boars). CanQuery off (mob ground rays + clicks pass). Raft / paved spots get nothing (OK_MAT). ModelFactory NPC_LOOK
+    boars). Tiles = Sand material in dirt colors, only on plain Grass (farm plots, paths, raft, paving stay). Humanoid = MonsterLooks.ById. CanQuery off (mob ground rays + clicks pass). ModelFactory NPC_LOOK
     now takes shirt/pants/shoes names, hat (overrides the caller's; "none" = bare), race + variant; one entry per
     Quests.Guide name; new voxelHat kinds tophat / toque / headscarf. WORLD_VERSION 41.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the

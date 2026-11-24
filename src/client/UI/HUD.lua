@@ -1127,9 +1127,8 @@ local function buildTarget()
 	HUD.targetHp = hp
 	-- v0.25.137 (owner reference): boss panel under the target bar: DAMAGE PROGRESS (share per player, yours gold)
 	-- left, ITEM DROPS (chance) right, focus type on top
-	local bf = glass(UI.Root, UDim2.fromOffset(560, 150), UDim2.new(0.5, 0, 0, 164), Vector2.new(0.5, 0))
-	bf.Visible = false
-	UI.Pad(bf, 8)
+	-- v0.25.138 (owner): no panel, just text floating over the game like the reference (dark outline for contrast)
+	local bf = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(560, 150), Position = UDim2.new(0.5, 0, 0, 164), AnchorPoint = Vector2.new(0.5, 0), Visible = false, Parent = UI.Root })
 	HUD.bossFrame = bf
 	HUD.bossFocus = UI.Text(bf, "", 13, T.Text, "Display", { TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 16) })
 	UI.Text(bf, "DAMAGE PROGRESS", 13, Color3.fromRGB(255, 220, 120), "Display", { Position = UDim2.fromOffset(0, 20), Size = UDim2.new(0.48, 0, 0, 16) })
@@ -1143,6 +1142,12 @@ local function buildTarget()
 			dn = UI.Text(bf, "", 12, T.Text, "Semi", { Position = UDim2.new(0.52, 0, 0, y), Size = UDim2.new(0.34, 0, 0, 15), TextTruncate = Enum.TextTruncate.AtEnd }),
 			dp = UI.Text(bf, "", 12, T.Text, "Number", { Position = UDim2.new(0.86, 0, 0, y), Size = UDim2.new(0.14, 0, 0, 15), TextXAlignment = Enum.TextXAlignment.Right }),
 		}
+	end
+	for _, d in ipairs(bf:GetDescendants()) do
+		if d:IsA("TextLabel") then
+			d.TextStrokeTransparency = 0.15
+			d.TextStrokeColor3 = Color3.fromRGB(10, 8, 20)
+		end
 	end
 	-- Enabled only while there is a target: a Highlight with no Adornee outlines its Parent (the whole workspace!)
 	-- Lives INSIDE the target model (so it can only ever outline that model) and is unparented when there is no target.

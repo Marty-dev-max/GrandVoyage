@@ -1032,6 +1032,10 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     color ramp, edge fade into the flat Ocean parts which it lowers locally by Amp + 0.3. Narrator TTS Pitch -2.5 /
     Speed 0.95 (owner: deep is fine but hard to understand); gen_voice DEEPEN milder (regenerate the wavs before the
     6 Dec upload). Owner plans a cutscene after character creation -> PLAY (not started).
+    v0.25.145 (owner: square patch following the camera looked bad, waves too low): Waves.Amp 3, SHORE 60; VoxelSea =
+    TWO tiers (fine 4-stud cells every frame + coarse 12-stud cells every other frame out to ~290 studs, coarse hides
+    where the fine one is), coarse rim fades height + color (FADES palette) into the flat sea, which is recolored
+    locally to FLAT (SmoothPlastic, opaque) and lowered by Amp + 0.4. ~4600 parts on High, ~72 fps in Studio.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

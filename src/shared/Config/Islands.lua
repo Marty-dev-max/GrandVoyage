@@ -66,11 +66,11 @@ local Islands = {
 		-- v0.25.24 (World/Marmalade layout, offsets before the island turns): clowns on the west coast path,
 		-- acrobats on the east one, lions in the orange groves on the hill, Captain Confetti in the town hall square
 		spawns = {
-			{ offset = Vector2.new(-150, 70), radius = 16, monster = "ClownGrunt", count = 6 },
+			{ offset = Vector2.new(0, 38), radius = 14, monster = "ClownGrunt", count = 6, lair = false }, -- v0.25.147: the Crew's checkpoint camp on the crossroads (Marmalade townStory)
 			{ offset = Vector2.new(152, 0), radius = 16, monster = "CircusAcrobat", count = 5 }, -- clear of the turned shipyard (v0.25.25)
 			{ offset = Vector2.new(0, -192), radius = 20, monster = "CircusLion", count = 4 },
 		},
-		boss = { id = "CaptainConfetti", offset = Vector2.new(0, -58), respawn = 30 * 60, indoorY = 20 }, -- v0.25.146: inside the Big Top
+		boss = { id = "CaptainConfetti", offset = Vector2.new(0, -40), respawn = 30 * 60, indoorY = 20 }, -- v0.25.146: inside the Big Top (v0.25.147 bigger, centre z -40)
 		dungeon = "CircusTent",
 	},
 	{

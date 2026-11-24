@@ -7,8 +7,8 @@
 --     shutters), doors to the boulevard and to the lanes, one cross street.
 --   Town hall (north end): raised terrace + wide stairs, blue roof with a dome, the clock tower beside it.
 --   Forest hill behind it (orange groves), winding dirt paths up both coasts, grey boulders all round the shore.
--- Monsters: clowns on the west path, acrobats on the east path, lions in the hill groves, Captain Confetti in the
--- square in front of the town hall (Config/Islands offsets). Original names only.
+-- Monsters: the clown gang (Confetti Crew) holds the town: grunts at their crossroads checkpoint camp, acrobats on the
+-- east path, the lions loose in the hill groves, Captain Confetti in the big top (Config/Islands offsets). Original names only.
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Kit = require(script.Parent.Kit)
@@ -30,6 +30,9 @@ local TRIM = Color3.fromRGB(120, 82, 56)
 local HALL_ROOF, HALL_WALL = Color3.fromRGB(56, 92, 200), Color3.fromRGB(236, 176, 104)
 local GOLD = Color3.fromRGB(240, 196, 70)
 local ORANGE_FRUIT = Color3.fromRGB(255, 150, 30)
+local RED, WHITE = Color3.fromRGB(214, 44, 52), Color3.fromRGB(250, 244, 232)
+local GANG, GANG2 = Color3.fromRGB(122, 64, 176), Color3.fromRGB(250, 200, 60) -- the Confetti Crew colors
+local DARKIRON = Color3.fromRGB(52, 50, 58)
 
 local TOWN = { -122, 122, -112, 172 } -- paved town (x0, x1, z0, z1)
 local QUAY_Z = 200 -- seawall line
@@ -62,7 +65,7 @@ local function townHall(ctx)
 		Cyl(1.6, 12 - i * 2.6, HALL_ROOF, d + Vector3.new(0, 5.8 + i * 1.5, 0), {})
 	end
 	Cyl(2.4, 2.2, GOLD, d + Vector3.new(0, 12.6, 0), {})
-	Kit.Flag(d + Vector3.new(0, 13.8, 0), Color3.fromRGB(240, 120, 40), 6)
+	Kit.Flag(d + Vector3.new(0, 13.8, 0), GANG, 6, true) -- v0.25.147: the Crew's flag flies over the hall
 	-- side wings, one storey
 	for _, sx in ipairs({ -1, 1 }) do
 		local w = base + Vector3.new(sx * 32, 0, 2)
@@ -96,10 +99,371 @@ local function clockTower(ctx, x, z)
 	ctx.reserve(x, z, 8)
 end
 
+-- v0.25.147 (owner reference: a block-built circus big top, much bigger + taller, voxel like the rest): a stadium
+-- tent (two poles on the x axis, round ends) built on a 2-stud grid. Roof = one block per cell whose top follows a
+-- concave tent curve (steep at the peaks, flat at the eave, a sag between the poles), each block reaching down to its
+-- lowest neighbour so the steps never show holes; radial red/white stripes (odd counts so the colors alternate at
+-- every seam), gold trim + a scalloped valance on the eave. Striped wall with an open doorway toward the harbor (+Z)
+-- under a framed marquee sign with bulbs. Inside = the show: plank floor, sawdust ring + curb, stadium bleachers
+-- (open at the door and behind the stage), backstage curtain + stage, striped poles with a tightrope, a trapeze,
+-- spotlights on the ring, garlands, drum pedestals, a fire hoop, a striped ball and the human-cannonball cannon.
+-- Plaster cloth (Fabric renders dark). No rng: the town's random stream is unchanged.
+local BIGTOP = { x = 0, z = -40, rs = 28, p = 22, wall = 14, eave = 15, top = 44, sag = 7 }
+
+-- stadium distance from the pole segment, and which stripe a spot is on (true = red)
+local function stadium(x, z)
+	local dx = math.max(math.abs(x) - BIGTOP.p, 0)
+	return math.sqrt(dx * dx + z * z)
+end
+local function redStripe(x, z)
+	local P = BIGTOP.p
+	if math.abs(x) <= P then
+		return math.min(6, math.floor((x + P) / (2 * P) * 7)) % 2 == 0 -- 7 stripes across the middle (red at both seams)
+	end
+	local a = math.atan2(z, math.abs(x) - P) -- -pi/2 .. pi/2 around the pole
+	local k = math.clamp(math.floor((a + math.pi / 2) / math.pi * 15), 0, 14) -- 15 sectors per end
+	return (k + 1) % 2 == 0
+end
+local function roofH(x, z)
+	local B = BIGTOP
+	local t = math.clamp(stadium(x, z) / B.rs, 0, 1)
+	local h = B.eave + (B.top - B.eave) * (1 - t) ^ 2.2
+	if math.abs(x) < B.p then
+		h -= B.sag * (1 - (x / B.p) ^ 2) * (1 - t) ^ 2
+	end
+	return math.floor(h + 0.5)
+end
+do -- self-check: the eave sits at the eave height, the poles are the peaks, the middle sags
+	assert(roofH(0, BIGTOP.rs) == BIGTOP.eave and roofH(BIGTOP.p, 0) == BIGTOP.top and roofH(0, 0) == BIGTOP.top - BIGTOP.sag, "bigtop roof curve")
+	local e = BIGTOP.rs - 1 -- the seams show at the eave
+	for _, sz in ipairs({ -1, 1 }) do
+		for _, sx in ipairs({ -1, 1 }) do
+			assert(redStripe(sx * (BIGTOP.p - 1), sz * e) ~= redStripe(sx * (BIGTOP.p + 1), sz * e), "bigtop stripe seams")
+		end
+	end
+end
+
+local function bigTop(ctx)
+	local B = BIGTOP
+	local c = ctx.c + Vector3.new(B.x, GROUND, B.z)
+	local RW = B.rs - 3 -- wall line (3-stud eave overhang)
+	local half = B.p + B.rs
+	local function inRoof(x, z)
+		return stadium(x, z) <= B.rs
+	end
+	local function inWall(x, z)
+		return stadium(x, z) <= RW
+	end
+	local function door(x, z)
+		return z > 0 and math.abs(x) < 5
+	end
+	-- roof + wall + floor on the 2-stud grid
+	for x = -half + 1, half - 1, 2 do
+		for z = -B.rs + 1, B.rs - 1, 2 do
+			if inRoof(x, z) then
+				local red = redStripe(x, z)
+				local col = red and RED or WHITE
+				local h = roofH(x, z)
+				local lo, edge = h, false
+				for _, o in ipairs({ { 2, 0 }, { -2, 0 }, { 0, 2 }, { 0, -2 } }) do
+					local nx, nz = x + o[1], z + o[2]
+					if inRoof(nx, nz) then
+						lo = math.min(lo, roofH(nx, nz))
+					else
+						edge = true
+					end
+				end
+				local bottom = math.min(lo - 1, h - 1.5)
+				P(Vector3.new(2, h - bottom, 2), col, CFrame.new(c + Vector3.new(x, (h + bottom) / 2, z)), { material = M.Plaster })
+				if edge then
+					P(Vector3.new(2.1, 0.5, 2.1), GOLD, CFrame.new(c + Vector3.new(x, bottom + 0.25, z)), Kit.decor({ material = M.Wood }))
+					if (x + z) % 4 == 0 then -- scalloped valance
+						P(Vector3.new(2, 1.6, 2), col, CFrame.new(c + Vector3.new(x, bottom - 0.8, z)), Kit.decor({ material = M.Plaster, collide = false }))
+					end
+				end
+				if inWall(x, z) then
+					-- wall = the outer ring of wall cells; floor planks everywhere inside
+					local wallCell = false
+					for _, o in ipairs({ { 2, 0 }, { -2, 0 }, { 0, 2 }, { 0, -2 } }) do
+						if not inWall(x + o[1], z + o[2]) then
+							wallCell = true
+						end
+					end
+					if wallCell then
+						local y0 = door(x, z) and 10 or 0
+						P(Vector3.new(2, B.wall - y0, 2), col, CFrame.new(c + Vector3.new(x, (y0 + B.wall) / 2, z)), { material = M.Plaster })
+					else
+						P(Vector3.new(2, 0.2, 2), ((x + z) % 4 == 0) and Color3.fromRGB(150, 98, 62) or Color3.fromRGB(162, 108, 70), CFrame.new(c + Vector3.new(x, 0.1, z)), Kit.decor({ material = M.WoodPlanks, shadow = false }))
+					end
+				end
+			end
+		end
+	end
+	-- doorway frame + marquee sign on the eave
+	local front = c + Vector3.new(0, 0, RW)
+	for _, sx in ipairs({ -1, 1 }) do
+		P(Vector3.new(1.2, 10.6, 1.2), GOLD, CFrame.new(front + Vector3.new(sx * 5.6, 5.3, 0.6)), { material = M.Wood })
+	end
+	P(Vector3.new(12.4, 1.2, 1.2), GOLD, CFrame.new(front + Vector3.new(0, 10.4, 0.6)), { material = M.Wood })
+	local signC = c + Vector3.new(0, B.eave + 4.4, B.rs + 0.9)
+	P(Vector3.new(27, 9.4, 1.2), DARKIRON, CFrame.new(signC), { material = M.Slate })
+	Kit.Sign("CONFETTI CIRCUS", CFrame.new(signC + Vector3.new(0, 0, 0.5)) * CFrame.Angles(0, math.pi, 0), Vector2.new(24, 6.4), GANG2, Color3.fromRGB(120, 30, 40))
+	for i = 0, 12 do -- marquee bulbs along the top and bottom of the frame
+		for _, y in ipairs({ -4.3, 4.3 }) do
+			P(Vector3.new(0.7, 0.7, 0.4), Color3.fromRGB(255, 236, 150), CFrame.new(signC + Vector3.new(-12 + i * 2, y, 0.75)), Kit.decor({ material = M.Neon, collide = false, shadow = false }))
+		end
+	end
+	-- poles: striped columns through the roof, gold tip + crew pennant above each peak, bunting between the peaks
+	for _, sx in ipairs({ -1, 1 }) do
+		local pole = c + Vector3.new(sx * B.p, 0, 0)
+		for y = 0, B.top + 3, 3 do
+			P(Vector3.new(1.6, 3, 1.6), (y // 3) % 2 == 0 and RED or WHITE, CFrame.new(pole + Vector3.new(0, y + 1.5, 0)), { material = M.Plaster })
+		end
+		P(Vector3.new(0.7, 5, 0.7), GOLD, CFrame.new(pole + Vector3.new(0, B.top + 8.5, 0)), { material = M.Wood })
+		P(Vector3.new(1.4, 1.4, 1.4), GOLD, CFrame.new(pole + Vector3.new(0, B.top + 11.4, 0)), Kit.decor({ material = M.Neon }))
+		P(Vector3.new(0.2, 2.6, 4.6), GANG, CFrame.new(pole + Vector3.new(0, B.top + 9.4, 2.4)), Kit.decor({ material = M.Plaster, collide = false }))
+		P(Vector3.new(0.25, 1, 1), GANG2, CFrame.new(pole + Vector3.new(0, B.top + 9.4, 2.4)), Kit.decor({ material = M.Plaster, collide = false }))
+		-- tightrope platform + spotlight on the pole
+		P(Vector3.new(3.4, 0.5, 3.4), Color3.fromRGB(120, 82, 56), CFrame.new(pole + Vector3.new(-sx * 0.6, 17, 0)), { material = M.WoodPlanks })
+		local lamp = P(Vector3.new(1.4, 1.4, 1.4), Color3.fromRGB(255, 246, 220), CFrame.lookAt(pole + Vector3.new(-sx * 1.4, 21, 0), c + Vector3.new(0, 0, 0)), Kit.decor({ material = M.Neon, collide = false }))
+		local s = Instance.new("SpotLight")
+		s.Face = Enum.NormalId.Front
+		s.Angle = 50
+		s.Range = 40
+		s.Brightness = 2.2
+		s.Color = sx < 0 and Color3.fromRGB(255, 226, 180) or Color3.fromRGB(255, 190, 220)
+		s.Parent = lamp
+	end
+	Kit.Bunting(c + Vector3.new(-B.p, B.top + 6, 0), c + Vector3.new(B.p, B.top + 6, 0), { RED, GANG2, GANG, WHITE })
+	-- tightrope between the platforms + a trapeze under the middle of the roof
+	P(Vector3.new(2 * B.p - 3, 0.2, 0.2), Color3.fromRGB(230, 220, 190), CFrame.new(c + Vector3.new(0, 17.3, 0)), Kit.decor({ collide = false, shadow = false }))
+	for _, sx in ipairs({ -1, 1 }) do
+		P(Vector3.new(0.15, 5, 0.15), Color3.fromRGB(230, 220, 190), CFrame.new(c + Vector3.new(sx * 1.6, 22.5, 8)), Kit.decor({ collide = false, shadow = false }))
+	end
+	P(Vector3.new(3.6, 0.35, 0.35), GOLD, CFrame.new(c + Vector3.new(0, 20, 8)), Kit.decor({ collide = false }))
+	-- garlands from the poles to the wall top
+	for _, g in ipairs({ { -1, -1 }, { -1, 1 }, { 1, -1 }, { 1, 1 } }) do
+		Kit.Bunting(c + Vector3.new(g[1] * B.p, 24, 0), c + Vector3.new(g[1] * (B.p + 10), B.wall - 0.5, g[2] * (RW - 2)), { GANG2, RED, WHITE })
+	end
+	-- the ring: sawdust tiles + red/white curb
+	for gx = -12, 12, 3 do
+		for gz = -12, 12, 3 do
+			if gx * gx + gz * gz <= 12.5 * 12.5 then
+				P(Vector3.new(3, 0.2, 3), Color3.fromRGB(196, 158, 108), CFrame.new(c + Vector3.new(gx, 0.3 + ((gx + gz) % 2) * 0.02, gz)), Kit.decor({ material = M.Sand }))
+			end
+		end
+	end
+	for i = 0, 27 do
+		local a = i / 28 * math.pi * 2
+		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+		P(Vector3.new(3.4, 1, 1), i % 2 == 0 and RED or WHITE, CFrame.new(c + dir * 14 + Vector3.new(0, 0.5, 0)) * CFrame.Angles(0, math.atan2(dir.X, dir.Z), 0), { material = M.Plaster })
+	end
+	-- bleachers: three rows on the grid, highest at the back; open at the door and behind the stage
+	for x = -half + 1, half - 1, 2 do
+		for z = -B.rs + 1, B.rs - 1, 2 do
+			local d = stadium(x, z)
+			local row = RW - 1.5 - d
+			if row > 0 and row < 7.5 and not (z > 0 and math.abs(x) < 9) and not (z < 0 and math.abs(x) < 10) then
+				local tier = 2 - math.floor(row / 2.5) -- 2 = against the wall (tallest)
+				local h = 1.2 + tier * 1.3
+				P(Vector3.new(2, h, 2), tier % 2 == 0 and Color3.fromRGB(60, 80, 190) or Color3.fromRGB(86, 108, 214), CFrame.new(c + Vector3.new(x, h / 2 + 0.2, z)), { material = M.WoodPlanks })
+			end
+		end
+	end
+	-- backstage: stage + curtain against the back wall
+	local back = c + Vector3.new(0, 0, -RW + 2.5)
+	P(Vector3.new(18, 1.4, 6), Color3.fromRGB(120, 82, 56), CFrame.new(back + Vector3.new(0, 0.7, 1.5)), { material = M.WoodPlanks })
+	P(Vector3.new(18.4, 0.4, 0.4), GOLD, CFrame.new(back + Vector3.new(0, 1.4, 4.6)), Kit.decor({ material = M.Wood }))
+	for i = 0, 9 do
+		P(Vector3.new(1.8, 11, 0.6), i % 2 == 0 and Color3.fromRGB(160, 24, 40) or Color3.fromRGB(196, 36, 52), CFrame.new(back + Vector3.new(-8.1 + i * 1.8, 6.9, -1)), Kit.decor({ material = M.Plaster }))
+	end
+	P(Vector3.new(19, 1.6, 0.8), GOLD, CFrame.new(back + Vector3.new(0, 12.6, -0.8)), Kit.decor({ material = M.Wood }))
+	-- show props round the ring
+	local function drum(x, z, col)
+		for i, s in ipairs({ 3.4, 3.8, 3.4 }) do
+			P(Vector3.new(s, 0.8, s), i == 2 and GOLD or col, CFrame.new(c + Vector3.new(x, 0.2 + (i - 0.5) * 0.8, z)), { material = M.Plaster })
+		end
+		P(Vector3.new(2.6, 0.4, 2.6), WHITE, CFrame.new(c + Vector3.new(x, 2.8, z)), Kit.decor({ material = M.Plaster }))
+	end
+	drum(-17, -7, RED)
+	drum(17, -7, GANG)
+	drum(-17, 8, GANG)
+	drum(17, 8, RED)
+	-- fire hoop on two posts
+	local hoop = c + Vector3.new(-26, 0, 4)
+	for _, sz in ipairs({ -1, 1 }) do
+		P(Vector3.new(0.6, 4, 0.6), DARKIRON, CFrame.new(hoop + Vector3.new(0, 2, sz * 3.4)), { material = M.Metal })
+	end
+	for i = 0, 15 do
+		local a = i / 16 * math.pi * 2
+		local b = P(Vector3.new(0.8, 0.8, 0.8), i % 2 == 0 and Color3.fromRGB(255, 140, 40) or Color3.fromRGB(255, 210, 70), CFrame.new(hoop + Vector3.new(0, 7.4 + math.sin(a) * 3.4, math.cos(a) * 3.4)), Kit.decor({ material = M.Neon, collide = false }))
+		if i % 4 == 0 then
+			local f = Instance.new("Fire")
+			f.Size = 2
+			f.Heat = 4
+			f.Parent = b
+		end
+	end
+	-- striped ball
+	for i = 0, 3 do
+		local s = ({ 2.4, 3.2, 3.2, 2.4 })[i + 1]
+		P(Vector3.new(s, 0.9, s), i % 2 == 0 and Color3.fromRGB(60, 120, 230) or GANG2, CFrame.new(c + Vector3.new(26, 0.65 + i * 0.9, 6)), { material = M.Plaster })
+	end
+	-- human-cannonball cannon aimed over the ring
+	local can = c + Vector3.new(30, 0, -8)
+	for _, sz in ipairs({ -1, 1 }) do
+		P(Vector3.new(3, 3, 0.6), Color3.fromRGB(120, 82, 56), CFrame.new(can + Vector3.new(0, 1.5, sz * 1.8)), { material = M.Wood })
+	end
+	local barrel = CFrame.new(can + Vector3.new(0, 3.4, 0)) * CFrame.Angles(0, math.pi / 2, 0) * CFrame.Angles(math.rad(35), 0, 0) * CFrame.new(0, 0, -2.5)
+	P(Vector3.new(2.6, 2.6, 9), RED, barrel, { material = M.Metal })
+	P(Vector3.new(3.2, 3.2, 0.8), GOLD, barrel * CFrame.new(0, 0, -4.2), Kit.decor({ material = M.Metal }))
+	P(Vector3.new(1.2, 1.2, 0.3), GOLD, barrel * CFrame.new(0, 1.4, 0) * CFrame.Angles(math.pi / 2, 0, 0), Kit.decor({ material = M.Neon, collide = false }))
+	-- warm hanging lamps over the ring
+	for i = 0, 3 do
+		local a = i / 4 * math.pi * 2 + math.pi / 4
+		local pos = c + Vector3.new(math.cos(a) * 11, 19, math.sin(a) * 11)
+		P(Vector3.new(0.2, 5, 0.2), Color3.fromRGB(60, 50, 40), CFrame.new(pos + Vector3.new(0, 2.5, 0)), Kit.decor({ collide = false }))
+		local bulb = P(Vector3.new(1.2, 1.2, 1.2), Color3.fromRGB(255, 220, 140), CFrame.new(pos), Kit.decor({ material = M.Neon, collide = false }))
+		local l = Instance.new("PointLight")
+		l.Range = 20
+		l.Brightness = 0.6
+		l.Color = Color3.fromRGB(255, 210, 150)
+		l.Parent = bulb
+	end
+	ctx.reserve(B.x - B.p, B.z, B.rs + 2)
+	ctx.reserve(B.x, B.z, B.rs + 2)
+	ctx.reserve(B.x + B.p, B.z, B.rs + 2)
+end
+
+-- v0.25.147 (owner: the clown gang has taken the town; lay it out so it tells the story): the player lands at the
+-- harbor (townsfolk, shops) and walks up the boulevard into occupied ground: the Crew's barricade with a gap and a
+-- KEEP OUT board, their checkpoint camp on the crossroads (the ClownGrunt spawn, Islands offset (0, 38)), parked
+-- circus wagons, crew bunting strung lamp to lamp, confetti trodden into the paving all the way up, empty lion cages
+-- with the doors hanging open beside the big top (the lions got loose up the hill), the crew's flag on the town hall,
+-- and the big top itself in the hall square = Captain Confetti's show. No rng (hash for the confetti).
+local function townStory(ctx)
+	local at = function(x, z, y)
+		return ctx.c + Vector3.new(x, GROUND + (y or 0), z)
+	end
+	-- barricade across the boulevard (gap in the middle)
+	local BZ = 60
+	for _, sx in ipairs({ -1, 1 }) do
+		for i = 0, 4 do
+			local x = sx * (8 + i * 4.4)
+			local board = i % 2 == 0 and RED or WHITE
+			P(Vector3.new(4.2, 0.8, 0.5), board, CFrame.new(at(x, BZ, 2.6)), { material = M.WoodPlanks })
+			P(Vector3.new(4.2, 0.8, 0.5), i % 2 == 0 and WHITE or RED, CFrame.new(at(x, BZ, 1.4)), Kit.decor({ material = M.WoodPlanks }))
+			P(Vector3.new(0.6, 3.4, 0.6), Color3.fromRGB(96, 62, 38), CFrame.new(at(x - 2, BZ, 1.7)), { material = M.Wood })
+		end
+		Kit.Crate(at(sx * 7, BZ + 2.2), 2.4, 0.3 * sx)
+		Kit.Barrel(at(sx * 27, BZ + 2))
+		Kit.Crate(at(sx * 26, BZ - 2.4), 2.6, 0.2)
+		-- crew flags at the gap
+		P(Vector3.new(0.6, 12, 0.6), Color3.fromRGB(96, 62, 38), CFrame.new(at(sx * 6, BZ - 1.4, 6)), { material = M.Wood })
+		P(Vector3.new(0.2, 3, 4.6), GANG, CFrame.new(at(sx * 6, BZ - 1.4, 10.4) + Vector3.new(0, 0, 2.4)), Kit.decor({ material = M.Plaster, collide = false }))
+		P(Vector3.new(0.25, 1.2, 1.2), GANG2, CFrame.new(at(sx * 6, BZ - 1.4, 10.4) + Vector3.new(0, 0, 2.4)), Kit.decor({ material = M.Plaster, collide = false }))
+	end
+	Kit.PostSign("KEEP OUT", at(-14, BZ + 3), Vector3.new(0, 0, 1), 8)
+	-- the checkpoint camp on the crossroads: striped tents at the sides, a brazier, crates
+	local function campTent(x, z, yaw, col)
+		local cf = CFrame.new(at(x, z)) * CFrame.Angles(0, yaw, 0)
+		for i = 0, 3 do
+			P(Vector3.new(8 - i * 1.9, 1.5, 9), i % 2 == 0 and col or WHITE, cf * CFrame.new(0, 0.75 + i * 1.5, 0), { material = M.Plaster })
+		end
+		P(Vector3.new(2.4, 2.8, 0.2), Color3.fromRGB(30, 22, 20), cf * CFrame.new(0, 1.4, -4.55), Kit.decor({ collide = false }))
+		P(Vector3.new(0.4, 2, 0.4), GOLD, cf * CFrame.new(0, 7, 0), Kit.decor())
+	end
+	campTent(-44, 32, -math.pi / 2, GANG) -- doors face the crossroads
+	campTent(-44, 46, -math.pi / 2, RED)
+	campTent(44, 38, math.pi / 2, GANG)
+	local br = at(-34, 39)
+	P(Vector3.new(3, 1.6, 3), DARKIRON, CFrame.new(br + Vector3.new(0, 0.8, 0)), { material = M.Metal })
+	local coal = P(Vector3.new(2.2, 0.6, 2.2), Color3.fromRGB(255, 120, 40), CFrame.new(br + Vector3.new(0, 1.8, 0)), Kit.decor({ material = M.Neon }))
+	local fire = Instance.new("Fire")
+	fire.Size = 4
+	fire.Heat = 6
+	fire.Parent = coal
+	local fl = Instance.new("PointLight")
+	fl.Range = 18
+	fl.Brightness = 1.2
+	fl.Color = Color3.fromRGB(255, 160, 80)
+	fl.Parent = coal
+	Kit.CrateStack(at(34, 28))
+	-- circus wagons parked in the cross street
+	local function wagon(x, z, yaw, body, roof)
+		local cf = CFrame.new(at(x, z)) * CFrame.Angles(0, yaw, 0)
+		P(Vector3.new(5, 5, 11), body, cf * CFrame.new(0, 4, 0), { material = M.WoodPlanks })
+		P(Vector3.new(5.6, 0.8, 11.6), roof, cf * CFrame.new(0, 6.9, 0), { material = M.Plaster })
+		P(Vector3.new(4.4, 0.8, 10.4), roof, cf * CFrame.new(0, 7.7, 0), { material = M.Plaster })
+		P(Vector3.new(5.2, 0.5, 11.2), GOLD, cf * CFrame.new(0, 1.7, 0), Kit.decor({ material = M.Wood }))
+		for _, wz in ipairs({ -3.6, 3.6 }) do
+			for _, wx in ipairs({ -2.8, 2.8 }) do
+				P(Vector3.new(0.6, 3, 3), GOLD, cf * CFrame.new(wx, 1.5, wz), { material = M.Wood })
+				P(Vector3.new(0.7, 1, 1), Color3.fromRGB(96, 62, 38), cf * CFrame.new(wx, 1.5, wz), Kit.decor({ collide = false }))
+			end
+		end
+		for _, side in ipairs({ -1, 1 }) do -- a gold star on each side
+			P(Vector3.new(0.2, 1.8, 0.6), GANG2, cf * CFrame.new(side * 2.55, 4.2, 0), Kit.decor({ collide = false }))
+			P(Vector3.new(0.2, 0.6, 1.8), GANG2, cf * CFrame.new(side * 2.55, 4.2, 0), Kit.decor({ collide = false }))
+		end
+	end
+	wagon(62, 34, 0.15, GANG, RED)
+	wagon(-62, 42, -0.1, Color3.fromRGB(60, 120, 200), GANG2)
+	-- crew bunting lamp to lamp across the boulevard
+	for _, z in ipairs({ 8, 64, 120 }) do
+		Kit.Bunting(at(-31, z, 9.4), at(31, z, 9.4), { GANG, GANG2, RED, WHITE })
+	end
+	-- empty lion cages beside the big top, doors hanging open (the lions are loose in the hill groves)
+	local function cage(x, z, side)
+		local cf = CFrame.new(at(x, z))
+		P(Vector3.new(5, 1, 9), Color3.fromRGB(120, 82, 56), cf * CFrame.new(0, 1.6, 0), { material = M.WoodPlanks })
+		P(Vector3.new(5.4, 0.8, 9.4), RED, cf * CFrame.new(0, 7.2, 0), { material = M.Plaster })
+		for _, wz in ipairs({ -3, 3 }) do
+			for _, wx in ipairs({ -2.6, 2.6 }) do
+				P(Vector3.new(0.6, 2.2, 2.2), GOLD, cf * CFrame.new(wx, 1.1, wz), { material = M.Wood })
+			end
+		end
+		for i = 0, 8 do
+			local zz = -4.2 + i * 1.05
+			P(Vector3.new(0.3, 4.8, 0.3), DARKIRON, cf * CFrame.new(-side * 2.3, 4.6, zz), { material = M.Metal })
+		end
+		for _, ez in ipairs({ -4.3, 4.3 }) do
+			for i = 0, 3 do
+				P(Vector3.new(0.3, 4.8, 0.3), DARKIRON, cf * CFrame.new(-1.5 + i, 4.6, ez), { material = M.Metal })
+			end
+		end
+		-- the open door: bars swung out on the boulevard side, one bent bar on the ground
+		local hinge = cf * CFrame.new(side * 2.3, 4.6, -4.2) * CFrame.Angles(0, side * 1.9, 0)
+		for i = 0, 3 do
+			P(Vector3.new(0.3, 4.8, 0.3), DARKIRON, hinge * CFrame.new(0, 0, i * 1.05 + 0.5), Kit.decor({ material = M.Metal }))
+		end
+		P(Vector3.new(0.3, 0.3, 3.6), DARKIRON, cf * CFrame.new(side * 4.4, 0.15, 3) * CFrame.Angles(0, 0.7, 0), Kit.decor({ material = M.Metal }))
+		-- paw prints heading north toward the hill
+		for i = 0, 2 do
+			local p = cf * CFrame.new(side * (4 + i * 0.6), 0.08, -6 - i * 3.2)
+			P(Vector3.new(0.9, 0.06, 0.9), Color3.fromRGB(92, 70, 52), p, Kit.decor({ collide = false, shadow = false }))
+		end
+	end
+	cage(-36, -2, 1)
+	cage(36, -2, -1)
+	-- confetti trodden into the paving from the barricade up to the big top
+	for gx = -28, 28, 2 do
+		for gz = -10, 104, 2 do
+			local h = math.sin(gx * 12.9898 + gz * 78.233) * 43758.5453
+			h -= math.floor(h)
+			if h < 0.09 then
+				local cols = { RED, GANG, GANG2, Color3.fromRGB(80, 180, 240), Color3.fromRGB(110, 220, 120) }
+				local jx, jz = (h * 97 % 1 - 0.5) * 1.6, (h * 211 % 1 - 0.5) * 1.6
+				P(Vector3.new(0.7, 0.06, 0.7), cols[math.floor(h * 1000) % #cols + 1], CFrame.new(at(gx + jx, gz + jz, 0.09)) * CFrame.Angles(0, h * 20, 0), Kit.decor({ collide = false, shadow = false }))
+			end
+		end
+	end
+end
+
 -- the grand boulevard: lighter paving, planters with flowers down the middle, lamps on both sides
 local function boulevard(ctx)
 	slab(ctx, { -30, 30, HALL[4], QUAY_Z - 4 }, GROUND - 0.2, GROUND + 0.06, PAVE2, M.Cobblestone)
-	for _, z in ipairs({ -18, 14, 62, 110 }) do -- v0.25.146: -34 -> -18 (the big top stands in the square)
+	for _, z in ipairs({ 84, 128 }) do -- v0.25.147: the big top + the crossroads camp took the upper planters
 		P(Vector3.new(7, 1.4, 18), STONE, CFrame.new(ctx.c + Vector3.new(0, GROUND + 0.7, z)), { material = M.Brick })
 		P(Vector3.new(5.6, 0.3, 16.6), Color3.fromRGB(110, 78, 50), CFrame.new(ctx.c + Vector3.new(0, GROUND + 1.45, z)), Kit.decor({ material = M.Ground }))
 		Kit.Flowers(ctx.c + Vector3.new(0, GROUND + 1.6, z), 3, 9)
@@ -109,92 +473,13 @@ local function boulevard(ctx)
 	end
 	for z = -76, QUAY_Z - 14, 28 do
 		for _, sx in ipairs({ -1, 1 }) do
-			Kit.Lamp(ctx.c + Vector3.new(sx * 31, GROUND, z))
+			if stadium(sx * 31 - BIGTOP.x, z - BIGTOP.z) > BIGTOP.rs + 2 then -- none under the big top
+				Kit.Lamp(ctx.c + Vector3.new(sx * 31, GROUND, z))
+			end
 		end
 	end
 end
 
--- v0.25.146 (owner: bosses live inside their structures; the clown boss in a circus tent): the BIG TOP in the town
--- hall square, Captain Confetti's ring. Faceted striped wall with the entrance toward the harbor (+Z), a stepped
--- striped roof of block rings, inside: sawdust ring + red/white curb, stepped bleachers round the back, hanging lamps.
--- Plaster cloth (Fabric renders dark). No rng: the town's random stream is unchanged.
-local BIGTOP = { x = 0, z = -56, r = 22 }
-local function bigTop(ctx)
-	local c = ctx.c + Vector3.new(BIGTOP.x, GROUND, BIGTOP.z)
-	local R = BIGTOP.r
-	local red, white, blue = Color3.fromRGB(226, 56, 60), Color3.fromRGB(252, 246, 236), Color3.fromRGB(60, 80, 190)
-	local N, WALL_H = 20, 9
-	local fw = 2 * R * math.sin(math.pi / N) + 0.5
-	for i = 0, N - 1 do
-		local a = (i + 0.5) / N * math.pi * 2
-		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
-		local yaw = math.atan2(dir.X, dir.Z)
-		local cf = CFrame.new(c + dir * R) * CFrame.Angles(0, yaw, 0)
-		if dir.Z > 0.96 then
-			-- the entrance: flaps tied back to both sides, a gold frame + sign over it
-			for _, sx in ipairs({ -1, 1 }) do
-				P(Vector3.new(1.6, WALL_H - 1, 0.6), red, cf * CFrame.new(sx * (fw / 2 + 0.3), (WALL_H - 1) / 2, -0.6), Kit.decor({ material = M.Plaster }))
-			end
-			P(Vector3.new(fw + 1.4, 1.6, 1), GOLD, cf * CFrame.new(0, WALL_H - 0.8, 0), { material = M.Wood })
-			Kit.Sign("BIG TOP", CFrame.new(c + dir * (R + 0.9) + Vector3.new(0, WALL_H + 1.6, 0)) * CFrame.Angles(0, yaw + math.pi, 0), Vector2.new(10, 2.6), Color3.fromRGB(255, 230, 120), red)
-		else
-			P(Vector3.new(fw, WALL_H, 0.8), i % 2 == 0 and red or white, cf * CFrame.new(0, WALL_H / 2, 0), { material = M.Plaster })
-			P(Vector3.new(fw, 0.6, 1.1), GOLD, cf * CFrame.new(0, WALL_H - 0.3, 0), Kit.decor({ material = M.Wood }))
-		end
-	end
-	-- stepped roof: block rings shrinking upward, stripes per facet
-	local ROOF_N = 16
-	for layer = 0, 5 do
-		local rr = R + 1.5 - layer * 4
-		local y = WALL_H + 1 + layer * 2.6
-		local w = 2 * rr * math.sin(math.pi / ROOF_N) + 0.6
-		for i = 0, ROOF_N - 1 do
-			local a = (i + 0.5) / ROOF_N * math.pi * 2
-			local dir = Vector3.new(math.cos(a), 0, math.sin(a))
-			P(Vector3.new(w, 2.6, 4.6), (i + layer) % 2 == 0 and red or white, CFrame.new(c + dir * (rr - 2.2) + Vector3.new(0, y, 0)) * CFrame.Angles(0, math.atan2(dir.X, dir.Z), 0), { material = M.Plaster })
-		end
-	end
-	local top = WALL_H + 1 + 6 * 2.6
-	P(Vector3.new(4, 2, 4), red, CFrame.new(c + Vector3.new(0, top, 0)), { material = M.Plaster })
-	P(Vector3.new(0.8, 9, 0.8), GOLD, CFrame.new(c + Vector3.new(0, top + 5, 0)), { material = M.Wood })
-	P(Vector3.new(0.2, 2.6, 4.4), blue, CFrame.new(c + Vector3.new(0, top + 8, 2.3)), Kit.decor({ material = M.Plaster }))
-	-- inside: sawdust ring + curb
-	for gx = -12, 12, 3 do
-		for gz = -12, 12, 3 do
-			if gx * gx + gz * gz <= 12.5 * 12.5 then
-				P(Vector3.new(3, 0.2, 3), Color3.fromRGB(196, 158, 108), CFrame.new(c + Vector3.new(gx, 0.18 + ((gx + gz) % 2) * 0.02, gz)), Kit.decor({ material = M.Sand }))
-			end
-		end
-	end
-	for i = 0, 23 do
-		local a = i / 24 * math.pi * 2
-		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
-		P(Vector3.new(3.6, 0.9, 1), i % 2 == 0 and red or white, CFrame.new(c + dir * 13.5 + Vector3.new(0, 0.45, 0)) * CFrame.Angles(0, math.atan2(dir.X, dir.Z), 0), { material = M.Plaster })
-	end
-	-- bleachers: three stepped plank rows round the back half
-	for row = 0, 2 do
-		local rr = R - 2 - row * 1.8
-		for i = 0, 13 do
-			local a = math.pi + (i + 0.5) / 14 * math.pi -- the back half (-Z)
-			local dir = Vector3.new(math.cos(a), 0, math.sin(a))
-			local h = 1.2 + (2 - row) * 1.2
-			P(Vector3.new(2 * rr * math.sin(math.pi / 28) + 0.4, h, 1.8), row % 2 == 0 and blue or Color3.fromRGB(80, 104, 210), CFrame.new(c + dir * rr + Vector3.new(0, h / 2, 0)) * CFrame.Angles(0, math.atan2(dir.X, dir.Z), 0), { material = M.WoodPlanks })
-		end
-	end
-	-- hanging lamps (warm light under the roof)
-	for i = 0, 3 do
-		local a = i / 4 * math.pi * 2 + math.pi / 4
-		local pos = c + Vector3.new(math.cos(a) * 9, WALL_H + 2, math.sin(a) * 9)
-		P(Vector3.new(0.2, 4, 0.2), Color3.fromRGB(60, 50, 40), CFrame.new(pos + Vector3.new(0, 2, 0)), Kit.decor())
-		local bulb = P(Vector3.new(1.2, 1.2, 1.2), Color3.fromRGB(255, 220, 140), CFrame.new(pos), Kit.decor({ material = M.Neon }))
-		local l = Instance.new("PointLight")
-		l.Range = 18
-		l.Brightness = 0.55
-		l.Color = Color3.fromRGB(255, 210, 150)
-		l.Parent = bulb
-	end
-	ctx.reserve(BIGTOP.x, BIGTOP.z, R + 3)
-end
 
 -- house blocks either side: three columns per side, doors toward the boulevard, one cross street at z ~ 38
 local function houseBlocks(ctx)
@@ -206,7 +491,7 @@ local function houseBlocks(ctx)
 				local w = rng:NextNumber(13, 16)
 				local cz = z + w / 2
 				local cross = cz > 26 and cz < 50
-				local hall = col == 1 and cz < -80
+				local hall = col == 1 and cz < -2 -- v0.25.147: the big top spreads over the first column (-86..-2)
 				if not cross and not hall then
 					local pos = ctx.c + Vector3.new(sx * x, GROUND, cz)
 					local d = rng:NextNumber(11, 12.5)
@@ -429,6 +714,7 @@ function MT.Build(island, api)
 	clockTower(ctx, 58, -106)
 	boulevard(ctx)
 	bigTop(ctx)
+	townStory(ctx)
 	harbor(ctx)
 	houseBlocks(ctx)
 	coastPaths(ctx)

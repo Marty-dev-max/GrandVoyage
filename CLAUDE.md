@@ -945,6 +945,13 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     Mint 2-storey hall + balcony + east stairs, stepped orange/white striped roof, mast with striped sails, dining deck
     with umbrella tables, GALLEY house, lamps + bunting, deck sheds by the rim (r - 20: at r - 30 the mob spawn
     reserves refused them), south pier + rowboats. Cloth uses Plaster (Fabric renders dark/blue). Spawns moved inside.
+    v0.25.132 (owner): `World/Mikan.lua` (LAYOUTS seed 20261126, WORLD_VERSION 35): Sawtooth Park = the Overlord's
+    coral palace (walls + merlons, corner/gate towers with scallop `shell` crests instead of shark teeth, south main
+    gate + sign, north WATER GATE with a grille and a canal to the sea, Kit.Pagoda hall 1.45 + shell crown, pool +
+    pavilion), boss moved to the palace courtyard (20,-140), Dungeon NPC outside the gate; round rice paddies east
+    (disc rings water/rice/water + tufts), tangerine groves west, plaza village (12-slot ring minus road mouths),
+    wreck SW, jetty south, 3 corner hills (keep x/z + r within ~218: the grass square ends ~230 out), tropical woods
+    (palms near the shore). OctofolkBrute spawn (-90,-120). Daylight shots: server clock phase 0..0.7 is day (24 min).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

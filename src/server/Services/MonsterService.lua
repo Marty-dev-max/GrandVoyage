@@ -36,13 +36,9 @@ local function groundAt(x, z, fromY)
 end
 MS.GroundAt = groundAt
 
--- v0.25.135 (owner reference): bosses show a card above the nameplate: DMG FOCUS = the type that beats them
--- (MonsterTypes cycle, Bonus x) and their drop chances (drops table + card + blade roll), rarest last
-local function pct(c)
-	local v = c * 100
-	return (v >= 10 and string.format("%d%%", math.floor(v + 0.5))) or (v >= 1 and string.format("%.1f%%", v)) or string.format("%.2f%%", v)
-end
-local function makeBossInfo(mob)
+-- v0.25.137 (owner reference clip): bosses publish their drop table + the focus type as model attributes; the HUD
+-- target panel shows them with the live DAMAGE PROGRESS (each player's share of the damage, attribute DmgShare)
+local function bossAttrs(mob)
 	local def = mob.def
 	local lines = {}
 	for _, d in ipairs(def.drops or {}) do
@@ -58,74 +54,52 @@ local function makeBossInfo(mob)
 	if bd and bd.BossChance then
 		table.insert(lines, { "Mystery Blade", bd.BossChance })
 	end
-	table.sort(lines, function(a, b)
-		return a[2] > b[2]
+	table.sort(lines, function(x, y)
+		return x[2] > y[2]
 	end)
 	while #lines > 6 do
 		table.remove(lines, 1) -- keep the rare ones, they are what players hunt for
 	end
-	local bb = Instance.new("BillboardGui")
-	bb.Name = "BossInfo"
-	local h = 40 + #lines * 17
-	bb.Size = UDim2.fromOffset(250, h)
-	bb.StudsOffsetWorldSpace = Vector3.new(0, 3 + (def.style.scale or 1) * 2.5, 0)
-	bb.ExtentsOffsetWorldSpace = Vector3.new(0, 0, 0)
-	bb.SizeOffset = Vector2.new(0, 1.15)
-	bb.MaxDistance = 200
-	bb.Adornee = mob.root
-	local panel = Instance.new("Frame")
-	panel.Size = UDim2.fromScale(1, 1)
-	panel.BackgroundColor3 = Color3.fromRGB(18, 16, 30)
-	panel.BackgroundTransparency = 0.25
-	panel.BorderSizePixel = 0
-	panel.Parent = bb
-	local st = Instance.new("UIStroke")
-	st.Thickness = 2
-	st.Color = Color3.fromRGB(255, 200, 90)
-	st.Parent = panel
-	local function label(text, y, color, size)
-		local t = Instance.new("TextLabel")
-		t.BackgroundTransparency = 1
-		t.Position = UDim2.fromOffset(8, y)
-		t.Size = UDim2.new(1, -16, 0, size or 14)
-		t.Font = Enum.Font.Arcade
-		t.TextScaled = true
-		t.TextXAlignment = Enum.TextXAlignment.Left
-		t.TextColor3 = color
-		t.TextStrokeTransparency = 0.5
-		t.Text = text
-		t.Parent = panel
-		return t
+	local parts = {}
+	for _, l in ipairs(lines) do
+		table.insert(parts, (l[1]:gsub("[|;]", "")) .. "|" .. l[2])
 	end
-	local ty = def.mtype and MonsterTypes[def.mtype]
-	local focus
+	mob.model:SetAttribute("BossDrops", table.concat(parts, ";"))
 	for k, v in pairs(MonsterTypes) do
 		if type(v) == "table" and v.beats and def.mtype and table.find(v.beats, def.mtype) then
-			focus = { id = k, t = v }
+			mob.model:SetAttribute("BossFocus", k)
 		end
 	end
-	if focus then
-		label(string.format("DMG FOCUS: %s x%.1f", focus.t.name, MonsterTypes.Bonus or 1.2), 6, focus.t.color, 15)
-	else
-		label("DMG FOCUS: any", 6, Color3.new(1, 1, 1), 15)
+end
+
+local function shareUpdate(mob)
+	-- throttled: "Name|UserId|share;..." best first, at most 8 players
+	local now = os.clock()
+	if now - (mob.shareAt or 0) < 0.4 then
+		return
 	end
-	if ty then
-		label("(" .. ty.name .. " type)", 23, ty.color, 11)
+	mob.shareAt = now
+	local total, list = 0, {}
+	for pl, dmg in pairs(mob.damageBy) do
+		if pl.Parent then
+			total += dmg
+			table.insert(list, { pl, dmg })
+		end
 	end
-	for i, l in ipairs(lines) do
-		local t = label(l[1], 24 + i * 17 - 4, Color3.fromRGB(235, 230, 215), 13)
-		t.Size = UDim2.new(0.72, -8, 0, 13)
-		local c = label(pct(l[2]), 24 + i * 17 - 4, l[2] < 0.05 and Color3.fromRGB(255, 200, 80) or Color3.fromRGB(150, 230, 150), 13)
-		c.Position = UDim2.new(0.72, 0, 0, 24 + i * 17 - 4)
-		c.Size = UDim2.new(0.28, -8, 0, 13)
-		c.TextXAlignment = Enum.TextXAlignment.Right
+	table.sort(list, function(x, y)
+		return x[2] > y[2]
+	end)
+	local parts = {}
+	for i = 1, math.min(8, #list) do
+		local pl = list[i][1]
+		table.insert(parts, (pl.DisplayName:gsub("[|;]", "")) .. "|" .. pl.UserId .. "|" .. string.format("%.4f", list[i][2] / math.max(1, total)))
 	end
-	bb.Parent = mob.root
+	mob.model:SetAttribute("DmgShare", table.concat(parts, ";"))
 end
 
 local function makeBar(mob)
 	if mob.def.isBoss then
-		pcall(makeBossInfo, mob)
+		pcall(bossAttrs, mob)
 	end
 	local root = mob.root
 	local bb = ModelFactory.Billboard(root, mob.def.name, "Lv." .. mob.def.level .. "  " .. string.rep("★", mob.def.stars or 1), mob.def.isBoss and Color3.fromRGB(255, 90, 90) or Color3.new(1, 1, 1), 3 + (mob.def.style.scale or 1) * 2.5)
@@ -497,6 +471,9 @@ function MS.Damage(mob, amount, player, crit, kind)
 	mob.hp -= amount
 	if player then
 		mob.damageBy[player] = (mob.damageBy[player] or 0) + amount
+		if mob.def.isBoss then
+			shareUpdate(mob)
+		end
 		R.KnockdownService.OnMobHit(mob, player)
 		MS.Provoke(mob, player)
 	end

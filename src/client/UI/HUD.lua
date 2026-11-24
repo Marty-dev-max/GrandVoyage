@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local ClassesCfg = require(Shared.Config.Classes)
 local Monsters = require(Shared.Config.Monsters)
+local MonsterTypes = require(Shared.Config.MonsterTypes)
 local ItemDB = require(Shared.Modules.ItemDB)
 local Rarity = require(Shared.Modules.Rarity)
 local FruitsCfg = require(Shared.Config.Fruits)
@@ -1049,6 +1050,61 @@ local function setHighlight(model)
 	end
 end
 
+local function pctText(v)
+	v *= 100
+	return (v >= 10 and string.format("%d%%", math.floor(v + 0.5))) or (v >= 1 and string.format("%.1f%%", v)) or string.format("%.2f%%", v)
+end
+
+function HUD.updateBossPanel(tgt)
+	local bf = HUD.bossFrame
+	if not bf then
+		return
+	end
+	local isBoss = tgt and tgt:GetAttribute("Boss")
+	bf.Visible = isBoss and true or false
+	if not isBoss then
+		return
+	end
+	local focus = tgt:GetAttribute("BossFocus")
+	local ty = focus and MonsterTypes[focus]
+	HUD.bossFocus.Text = ty and ("DMG FOCUS: " .. ty.name .. " x" .. string.format("%.1f", MonsterTypes.Bonus or 1.2)) or ""
+	HUD.bossFocus.TextColor3 = ty and ty.color or T.Text
+	local share = {}
+	for entry in string.gmatch(tgt:GetAttribute("DmgShare") or "", "[^;]+") do
+		local name, uid, v = string.match(entry, "^(.-)|(%d+)|([%d%.]+)$")
+		if name then
+			table.insert(share, { name, tonumber(uid), tonumber(v) })
+		end
+	end
+	local drops = {}
+	for entry in string.gmatch(tgt:GetAttribute("BossDrops") or "", "[^;]+") do
+		local name, v = string.match(entry, "^(.-)|([%d%.e%-]+)$")
+		if name then
+			table.insert(drops, { name, tonumber(v) or 0 })
+		end
+	end
+	-- you always show: your row takes the 6th line when you are further down
+	for i, s in ipairs(share) do
+		if s[2] == player.UserId and i > 6 then
+			share[6] = s
+		end
+	end
+	for i, row in ipairs(HUD.bossRows) do
+		local s, d = share[i], drops[i]
+		local me = s and s[2] == player.UserId
+		row.n.Text = s and (s[1]) or ""
+		row.p.Text = s and pctText(s[3]) or ""
+		row.n.TextColor3 = me and Color3.fromRGB(255, 215, 90) or T.Text
+		row.p.TextColor3 = row.n.TextColor3
+		row.dn.Text = d and d[1] or ""
+		row.dp.Text = d and pctText(d[2]) or ""
+		row.dp.TextColor3 = (d and d[2] < 0.05) and Color3.fromRGB(255, 200, 80) or Color3.fromRGB(150, 230, 150)
+	end
+	local n = math.max(#drops, math.min(6, #share), 1)
+	bf.Size = UDim2.fromOffset(bf.Size.X.Offset, 48 + n * 17)
+	bf.Position = UDim2.new(0.5, 0, 0, targetFrame.Position.Y.Offset + targetFrame.Size.Y.Offset + 6)
+end
+
 local function buildTarget()
 	targetFrame = glass(UI.Root, UDim2.fromOffset(380, 70), UDim2.new(0.5, 0, 0, 88), Vector2.new(0.5, 0))
 	targetFrame.Visible = false
@@ -1069,6 +1125,25 @@ local function buildTarget()
 	local hp = UI.Bar(targetFrame, T.Red, UDim2.new(1, 0, 0, 20), "")
 	hp.back.Position = UDim2.fromOffset(0, 30)
 	HUD.targetHp = hp
+	-- v0.25.137 (owner reference): boss panel under the target bar: DAMAGE PROGRESS (share per player, yours gold)
+	-- left, ITEM DROPS (chance) right, focus type on top
+	local bf = glass(UI.Root, UDim2.fromOffset(560, 150), UDim2.new(0.5, 0, 0, 164), Vector2.new(0.5, 0))
+	bf.Visible = false
+	UI.Pad(bf, 8)
+	HUD.bossFrame = bf
+	HUD.bossFocus = UI.Text(bf, "", 13, T.Text, "Display", { TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 16) })
+	UI.Text(bf, "DAMAGE PROGRESS", 13, Color3.fromRGB(255, 220, 120), "Display", { Position = UDim2.fromOffset(0, 20), Size = UDim2.new(0.48, 0, 0, 16) })
+	UI.Text(bf, "ITEM DROPS", 13, Color3.fromRGB(255, 220, 120), "Display", { Position = UDim2.new(0.52, 0, 0, 20), Size = UDim2.new(0.48, 0, 0, 16), TextXAlignment = Enum.TextXAlignment.Right })
+	HUD.bossRows = {}
+	for i = 1, 6 do
+		local y = 22 + i * 17
+		HUD.bossRows[i] = {
+			n = UI.Text(bf, "", 12, T.Text, "Semi", { Position = UDim2.fromOffset(0, y), Size = UDim2.new(0.34, 0, 0, 15), TextTruncate = Enum.TextTruncate.AtEnd }),
+			p = UI.Text(bf, "", 12, T.Text, "Number", { Position = UDim2.new(0.34, 0, 0, y), Size = UDim2.new(0.14, 0, 0, 15), TextXAlignment = Enum.TextXAlignment.Right }),
+			dn = UI.Text(bf, "", 12, T.Text, "Semi", { Position = UDim2.new(0.52, 0, 0, y), Size = UDim2.new(0.34, 0, 0, 15), TextTruncate = Enum.TextTruncate.AtEnd }),
+			dp = UI.Text(bf, "", 12, T.Text, "Number", { Position = UDim2.new(0.86, 0, 0, y), Size = UDim2.new(0.14, 0, 0, 15), TextXAlignment = Enum.TextXAlignment.Right }),
+		}
+	end
 	-- Enabled only while there is a target: a Highlight with no Adornee outlines its Parent (the whole workspace!)
 	-- Lives INSIDE the target model (so it can only ever outline that model) and is unparented when there is no target.
 	-- Parented to workspace with no Adornee, a Highlight outlines the entire map.
@@ -1380,11 +1455,13 @@ local function refresh()
 			end
 		end
 		HUD.captureBtn.Visible = tameable and hasBait and hp / max <= PetsCfg.Capture.MaxHpRatio
+		HUD.updateBossPanel(tgt)
 		HUD.captureBtn.Position = UDim2.new(0.5, 0, 0, targetFrame.Position.Y.Offset + targetFrame.Size.Y.Offset + 8)
 		setHighlight(tgt)
 	else
 		targetFrame.Visible = false
 		HUD.captureBtn.Visible = false
+		HUD.updateBossPanel(nil)
 		setHighlight(tgt and tgt.Parent and tgt or nil) -- still outlined while selected
 	end
 end

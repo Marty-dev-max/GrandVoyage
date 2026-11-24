@@ -35,6 +35,13 @@ mob("WildBoar", { name = "Wild Boar", level = 6, hp = 230, atk = 24, def = 8, ex
 mob("MountainBandit", { name = "Mountain Bandit", level = 8, hp = 320, atk = 32, def = 10, exp = 75, jobExp = 50, beli = { 30, 60 },
 	style = { shape = "humanoid", color = Color3.fromRGB(120, 100, 80), scale = 1, hat = "bandana" }, aggro = true, aggroRadius = 14,
 	drops = { { "Sword_Plain", 0.03, 1, 1 }, { "SteelOre", 0.08, 1, 1 }, { "BeardDark", 0.01, 1, 1 } } })
+-- v0.25.148 (owner): MINI BOSSES = one elite per island at the middle story beat (Islands `minis`): ~4x the HP of the
+-- mobs around them, one telegraphed special (`mini` = slam | charge | summon, MonsterService miniSpecial), gold
+-- ELITE nameplate, no intro or boss music, respawn 6-8 min, a guaranteed material + a small chance of their own item.
+-- (mob() still takes 60% of the listed HP.)
+mob("BanditChief", { name = "Bandit Chief Ragmaw", level = 10, hp = 1300, atk = 40, def = 14, exp = 420, jobExp = 280, beli = { 200, 400 },
+	style = { shape = "humanoid", color = Color3.fromRGB(110, 80, 60), scale = 1.35 }, aggro = true, aggroRadius = 16, mini = "slam", respawn = 6 * 60, cardChance = 0.02,
+	drops = { { "SteelOre", 1, 1, 2 }, { "ChiefFurMantle", 0.06, 1, 1 }, { "BeardDark", 0.15, 1, 1 }, { "Sword_Plain", 0.1, 1, 1 } } })
 
 -- Conch Bay (10-20)
 mob("MarineRecruit", { name = "Rogue Marine Recruit", level = 12, hp = 520, atk = 42, def = 14, exp = 120, jobExp = 80, beli = { 40, 80 },
@@ -46,6 +53,10 @@ mob("GuardWolf", { name = "Guard Wolf", level = 14, hp = 600, atk = 52, def = 12
 mob("MarineRifleman", { name = "Rogue Rifleman", level = 17, hp = 700, atk = 60, def = 16, exp = 190, jobExp = 130, beli = { 50, 100 },
 	style = { shape = "humanoid", color = Color3.fromRGB(220, 230, 255), scale = 1, hat = "marine" }, attackRange = 30, aggro = true,
 	drops = { { "Gunpowder", 0.3, 1, 2 }, { "Slingshot_Keen", 0.005, 1, 1 } } })
+-- mini boss: the garrison captain's pampered son, struts on the terrace-2 street and lunges with his cutlass
+mob("SpoiledEnsign", { name = "Pampered Ensign Velour", level = 16, hp = 2200, atk = 58, def = 20, exp = 900, jobExp = 600, beli = { 500, 900 },
+	style = { shape = "humanoid", color = Color3.fromRGB(150, 110, 210), scale = 1.3 }, aggro = true, aggroRadius = 14, mini = "charge", respawn = 7 * 60, cardChance = 0.02,
+	drops = { { "SteelOre", 1, 2, 3 }, { "PamperedShades", 0.05, 1, 1 }, { "MarineBadge", 0.6, 1, 3 }, { "Sword_Keen", 0.04, 1, 1 } } })
 
 -- Marmalade Town (20-30)
 mob("ClownGrunt", { name = "Clown Pirate Grunt", level = 21, hp = 950, atk = 76, def = 20, exp = 260, jobExp = 180, beli = { 60, 120 },
@@ -57,6 +68,10 @@ mob("CircusAcrobat", { name = "Circus Acrobat", level = 24, hp = 1050, atk = 88,
 mob("CircusLion", { name = "Circus Lion", level = 27, hp = 1500, atk = 105, def = 26, exp = 420, jobExp = 290, beli = { 90, 160 },
 	style = { shape = "lion", color = Color3.fromRGB(240, 180, 80), scale = 1.5 }, aggro = true,
 	drops = { { "MeatOnBone", 0.5, 2, 3 }, { "TidecoreShard", 0.01, 1, 1 } } })
+-- mini boss: the Crew's beast tamer by the lion cages, whistles lions in to help
+mob("BeastTamer", { name = "Beast Tamer Bristle", level = 26, hp = 6000, atk = 110, def = 28, exp = 2200, jobExp = 1500, beli = { 900, 1600 },
+	style = { shape = "humanoid", color = Color3.fromRGB(230, 220, 200), scale = 1.35 }, aggro = true, aggroRadius = 16, mini = "summon", respawn = 8 * 60, cardChance = 0.02,
+	drops = { { "ClownPaint", 1, 2, 3 }, { "TamerWhip", 0.05, 1, 1 }, { "TidecoreShard", 0.08, 1, 1 } } })
 
 -- Honeyslope Village (30-40)
 mob("NightCatPirate", { name = "Night Cat Pirate", level = 31, hp = 1800, atk = 122, def = 30, exp = 520, jobExp = 360, beli = { 100, 200 },
@@ -164,14 +179,15 @@ mob("FortCore", { name = "Giant Signal Conch", level = 80, hp = 60000, atk = 0, 
 --   INT = tactics: stuns / crowd control on hit
 --   (v0.25.38: PHY is gone; its two gunners keep their long range below: Rifleman = DEX, Armored Gunner = STR)
 local TYPE_OF = {
-	STR = { "ArmoredGunner", "WildBoar", "MountainBandit", "CircusLion", "ArmadaRaider", "SharkfolkBrawler", "AxeCaptain", "ArmadaAdmiral", "Leviathan" },
-	AGI = { "MarineRecruit", "NightCatPirate", "SawfolkRaider", "MarineElite", "BountyHunter", "SilentClaw", "SawtoothOverlord", "ClawCat" },
-	DEX = { "MarineRifleman", "ForestMonkey", "JungleTiger", "GuardWolf", "CircusAcrobat", "StarvedPirate", "BaySerpent", "DepthsWarden" },
+	STR = { "BanditChief", "ArmoredGunner", "WildBoar", "MountainBandit", "CircusLion", "ArmadaRaider", "SharkfolkBrawler", "AxeCaptain", "ArmadaAdmiral", "Leviathan" },
+	AGI = { "SpoiledEnsign", "MarineRecruit", "NightCatPirate", "SawfolkRaider", "MarineElite", "BountyHunter", "SilentClaw", "SawtoothOverlord", "ClawCat" },
+	DEX = { "BeastTamer", "MarineRifleman", "ForestMonkey", "JungleTiger", "GuardWolf", "CircusAcrobat", "StarvedPirate", "BaySerpent", "DepthsWarden" },
 	INT = { "ClownGrunt", "HypnoThug", "MistSoldier", "CaptainConfetti", "RingMaster", "MistCommodore", "OctofolkBrute" },
 }
 -- stars: 1 = plain animals, 2 = regular fighters, 3 = elites, 4 = bosses, 5 = the strongest bosses
 local STARS = {
 	ForestMonkey = 1, JungleTiger = 1, WildBoar = 1, GuardWolf = 1, CircusLion = 1,
+	BanditChief = 3, SpoiledEnsign = 3, BeastTamer = 3,
 	ClawCat = 3, ArmoredGunner = 3, OctofolkBrute = 3, MarineElite = 3, MistSoldier = 3, BountyHunter = 3,
 	MistCommodore = 5, DepthsWarden = 5, Leviathan = 5,
 }

@@ -11,16 +11,21 @@ local Net = require(ReplicatedStorage.Shared.Modules.Net)
 local Recruits = require(ReplicatedStorage.Shared.Config.Recruits)
 local ShipStats = require(ReplicatedStorage.Shared.Modules.ShipStats)
 local ItemDB = require(ReplicatedStorage.Shared.Modules.ItemDB)
+local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
 local VoxelChar = require(ReplicatedStorage.Shared.Modules.VoxelChar)
 local ModelFactory = require(script.Parent.Parent.World.ModelFactory)
+local Formulas = require(ReplicatedStorage.Shared.Modules.Formulas)
 
 local RS = {}
 local R
 local taverns = {} -- { key, cf, folder, list = { [slot] = { c, model, home } } }
 local rotation = -1
 
--- spots around the keeper, in the keeper's space (-Z = the way the keeper faces): outside its 7-stud walk-in ring
-local SPOTS = { Vector3.new(-8, 0, -7), Vector3.new(8, 0, -7), Vector3.new(-9.5, 0, -12.5), Vector3.new(9.5, 0, -12.5) }
+-- spots around the keeper, in the keeper's space (-Z = the way the keeper faces): outside its 7-stud walk-in ring,
+-- v0.25.148 spread so the sailors (and their tags) never bunch up
+local SPOTS = { Vector3.new(-9, 0, -6), Vector3.new(9, 0, -6), Vector3.new(-5, 0, -14), Vector3.new(5, 0, -14) }
+local groundParams = RaycastParams.new()
+groundParams.FilterType = Enum.RaycastFilterType.Exclude
 
 function RS.Init(registry)
 	R = registry
@@ -42,7 +47,7 @@ local function public(t, slot, player)
 	end
 	return {
 		key = keyOf(t, slot), seed = c.seed, name = c.name, race = c.race, variant = c.variant, prof = c.prof,
-		stars = c.stars, want = c.want, line = c.line, have = have, model = e.model,
+		stars = c.stars, skill = c.skill, trait = c.trait, want = c.want, line = c.line, have = have, model = e.model,
 	}
 end
 
@@ -59,11 +64,32 @@ local function buildModel(t, slot, c)
 		end
 	end
 	local home = t.cf * CFrame.new(SPOTS[slot])
+	-- v0.25.148 (owner: they floated): stand the feet on the floor under the spot (the keeper's pivot is not the floor)
+	local bbCF, bbSize = m:GetBoundingBox()
+	local footDrop = root.Position.Y - (bbCF.Position.Y - bbSize.Y / 2) -- root height above the soles
+	local ignore = { t.folder }
+	for _, n in ipairs(CollectionService:GetTagged("NPC")) do
+		table.insert(ignore, n)
+	end
+	for _, pl in ipairs(Players:GetPlayers()) do
+		if pl.Character then
+			table.insert(ignore, pl.Character)
+		end
+	end
+	groundParams.FilterDescendantsInstances = ignore
+	local hit = workspace:Raycast(home.Position + Vector3.new(0, 3, 0), Vector3.new(0, -14, 0), groundParams)
+	if hit then
+		home = CFrame.new(home.Position.X, hit.Position.Y + footDrop, home.Position.Z) * home.Rotation
+	end
 	m:PivotTo(home * CFrame.Angles(0, math.rad((slot * 77) % 360), 0))
 	m:SetAttribute("RecruitKey", keyOf(t, slot))
 	m:SetAttribute("Home", home.Position)
 	local prof = Recruits.Professions[c.prof]
-	ModelFactory.Billboard(root, c.name, prof.icon .. " " .. prof.name .. "  " .. string.rep("*", c.stars), Color3.fromRGB(255, 230, 170), 5.5)
+	local tier = Recruits.Tier(c)
+	local bb = ModelFactory.Billboard(root, c.name, prof.icon .. " " .. prof.name .. "  " .. string.rep("*", c.stars), tier.color, 5.2)
+	-- sized in studs (shrinks with distance) and only near: fixed-pixel tags piled on top of each other
+	bb.Size = UDim2.new(6, 0, 1.6, 0)
+	bb.MaxDistance = 45
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.ActionText = "Talk"
 	prompt.ObjectText = c.name
@@ -199,7 +225,7 @@ function RS.Start()
 				return false, c.name .. " wants " .. w.qty .. "x " .. (def and def.name or w.id)
 			end
 		end
-		table.insert(p.recruits, { seed = c.seed, name = c.name, race = c.race, variant = c.variant, prof = c.prof, stars = c.stars })
+		table.insert(p.recruits, Recruits.Record(c))
 		p.crew += 1
 		player:SetAttribute("Crew", p.crew)
 		R.PlayerService.MarkDirty(player)
@@ -226,6 +252,61 @@ function RS.Start()
 			end
 		end
 		return false
+	end, 0.5)
+
+	-- v0.25.148 (owner: players trade crew): a recruit leaves the crew as a Crew Contract item (entry.recruit), which
+	-- moves like any gear (stalls, Gem stalls with the usual trade lock); signing it puts them in the signer's crew
+	Net.Handle("MakeContract", function(player, data)
+		local p = R.DataService.Get(player)
+		local seed = type(data) == "table" and tonumber(data.seed)
+		for i, r in ipairs(p.recruits or {}) do
+			if r.seed == seed then
+				if #p.inventory >= GameConfig.InventorySlots then
+					return false, "Your bag is full"
+				end
+				if not R.InventoryService.AddItem(player, "CrewContract", 1) then
+					return false, "Your bag is full"
+				end
+				p.inventory[#p.inventory].recruit = table.clone(r)
+				table.remove(p.recruits, i)
+				p.crew = math.max(0, p.crew - 1)
+				player:SetAttribute("Crew", p.crew)
+				R.PlayerService.MarkDirty(player)
+				return true, r.name .. "'s contract is in your bag"
+			end
+		end
+		return false
+	end, 0.5)
+
+	Net.Handle("SignContract", function(player, data)
+		local p = R.DataService.Get(player)
+		local entry = type(data) == "table" and Formulas.FindItem(p, data.uid)
+		local r = entry and entry.id == "CrewContract" and entry.recruit
+		if not Recruits.ValidRecord(r) then
+			return false, "That contract is blank"
+		end
+		p.recruits = p.recruits or {}
+		for _, o in ipairs(p.recruits) do
+			if o.seed == r.seed then
+				return false, r.name .. " already sails with you"
+			end
+		end
+		local design = p.ships[p.activeShip] or p.ships[1]
+		local st = ShipStats.Compute(design, p.crew)
+		if p.crew + 1 > st.crewCap then
+			return false, "No bunk for them (max " .. st.crewCap .. "). Build more Crew Cabins or dismiss someone."
+		end
+		for idx, e in ipairs(p.inventory) do
+			if e == entry then
+				table.remove(p.inventory, idx)
+				break
+			end
+		end
+		table.insert(p.recruits, Recruits.Record(r))
+		p.crew += 1
+		player:SetAttribute("Crew", p.crew)
+		R.PlayerService.MarkDirty(player)
+		return true, r.name .. " joined your crew!"
 	end, 0.5)
 end
 

@@ -16,6 +16,16 @@ end
 ById.MountainBandit = look({ hair = "Messy", eyes = "Thug", mouth = "Snarl", mark = "Scar", shirt = "Open Vest", pants = "Baggy", shoes = "Wraps",
 	hair1 = "3C2A1E", shirt1 = "785A3C", shirt2 = "A08060", pants1 = "4A3A2C", skin = "D6A478", eyes1 = "C08020", eyes2 = "6A3A10",
 	acc = { "Bandana", "BeardDark" }, held = "HeldClub", attack = "Hammer_Smash" })
+-- mini bosses (v0.25.148): bigger by Config/Monsters style.scale
+ById.BanditChief = look({ hair = "Shaggy Long", eyes = "Thug", mouth = "Grin", mark = "Scar", shirt = "Open Vest", pants = "Baggy", shoes = "Boots",
+	hair1 = "2A1E18", shirt1 = "5A3C28", shirt2 = "8A6A48", pants1 = "3A2E24", shoes1 = "3A2A1E", skin = "C8946A", eyes1 = "C05020", eyes2 = "601C08",
+	acc = { "Bandana", "BeardDark", "ChiefFurMantle" }, held = "HeldCutlass", attack = "Sword_Slash" })
+ById.SpoiledEnsign = look({ hair = "Pompadour", eyes = "Sharp", mouth = "Grin", shirt = "Open Jacket", pants = "Long Pants", shoes = "Buckle Boots",
+	hair1 = "F0D070", shirt1 = "7A5AC8", shirt2 = "F0F0FA", pants1 = "2E2A40", shoes1 = "1C1A22", shoes2 = "FFD040", skin = "FFE2C4", eyes1 = "4A70C0", eyes2 = "1C2C60",
+	acc = { "PamperedShades" }, held = "HeldCutlass", attack = "Sword_Slash" })
+ById.BeastTamer = look({ hair = "Fluffy", eyes = "Feral", mouth = "Fang", mark = "WarPaint", shirt = "Open Vest", pants = "Baggy", shoes = "Wraps",
+	hair1 = "F0EEE6", shirt1 = "E8D8B0", shirt2 = "B08A50", pants1 = "6A4A2A", skin = "D6A478", eyes1 = "E0A020", eyes2 = "704008",
+	acc = { "TamerWhip" }, held = "HeldClub", attack = "Hammer_Smash" })
 ById.MarineRecruit = look({ hair = "Short", eyes = "Stern", mouth = "Flat", shirt = "Sailor Stripes", pants = "Long Pants", shoes = "Boots",
 	hair1 = "462C1E", shirt1 = "F0F0FA", shirt2 = "3C5AAA", pants1 = "3C5AAA", skin = "F6D0AA", eyes1 = "4A3A30", eyes2 = "2A1E18",
 	acc = { "MarineCap" }, held = "HeldCutlass", attack = "Sword_Slash" })

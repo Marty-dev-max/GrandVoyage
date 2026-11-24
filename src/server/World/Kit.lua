@@ -569,7 +569,10 @@ function Kit.House(cf, w, d, wall, roof, opts)
 	for _, side in ipairs({ -1, 1 }) do
 		Wedge(Vector3.new(w + 2.4, roofH, d / 2 + 1.4), roof, cf * CFrame.new(0, ry, side * (d / 4 + 0.35)) * CFrame.Angles(0, side > 0 and math.pi or 0, 0), { material = M.SmoothPlastic })
 	end
-	P(Vector3.new(w + 2.8, 0.8, 1), roof:Lerp(Color3.new(0, 0, 0), 0.25), cf * CFrame.new(0, 1.2 + h + roofH, 0), decor({ collide = false }))
+	-- ridge cap sits ON the top voxel step (Voxelize turns each wedge into n steps, the highest at (n - 0.5) / n of
+	-- its height); at the wedge apex it floated as a loose slab above the roof (owner, v0.25.148)
+	local n = math.clamp(math.floor(math.max(roofH, d / 2 + 1.4) / 3), 2, 4)
+	P(Vector3.new(w + 2.4, 0.8, 1.6), roof:Lerp(Color3.new(0, 0, 0), 0.25), cf * CFrame.new(0, 1.2 + h + roofH * (n - 0.5) / n + 0.4, 0), decor({ collide = false }))
 	if opts.chimney ~= false then
 		P(Vector3.new(1.8, roofH + 2.5, 1.8), Color3.fromRGB(176, 92, 70), cf * CFrame.new(w * 0.3, 1.2 + h + roofH / 2 + 1.5, d * 0.22), decor({ material = M.Brick }))
 	end

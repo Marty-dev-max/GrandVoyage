@@ -201,6 +201,9 @@ add("CapePurple", { name = "Confetti Cape", kind = "Accessory", slot = "accessor
 add("CapeShadow", { name = "Shadow Cape", kind = "Accessory", slot = "accessory", agi = 6, reqLevel = 40, slots = 1, price = 50000, rarity = "Epic" })
 add("CapeCrimson", { name = "Admiral's Crimson Cape", kind = "Accessory", slot = "accessory", str = 6, vit = 3, reqLevel = 50, slots = 1, price = 110000, rarity = "Legendary" })
 add("CapeSlate", { name = "Mist Cape", kind = "Accessory", slot = "accessory", int = 5, vit = 5, reqLevel = 58, slots = 1, price = 150000, rarity = "Legendary" })
+add("ChiefFurMantle", { name = "Chief's Fur Mantle", desc = "Worn by Bandit Chief Ragmaw.", kind = "Accessory", slot = "accessory", str = 3, vit = 2, reqLevel = 10, slots = 1, price = 4000, rarity = "Rare" })
+add("PamperedShades", { name = "Pampered Shades", desc = "Ensign Velour never takes them off.", kind = "Headgear", slot = "headgear", def = 2, dex = 3, luk = 3, reqLevel = 15, slots = 1, price = 8000, refinable = true, rarity = "Rare" })
+add("TamerWhip", { name = "Tamer's Coiled Whip", desc = "Beast Tamer Bristle's whip, coiled at the hip.", kind = "Accessory", slot = "accessory", agi = 4, dex = 2, reqLevel = 25, slots = 1, price = 20000, rarity = "Rare" })
 add("BeardDark", { name = "Bandit Beard", kind = "Accessory", slot = "accessory", str = 2, reqLevel = 8, slots = 0, price = 1200, rarity = "Uncommon" })
 add("BeardBrown", { name = "Sea Dog Beard", kind = "Accessory", slot = "accessory", vit = 3, reqLevel = 20, slots = 1, price = 6000, rarity = "Uncommon" })
 add("BeardGrey", { name = "Commodore's Beard", kind = "Accessory", slot = "accessory", vit = 4, int = 3, reqLevel = 65, slots = 1, price = 90000, rarity = "Epic" })
@@ -257,6 +260,7 @@ end
 -- ===== Pets: eggs and bait =====
 add("SeaEgg", { name = "Sea Egg", desc = "Hatch it from your Bag. Hermit 40% / Boarlet 35% / Gull 20% / Puffer 5%.", kind = "Egg", rarity = "Uncommon", price = 2000, icon = "🥚", stack = true })
 add("GoldenEgg", { name = "Golden Egg", desc = "Hatch it from your Bag. Gull 40% / Puffer 35% / Lantern 22% / Leviathan 3%.", kind = "Egg", rarity = "Epic", price = 20000, icon = "🪺", stack = true })
+add("CrewContract", { name = "Crew Contract", desc = "A sailor's signed papers. Sign it at a Tavern Keeper to add them to your crew.", kind = "Material", price = 50, rarity = "Common", icon = "📜" }) -- v0.25.148: entry.recruit = who (Config/Recruits Record)
 add("SeaBait", { name = "Sea Bait", desc = "Throw it at a weakened Wild Boar or Leviathan (below 35% HP) to tame it.", kind = "Consumable", special = true, price = 300, stack = true, rarity = "Common", icon = "🪤" })
 
 -- ===== Ammo (slingshot classes, Config/Ammo) =====

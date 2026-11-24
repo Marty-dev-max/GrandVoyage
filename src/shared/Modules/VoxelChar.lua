@@ -508,7 +508,7 @@ local function buildAll(look, heritage, variant, mode, place, emit)
 			end
 		elseif SH == 5 then
 			for _, sx in ipairs({ -1, 1 }) do
-				block("UpperTorso", Vector3.new(0.62, Hh + 0.02, D + 0.08), CFrame.new(sx * (W / 2 - 0.3), 0, 0), s1, "Vest")
+				block("UpperTorso", Vector3.new(0.62, Hh + 0.06, D + 0.08), CFrame.new(sx * (W / 2 - 0.3), 0, 0), s1, "Vest")
 				block("UpperTorso", Vector3.new(0.1, Hh + 0.04, 0.1), CFrame.new(sx * (W / 2 - 0.62), 0, front - 0.02), s2, "Trim")
 			end
 			block("UpperTorso", Vector3.new(W - 1.1, Hh, 0.06), CFrame.new(0, 0, backZ), s1, "VestBack")
@@ -538,10 +538,10 @@ local function buildAll(look, heritage, variant, mode, place, emit)
 			block("UpperTorso", Vector3.new(0.42, 0.4, 0.05), CFrame.new(0, Hh / 2 - 0.25, front - 0.005), skin, "VNeck")
 		elseif SH == 10 then
 			for _, sx in ipairs({ -1, 1 }) do
-				block("UpperTorso", Vector3.new(0.55, Hh + 0.02, D + 0.1), CFrame.new(sx * (W / 2 - 0.27), 0, 0), s1, "Jacket")
+				block("UpperTorso", Vector3.new(0.55, Hh + 0.06, D + 0.1), CFrame.new(sx * (W / 2 - 0.27), 0, 0), s1, "Jacket")
 			end
 			block("UpperTorso", Vector3.new(W - 1.0, Hh, 0.08), CFrame.new(0, 0, backZ), s1, "JacketBack")
-			block("UpperTorso", Vector3.new(W + 0.14, 0.2, D + 0.14), CFrame.new(0, Hh / 2 - 0.1, 0), dark(s1, 0.2), "JacketCollar")
+			block("UpperTorso", Vector3.new(W + 0.14, 0.2, D + 0.14), CFrame.new(0, Hh / 2 - 0.09, 0), dark(s1, 0.2), "JacketCollar")
 		elseif SH == 11 then
 			for _, sx in ipairs({ -1, 1 }) do
 				block("UpperTorso", Vector3.new(0.42, 0.2, 0.1), CFrame.new(sx * 0.3, Hh / 2 - 0.1, front - 0.02), s2, "Collar")
@@ -584,16 +584,16 @@ local function buildAll(look, heritage, variant, mode, place, emit)
 		local W = lt.X
 		if PA == 1 or PA == 3 or PA == 4 or PA == 7 or PA == 8 or PA == 10 or PA == 12 then
 			block("LowerTorso", Vector3.new(W + 0.08, 0.16, lt.Z + 0.08), CFrame.new(0, lt.Y / 2 - 0.08, 0), p2, "Belt")
-			block("LowerTorso", Vector3.new(0.24, 0.2, 0.1), CFrame.new(0, lt.Y / 2 - 0.08, -lt.Z / 2 - 0.05), Color3.fromRGB(232, 196, 90), "Buckle")
+			block("LowerTorso", Vector3.new(0.24, 0.18, 0.1), CFrame.new(0, lt.Y / 2 - 0.08, -lt.Z / 2 - 0.05), Color3.fromRGB(232, 196, 90), "Buckle")
 		elseif PA == 5 then
-			block("LowerTorso", Vector3.new(W + 0.1, 0.3, lt.Z + 0.1), CFrame.new(), p2, "Sash")
-			block("LowerTorso", Vector3.new(0.3, 0.7, 0.1), CFrame.new(0.6, -0.4, -lt.Z / 2 - 0.06), p2, "SashTail")
+			block("LowerTorso", Vector3.new(W + 0.12, 0.32, lt.Z + 0.12), CFrame.new(), p2, "Sash")
+			block("LowerTorso", Vector3.new(0.3, 0.7, 0.1), CFrame.new(0.6, -0.4, -lt.Z / 2 - 0.07), p2, "SashTail")
 		elseif PA == 9 then
 			block("LowerTorso", Vector3.new(W + 0.12, 0.26, lt.Z + 0.12), CFrame.new(), p2, "Waist")
 		end
 		if skirt then
 			block("LowerTorso", Vector3.new(2.2, 1.0, 1.2), CFrame.new(0, -0.55, 0), p1, "Skirt")
-			block("LowerTorso", Vector3.new(2.24, 0.14, 1.24), CFrame.new(0, -0.98, 0), p2, "SkirtHem")
+			block("LowerTorso", Vector3.new(2.24, 0.14, 1.24), CFrame.new(0, -0.99, 0), p2, "SkirtHem")
 		end
 		if SH == 6 then
 			block("LowerTorso", Vector3.new(2.1, 1.2, 0.2), CFrame.new(0, -0.6, lt.Z / 2 + 0.1), s1, "CoatTail")
@@ -610,7 +610,7 @@ local function buildAll(look, heritage, variant, mode, place, emit)
 			-- overalls: bib + straps over the shirt
 			block("UpperTorso", Vector3.new(1.3, ut.Y * 0.55, 0.08), CFrame.new(0, -ut.Y * 0.22, front - 0.03), p1, "Bib")
 			for _, sx in ipairs({ -1, 1 }) do
-				block("UpperTorso", Vector3.new(0.22, ut.Y + 0.04, ut.Z + 0.1), CFrame.new(sx * 0.5, 0.02, 0), p1, "OverallStrap")
+				block("UpperTorso", Vector3.new(0.2, ut.Y + 0.04, ut.Z + 0.12), CFrame.new(sx * 0.5, 0, 0), p1, "OverallStrap")
 				block("UpperTorso", Vector3.new(0.16, 0.16, 0.08), CFrame.new(sx * 0.5, ut.Y * 0.05, front - (SH == 14 and 0.17 or 0.09)), p2, "OverallButton") -- in front of an armor plate, not in its face (flicker)
 			end
 		end
@@ -628,15 +628,15 @@ local function buildAll(look, heritage, variant, mode, place, emit)
 		elseif PA == 7 and ul then
 			block(side .. "UpperLeg", Vector3.new(0.12, 0.5, 0.6), CFrame.new(sx * 0.53, -0.1, 0), p2, "Pocket")
 		elseif PA == 8 and ul and ll then
-			block(side .. "UpperLeg", Vector3.new(0.1, ul.Y, 0.3), CFrame.new(sx * 0.52, 0, 0), p2, "Stripe")
-			block(side .. "LowerLeg", Vector3.new(0.1, ll.Y, 0.3), CFrame.new(sx * 0.52, 0, 0), p2, "Stripe")
+			block(side .. "UpperLeg", Vector3.new(0.1, ul.Y, 0.3), CFrame.new(sx * 0.53, 0, 0), p2, "Stripe")
+			block(side .. "LowerLeg", Vector3.new(0.1, ll.Y - 0.02, 0.3), CFrame.new(sx * 0.53, 0, 0), p2, "Stripe")
 		elseif PA == 9 and ll then
 			block(side .. "LowerLeg", Vector3.new(1.45, ll.Y * 0.6, 1.45), CFrame.new(0, -ll.Y * 0.2, 0), p1, "Flare")
 		elseif PA == 10 and ll then
 			block(side .. "LowerLeg", Vector3.new(1.14, 0.4, 0.2), CFrame.new(0, ll.Y / 2 - 0.25, -0.55), p2, "KneePad")
 		elseif PA == 12 and ll then
-			block(side .. "LowerLeg", Vector3.new(1.06, ll.Y * 0.5, 1.06), CFrame.new(0, -ll.Y * 0.25, 0), skin, "Shin")
-			band(side .. "LowerLeg", 0, 0.14, p2, 0.1, "Cuff")
+			block(side .. "LowerLeg", Vector3.new(1.06, ll.Y * 0.48, 1.06), CFrame.new(0, -ll.Y * 0.26, 0), skin, "Shin")
+			band(side .. "LowerLeg", 0, 0.14, p2, 0.13, "Cuff")
 		end
 
 		-- ===== shoes =====
@@ -649,7 +649,7 @@ local function buildAll(look, heritage, variant, mode, place, emit)
 		local ft = sizeOf(side .. "Foot")
 		if ft then
 			if SO == 1 or SO == 10 then
-				block(side .. "Foot", Vector3.new(1.1, 0.12, 0.3), CFrame.new(0, 0.1, -0.15), f1, "Strap")
+				block(side .. "Foot", Vector3.new(1.1, 0.14, 0.3), CFrame.new(0, 0.1, -0.15), f1, "Strap")
 				block(side .. "Foot", Vector3.new(1.12, 0.08, 1.12), CFrame.new(0, -ft.Y / 2 + 0.04, 0), SO == 10 and f1 or f2, "Sole")
 			elseif SO == 3 then
 				block(side .. "Foot", Vector3.new(1.1, 0.1, 1.1), CFrame.new(0, -ft.Y / 2 + 0.05, 0), f2, "Sole")
@@ -665,20 +665,20 @@ local function buildAll(look, heritage, variant, mode, place, emit)
 		end
 		if ll then
 			if SO == 2 or SO == 9 then
-				block(side .. "LowerLeg", Vector3.new(1.1, ll.Y * 0.45, 1.1), CFrame.new(0, -ll.Y * 0.275, 0), f1, "Boot")
+				block(side .. "LowerLeg", Vector3.new(1.1, ll.Y * 0.45 + 0.04, 1.1), CFrame.new(0, -ll.Y * 0.275 - 0.02, 0), f1, "Boot")
 				band(side .. "LowerLeg", -ll.Y * 0.05, 0.14, f2, 0.14, "BootCuff")
 				if SO == 9 then
-					block(side .. "LowerLeg", Vector3.new(0.3, 0.22, 0.1), CFrame.new(0, -ll.Y * 0.28, -0.57), f2, "Buckle")
+					block(side .. "LowerLeg", Vector3.new(0.3, 0.22, 0.1), CFrame.new(0, -ll.Y * 0.28, -0.58), f2, "Buckle")
 				end
 			elseif SO == 5 then
-				block(side .. "LowerLeg", Vector3.new(1.1, ll.Y + 0.02, 1.1), CFrame.new(), f1, "TallBoot")
+				block(side .. "LowerLeg", Vector3.new(1.1, ll.Y + 0.06, 1.1), CFrame.new(), f1, "TallBoot")
 				band(side .. "LowerLeg", ll.Y / 2 - 0.09, 0.18, f2, 0.16, "BootCuff")
 			elseif SO == 6 then
 				for i = 0, 2 do
 					band(side .. "LowerLeg", -ll.Y / 2 + 0.1 + i * 0.22, 0.12, i == 2 and f2 or f1, 0.08, "Wrap")
 				end
 			elseif SO == 10 then
-				block(side .. "LowerLeg", Vector3.new(1.06, ll.Y * 0.35, 1.06), CFrame.new(0, -ll.Y * 0.325, 0), f2, "Sock")
+				block(side .. "LowerLeg", Vector3.new(1.08, ll.Y * 0.35 + 0.04, 1.08), CFrame.new(0, -ll.Y * 0.325 - 0.02, 0), f2, "Sock")
 			end
 		end
 	end

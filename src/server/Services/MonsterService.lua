@@ -103,7 +103,9 @@ local function makeBar(mob)
 		pcall(bossAttrs, mob)
 	end
 	local root = mob.root
-	local bb = ModelFactory.Billboard(root, mob.def.name, "Lv." .. mob.def.level .. "  " .. string.rep("★", mob.def.stars or 1), mob.def.isBoss and Color3.fromRGB(255, 90, 90) or Color3.new(1, 1, 1), 3 + (mob.def.style.scale or 1) * 2.5)
+	local elite = mob.def.mini ~= nil -- v0.25.148 mini boss: gold ELITE plate, no boss intro / music
+	local bb = ModelFactory.Billboard(root, mob.def.name, (elite and "ELITE  " or "") .. "Lv." .. mob.def.level .. "  " .. string.rep("★", mob.def.stars or 1),
+		mob.def.isBoss and Color3.fromRGB(255, 90, 90) or elite and Color3.fromRGB(255, 205, 70) or Color3.new(1, 1, 1), 3 + (mob.def.style.scale or 1) * 2.5)
 	-- type badge (v0.25.18): colored square with the type's kanji left of the name
 	local ty = mob.def.mtype and MonsterTypes[mob.def.mtype]
 	if ty then
@@ -130,8 +132,8 @@ local function makeBar(mob)
 			title.Size = UDim2.new(1, -34, 0.55, 0)
 		end
 	end
-	bb.Size = UDim2.fromOffset(mob.def.isBoss and 260 or 170, 62)
-	bb.MaxDistance = mob.def.isBoss and 260 or 110
+	bb.Size = UDim2.fromOffset(mob.def.isBoss and 260 or elite and 210 or 170, 62)
+	bb.MaxDistance = mob.def.isBoss and 260 or elite and 160 or 110
 	local back = Instance.new("Frame")
 	back.Name = "HPBack"
 	back.Size = UDim2.new(0.8, 0, 0, 8)
@@ -145,7 +147,7 @@ local function makeBar(mob)
 	local fill = Instance.new("Frame")
 	fill.Name = "Fill"
 	fill.Size = UDim2.new(1, 0, 1, 0)
-	fill.BackgroundColor3 = mob.def.isBoss and Color3.fromRGB(255, 70, 70) or Color3.fromRGB(110, 230, 110)
+	fill.BackgroundColor3 = mob.def.isBoss and Color3.fromRGB(255, 70, 70) or elite and Color3.fromRGB(255, 190, 50) or Color3.fromRGB(110, 230, 110)
 	fill.BorderSizePixel = 0
 	fill.Parent = back
 	c:Clone().Parent = fill
@@ -214,6 +216,7 @@ function MS.Spawn(monsterId, position, opts)
 	model:SetAttribute("Level", def.level)
 	model:SetAttribute("MaxHP", mob.maxHp)
 	model:SetAttribute("Boss", def.isBoss == true)
+	model:SetAttribute("Elite", def.mini ~= nil)
 	if not opts.model then
 		model:PivotTo(CFrame.new(position + Vector3.new(0, 4 + (def.style.scale or 1) * 2, 0)) * CFrame.Angles(0, math.random() * 6.28, 0))
 	end
@@ -731,16 +734,8 @@ local function bossCharge(mob, troot)
 	return true
 end
 
-local function bossSpecial(mob)
+local function bossSlam(mob, radius, mult)
 	local center = mob.root.Position
-	local radius = 20 + (mob.def.style.scale or 1) * 3
-	mob.specialN = (mob.specialN or 0) + 1
-	local ok, troot = validTarget(mob, mob.target)
-	if mob.specialN % 2 == 0 and ok and troot and mob.hum and not mob.chain and not mob.sea then
-		if bossCharge(mob, troot) then
-			return
-		end
-	end
 	Net.FX("Telegraph", { pos = center, radius = radius, time = 1.2, model = mob.model }, center, 300)
 	task.delay(1.2, function()
 		if mob.dead then
@@ -750,10 +745,119 @@ local function bossSpecial(mob)
 		for _, pl in ipairs(Players:GetPlayers()) do
 			local root = R.PlayerService.Root(pl)
 			if root and Reach.Gap(root.Position, mob.model) <= radius then
-				R.CombatService.MonsterHit(mob, pl, 1.8)
+				R.CombatService.MonsterHit(mob, pl, mult)
 			end
 		end
 	end)
+end
+
+-- v0.25.148 (owner): Captain Confetti fights like a Split-fruit user. The pieces fly on every client through
+-- FruitFX (FX "BossFruit" = FruitFX.Play with the boss model as the caster); hits land here when they arrive.
+local function confettiSpecial(mob, troot)
+	local center = mob.root.Position
+	if mob.specialN % 3 == 1 and troot then
+		-- Rocket Forearm: the forearm shoots along a telegraphed line and punches whoever stands in it
+		local flat = Vector3.new(troot.Position.X - center.X, 0, troot.Position.Z - center.Z)
+		if flat.Magnitude < 1 then
+			flat = mob.root.CFrame.LookVector
+		end
+		local dir = flat.Unit
+		local len = math.clamp(flat.Magnitude + 10, 20, 54)
+		local to = center + dir * len
+		Net.FX("Telegraph", { kind = "line", from = center - Vector3.new(0, 2.5, 0), to = to - Vector3.new(0, 2.5, 0), width = 7, time = 0.9 }, center, 300)
+		mob.knockUntil = os.clock() + 1.4 -- stands still while the arm is away
+		mob.root.CFrame = CFrame.lookAt(center, center + dir)
+		task.delay(0.9, function()
+			if mob.dead or not mob.root then
+				return
+			end
+			local travel = 0.35
+			Net.FX("BossFruit", { skill = "F_SplitCannon", char = mob.model, from = mob.root.Position, to = to, strike = 0, travel = travel }, center, 300)
+			task.delay(travel, function()
+				if not mob.dead then
+					for _, pl in ipairs(playersInLine(center, to, 7)) do
+						R.CombatService.MonsterHit(mob, pl, 1.7)
+					end
+				end
+			end)
+		end)
+		return
+	end
+	if mob.specialN % 3 == 2 then
+		-- Scatter Storm: the body comes apart and whirls around him, 4 hits on everyone inside the ring
+		local radius = 16
+		Net.FX("Telegraph", { pos = center, radius = radius, time = 1.0, model = mob.model }, center, 300)
+		mob.knockUntil = os.clock() + 3.6
+		task.delay(1.0, function()
+			if mob.dead or not mob.root then
+				return
+			end
+			Net.FX("BossFruit", { skill = "F_SplitFestival", char = mob.model, from = mob.root.Position, radius = radius, strike = 0 }, center, 300)
+			for i = 1, 4 do
+				task.delay(0.3 + i * 0.45, function()
+					if mob.dead then
+						return
+					end
+					for _, pl in ipairs(Players:GetPlayers()) do
+						local root = R.PlayerService.Root(pl)
+						if root and Reach.Gap(root.Position, mob.model) <= radius then
+							R.CombatService.MonsterHit(mob, pl, 0.6)
+						end
+					end
+				end)
+			end
+		end)
+		return
+	end
+	if not (troot and bossCharge(mob, troot)) then
+		bossSlam(mob, 20 + (mob.def.style.scale or 1) * 3, 1.8)
+	end
+end
+
+local function bossSpecial(mob)
+	local radius = 20 + (mob.def.style.scale or 1) * 3
+	mob.specialN = (mob.specialN or 0) + 1
+	local ok, troot = validTarget(mob, mob.target)
+	if mob.def.id == "CaptainConfetti" and mob.hum then
+		confettiSpecial(mob, ok and troot or nil)
+		return
+	end
+	if mob.specialN % 2 == 0 and ok and troot and mob.hum and not mob.chain and not mob.sea then
+		if bossCharge(mob, troot) then
+			return
+		end
+	end
+	bossSlam(mob, radius, 1.8)
+end
+
+-- v0.25.148 mini bosses (Config/Monsters `mini`): one telegraphed special each, weaker than a boss's
+local function miniSpecial(mob)
+	local ok, troot = validTarget(mob, mob.target)
+	local kind = mob.def.mini
+	if kind == "charge" and ok and troot and bossCharge(mob, troot) then
+		return
+	end
+	if kind == "summon" then
+		-- whistles up to 2 lions from the cages (they never respawn)
+		mob.helpers = mob.helpers or {}
+		for i = #mob.helpers, 1, -1 do
+			if mob.helpers[i].dead then
+				table.remove(mob.helpers, i)
+			end
+		end
+		if #mob.helpers < 2 then
+			Net.FX("MobAlert", { model = mob.model }, mob.root.Position, 250)
+			local a = math.random() * math.pi * 2
+			local p = mob.root.Position + Vector3.new(math.cos(a) * 8, 0, math.sin(a) * 8)
+			local helper = MS.Spawn("CircusLion", groundAt(p.X, p.Z), { noRespawn = true, hpMult = 0.5 })
+			if helper then
+				helper.target = mob.target
+				table.insert(mob.helpers, helper)
+			end
+			return
+		end
+	end
+	bossSlam(mob, 10 + (mob.def.style.scale or 1) * 3, 1.5)
 end
 
 -- ===== full-length serpents (v0.22.5: Bay Serpent) =====
@@ -1254,6 +1358,9 @@ local function step(mob, now)
 		if def.isBoss and now >= mob.nextSpecial then
 			mob.nextSpecial = now + 9
 			bossSpecial(mob)
+		elseif def.mini and now >= mob.nextSpecial then
+			mob.nextSpecial = now + 11
+			miniSpecial(mob)
 		end
 	else
 		-- Wander inside the zone; heal when back home
@@ -1293,6 +1400,10 @@ function MS.SpawnIslandMobs()
 				local r = math.random() * sp.radius
 				MS.Spawn(sp.monster, groundAt(cx + math.cos(a) * r, cz + math.sin(a) * r), { zone = zone })
 			end
+		end
+		for _, sp in ipairs(island.minis or {}) do -- v0.25.148: one elite each, respawns from def.respawn
+			local center = groundAt(island.x + sp.offset.X, (island.z or 0) + sp.offset.Y)
+			MS.Spawn(sp.monster, center, { zone = { center = center, radius = sp.radius } })
 		end
 	end
 end

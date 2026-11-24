@@ -5,6 +5,7 @@ local Cards = require(Config.Cards)
 local Monsters = require(Config.Monsters)
 local Rarity = require(script.Parent.Rarity)
 local GameConfig = require(Config.GameConfig)
+local Recruits = require(Config.Recruits)
 
 local ItemDB = {}
 local cardItems = {}
@@ -34,7 +35,27 @@ end
 -- v0.25.105 Ascend: an evolved weapon (entry.asc = steps) is its item one rarity higher per step, with more ATK,
 -- lean stats and card slots (GameConfig.Ascend). Use this instead of Get(entry.id) wherever a bag entry is shown or counted.
 local ascCache = {}
+-- v0.25.148: a Crew Contract shows the sailor it holds (name, tier = rarity, job + stats in the description)
+local contractCache = {}
+local function contractDef(def, r)
+	local key = r.seed .. "#" .. tostring(r.stars) .. "#" .. tostring(r.skill)
+	local c = contractCache[key]
+	if not c then
+		local prof = Recruits.Professions[r.prof]
+		c = table.clone(def)
+		c.name = "Contract: " .. r.name
+		c.rarity = Rarity.Order[math.clamp(r.stars or 1, 1, 5)]
+		c.desc = Recruits.Tier(r).name .. " " .. (prof and prof.name or "") .. " (" .. (r.race or "") .. ")  Skill " .. (r.skill or 100) .. "%\n"
+			.. Recruits.EffectText(r) .. "  •  " .. Recruits.TraitText(r) .. "\nSign it at a Tavern Keeper to add them to your crew."
+		contractCache[key] = c
+	end
+	return c
+end
+
 function ItemDB.ForEntry(entry)
+	if entry and entry.id == "CrewContract" and type(entry.recruit) == "table" and Recruits.ValidRecord(entry.recruit) then
+		return contractDef(ItemDB.Get(entry.id), entry.recruit)
+	end
 	local def = entry and ItemDB.Get(entry.id)
 	local asc = entry and tonumber(entry.asc) or 0
 	if not def or asc <= 0 then

@@ -921,6 +921,39 @@ function Combat.Dash()
 	lv.RelativeTo = Enum.ActuatorRelativeTo.World
 	lv.Parent = r
 	turnTo(r, r.Position + dir)
+	-- v0.25.148 (owner: dashing into a prop sent the character tumbling): no trip states during the burst, and the
+	-- burst ends at a wall (ray ahead) instead of shoving the legs into it
+	local TRIP = { Enum.HumanoidStateType.FallingDown, Enum.HumanoidStateType.Ragdoll }
+	for _, s in ipairs(TRIP) do
+		h:SetStateEnabled(s, false)
+	end
+	local rayP = RaycastParams.new()
+	rayP.FilterType = Enum.RaycastFilterType.Exclude
+	rayP.FilterDescendantsInstances = { r.Parent, workspace:FindFirstChild("Monsters") }
+	local wallConn
+	wallConn = RunService.Heartbeat:Connect(function()
+		if not lv.Parent then
+			wallConn:Disconnect()
+			return
+		end
+		for _, y in ipairs({ -1.6, 0 }) do -- knee and chest height
+			local hit = workspace:Raycast(r.Position + Vector3.new(0, y, 0), dir * 4, rayP)
+			if hit and hit.Normal.Y < 0.6 and hit.Instance.CanCollide then
+				lv:Destroy()
+				att:Destroy()
+				r.AssemblyLinearVelocity = Vector3.new(0, r.AssemblyLinearVelocity.Y, 0)
+				wallConn:Disconnect()
+				return
+			end
+		end
+	end)
+	task.delay(cfg.Duration + 0.35, function()
+		if h.Parent and not h.Parent:GetAttribute("Downed") then
+			for _, s in ipairs(TRIP) do
+				h:SetStateEnabled(s, true)
+			end
+		end
+	end)
 	-- ghost trail right away (others see it from the Dash FX) and a quick FOV kick
 	local char = r.Parent
 	require(script.Parent.VFX).Afterimages(char, cfg.Duration + 0.02, 0.03)

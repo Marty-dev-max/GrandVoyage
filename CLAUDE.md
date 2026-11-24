@@ -1051,6 +1051,23 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     to (0,38), lair = false), wagons, crew bunting, empty lion cages, hashed confetti, Crew flag on the town hall.
     First column of houses skipped for cz < -2. Story-layout rules + mini-boss proposal: docs/Plan-Worldbuild-v2.md.
     WORLD_VERSION 43.
+    v0.25.148 (owner): MINI BOSSES = Islands `minis` (NOT `spawns`: WorldBuilder reserves room per spawn, which would
+    shift generated islands, and hunts/dailies/quest arrows read spawns): Monsters `mini` = slam | charge | summon
+    (MonsterService miniSpecial every 11 s; summon = up to 2 noRespawn CircusLions), gold ELITE plate + attr Elite,
+    def.respawn 6-8 min. BanditChief (Daybreak Bandit Hill), SpoiledEnsign (Conch T2 street), BeastTamer (Marmalade
+    east cage); own items ChiefFurMantle / PamperedShades / TamerWhip (Config/Accessories, no acc_ icons yet).
+    Captain Confetti specials = confettiSpecial: F_SplitCannon line + F_SplitFestival ring (FX "BossFruit" ->
+    VFX handler -> FruitFX.Play with the boss model as `char`; FruitFX limbPieces works on R15Mob VoxelBody) + charge.
+    Dash: FallingDown/Ragdoll disabled during the burst (+0.35 s), Heartbeat rays at knee/chest end it at a wall.
+    Recruits v2: 5 tiers (Recruits.Tiers, StarWeights), all-random look, `skill` 80-125 + `trait` (other job x
+    TraitShare), R.Effects/Record/ValidRecord, Rotate 600 + R.NextIn (windows count down from GetServerTimeNow);
+    RecruitService stands models on the floor (ray under the spot, feet offset from the bounding box), stud-sized
+    tags (MaxDistance 45), `MakeContract` { seed } -> CrewContract item with entry.recruit, `SignContract` { uid };
+    ItemDB.ForEntry names a contract after its sailor (rarity = tier). DataService `crewV2`: crew = #recruits once.
+    Kit.House ridge sits on the top Voxelize step (roofH x (n-0.5)/n). VoxelChar: every same-limb coplanar face pair
+    (shirt x pants, pants x shoes, checked in Studio with VC.Preview) moved apart 0.01-0.04. Job Master aura lives in
+    `bg` behind the view, plainLight. Map: sea gradient + hashed pixel crests, Crimson Wall = offset stone blocks.
+    WORLD_VERSION 44.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

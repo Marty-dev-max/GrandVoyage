@@ -1390,11 +1390,13 @@ function Panels.JobMaster()
 	local wheel = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(0.2, 0, 1, 0), ClipsDescendants = true, ZIndex = 2, Parent = win.body })
 	-- middle: the character on a podium, the button under it
 	local mid = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromScale(0.2, 0), Size = UDim2.new(0.38, 0, 1, 0), ZIndex = 2, Parent = win.body })
-	local aura = New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.glow, ImageTransparency = 0.35, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.45), Size = UDim2.fromScale(1.1, 0.9), Parent = mid })
+	-- v0.25.148 (owner: a white disc covered the character): the class glow sits BEHIND the statue (it was in `mid`,
+	-- ZIndex 2, drawn over the ZIndex 1 viewport), and the statue keeps its own colors (plainLight) so it stands out
+	local aura = New("ImageLabel", { BackgroundTransparency = 1, Image = Tex.glow, ImageTransparency = 0.5, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.39, 0.42), Size = UDim2.fromScale(0.42, 0.75), ZIndex = 0, Parent = bg })
 	-- the character stands in the sea lit by the class color (reference), drag to turn 360, wheel to zoom. The view
 	-- covers the whole window (the water must reach every edge) and puts the character in the middle column
 	local stage = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(-24, -14), Size = UDim2.new(1, 48, 1, 28), ZIndex = 1, Parent = win.body })
-	local _, refreshChar = UI.CharacterView(stage, nil, { water = true, zoom = true, zoomStart = 1.5, shiftX = -0.11, shiftY = 0.07, onFrame = function(h)
+	local _, refreshChar = UI.CharacterView(stage, nil, { water = true, plainLight = true, zoom = true, zoomStart = 1.5, shiftX = -0.11, shiftY = 0.07, onFrame = function(h)
 		water.Position = UDim2.fromScale(0, h)
 		water.Size = UDim2.fromScale(1, 1 - h)
 	end })
@@ -2129,64 +2131,115 @@ local function canGive(w)
 	return n >= w.qty
 end
 
+-- "New sailors in 7:32" (Config/Recruits Rotate, server clock), kept ticking while the label lives
+local function rotateClock(label)
+	task.spawn(function()
+		while label.Parent do
+			local s = math.floor(Recruits.NextIn(workspace:GetServerTimeNow()))
+			label.Text = string.format("New sailors arrive in %d:%02d", s // 60, s % 60)
+			task.wait(1)
+		end
+	end)
+end
+
+local function stars(n)
+	return string.rep("★", n or 1)
+end
+
+-- one crew row: tier-colored name, job + stats, buttons on the right
+local function crewRow(parent, order, r, buttons)
+	local prof = Recruits.Professions[r.prof] or {}
+	local tier = Recruits.Tier(r)
+	local row = New("Frame", { BackgroundColor3 = T.PanelDeep, Size = UDim2.new(1, -8, 0, 58), LayoutOrder = order, Parent = parent })
+	UI.Corner(row, 8)
+	New("Frame", { BackgroundColor3 = tier.color, BorderSizePixel = 0, Size = UDim2.new(0, 6, 1, 0), Parent = row })
+	local bw = #buttons * 128
+	UI.Text(row, (prof.icon or "") .. " " .. r.name, 16, tier.color, "Display", { Position = UDim2.fromOffset(16, 6), Size = UDim2.new(1, -24 - bw, 0, 22), TextTruncate = Enum.TextTruncate.AtEnd, TextWrapped = false })
+	UI.Text(row, stars(r.stars) .. " " .. tier.name .. "  •  " .. (prof.name or "") .. "  •  Skill " .. (r.skill or 100) .. "%  •  " .. Recruits.EffectText(r), 13, T.TextSoft, "Semi",
+		{ Position = UDim2.fromOffset(16, 32), Size = UDim2.new(1, -24 - bw, 0, 18), TextTruncate = Enum.TextTruncate.AtEnd, TextWrapped = false })
+	for i, b in ipairs(buttons) do
+		local _, h = UI.Button(row, b[1], b[2], UDim2.fromOffset(120, 40), b[3])
+		h.AnchorPoint = Vector2.new(1, 0.5)
+		h.Position = UDim2.new(1, -8 - (#buttons - i) * 128, 0.5, 0)
+	end
+	return row
+end
+
 function Panels.Tavern()
-	local win = UI.Window("Tavern", "Tavern", UDim2.fromOffset(620, 520), T.Red, "🍺")
+	UI.CloseWindow("Tavern")
+	local win = UI.Window("Tavern", "Tavern", UDim2.fromOffset(680, 560), T.Red, "🍺")
 	local p = State.profile
 	local design = p.ships[p.activeShip] or p.ships[1]
 	local st = ShipStats.Compute(design, p.crew)
 	UI.List(win.body, nil, 8)
-	UI.Section(win.body, "🧑‍✈️", "Your Crew", T.Red, p.crew .. " / " .. st.crewCap .. " bunks").LayoutOrder = 1
+	UI.Section(win.body, "🧑‍✈️", "Your Crew", T.Red, (p.crew or 0) .. " / " .. st.crewCap .. " bunks").LayoutOrder = 1
 	local list = p.recruits or {}
-	local old = math.max(0, (p.crew or 0) - #list)
 	local b = Recruits.Bonus(list)
-	UI.Text(win.body, string.format("Talk to the sailors around here (E) to recruit them.  Crew bonus: reload -%d%%  speed +%d%%  hull +%.1f%%/s  heal +%.1f%%/s",
-		b.reload * 100, b.speed * 100, b.repair * 100, b.heal * 100), 14, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 36), LayoutOrder = 2 })
-	local scroll = UI.Scroll(win.body, UDim2.new(1, 0, 1, -110))
-	scroll.LayoutOrder = 3
+	UI.Text(win.body, string.format("Crew bonus:  reload -%d%%   speed +%d%%   hull +%.1f%%/s   heal +%.1f%%/s", b.reload * 100, b.speed * 100, b.repair * 100, b.heal * 100),
+		14, Color3.fromRGB(150, 230, 150), "Semi", { Size = UDim2.new(1, 0, 0, 20), LayoutOrder = 2 })
+	local clock = UI.Text(win.body, "", 14, T.Gold, "Semi", { Size = UDim2.new(1, 0, 0, 20), LayoutOrder = 3 })
+	rotateClock(clock)
+	local scroll = UI.Scroll(win.body, UDim2.new(1, 0, 1, -130))
+	scroll.LayoutOrder = 4
 	UI.List(scroll, nil, 6)
-	for i, r in ipairs(list) do
-		local prof = Recruits.Professions[r.prof] or {}
-		local row = New("Frame", { BackgroundColor3 = T.PanelDeep, Size = UDim2.new(1, -8, 0, 48), LayoutOrder = i, Parent = scroll })
-		UI.Corner(row, 8)
-		UI.Text(row, (prof.icon or "") .. " " .. r.name, 16, T.Text, "Display", { Position = UDim2.fromOffset(10, 4), Size = UDim2.new(0.6, 0, 0, 20) })
-		UI.Text(row, (r.race or "") .. "  •  " .. (prof.name or "") .. "  " .. string.rep("*", r.stars or 1) .. "  •  " .. Recruits.EffectText(r), 13, T.TextSoft, "Semi", { Position = UDim2.fromOffset(10, 26), Size = UDim2.new(0.75, 0, 0, 18) })
-		local _, btn = UI.Button(row, "DISMISS", T.Panel, UDim2.fromOffset(110, 36), function()
-			if req("DismissRecruit", { seed = r.seed }).ok then
-				win:Destroy()
-				Panels.Tavern()
-			end
-		end)
-		btn.AnchorPoint = Vector2.new(1, 0.5)
-		btn.Position = UDim2.new(1, -8, 0.5, 0)
+	local function reopen()
+		win:Destroy()
+		Panels.Tavern()
 	end
-	if old > 0 then
-		local row = New("Frame", { BackgroundColor3 = T.PanelDeep, Size = UDim2.new(1, -8, 0, 48), LayoutOrder = 998, Parent = scroll })
-		UI.Corner(row, 8)
-		UI.Text(row, old .. " deckhand" .. (old > 1 and "s" or "") .. " (unnamed, from before: they man cannons and oars)", 14, T.TextSoft, "Semi", { Position = UDim2.fromOffset(10, 0), Size = UDim2.new(0.75, 0, 1, 0) })
-		local _, h = UI.Button(row, "DISMISS 1", T.Panel, UDim2.fromOffset(120, 36), function()
-			if req("DismissRecruit", { deckhand = true }).ok then
-				win:Destroy()
-				Panels.Tavern()
-			end
-		end)
-		h.AnchorPoint = Vector2.new(1, 0.5)
-		h.Position = UDim2.new(1, -8, 0.5, 0)
+	for i, r in ipairs(list) do
+		crewRow(scroll, i, r, {
+			{ "CONTRACT", T.Panel, function()
+				if req("MakeContract", { seed = r.seed }).ok then
+					reopen()
+				end
+			end },
+			{ "DISMISS", T.Red, function()
+				if req("DismissRecruit", { seed = r.seed }).ok then
+					reopen()
+				end
+			end },
+		})
 	end
 	if #list == 0 then
-		UI.Text(scroll, "No one yet. Sailors looking for a ship hang around this tavern: walk up and press E.", 15, T.TextSoft, "Semi", { Size = UDim2.new(1, -8, 0, 44), LayoutOrder = 999 })
+		UI.Text(scroll, "No one yet. Sailors looking for a ship hang around this tavern: walk up to one and press E.", 15, T.TextSoft, "Semi",
+			{ Size = UDim2.new(1, -8, 0, 44), LayoutOrder = 500, TextWrapped = true })
 	end
+	-- Crew Contracts in your bag (bought in a stall, or your own): sign one to take that sailor on
+	local n = 0
+	for _, e in ipairs(p.inventory or {}) do
+		if e.id == "CrewContract" and type(e.recruit) == "table" and Recruits.ValidRecord(e.recruit) then
+			n += 1
+			if n == 1 then
+				UI.Text(scroll, "📜 Contracts in your bag", 15, T.Gold, "Display", { Size = UDim2.new(1, -8, 0, 26), LayoutOrder = 600 })
+			end
+			crewRow(scroll, 600 + n, e.recruit, {
+				{ "SIGN", T.Green, function()
+					if req("SignContract", { uid = e.uid }).ok then
+						reopen()
+					end
+				end },
+			})
+		end
+	end
+	UI.Text(scroll, "CONTRACT turns a sailor into a Crew Contract item you can sell in a stall. Whoever signs it gets them, stats and all.",
+		12, T.TextSoft, "Semi", { Size = UDim2.new(1, -8, 0, 34), LayoutOrder = 900, TextWrapped = true })
 end
 
--- one sailor: who they are, their job, what they want for joining (args from the server's OpenPanel push)
+-- one sailor: who they are, their tier, job, stats and what they want (args from the server's OpenPanel push)
 function Panels.Recruit(c)
 	if type(c) ~= "table" or not c.key then
 		return
 	end
 	local prof = Recruits.Professions[c.prof] or {}
+	local tier = Recruits.Tier(c)
 	UI.CloseWindow("Recruit") -- talking to the next sailor replaces the card
-	local win = UI.Window("Recruit", c.name, UDim2.fromOffset(560, 470), T.Red, prof.icon or "🍺")
-	local stage = New("Frame", { BackgroundColor3 = T.PanelDeep, Position = UDim2.fromOffset(0, 0), Size = UDim2.fromOffset(200, 260), Parent = win.body })
+	-- v0.25.148 (owner: the name overflowed the title plaque): short title, the name lives in the card
+	local win = UI.Window("Recruit", "Recruit", UDim2.fromOffset(640, 470), T.Red, prof.icon or "🍺")
+	-- left: the sailor on a tier-colored stage with a tier ribbon
+	local stage = New("Frame", { BackgroundColor3 = T.PanelDeep, Size = UDim2.fromOffset(220, 330), ClipsDescendants = true, Parent = win.body })
 	UI.Corner(stage, 12)
+	UI.Gradient(stage, tier.color:Lerp(T.PanelDeep, 0.55), T.PanelDeep, 90)
+	UI.Stroke(stage, tier.color, 2)
 	if typeof(c.model) == "Instance" and c.model.Parent then
 		local m = c.model:Clone()
 		for _, d in ipairs(m:GetDescendants()) do
@@ -2194,26 +2247,40 @@ function Panels.Recruit(c)
 				d:Destroy()
 			end
 		end
-		local vp = UI.ModelViewOf(stage, m, 200, 0.5)
-		vp.Position = UDim2.fromOffset(0, 30)
+		local vp = UI.ModelViewOf(stage, m, 220, 0.5)
+		vp.Position = UDim2.fromOffset(0, 20)
 	end
-	local x = 216
+	local ribbon = New("Frame", { BackgroundColor3 = tier.color, BorderSizePixel = 0, AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 0, 1, 0), Size = UDim2.new(1, 0, 0, 40), Parent = stage })
+	UI.Text(ribbon, stars(c.stars) .. "  " .. string.upper(tier.name), 16, Color3.fromRGB(24, 20, 34), "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center })
+	-- right: name, job, quote, stats, wants, buttons
+	local x = 238
 	local function line(text, size, color, font, y, h)
-		return UI.Text(win.body, text, size, color, font, { Position = UDim2.fromOffset(x, y), Size = UDim2.new(1, -x, 0, h or 22) })
+		return UI.Text(win.body, text, size, color, font, { Position = UDim2.fromOffset(x, y), Size = UDim2.new(1, -x, 0, h or 22), TextTruncate = Enum.TextTruncate.AtEnd, TextWrapped = false })
 	end
-	line(c.name, 22, T.Text, "Display", 0, 28)
-	line((c.race or "") .. "  •  " .. (prof.name or "") .. "  " .. string.rep("*", c.stars or 1), 16, T.Gold, "Display", 32)
-	line("\"" .. (c.line or "") .. "\"", 15, T.TextSoft, "Semi", 60, 44).TextWrapped = true
-	line(prof.desc or "", 14, T.Text, "Semi", 110, 40).TextWrapped = true
-	line("On your ship: " .. Recruits.EffectText(c), 15, Color3.fromRGB(150, 230, 150), "Semi", 152)
-	line("Wants:", 15, T.TextSoft, "Semi", 190)
-	line(wantText(c.want), 20, canGive(c.want) and T.Gold or Color3.fromRGB(255, 120, 110), "Number", 212, 26)
+	line(c.name, 22, tier.color, "Display", 0, 28)
+	line((prof.icon or "") .. " " .. (prof.name or "") .. "  •  " .. (c.race or ""), 15, T.Text, "Semi", 32)
+	local q = line("\"" .. (c.line or "") .. "\"", 14, T.TextSoft, "Semi", 58, 38)
+	q.TextWrapped = true
+	q.TextTruncate = Enum.TextTruncate.None
+	local box = New("Frame", { BackgroundColor3 = T.PanelDeep, Position = UDim2.fromOffset(x, 102), Size = UDim2.new(1, -x, 0, 104), Parent = win.body })
+	UI.Corner(box, 8)
+	local skill = c.skill or 100
+	local skillC = skill >= 110 and Color3.fromRGB(130, 230, 130) or skill < 90 and Color3.fromRGB(255, 130, 120) or T.Text
+	local function stat(i, label, value, color)
+		UI.Text(box, label, 13, T.TextSoft, "Semi", { Position = UDim2.fromOffset(12, 8 + (i - 1) * 31), Size = UDim2.fromOffset(70, 24) })
+		UI.Text(box, value, 15, color, "Semi", { Position = UDim2.fromOffset(84, 8 + (i - 1) * 31), Size = UDim2.new(1, -92, 0, 24), TextTruncate = Enum.TextTruncate.AtEnd, TextWrapped = false })
+	end
+	stat(1, "SKILL", skill .. "%", skillC)
+	stat(2, "ON SHIP", Recruits.EffectText(c), Color3.fromRGB(150, 230, 150))
+	stat(3, "TRAIT", Recruits.TraitText(c), Color3.fromRGB(170, 200, 255))
+	line("WANTS", 13, T.TextSoft, "Semi", 216)
+	line(wantText(c.want), 20, canGive(c.want) and T.Gold or Color3.fromRGB(255, 120, 110), "Number", 236, 26)
 	local p = State.profile
 	local design = p.ships[p.activeShip] or p.ships[1]
 	local st = ShipStats.Compute(design, p.crew)
-	line("Bunks: " .. p.crew .. " / " .. st.crewCap, 14, T.TextSoft, "Semi", 244)
+	line("Bunks: " .. (p.crew or 0) .. " / " .. st.crewCap, 14, p.crew < st.crewCap and T.TextSoft or Color3.fromRGB(255, 120, 110), "Semi", 266)
 	local ok = not c.have and canGive(c.want) and p.crew < st.crewCap
-	local _, btn = UI.Button(win.body, c.have and "IN YOUR CREW" or "RECRUIT", ok and T.Green or T.Red, UDim2.fromOffset(260, 52), function()
+	local _, btn = UI.Button(win.body, c.have and "IN YOUR CREW" or "RECRUIT", ok and T.Green or T.Red, UDim2.fromOffset(220, 50), function()
 		if c.have then
 			return
 		end
@@ -2221,11 +2288,13 @@ function Panels.Recruit(c)
 			win:Destroy()
 		end
 	end)
-	btn.Position = UDim2.new(0, x, 0, 290)
-	local _, bye = UI.Button(win.body, "LATER", T.Panel, UDim2.fromOffset(140, 52), function()
+	btn.Position = UDim2.new(0, x, 0, 296)
+	local _, bye = UI.Button(win.body, "LATER", T.Panel, UDim2.fromOffset(130, 50), function()
 		win:Destroy()
 	end)
-	bye.Position = UDim2.new(0, x + 272, 0, 290)
+	bye.Position = UDim2.new(0, x + 232, 0, 296)
+	local clock = UI.Text(win.body, "", 13, T.Gold, "Semi", { Position = UDim2.fromOffset(0, 346), Size = UDim2.new(1, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Center })
+	rotateClock(clock)
 end
 
 -- ===================== SHIPYARD =====================
@@ -2294,11 +2363,30 @@ function Panels.FastTravel()
 		return math.clamp(0.05 + (x - minX) / (maxX - minX) * 0.83, 0.05, 0.88), 0.5 + math.clamp(z / maxZ, -1, 1) * 0.5
 	end
 	UI.Corner(strip, 16)
-	UI.Gradient(strip, Color3.fromRGB(110, 210, 245), Color3.fromRGB(50, 150, 210), 90)
+	-- v0.25.148 (owner: should read as sea water): deep-to-shallow blue + pixel wave crests scattered on a fixed hash
+	UI.Gradient(strip, Color3.fromRGB(46, 150, 206), Color3.fromRGB(22, 92, 162), 90)
 	UI.Stroke(strip, T.Edge, 3)
+	strip.ClipsDescendants = true
+	local function hash(a, b)
+		local h = math.sin(a * 12.9898 + b * 78.233) * 43758.5453
+		return h - math.floor(h)
+	end
+	for i = 1, 70 do
+		local hx, hy = hash(i, 1), hash(i, 2)
+		local wave = New("Frame", { BackgroundTransparency = 1, Position = UDim2.new(hx * 0.86, 0, 0.1 + hy * 0.8, 0), Size = UDim2.fromOffset(18, 6), Parent = strip })
+		-- a crest = two short pixel dashes, the right one a step higher (like ~)
+		New("Frame", { BackgroundColor3 = Color3.fromRGB(170, 228, 250), BackgroundTransparency = 0.45, BorderSizePixel = 0, Position = UDim2.fromOffset(0, 3), Size = UDim2.fromOffset(8, 3), Parent = wave })
+		New("Frame", { BackgroundColor3 = Color3.fromRGB(170, 228, 250), BackgroundTransparency = 0.45, BorderSizePixel = 0, Position = UDim2.fromOffset(8, 0), Size = UDim2.fromOffset(8, 3), Parent = wave })
+		if hash(i, 3) > 0.6 then
+			New("Frame", { BackgroundColor3 = Color3.fromRGB(12, 70, 130), BackgroundTransparency = 0.6, BorderSizePixel = 0, Position = UDim2.fromOffset(2, 6), Size = UDim2.fromOffset(14, 3), Parent = wave })
+		end
+	end
 	for _, top in ipairs({ true, false }) do
-		local calm = New("Frame", { BackgroundColor3 = Color3.fromRGB(30, 90, 115), Size = UDim2.new(1, 0, 0, 42), Position = top and UDim2.new() or UDim2.new(0, 0, 1, -42), Parent = strip })
+		local calm = New("Frame", { BackgroundColor3 = Color3.fromRGB(18, 58, 86), Size = UDim2.new(1, 0, 0, 42), Position = top and UDim2.new() or UDim2.new(0, 0, 1, -42), Parent = strip })
 		UI.Corner(calm, 16)
+		for k = 1, 14 do -- still, dark water: a few faint flat ripples
+			New("Frame", { BackgroundColor3 = Color3.fromRGB(70, 120, 150), BackgroundTransparency = 0.7, BorderSizePixel = 0, Position = UDim2.new(hash(k, top and 5 or 6) * 0.95, 0, 0.2 + hash(k, 7) * 0.6, 0), Size = UDim2.fromOffset(16, 2), Parent = calm })
+		end
 		UI.Text(calm, "☠  " .. string.upper(Islands.CalmName) .. "  •  no wind, Leviathans", 16, Color3.fromRGB(190, 230, 240), "Bold", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center })
 	end
 	local TW, TH = 110, 96
@@ -2339,10 +2427,27 @@ function Panels.FastTravel()
 			end, nil, "Travel", "Cancel")
 		end)
 	end
-	local rl = New("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(1 / (n + 1), -10, 1, 0), BackgroundColor3 = Color3.fromRGB(196, 72, 56), Parent = strip })
-	UI.Corner(rl, 16)
+	-- v0.25.148 (owner: should look like a stone wall): dark mortar + rows of red stone blocks with offset joints,
+	-- shades from the hash, a lit top edge, the name on a dark plaque
+	local rl = New("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(1 / (n + 1), -10, 1, 0), BackgroundColor3 = Color3.fromRGB(70, 26, 22), ClipsDescendants = true, Parent = strip })
 	UI.Stroke(rl, T.Edge, 3)
-	UI.Text(rl, string.upper(Islands.RedLine.name) .. "\n⛰\nLv." .. GameConfig.GrandLineLevel, 18, T.Text, "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center })
+	local ROWS, PER = 16, 3
+	for r = 0, ROWS - 1 do
+		local off = (r % 2) * 0.5
+		for c = -1, PER do
+			local shade = hash(r, c + 11)
+			local col = Color3.fromRGB(150, 52, 40):Lerp(Color3.fromRGB(206, 92, 66), shade)
+			local b = New("Frame", { BackgroundColor3 = col, BorderSizePixel = 0, Position = UDim2.new((c + off) / PER, 2, r / ROWS, 2), Size = UDim2.new(1 / PER, -4, 1 / ROWS, -4), Parent = rl })
+			New("Frame", { BackgroundColor3 = col:Lerp(Color3.new(1, 1, 1), 0.22), BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 3), Parent = b }) -- lit top lip
+			New("Frame", { BackgroundColor3 = col:Lerp(Color3.new(0, 0, 0), 0.3), BorderSizePixel = 0, AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.new(1, 0, 0, 3), Parent = b })
+			if shade > 0.8 then -- a crack
+				New("Frame", { BackgroundColor3 = Color3.fromRGB(60, 22, 18), BorderSizePixel = 0, Position = UDim2.fromScale(0.3, 0.3), Size = UDim2.new(0.3, 0, 0, 2), Parent = b })
+			end
+		end
+	end
+	local plaque = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.new(1, -12, 0, 104), BackgroundColor3 = Color3.fromRGB(30, 16, 16), BackgroundTransparency = 0.15, ZIndex = 5, Parent = rl })
+	UI.Stroke(plaque, Color3.fromRGB(120, 60, 40), 2)
+	UI.Text(plaque, string.upper(Islands.RedLine.name) .. "\n⛰\nLv." .. GameConfig.GrandLineLevel, 18, T.Text, "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 6 })
 	UI.Text(win.body, "Islands lie north and south of the route east: pick a heading, steer around sea stacks and stop at sandbars and wrecks. Stay in the windy sea: the Doldrums at the edges have no wind and Leviathans. Past the last island, " .. Islands.RedLine.peakName .. " leads to the " .. Islands.RedLine.nextSea .. " (next update).", 16, T.TextSoft, "Semi", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 0, 1, 0), Size = UDim2.new(1, 0, 0, 64), TextXAlignment = Enum.TextXAlignment.Center })
 end
 Panels.Map = Panels.FastTravel

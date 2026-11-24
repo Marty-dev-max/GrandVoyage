@@ -1782,6 +1782,12 @@ handlers.SeastoneSeal = function(d)
 end
 
 -- a monster you just attacked startles: a yellow "!" pops over its head, bobs, then fades (MonsterService.Provoke)
+-- v0.25.148: a boss using a Cursed Fruit move (Captain Confetti's Split pieces): FruitFX with the boss as the caster
+handlers.BossFruit = function(d)
+	if typeof(d.char) == "Instance" and type(d.skill) == "string" and string.sub(d.skill, 1, 2) == "F_" then
+		require(script.Parent.FruitFX).Play(d)
+	end
+end
 handlers.MobAlert = function(d)
 	local model = d.model
 	if typeof(model) ~= "Instance" or not model.Parent then

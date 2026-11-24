@@ -25,6 +25,9 @@ local Islands = {
 			{ offset = Vector2.new(75, -155), radius = 30, monster = "WildBoar", count = 5, area = "Boar Meadow" },
 			{ offset = Vector2.new(-27, -100), radius = 17, monster = "MountainBandit", count = 5, area = "Bandit Hill", lair = false },
 		},
+		-- v0.25.148 mini bosses: kept out of `spawns` (WorldBuilder reserves room per spawn, which would move the
+		-- generated islands, and hunts / dailies / the quest arrow should not send players to a single elite)
+		minis = { { offset = Vector2.new(-27, -100), radius = 4, monster = "BanditChief" } },
 		-- the Bay Serpent guards the way out, at sea in front of the harbor on the route to Conch Bay. v0.23.0 (owner):
 		-- no arena; it lies under the water there and rises to fight ships that sail within wakeRadius.
 		-- A story fight (quest T12), so it comes back quickly.
@@ -50,6 +53,7 @@ local Islands = {
 			{ offset = Vector2.new(30, 79), radius = 6, monster = "GuardWolf", count = 2 },
 			{ offset = Vector2.new(-52, -2), radius = 10, monster = "MarineRifleman", count = 5 },
 		},
+		minis = { { offset = Vector2.new(0, 79), radius = 4, monster = "SpoiledEnsign" } }, -- terrace-2 street between the wolves
 		boss = { id = "AxeCaptain", offset = Vector2.new(24, 0), respawn = 25 * 60 },
 	},
 	{
@@ -70,6 +74,7 @@ local Islands = {
 			{ offset = Vector2.new(152, 0), radius = 16, monster = "CircusAcrobat", count = 5 }, -- clear of the turned shipyard (v0.25.25)
 			{ offset = Vector2.new(0, -192), radius = 20, monster = "CircusLion", count = 4 },
 		},
+		minis = { { offset = Vector2.new(30, 8), radius = 5, monster = "BeastTamer" } }, -- by the east lion cage (Marmalade townStory)
 		boss = { id = "CaptainConfetti", offset = Vector2.new(0, -40), respawn = 30 * 60, indoorY = 20 }, -- v0.25.146: inside the Big Top (v0.25.147 bigger, centre z -40)
 		dungeon = "CircusTent",
 	},
@@ -189,6 +194,9 @@ for i = 2, #Islands do
 	isl.localOffsets = { spawns = {}, boss = isl.boss and isl.boss.offset, arena = isl.arena and isl.arena.offset }
 	for k, sp in ipairs(isl.spawns) do
 		isl.localOffsets.spawns[k] = sp.offset
+		sp.offset = turn(sp.offset, isl.yaw)
+	end
+	for _, sp in ipairs(isl.minis or {}) do
 		sp.offset = turn(sp.offset, isl.yaw)
 	end
 	if isl.boss and isl.boss.offset then

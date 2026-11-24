@@ -185,6 +185,11 @@ function DataService.Load(player, slot)
 			end
 		end
 	end
+	-- v0.25.148 (owner): crew starts at 0: the old unnamed deckhands are gone, only recruited sailors count
+	if not data.crewV2 then
+		data.crewV2 = true
+		data.crew = #(data.recruits or {})
+	end
 	-- v2: the old "Novice" (Cabin Boy) starter class became the Brawler; give old saves a pair of knuckles
 	if data.class == "Novice" then
 		data.class = "Brawler"

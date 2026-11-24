@@ -52,6 +52,7 @@ local function build(npc)
 	sg.LightInfluence = 0.15
 	sg.MaxDistance = 120
 	sg.Adornee = board
+	sg.ResetOnSpawn = false -- v0.25.119: in PlayerGui it was wiped when the character spawned (blank board)
 	sg:SetAttribute("PxKeep", true) -- PixelUI would shrink + refit the text
 	sg.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
 	local px = Vector2.new(W * PPS, H * PPS)

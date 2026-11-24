@@ -968,7 +968,7 @@ local function npcs(ctx, api)
 	put("Guide", Quests.Guide.Daybreak or "Guide", Color3.fromRGB(255, 200, 90), "captain", CAMP + Vector2.new(-2, -14), { SubTitle = "📜 Quests" }, SPAWN)
 	-- plaza: Job Master and the Bounty Board at the trail entrance, shops around the fountain
 	put("JobMaster", "Job Master", Color3.fromRGB(142, 28, 42), "master", onPlaza(2.75), { SubTitle = "Choose a Class" }, P0)
-	put("BossBoard", "Bounty Board", Color3.fromRGB(255, 220, 120), nil, onPlaza(-2.75), { SubTitle = "Bosses & Bounties" }, P0)
+	put("BossBoard", "Bounty Board", Color3.fromRGB(255, 220, 120), nil, onPlaza(-2.7, 50), { SubTitle = "Bosses & Bounties" }, P0) -- v0.25.119 (owner): by the small house at the west street
 	put("Shop", "General Store", Color3.fromRGB(240, 170, 80), nil, onPlaza(-1.25), { SubTitle = "Shop" }, P0)
 	put("Blacksmith", "Blacksmith", Color3.fromRGB(110, 90, 80), "bandana", onPlaza(1.05), { SubTitle = "Refine & Cards" }, P0)
 	-- harbor: shipwright by the shipyard, courier gulls by the north dock

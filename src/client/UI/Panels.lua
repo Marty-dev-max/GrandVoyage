@@ -2022,6 +2022,12 @@ function Panels.Shop()
 		return x.def
 	end)
 	local buys = {} -- { button, cost }
+	-- v0.25.123 (owner): the blade merchant shows one random blade for a fee; BUY or PASS without knowing its tier
+	local fee = GameConfig.BladeRoll.Fee
+	local _, _, lookBtns = shopCard(grid, { def = { id = "MysteryBlade", name = "Mystery Blade", kind = "Weapon", weaponType = "Sword", grade = "Keen", rarity = "Common", desc = "Pay to see one blade from the merchant's chest. Most are plain good steel, a few are famous. Can you tell which?" }, order = 0, price = COIN .. " " .. UI.Format(fee), buttons = { { "LOOK", T.Gold, function()
+		Panels.BladeOffer()
+	end } } })
+	table.insert(buys, { lookBtns[1], fee })
 	for order, it in ipairs(items) do
 		local def, id = it.def, it.def.id
 		-- ammo comes in handfuls
@@ -2052,6 +2058,43 @@ function Panels.Shop()
 	end
 	recolor()
 	onProfile(win, recolor)
+end
+
+function Panels.BladeOffer()
+	local res = req("BladeLook")
+	local def = res.ok and res.data and ItemDB.Get(res.data.id)
+	if not def then
+		return
+	end
+	require(script.Parent.ItemReveal).Play(def) -- famous (Rare+) blades get the full reveal first
+	local win = UI.Window("BladeOffer", "Blade Merchant", UDim2.fromOffset(460, 520), ItemDB.Rarity(def).color, "⚔️")
+	UI.List(win.body, nil, 8, Enum.HorizontalAlignment.Center)
+	local stage = New("Frame", { BackgroundColor3 = T.PanelDeep, Size = UDim2.fromOffset(260, 220), LayoutOrder = 1, Parent = win.body })
+	UI.Corner(stage, 12)
+	UI.RarityStyle(stage, def.rarity)
+	local vp = UI.WeaponView(stage, def, 220, true)
+	if vp then
+		vp.AnchorPoint = Vector2.new(0.5, 0.5)
+		vp.Position = UDim2.fromScale(0.5, 0.5)
+	end
+	local nm = UI.Text(win.body, def.name, 22, T.Text, "Display", { Size = UDim2.new(1, 0, 0, 28), TextXAlignment = Enum.TextXAlignment.Center, LayoutOrder = 2 })
+	UI.RarityText(nm, def.rarity)
+	local lean = def.dex and ("DEX +" .. def.dex .. "  LUK +" .. def.luk) or ("STR +" .. (def.str or 0) .. "  VIT +" .. (def.vit or 0))
+	UI.Text(win.body, string.format("%s  •  ATK %d  •  %s
+Card slots %d  •  Needs Lv.%d", def.typeLabel or "Sword", def.atk, lean, def.slots or 0, def.reqLevel or 1), 15, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 40), TextXAlignment = Enum.TextXAlignment.Center, LayoutOrder = 3 })
+	UI.Text(win.body, COIN .. " " .. UI.Format(def.price), 20, T.Gold, "Number", { Size = UDim2.new(1, 0, 0, 26), TextXAlignment = Enum.TextXAlignment.Center, LayoutOrder = 4 })
+	local row = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, -40, 0, 50), LayoutOrder = 5, Parent = win.body })
+	UI.List(row, Enum.FillDirection.Horizontal, 12, Enum.HorizontalAlignment.Center)
+	local have = State.profile and State.profile.beli or 0
+	UI.Button(row, "BUY", have >= def.price and T.Green or T.Red, UDim2.fromOffset(170, 48), function()
+		if req("BladeBuy", nil, "Purchase").ok then
+			win:Destroy()
+		end
+	end)
+	UI.Button(row, "PASS", T.Panel, UDim2.fromOffset(170, 48), function()
+		req("BladePass")
+		win:Destroy()
+	end)
 end
 
 -- ===================== TAVERN =====================

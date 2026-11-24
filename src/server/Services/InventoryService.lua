@@ -404,6 +404,47 @@ local function setup()
 		return true, "Bought " .. def.name .. " x" .. qty
 	end, 0.2)
 
+	-- v0.25.123 blade roll (GameConfig.BladeRoll): pay the fee to see one random blade, then BUY it or PASS
+	local offers = {} -- [player] = { id, at }
+	Net.Handle("BladeLook", function(player)
+		local cfg = GameConfig.BladeRoll
+		if not R.WorldBuilder.NearNPC(player, "Shop") then
+			return false, "Stand near a shop"
+		end
+		if not R.PlayerService.AddBeli(player, -cfg.Fee) then
+			return false, "Not enough Doubloons"
+		end
+		local tier = math.random() < cfg.TideChance and "Tide" or "Fathom"
+		local list = ItemDB.Blades[tier]
+		local id = list[math.random(#list)]
+		offers[player] = { id = id, at = os.clock() }
+		return { ok = true, data = { id = id } }
+	end, 0.8)
+	Net.Handle("BladeBuy", function(player)
+		local o = offers[player]
+		if not o or os.clock() - o.at > GameConfig.BladeRoll.Seconds then
+			offers[player] = nil
+			return false, "The merchant put that blade away"
+		end
+		if not R.WorldBuilder.NearNPC(player, "Shop") then
+			return false, "Stand near a shop"
+		end
+		local def = ItemDB.Get(o.id)
+		if not R.PlayerService.AddBeli(player, -def.price) then
+			return false, "Not enough Doubloons"
+		end
+		offers[player] = nil
+		Inv.AddItem(player, def.id, 1)
+		return true, "Bought " .. def.name
+	end, 0.5)
+	Net.Handle("BladePass", function(player)
+		offers[player] = nil
+		return true
+	end, 0.2)
+	game:GetService("Players").PlayerRemoving:Connect(function(pl)
+		offers[pl] = nil
+	end)
+
 	Net.Handle("ShopSell", function(player, data)
 		local p = profile(player)
 		local entry = Formulas.FindItem(p, data.uid)

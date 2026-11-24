@@ -2103,27 +2103,117 @@ function Panels.BladeOffer()
 end
 
 -- ===================== TAVERN =====================
+-- v0.25.142 (owner): crew are recruited, not bought. The Tavern Keeper shows your crew; sailors walking around the
+-- tavern are talked to one by one (Panels.Recruit, opened by the server when you press E on one).
+local Recruits = require(Shared.Config.Recruits)
+
+local function wantText(w)
+	if w.kind == "coin" then
+		return COIN .. " " .. UI.Format(w.amount)
+	end
+	local def = ItemDB.Get(w.id)
+	return w.qty .. "x " .. (def and def.name or w.id)
+end
+
+local function canGive(w)
+	local p = State.profile
+	if w.kind == "coin" then
+		return (p.beli or 0) >= w.amount
+	end
+	local n = 0
+	for _, e in ipairs(p.inventory or {}) do
+		if e.id == w.id then
+			n += e.qty or 1
+		end
+	end
+	return n >= w.qty
+end
+
 function Panels.Tavern()
-	local win = UI.Window("Tavern", "Tavern", UDim2.fromOffset(560, 360), T.Red, "🍺")
+	local win = UI.Window("Tavern", "Tavern", UDim2.fromOffset(620, 520), T.Red, "🍺")
 	local p = State.profile
 	local design = p.ships[p.activeShip] or p.ships[1]
 	local st = ShipStats.Compute(design, p.crew)
-	UI.List(win.body, nil, 10)
-	UI.Section(win.body, "🧑‍✈️", "Crew", T.Red, p.crew .. " / " .. st.crewCap .. " bunks")
-	UI.Text(win.body, "Each crew member mans 1 cannon and rows 1 oar bench.\nBuild Crew Cabins at the shipyard for more bunks.", 16, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 44) })
-	local cost = math.floor(GameConfig.Ship.CrewCost * (1 + math.floor(p.crew / 4) * 0.5))
-	local row = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 54), Parent = win.body })
-	UI.List(row, Enum.FillDirection.Horizontal, 10)
-	UI.Button(row, "Hire 1  (" .. COIN .. UI.Format(cost) .. ")", T.Green, UDim2.fromOffset(250, 50), function()
-		req("RecruitCrew", { count = 1 }, "Purchase")
-		win:Destroy()
-		Panels.Tavern()
+	UI.List(win.body, nil, 8)
+	UI.Section(win.body, "🧑‍✈️", "Your Crew", T.Red, p.crew .. " / " .. st.crewCap .. " bunks").LayoutOrder = 1
+	local list = p.recruits or {}
+	local old = math.max(0, (p.crew or 0) - #list)
+	local b = Recruits.Bonus(list)
+	UI.Text(win.body, string.format("Talk to the sailors around here (E) to recruit them.  Crew bonus: reload -%d%%  speed +%d%%  hull +%.1f%%/s  heal +%.1f%%/s",
+		b.reload * 100, b.speed * 100, b.repair * 100, b.heal * 100), 14, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 36), LayoutOrder = 2 })
+	local scroll = UI.Scroll(win.body, UDim2.new(1, 0, 1, -110))
+	scroll.LayoutOrder = 3
+	UI.List(scroll, nil, 6)
+	for i, r in ipairs(list) do
+		local prof = Recruits.Professions[r.prof] or {}
+		local row = New("Frame", { BackgroundColor3 = T.PanelDeep, Size = UDim2.new(1, -8, 0, 48), LayoutOrder = i, Parent = scroll })
+		UI.Corner(row, 8)
+		UI.Text(row, (prof.icon or "") .. " " .. r.name, 16, T.Text, "Display", { Position = UDim2.fromOffset(10, 4), Size = UDim2.new(0.6, 0, 0, 20) })
+		UI.Text(row, (r.race or "") .. "  •  " .. (prof.name or "") .. "  " .. string.rep("*", r.stars or 1) .. "  •  " .. Recruits.EffectText(r), 13, T.TextSoft, "Semi", { Position = UDim2.fromOffset(10, 26), Size = UDim2.new(0.75, 0, 0, 18) })
+		local btn = UI.Button(row, "DISMISS", T.Panel, UDim2.fromOffset(110, 36), function()
+			if req("DismissRecruit", { seed = r.seed }).ok then
+				win:Destroy()
+				Panels.Tavern()
+			end
+		end)
+		btn.AnchorPoint = Vector2.new(1, 0.5)
+		btn.Position = UDim2.new(1, -8, 0.5, 0)
+	end
+	if old > 0 then
+		UI.Text(scroll, "+ " .. old .. " deckhand" .. (old > 1 and "s" or "") .. " (from before: they man cannons and oars)", 14, T.TextSoft, "Semi", { Size = UDim2.new(1, -8, 0, 24), LayoutOrder = 999 })
+	elseif #list == 0 then
+		UI.Text(scroll, "No one yet. Sailors looking for a ship hang around this tavern: walk up and press E.", 15, T.TextSoft, "Semi", { Size = UDim2.new(1, -8, 0, 44), LayoutOrder = 999 })
+	end
+end
+
+-- one sailor: who they are, their job, what they want for joining (args from the server's OpenPanel push)
+function Panels.Recruit(c)
+	if type(c) ~= "table" or not c.key then
+		return
+	end
+	local prof = Recruits.Professions[c.prof] or {}
+	local win = UI.Window("Recruit", c.name, UDim2.fromOffset(560, 470), T.Red, prof.icon or "🍺")
+	local stage = New("Frame", { BackgroundColor3 = T.PanelDeep, Position = UDim2.fromOffset(0, 0), Size = UDim2.fromOffset(200, 260), Parent = win.body })
+	UI.Corner(stage, 12)
+	if typeof(c.model) == "Instance" and c.model.Parent then
+		local m = c.model:Clone()
+		for _, d in ipairs(m:GetDescendants()) do
+			if d:IsA("ProximityPrompt") or d:IsA("BillboardGui") then
+				d:Destroy()
+			end
+		end
+		local vp = UI.ModelViewOf(stage, m, 200, 0.5)
+		vp.Position = UDim2.fromOffset(0, 30)
+	end
+	local x = 216
+	local function line(text, size, color, font, y, h)
+		return UI.Text(win.body, text, size, color, font, { Position = UDim2.fromOffset(x, y), Size = UDim2.new(1, -x, 0, h or 22) })
+	end
+	line(c.name, 22, T.Text, "Display", 0, 28)
+	line((c.race or "") .. "  •  " .. (prof.name or "") .. "  " .. string.rep("*", c.stars or 1), 16, T.Gold, "Display", 32)
+	line("\"" .. (c.line or "") .. "\"", 15, T.TextSoft, "Semi", 60, 44).TextWrapped = true
+	line(prof.desc or "", 14, T.Text, "Semi", 110, 40).TextWrapped = true
+	line("On your ship: " .. Recruits.EffectText(c), 15, Color3.fromRGB(150, 230, 150), "Semi", 152)
+	line("Wants:", 15, T.TextSoft, "Semi", 190)
+	line(wantText(c.want), 20, canGive(c.want) and T.Gold or Color3.fromRGB(255, 120, 110), "Number", 212, 26)
+	local p = State.profile
+	local design = p.ships[p.activeShip] or p.ships[1]
+	local st = ShipStats.Compute(design, p.crew)
+	line("Bunks: " .. p.crew .. " / " .. st.crewCap, 14, T.TextSoft, "Semi", 244)
+	local ok = not c.have and canGive(c.want) and p.crew < st.crewCap
+	local btn = UI.Button(win.body, c.have and "IN YOUR CREW" or "RECRUIT", ok and T.Green or T.Red, UDim2.fromOffset(260, 52), function()
+		if c.have then
+			return
+		end
+		if req("RecruitCrew", { key = c.key }, "Purchase").ok then
+			win:Destroy()
+		end
 	end)
-	UI.Button(row, "Hire 4", T.Ocean, UDim2.fromOffset(170, 50), function()
-		req("RecruitCrew", { count = 4 }, "Purchase")
+	btn.Position = UDim2.new(0, x, 0, 290)
+	local bye = UI.Button(win.body, "LATER", T.Panel, UDim2.fromOffset(140, 52), function()
 		win:Destroy()
-		Panels.Tavern()
 	end)
+	bye.Position = UDim2.new(0, x + 272, 0, 290)
 end
 
 -- ===================== SHIPYARD =====================

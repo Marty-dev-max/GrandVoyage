@@ -47,6 +47,7 @@ local Footsteps = require(script.Controllers.Footsteps)
 local ShiftLock = require(script.Controllers.ShiftLock)
 local FruitAlert = require(script.Controllers.FruitAlert)
 local NpcLife = require(script.Controllers.NpcLife)
+local RecruitLife = require(script.Controllers.RecruitLife)
 local IslandEnter = require(script.Controllers.IslandEnter)
 local NpcZones = require(script.Controllers.NpcZones)
 local BossIntro = require(script.Controllers.BossIntro)
@@ -290,7 +291,7 @@ local handlers = {
 	end,
 	-- the server opens a window for you (v0.25.72: the Toki color picker right after buying it)
 	OpenPanel = function(d)
-		if type(d.name) == "string" and d.name == "TokiColor" then
+		if type(d.name) == "string" and (d.name == "TokiColor" or d.name == "Recruit") then
 			Panels.Open(d.name, d.args)
 		end
 	end,
@@ -420,7 +421,7 @@ end)
 for _, c in ipairs({
 	{ "Sailing", Sailing }, { "Builder", Builder }, { "VFX", VFX }, { "Readability", Readability }, { "Swim", Swim },
 	{ "Pets", PetsCtl }, { "Titles", Titles }, { "Ocean", Ocean }, { "Atmos", Atmos }, { "GrassField", GrassField },
-	{ "CreatureAnim", CreatureAnim }, { "CharAnim", CharAnim }, { "Interact", Interact }, { "ChartsView", ChartsView }, { "ShipBars", ShipBars }, { "Underwater", Underwater }, { "SerpentBody", SerpentBody }, { "Heritage", Heritage }, { "Flight", Flight }, { "Crosshair", Crosshair }, { "HeritageAnim", HeritageAnim }, { "QuestPath", QuestPath }, { "WorldCull", WorldCull }, { "FruitFX", FruitFX }, { "Footsteps", Footsteps }, { "ShiftLock", ShiftLock }, { "FruitAlert", FruitAlert }, { "NpcLife", NpcLife }, { "Slingshot", Slingshot }, { "TokiFX", TokiFX }, { "Sprint", Sprint }, { "IslandEnter", IslandEnter }, { "NpcZones", NpcZones }, { "BossIntro", BossIntro }, { "PowerBoard", PowerBoard },
+	{ "CreatureAnim", CreatureAnim }, { "CharAnim", CharAnim }, { "Interact", Interact }, { "ChartsView", ChartsView }, { "ShipBars", ShipBars }, { "Underwater", Underwater }, { "SerpentBody", SerpentBody }, { "Heritage", Heritage }, { "Flight", Flight }, { "Crosshair", Crosshair }, { "HeritageAnim", HeritageAnim }, { "QuestPath", QuestPath }, { "WorldCull", WorldCull }, { "FruitFX", FruitFX }, { "Footsteps", Footsteps }, { "ShiftLock", ShiftLock }, { "FruitAlert", FruitAlert }, { "NpcLife", NpcLife }, { "RecruitLife", RecruitLife }, { "Slingshot", Slingshot }, { "TokiFX", TokiFX }, { "Sprint", Sprint }, { "IslandEnter", IslandEnter }, { "NpcZones", NpcZones }, { "BossIntro", BossIntro }, { "PowerBoard", PowerBoard },
 }) do
 	task.spawn(start, c[1], c[2])
 end

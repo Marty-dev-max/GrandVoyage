@@ -272,6 +272,7 @@ local function sync(player)
 			activeShip = p.activeShip,
 			shipSunk = p.shipSunk,
 			crew = p.crew,
+			recruits = p.recruits,
 			unlocked = p.unlocked,
 			chests = p.chests,
 			classProgress = p.classProgress,

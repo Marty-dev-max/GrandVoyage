@@ -23,6 +23,7 @@ local order = {
 	"GuildWarService",
 	"ShipyardService",
 	"ShipService",
+	"RecruitService",
 	"MarketService",
 	"QuestService",
 	"ChestService",

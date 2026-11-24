@@ -13,6 +13,7 @@ local ShipStats = require(Shared.Modules.ShipStats)
 local ShipModel = require(Shared.Modules.ShipModel)
 local SeaZones = require(Shared.Modules.SeaZones)
 local Net = require(Shared.Modules.Net)
+local Recruits = require(Shared.Config.Recruits)
 local Reach = require(Shared.Modules.Reach)
 local CollectionService = game:GetService("CollectionService")
 
@@ -581,6 +582,7 @@ local function volley(ship, target, count, damageMult, player, spread, fixedDama
 end
 
 -- ===== Player ships =====
+local addRecruits -- v0.25.142, defined with addCrew below
 -- `at` (CFrame, optional): where the ship appears (SummonShip in open water); else the nearest dock's launch spot
 function Ship.Launch(player, slot, at)
 	local p = R.DataService.Get(player)
@@ -589,7 +591,8 @@ function Ship.Launch(player, slot, at)
 		return false, "No ship design in that slot"
 	end
 	local derived = R.PlayerService.Derived(player) or {}
-	local stats = ShipStats.Compute(design, p.crew, { shipSpeed = derived.shipSpeed, shipHp = derived.shipHp })
+	local rb = Recruits.Bonus(p.recruits) -- v0.25.142: Rowers add speed, Gunners cut the reload
+	local stats = ShipStats.Compute(design, p.crew, { shipSpeed = (derived.shipSpeed or 0) + rb.speed, shipHp = derived.shipHp })
 	if not stats.valid then
 		return false, "A ship needs 1 helm and at least 1 sail or oar bench"
 	end
@@ -608,6 +611,8 @@ function Ship.Launch(player, slot, at)
 	local ship = buildShip(design, at or dock.launchCf, { name = "Ship_" .. player.UserId, hullStyle = HULL_STYLES[p and p.faction or "None"] or HULL_STYLES.None })
 	ship.owner = player
 	ship.stats = stats
+	ship.reloadMult = 1 - rb.reload
+	pcall(addRecruits, ship, p.recruits)
 	ship.maxHp = stats.hp
 	ship.hp = stats.hp
 	ship.model:SetAttribute("OwnerId", player.UserId)
@@ -680,6 +685,14 @@ function Ship.RepairNearby(player, pct)
 	setAttrs(s)
 	Net.FX("Repair", { pos = s.root.Position, radius = s.radius, amount = math.floor(s.hp - before) }, s.root.Position, 400)
 	return true
+end
+
+-- v0.25.142: a Carpenter recruit's slow patching (no FX burst)
+function Ship.Patch(s, amount)
+	if s and not s.sinking and s.hp then
+		s.hp = math.min(s.maxHp, s.hp + amount)
+		setAttrs(s)
+	end
 end
 
 function Ship.RepairOwned(player, pct)
@@ -868,6 +881,91 @@ local function addCrew(ship, def)
 			end
 		end
 	end
+end
+
+-- v0.25.142 (owner): your recruits stand at their posts on your ship: Gunners behind cannons, Rowers at the oar
+-- benches, the rest on deck (Cooks aft near the helm, Carpenters amidships). Name tag over each; not targets.
+function addRecruits(ship, list) -- (forward-declared above Ship.Launch)
+	if not list or #list == 0 then
+		return
+	end
+	local root = ship.root
+	local posts = { Gunner = {}, Rower = {}, deck = {} }
+	local deckY = root.Position.Y
+	for _, child in ipairs(ship.model:GetChildren()) do
+		local main = child:IsA("Model") and child.PrimaryPart
+		if main then
+			if child.Name == "Helm" then
+				deckY = main.Position.Y - G / 2
+				for _, sx in ipairs({ -1, 1 }) do
+					table.insert(posts.deck, { pos = main.Position + root.CFrame.RightVector * sx * 3.5 + root.CFrame.LookVector * 2, face = root.CFrame.LookVector, y = deckY })
+				end
+			elseif child.Name == "LightCannon" or child.Name == "HeavyCannon" then
+				local look = main.CFrame.LookVector
+				table.insert(posts.Gunner, { pos = main.Position - Vector3.new(look.X, 0, look.Z).Unit * 3.2, face = look, y = main.Position.Y - G / 2 })
+			elseif child.Name == "OarBench" then
+				table.insert(posts.Rower, { pos = main.Position, face = root.CFrame.LookVector, y = main.Position.Y - G / 2 })
+			end
+		end
+	end
+	-- extra deck spots along the middle line, bow to stern
+	for k = -2, 2 do
+		table.insert(posts.deck, { pos = root.Position + root.CFrame.LookVector * k * 4 + root.CFrame.RightVector * ((k % 2 == 0) and 1.5 or -1.5), face = -root.CFrame.RightVector, y = deckY })
+	end
+	local folder = Instance.new("Model")
+	folder.Name = "Recruits"
+	for i, r in ipairs(list) do
+		if i > 10 then
+			break
+		end
+		local spot = table.remove(posts[r.prof] or posts.deck, 1) or table.remove(posts.deck, 1)
+		if not spot then
+			break
+		end
+		local fig = VoxelChar.Preview(Recruits.Look(r), r.race, r.variant, nil, { lite = true })
+		local face = Vector3.new(spot.face.X, 0, spot.face.Z)
+		face = face.Magnitude > 0.01 and face.Unit or Vector3.zAxis
+		local base = Vector3.new(spot.pos.X, spot.y, spot.pos.Z)
+		fig:PivotTo(CFrame.lookAt(base, base + face))
+		local main = fig.PrimaryPart
+		for _, d in ipairs(fig:GetDescendants()) do
+			if d:IsA("BasePart") then
+				d.Anchored = false
+				d.CanCollide = false
+				d.CanQuery = false
+				d.CanTouch = false
+				d.Massless = true
+				if d ~= main then
+					local w = Instance.new("WeldConstraint")
+					w.Part0 = main
+					w.Part1 = d
+					w.Parent = d
+				end
+			end
+		end
+		local weld = Instance.new("Weld")
+		weld.Part0 = root
+		weld.Part1 = main
+		weld.C0 = root.CFrame:ToObjectSpace(main.CFrame)
+		weld.Parent = main
+		local prof = Recruits.Professions[r.prof]
+		local tag = Instance.new("BillboardGui")
+		tag.Size = UDim2.fromOffset(160, 22)
+		tag.StudsOffsetWorldSpace = Vector3.new(0, 3.2, 0)
+		tag.MaxDistance = 50
+		tag.Parent = main
+		local t = Instance.new("TextLabel")
+		t.Size = UDim2.fromScale(1, 1)
+		t.BackgroundTransparency = 1
+		t.Font = Enum.Font.Arcade
+		t.TextScaled = true
+		t.TextStrokeTransparency = 0.3
+		t.TextColor3 = Color3.fromRGB(255, 230, 170)
+		t.Text = r.name .. " - " .. (prof and prof.name or "")
+		t.Parent = tag
+		fig.Parent = folder
+	end
+	folder.Parent = ship.model
 end
 
 local function spawnNPC(defId, pos, segment)
@@ -1313,11 +1411,11 @@ function Ship.Start()
 			return false
 		end
 		local now = os.clock()
-		if now - ship.lastVolley < cfg.ReloadTime then
+		if now - ship.lastVolley < cfg.ReloadTime * (ship.reloadMult or 1) then
 			return false, "Reloading"
 		end
 		if ship.stats.cannonsManned <= 0 then
-			return false, "No crew to man the cannons (hire at a tavern)"
+			return false, "No crew to man the cannons (recruit at a tavern)"
 		end
 		local d = R.PlayerService.Derived(player) or {}
 		local fired = volley(ship, target, ship.stats.cannonsManned, 1 + (d.cannonDamage or 0), player, 6)
@@ -1325,7 +1423,7 @@ function Ship.Start()
 			return false, "Target is outside your firing arcs (turn broadside)"
 		end
 		ship.lastVolley = now
-		ship.reloadEnd = workspace:GetServerTimeNow() + cfg.ReloadTime
+		ship.reloadEnd = workspace:GetServerTimeNow() + cfg.ReloadTime * (ship.reloadMult or 1)
 		setAttrs(ship)
 		return true
 	end, 0.3)

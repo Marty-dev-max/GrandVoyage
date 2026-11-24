@@ -71,6 +71,7 @@ local function template()
 		activeShip = 1,
 		shipSunk = false,
 		crew = 2,
+		recruits = {}, -- v0.25.142: named crew (Config/Recruits); crew - #recruits = old unnamed deckhands
 		unlocked = { [Islands.StartIsland] = true },
 		lastIsland = Islands.StartIsland,
 		dungeonCooldowns = {},

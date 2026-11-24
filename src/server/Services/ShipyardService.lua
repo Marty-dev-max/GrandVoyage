@@ -223,26 +223,6 @@ local function setup()
 		return true
 	end, 2)
 
-	Net.Handle("RecruitCrew", function(player, data)
-		local p = R.DataService.Get(player)
-		if not R.WorldBuilder.NearNPC(player, "Tavern") then
-			return false, "Hire crew at a tavern"
-		end
-		local d = p.ships[p.activeShip] or p.ships[1]
-		local st = ShipStats.Compute(d, p.crew)
-		local count = math.clamp(math.floor(tonumber(data.count) or 1), 1, 20)
-		if p.crew + count > st.crewCap then
-			return false, "Not enough bunks (max " .. st.crewCap .. "). Build more Crew Cabins."
-		end
-		local cost = cfg.CrewCost * count * (1 + math.floor(p.crew / 4) * 0.5)
-		if not R.PlayerService.AddBeli(player, -math.floor(cost)) then
-			return false, "Not enough Doubloons (🪙" .. math.floor(cost) .. ")"
-		end
-		p.crew += count
-		player:SetAttribute("Crew", p.crew)
-		R.PlayerService.MarkDirty(player)
-		return true, "Hired +" .. count .. " crew (total " .. p.crew .. ")"
-	end, 0.5)
 end
 
 function Yard.Start()

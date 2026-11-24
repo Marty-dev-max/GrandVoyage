@@ -151,8 +151,8 @@ Q.Main = {
 	},
 	{
 		id = "C03", island = "ConchBay", title = "Hands on Deck",
-		dialog = { "One ship, two cannons, one crewman? Each cannon needs a hand to fire. Hire crew at the Tavern." },
-		goal = { kind = "Hire" }, text = "Hire crew at the Tavern",
+		dialog = { "One ship, two cannons, one crewman? Each cannon needs a hand to fire. Sailors looking for a ship hang around the Tavern: talk to one and recruit them." },
+		goal = { kind = "Hire" }, text = "Recruit a sailor at the Tavern",
 		hint = "More crew = more cannons fire per volley.",
 		at = { npc = "Tavern" }, reward = { beli = 500, exp = 300, job = 150 },
 	},

@@ -1006,10 +1006,9 @@ local function npcs(ctx, api)
 	spot, lift = hallSpot(ctx, 1.35)
 	put("Blacksmith", "Blacksmith", Color3.fromRGB(110, 90, 80), "bandana", spot, { SubTitle = "Refine & Cards", Lift = lift }, P0)
 	spot, lift = hallSpot(ctx, -0.62)
-	put("Tavern", "Tavern Keeper", Color3.fromRGB(200, 90, 90), nil, spot, { SubTitle = "Hire Crew", Lift = lift }, P0)
+	put("Tavern", "Tavern Keeper", Color3.fromRGB(200, 90, 90), nil, spot, { SubTitle = "Recruit Crew", Lift = lift }, P0)
 	-- harbor: shipwright by the shipyard, courier gulls by the north dock
 	put("Shipwright", "Shipwright", Color3.fromRGB(90, 140, 200), "bandana", Vector2.new(230, -58), { SubTitle = "Shipyard & Launch" }, Vector2.new(150, -40))
-	put("Tavern", "Tavern Keeper", Color3.fromRGB(200, 90, 90), nil, Vector2.new(230, -42), { SubTitle = "Hire Crew" }, Vector2.new(150, -40)) -- v0.25.107: beside the Shipwright
 	put("FastTravel", "Courier Gull Post", Color3.fromRGB(240, 240, 240), "marine", Vector2.new(228, 50), { SubTitle = "Fast Travel" }, PLAZA)
 	-- post with a gull on it
 	local post = ctx.at(228, 56)

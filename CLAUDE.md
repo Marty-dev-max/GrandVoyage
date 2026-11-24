@@ -981,6 +981,12 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     island's scenery is culled. Owner, next pass: important buildings designed properly (bigger, enterable, NPC
     inside), filler houses stay simple models; buildings bigger than now; redesign mountains as real ranges/ridges
     (they shape rivers, climate, borders) instead of round mesa blobs.
+    v0.25.137 (owner clip: "damage focus" = the reference's Damage Progress): the BossInfo billboard is gone; bosses
+    carry attrs BossDrops ("name|chance;...") + BossFocus (type id) + DmgShare ("Name|UserId|share;...", MonsterService
+    shareUpdate, 0.4 s throttle) and HUD.updateBossPanel draws DAMAGE PROGRESS (yours gold, kept on row 6) + ITEM
+    DROPS under the target bar. Reference findings + the next passes: docs/Plan-Worldbuild-v2.md. Video refs >10 MB:
+    the owner downloads them to Downloads, frames are cut with Blender's sequencer (blender -b script: strips
+    new_movie + render per frame, contact sheets with PIL).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

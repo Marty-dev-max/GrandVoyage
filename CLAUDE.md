@@ -907,6 +907,8 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     v0.25.121 (owner): level ring = SEGMENTS 13 equal 13x13 square cells per half on one pitch (2h/8): 1 bottom cell by
     the badge, bottom corner, 7 up the side, top corner, 3 along the top. HUD close-up check in Play: multiply the ring
     frame's UIScale by ~3 from execute_luau (Client) and screen_capture.
+    v0.25.122 (owner): ring h = RING_SIZE/2 - 18 (cells 12x12, pitch 14) hugs the gold portrait frame; card content x 96.
+    If Studio is already in Play when you start_stop_play, that is the OWNER's session: do not stop it or change its UI.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

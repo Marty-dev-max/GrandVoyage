@@ -929,6 +929,14 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     MS.OnDowned adds "ArrestPrompt" (F, OnlyFaction = Marine: Interact disables it locally for others) -> MS.Jail:
     p.jailUntil (os.time, saved) + attr JailUntil, KD.StandUp, held in the Brig (ConchBay garrison cell, floor part
     tagged JailCell, WORLD_VERSION 32) by a 0.5 s loop + CharacterAdded; released in front of the bars.
+    v0.25.130 (owner): `World/Honeyslope.lua` (LAYOUTS seed 20261124, WORLD_VERSION 33): cove jetty z 250-318 (the
+    square base reaches ~r, a jetty inside r lies on land), roads (segments alternate 3 heights), green with a block
+    giant tree (a BroadTree prop scaled 2.8 showed a black trunk), cottages + fenced plots, west fields + scarecrows,
+    east hay + barn, manor hill (L.Tiers lobe + cap, hedge ring, gate), NW/NE cliff mesas, wood band d > 120 from the
+    green. ClawCat spawn moved to (-120,-150) (changes the generic burn's rng use: later islands may shift).
+    Edit-mode `require(WorldBuilder).Build()` returns the CACHED old module after Rojo edits (no rebuild): use Play to
+    look (world rebuilds at runtime), or restart Studio before the Edit build. Aerial shots in Play: click PLAY, anchor
+    the root over the island, BindToRenderStep a Scriptable camera, disable ScreenGuis, screen_capture.
     If Studio is already in Play when you start_stop_play, that is the OWNER's session: do not stop it or change its UI.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).

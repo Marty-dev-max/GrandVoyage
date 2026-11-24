@@ -911,6 +911,8 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     v0.25.123 (owner, Plan-Weapons-v2 sec 0): General Store first card = Mystery Blade (GameConfig.BladeRoll Fee /
     TideChance / Seconds): `BladeLook` (near Shop, pays Fee, random id from ItemDB.Blades Fathom or Tide, kept per player)
     -> Panels.BladeOffer (ItemReveal for Rare, WeaponView, BUY `BladeBuy` = def.price / PASS `BladePass`).
+    v0.25.124: MonsterService rollDrops also rolls a blade (GameConfig.BladeDrop: Fathom from mobs >= MobLevel at
+    MobChance, Tide from isBoss at BossChance, x drop mult; boss blades Announce).
     If Studio is already in Play when you start_stop_play, that is the OWNER's session: do not stop it or change its UI.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).

@@ -237,6 +237,19 @@ local function rollDrops(player, def, mult, pos)
 			end
 		end
 	end
+	-- v0.25.124 blades (GameConfig.BladeDrop): bosses roll a Twenty Tides blade, other monsters a Forty Fathoms one
+	local bd = GameConfig.BladeDrop
+	local tier = def.isBoss and "Tide" or ((def.level or 0) >= bd.MobLevel and "Fathom")
+	local list = tier and ItemDB.Blades[tier]
+	if list and math.random() < (def.isBoss and bd.BossChance or bd.MobChance) * (mult or 1) then
+		local id = list[math.random(#list)]
+		if R.InventoryService.AddItem(player, id, 1) then
+			table.insert(got, { id = id, qty = 1 })
+			if def.isBoss then
+				Net.PushAll("Announce", { text = "⚔️ " .. player.DisplayName .. " found " .. ItemDB.Get(id).name .. "!", kind = "card", rarity = ItemDB.Get(id).rarity })
+			end
+		end
+	end
 	-- Cards (LUK slightly increases the chance)
 	local luk = d and d.LUK or 1
 	if def.card and ItemDB.Get(def.card) and math.random() < def.cardChance * (1 + luk * 0.003) then

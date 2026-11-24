@@ -96,7 +96,7 @@ local function buildRing(parent, pos)
 	})
 	-- v0.25.113 (owner drew it): the ring is a SQUARE frame of segments around the square portrait. Each half runs
 	-- from the level badge (bottom middle) along the bottom edge, up its side and along the top to the middle.
-	local c, h = RING_SIZE / 2, RING_SIZE / 2 - 13
+	local c, h = RING_SIZE / 2, RING_SIZE / 2 - 18 -- v0.25.122 (owner): cells hug the gold portrait frame
 	-- v0.25.121 (owner: uneven ticks, jumbled corners): equal square cells on one pitch, a cell ON each corner, so the
 	-- column and the rows join into one closed square. Per half: 1 bottom cell beside the badge, bottom corner, 7 up
 	-- the side, top corner, 3 along the top (gap at the top middle) = SEGMENTS
@@ -119,7 +119,7 @@ local function buildRing(parent, pos)
 			local seg = New("Frame", {
 				AnchorPoint = Vector2.new(0.5, 0.5),
 				Position = UDim2.fromOffset(x, y),
-				Size = UDim2.fromOffset(13, 13),
+				Size = UDim2.fromOffset(12, 12),
 				BackgroundColor3 = T.PanelDeep,
 				ZIndex = 4,
 				Parent = frame,
@@ -321,11 +321,11 @@ local function buildStatus()
 	UI.Bevel(card, T.Bevel, 2, 0.3)
 	statusCard = card
 	buildRing(UI.Root, UDim2.fromOffset(14, 10))
-	local name = UI.Text(card, player.DisplayName, 24, T.Text, "Display", { Position = UDim2.fromOffset(110, 6), Size = UDim2.new(1, -120, 0, 28), TextWrapped = false, Visible = false })
+	local name = UI.Text(card, player.DisplayName, 24, T.Text, "Display", { Position = UDim2.fromOffset(96, 6), Size = UDim2.new(1, -106, 0, 28), TextWrapped = false, Visible = false })
 	-- v0.25.113 (owner): class • job and the EXP / JOB readouts are centered over the bars, in the pixel font
-	local cls = UI.Text(card, "", 15, T.TextSoft, "Display", { Position = UDim2.fromOffset(110, 8), Size = UDim2.new(1, -122, 0, 20), TextWrapped = false, TextXAlignment = Enum.TextXAlignment.Center })
+	local cls = UI.Text(card, "", 15, T.TextSoft, "Display", { Position = UDim2.fromOffset(96, 8), Size = UDim2.new(1, -108, 0, 20), TextWrapped = false, TextXAlignment = Enum.TextXAlignment.Center })
 	New("UIStroke", { Color = T.Edge, Thickness = 2, Parent = cls })
-	local holder = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(110, 31), Size = UDim2.new(1, -122, 0, 46), Parent = card })
+	local holder = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(96, 31), Size = UDim2.new(1, -108, 0, 46), Parent = card })
 	UI.List(holder, nil, 5)
 	bars = {
 		hp = UI.Bar(holder, T.Green, UDim2.new(1, 0, 0, 22), "HP"),
@@ -334,7 +334,7 @@ local function buildStatus()
 		cls = cls,
 	}
 	-- EXP readouts that match the two ring halves
-	local row = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(110, 80), Size = UDim2.new(1, -122, 0, 18), Parent = card })
+	local row = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(96, 80), Size = UDim2.new(1, -108, 0, 18), Parent = card })
 	UI.List(row, Enum.FillDirection.Horizontal, 18, Enum.HorizontalAlignment.Center)
 	bars.expText = UI.Text(row, "", 14, T.Green, "Display", { Size = UDim2.fromOffset(120, 18), TextWrapped = false, TextXAlignment = Enum.TextXAlignment.Center })
 	bars.jobText = UI.Text(row, "", 14, T.Purple, "Display", { Size = UDim2.fromOffset(120, 18), TextWrapped = false, TextXAlignment = Enum.TextXAlignment.Center })
@@ -342,7 +342,7 @@ local function buildStatus()
 	New("UIStroke", { Color = T.Edge, Thickness = 2, Parent = bars.jobText })
 	-- v0.24.12 (owner): Store boost timers (2x EXP / 2x DROP / FRUIT RADAR) sit right under the EXP readouts;
 	-- Controllers/Heritage fills this row
-	HUD.boostRow = New("Frame", { Name = "BoostRow", BackgroundTransparency = 1, Position = UDim2.fromOffset(110, 101), Size = UDim2.new(1, -122, 0, 20), Parent = card })
+	HUD.boostRow = New("Frame", { Name = "BoostRow", BackgroundTransparency = 1, Position = UDim2.fromOffset(96, 101), Size = UDim2.new(1, -108, 0, 20), Parent = card })
 	UI.List(HUD.boostRow, Enum.FillDirection.Horizontal, 6)
 	-- v0.25.113 (owner: frame too tall): the card only grows for the boost row while a boost is running
 	local function fitCard()

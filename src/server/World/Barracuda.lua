@@ -233,7 +233,6 @@ local function raft(ctx)
 	ring(ctx, 0, 0, r - 1.5, GROUND, 3, 0.8, WHITE, { material = M.Wood }, function(i, a)
 		return near(a, SOUTH, 0.09) or near(a, 0, 0.1) or near(a, math.pi, 0.1)
 	end)
-	ctx.foam(ctx.c + Vector3.new(0, 0.1, 0), r * 2 + 10)
 end
 
 -- the long pier south, rowboats tied up, lamps

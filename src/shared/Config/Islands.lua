@@ -82,11 +82,12 @@ local Islands = {
 		levels = { 30, 40 },
 		palette = { sand = Color3.fromRGB(245, 226, 176), grass = Color3.fromRGB(108, 200, 118), dirt = Color3.fromRGB(150, 110, 78), accent = Color3.fromRGB(150, 92, 200), wall = Color3.fromRGB(250, 244, 230) },
 		theme = "SlopeVillage",
+		layout = "Honeyslope", -- v0.25.130: hand-laid in World/Honeyslope.lua (owner concept notes)
 		townRadius = 90,
 		spawns = {
 			{ offset = Vector2.new(-130, 115), radius = 42, monster = "NightCatPirate", count = 6 },
 			{ offset = Vector2.new(125, 125), radius = 38, monster = "HypnoThug", count = 5 },
-			{ offset = Vector2.new(-25, -165), radius = 42, monster = "ClawCat", count = 4 },
+			{ offset = Vector2.new(-120, -150), radius = 36, monster = "ClawCat", count = 4 }, -- v0.25.130: off the manor hill
 		},
 		boss = { id = "SilentClaw", offset = Vector2.new(145, -120), respawn = 35 * 60 },
 	},

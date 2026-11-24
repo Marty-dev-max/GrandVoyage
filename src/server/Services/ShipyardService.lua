@@ -7,6 +7,7 @@ local ShipPartsCfg = require(Shared.Config.ShipParts)
 local ShipStats = require(Shared.Modules.ShipStats)
 local ShipModel = require(Shared.Modules.ShipModel)
 local Net = require(Shared.Modules.Net)
+local ShipPresets = require(Shared.Config.ShipPresets)
 
 local ShipParts = ShipPartsCfg.Parts
 local Yard = {}
@@ -40,8 +41,9 @@ local function render(player)
 		s.model:Destroy()
 	end
 	local d = design(player, s.slot)
-	s.model = ShipModel.BuildDesign(d, s.plot.origin)
+	s.model = ShipModel.BuildDesign(d, s.plot.origin, ShipModel.FactionColorFn(R.DataService.Get(player).faction))
 	s.model.Name = "Build_" .. player.Name
+	s.model:SetAttribute("Faction", R.DataService.Get(player).faction) -- the sail emblem (Controllers/SailCloth)
 	s.model.Parent = s.plot.folder
 	local st = statsFor(player, d)
 	Net.Push(player, "BuildState", {
@@ -225,8 +227,57 @@ local function setup()
 
 end
 
+-- v0.25.150 (owner): buy a ready-made Dinghy / Sloop / Galleon at the Shipwright. It costs its blocks, goes into the
+-- slot you pick and replaces what was there (that ship's parts are refunded first, like deleting them one by one).
+local function setupPresets()
+	local problems = ShipPresets.Check(ShipStats.Cells)
+	for _, msg in ipairs(problems) do
+		warn("[ShipPresets] " .. msg)
+	end
+	Net.Handle("BuyShipPreset", function(player, data)
+		local preset = type(data) == "table" and ShipPresets.ById[data.id]
+		local slot = type(data) == "table" and math.floor(tonumber(data.slot) or 0)
+		if not preset or not slot or slot < 1 or slot > MAX_SLOTS then
+			return false, "Pick a ship and a slot"
+		end
+		if not R.WorldBuilder.NearNPC(player, "Shipwright", 40) then
+			return false, "Talk to a Shipwright"
+		end
+		if R.ShipService.GetShipOf(player) then
+			return false, "Put your ship away first (MENU > Ships)"
+		end
+		if sessions[player] then
+			return false, "Leave the builder first"
+		end
+		local p = R.DataService.Get(player)
+		local ok, msg = R.InventoryService.Pay(player, ShipPresets.Cost(preset.design))
+		if not ok then
+			return false, msg
+		end
+		local old = p.ships[slot]
+		if old then
+			for _, part in ipairs(old.parts or {}) do
+				local def = ShipParts[part.id]
+				if def then
+					R.InventoryService.Refund(player, def.cost)
+				end
+			end
+		end
+		local d = { name = preset.name, parts = {} }
+		for i, part in ipairs(preset.design.parts) do
+			d.parts[i] = table.clone(part)
+		end
+		p.ships[slot] = d
+		p.activeShip = slot
+		p.shipSunk = false
+		R.PlayerService.MarkDirty(player)
+		return true, preset.name .. " is yours! Edit it any time here"
+	end, 1)
+end
+
 function Yard.Start()
 	setup()
+	setupPresets()
 	Players.PlayerRemoving:Connect(Yard.ExitBuild)
 end
 

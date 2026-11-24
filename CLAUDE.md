@@ -1078,6 +1078,19 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     (12,54,102). Quest texts "Reach X". Courier Gull Post (FastTravel) stands in the turned shipyard group (Daybreak
     keeps its harbor one), layouts no longer place one; FastTravel lands 6 studs in front of the destination's post.
     Marine Registrar at Conch Bay (-13, 189) by the main stairs. WORLD_VERSION 45.
+    v0.25.150 (owner refs: ships): no shipyard platform/crane/rails: boardwalk + mooring posts, the Plot part is
+    invisible at y 9 and the design hovers over the water (Builder camera pitch -1.1..1.45 looks from below).
+    `Config/ShipPresets` = Dinghy / Sloop / Galleon designs (builder helpers add/box/big, `P.Cost(design)` = beli + Wood
+    by block count, other materials x150 beli, `P.Check(cells)` run by ShipyardService at start) -> Shipwright tab
+    "Buy a Ship" -> `BuyShipPreset` { id, slot } (near Shipwright, no launched ship, refunds the slot's old parts).
+    Player ships launch WYSIWYG (`dress = false`: no DressHull; SizeClass still set) with `ShipModel.FactionColorFn`
+    (Marine = white/navy). ShipParts Stairs / Railing / Barrel; MaxParts 320; BuildPart = shaded hull blocks with seams,
+    trims, rivets / corner posts, deck seams (Lantern no longer caught by the slab branch). Sails: tag "ShipSail" +
+    attr Kind; ship attr "Sails" 0..3 from throttle (ShipService); `Controllers/SailCloth` hides the sail locally and
+    draws 8x8 Fabric cells welded to it (rows by level, stepped billow toward the bow, flat emblem plateau, furled roll)
+    + SurfaceGui emblem from `Config/SailArt` (16x16 hex-palette strings: ship attr SailArt, else Pirate skull / Marine
+    anchor-star by Kind or ship Faction; SailColor attr overrides the cloth). Emblem editor in Crew = next version.
+    WORLD_VERSION 46.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

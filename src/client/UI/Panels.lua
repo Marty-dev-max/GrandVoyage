@@ -14,6 +14,8 @@ local Dungeons = require(Shared.Config.Dungeons)
 local ItemDB = require(Shared.Modules.ItemDB)
 local Formulas = require(Shared.Modules.Formulas)
 local ShipStats = require(Shared.Modules.ShipStats)
+local ShipModel = require(Shared.Modules.ShipModel)
+local ShipPresets = require(Shared.Config.ShipPresets)
 local Rarity = require(Shared.Modules.Rarity)
 local Net = require(Shared.Modules.Net)
 local UI = require(script.Parent.UIKit)
@@ -2302,14 +2304,30 @@ function Panels.Recruit(c)
 end
 
 -- ===================== SHIPYARD =====================
-function Panels.Shipwright()
-	local win = UI.Window("Shipyard", "Shipyard", UDim2.fromOffset(760, 520), T.OceanDark, "⚓")
+-- v0.25.150 (owner): two tabs: your 3 ship slots (edit / use) and BUY A SHIP = ready-made Dinghy / Sloop / Galleon that
+-- cost exactly their blocks (Doubloons + Wood), then go on editing them in the builder
+local shipwrightTab = "ships"
+local function ownedCount(id)
 	local p = State.profile
-	UI.List(win.body, nil, 10)
-	UI.Section(win.body, "⛵", "Your Ships", T.Ocean, "3 slots")
+	if id == "beli" then
+		return p.beli or 0
+	end
+	local n = 0
+	for _, e in ipairs(p.inventory or {}) do
+		if e.id == id then
+			n += e.qty or 1
+		end
+	end
+	return n
+end
+
+local function shipSlots(body, win, reopen)
+	local p = State.profile
+	UI.List(body, nil, 10)
 	for slot = 1, 3 do
 		local d = p.ships[slot]
-		local card = UI.Card(win.body, UDim2.new(1, 0, 0, 108), slot == p.activeShip and T.OceanDark:Lerp(T.Panel, 0.5) or nil)
+		local card = UI.Card(body, UDim2.new(1, 0, 0, 108), slot == p.activeShip and T.OceanDark:Lerp(T.Panel, 0.5) or nil)
+		card.LayoutOrder = slot
 		UI.Pad(card, 10)
 		if d then
 			local st = ShipStats.Compute(d, p.crew, { shipSpeed = State.derived and State.derived.shipSpeed })
@@ -2319,7 +2337,7 @@ function Panels.Shipwright()
 				UI.Text(card, "⚠️ Sunk: repairs are charged when you launch", 14, T.Red, "Bold", { Position = UDim2.fromOffset(0, 70), Size = UDim2.new(1, -250, 0, 18) })
 			end
 		else
-			UI.Text(card, "Empty slot: build a new ship", 22, T.TextSoft, "Display")
+			UI.Text(card, "Empty slot: build one or buy one", 22, T.TextSoft, "Display")
 		end
 		local _, h1 = UI.Button(card, d and "🔨 Edit" or "🔨 Build", T.Orange, UDim2.fromOffset(116, 44), function()
 			local res = req("BuildEnter", { slot = slot })
@@ -2333,12 +2351,119 @@ function Panels.Shipwright()
 			local _, h2 = UI.Button(card, "⭐ Use", T.Green, UDim2.fromOffset(116, 44), function()
 				if req("SetActiveShip", { slot = slot }).ok then
 					p.activeShip = slot
-					win:Destroy()
-					Panels.Shipwright()
+					reopen()
 				end
 			end)
 			h2.Position = UDim2.new(1, -118, 0, 20)
 		end
+	end
+end
+
+local function shipShop(body, reopen)
+	local p = State.profile
+	-- default slot: the first empty one, else the active one
+	local pick = p.activeShip or 1
+	for s = 1, 3 do
+		if not p.ships[s] then
+			pick = s
+			break
+		end
+	end
+	local row = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, -64), Parent = body })
+	UI.List(row, Enum.FillDirection.Horizontal, 10)
+	local slotRow = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 0, 1, 0), Size = UDim2.new(1, 0, 0, 54), Parent = body })
+	local slotBtns = {}
+	local function paintSlots()
+		for s, b in pairs(slotBtns) do
+			UI.SetButtonColor(b, s == pick and T.Gold or T.Grey)
+		end
+	end
+	UI.Text(slotRow, "Into slot:", 16, T.TextSoft, "Semi", { Size = UDim2.fromOffset(110, 44), Position = UDim2.fromOffset(0, 5) })
+	for s = 1, 3 do
+		local d = p.ships[s]
+		local b, h = UI.Button(slotRow, s .. (d and (": " .. d.name) or ": empty"), T.Grey, UDim2.fromOffset(200, 44), function()
+			pick = s
+			paintSlots()
+		end)
+		h.Position = UDim2.fromOffset(110 + (s - 1) * 208, 5)
+		slotBtns[s] = b
+	end
+	paintSlots()
+	for i, e in ipairs(ShipPresets.List) do
+		local card = UI.Card(row, UDim2.new(1 / 3, -7, 1, 0))
+		card.LayoutOrder = i
+		card.ClipsDescendants = true
+		local stage = New("Frame", { BackgroundColor3 = T.OceanDark, Size = UDim2.new(1, 0, 0, 180), Parent = card })
+		UI.Corner(stage, 10)
+		UI.Gradient(stage, T.Ocean:Lerp(Color3.new(1, 1, 1), 0.25), T.OceanDark, 90)
+		local ok, m = pcall(ShipModel.BuildDesign, e.design, CFrame.new())
+		if ok and m then
+			local vp = UI.ModelViewOf(stage, m, 180, 0.35)
+			vp.AnchorPoint = Vector2.new(0.5, 0)
+			vp.Position = UDim2.fromScale(0.5, 0)
+		end
+		local st = ShipStats.Compute(e.design, p.crew)
+		UI.Text(card, e.name, 22, T.Gold, "Display", { Position = UDim2.fromOffset(10, 188), Size = UDim2.new(1, -20, 0, 26) })
+		local d1 = UI.Text(card, e.desc, 13, T.TextSoft, "Semi", { Position = UDim2.fromOffset(10, 216), Size = UDim2.new(1, -20, 0, 34) })
+		d1.TextWrapped = true
+		UI.Text(card, string.format("%d parts  •  HP %d  •  %d guns\nSpeed %d  •  Crew %d", st.partCount, st.hp, #st.cannons, ShipStats.Speed(st, 1), st.crewCap), 13, T.Text, "Semi",
+			{ Position = UDim2.fromOffset(10, 252), Size = UDim2.new(1, -20, 0, 34) })
+		-- cost chips: red when you are short
+		local cost = ShipPresets.Cost(e.design)
+		local can = true
+		local costRow = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(10, 292), Size = UDim2.new(1, -20, 0, 24), Parent = card })
+		UI.List(costRow, Enum.FillDirection.Horizontal, 12)
+		for _, k in ipairs({ "beli", "Wood" }) do
+			local v = cost[k] or 0
+			local short = ownedCount(k) < v
+			can = can and not short
+			local f = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(0, 22), AutomaticSize = Enum.AutomaticSize.X, Parent = costRow })
+			UI.List(f, Enum.FillDirection.Horizontal, 3).VerticalAlignment = Enum.VerticalAlignment.Center
+			UI.Icon(f, k == "beli" and "coin" or (UI.ItemIconName(ItemDB.Get("Wood")) or "ore"), 20)
+			UI.Text(f, UI.Format(v), 18, short and T.Red or T.Text, "Number", { AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 22), TextWrapped = false })
+		end
+		local _, buy = UI.Button(card, "BUY", can and T.Green or T.Red, UDim2.new(1, -20, 0, 46), function()
+			local target = p.ships[pick]
+			local function go()
+				local res = req("BuyShipPreset", { id = e.id, slot = pick }, "Purchase")
+				if res.ok then
+					local d = { name = e.name, parts = {} }
+					for j, part in ipairs(e.design.parts) do
+						d.parts[j] = table.clone(part)
+					end
+					p.ships[pick] = d
+					p.activeShip = pick
+					shipwrightTab = "ships"
+					reopen()
+				end
+			end
+			if target then
+				UI.Confirm("Replace " .. target.name .. " in slot " .. pick .. "?\nIts parts are refunded.", go, nil, "Replace", "Cancel")
+			else
+				go()
+			end
+		end)
+		buy.AnchorPoint = Vector2.new(0, 1)
+		buy.Position = UDim2.new(0, 10, 1, -10)
+	end
+end
+
+function Panels.Shipwright()
+	UI.CloseWindow("Shipyard")
+	local win = UI.Window("Shipyard", "Shipyard", UDim2.fromOffset(820, 600), T.OceanDark, "⚓")
+	local function reopen()
+		win:Destroy()
+		Panels.Shipwright()
+	end
+	UI.TabBar(win.body, { { "ships", "⛵", "Your Ships", T.Ocean }, { "buy", "🛍️", "Buy a Ship", T.Green } }, shipwrightTab, function(id)
+		shipwrightTab = id
+		reopen()
+	end)
+	local body = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 52), Size = UDim2.new(1, 0, 1, -52), Parent = win.body })
+	if shipwrightTab == "buy" then
+		shipShop(body, reopen)
+	else
+		shipSlots(body, win, reopen)
 	end
 end
 
@@ -2422,7 +2547,7 @@ function Panels.FastTravel()
 		end
 		dot.Activated:Connect(function()
 			if not unlocked then
-				UI.Toast(charted and "Not discovered yet: sail there first" or "Uncharted: finish this island's story and your compass will point the way", "bad")
+				UI.Toast(charted and "Not discovered yet: reach it first" or "Uncharted: finish this island's story and your compass will point the way", "bad")
 				return
 			end
 			UI.Confirm("Fly by courier gull to " .. isl.name .. "?\nCost " .. COIN .. " " .. (100 * i), function()

@@ -26,6 +26,11 @@ part("OakBlock", { name = "Oak Block", category = "Hull", weight = 16, hp = 140,
 	color = Color3.fromRGB(140, 95, 60), material = "Wood", cost = { beli = 150, Wood = 3 } })
 part("IronPlate", { name = "Iron Plating", category = "Hull", weight = 38, hp = 300,
 	color = Color3.fromRGB(120, 125, 135), material = "DiamondPlate", cost = { beli = 600, IronIngot = 2 } })
+-- v0.25.150 (owner refs: decked sloop with stairs + rails): walkable stairs (climb toward the part's +Z) and a railing
+part("Stairs", { name = "Deck Stairs", category = "Hull", weight = 7, hp = 50, stairs = true,
+	color = Color3.fromRGB(205, 155, 100), material = "WoodPlanks", cost = { beli = 40, Wood = 1 } })
+part("Railing", { name = "Railing", category = "Hull", weight = 3, hp = 25, railing = true,
+	color = Color3.fromRGB(150, 100, 62), material = "Wood", cost = { beli = 20, Wood = 1 } })
 part("TreasureBlock", { name = "Treasure Wood Block", category = "Hull", weight = 12, hp = 320,
 	color = Color3.fromRGB(230, 200, 140), material = "Wood", cost = { beli = 5000, TreasureWood = 1 } })
 -- Sails
@@ -51,6 +56,8 @@ part("RamHead", { name = "Ram Figurehead", category = "Utility", weight = 15, hp
 	speedBonus = 0.05, color = Color3.fromRGB(255, 255, 240), cost = { beli = 3000, Wood = 5 } })
 part("LionHead", { name = "Lion Figurehead", category = "Utility", weight = 25, hp = 120, max = 1,
 	speedBonus = 0.08, color = Color3.fromRGB(255, 200, 60), cost = { beli = 20000, TreasureWood = 1 } })
+part("Barrel", { name = "Barrel", category = "Utility", weight = 6, hp = 20,
+	color = Color3.fromRGB(160, 108, 64), cost = { beli = 60, Wood = 1 } })
 part("Lantern", { name = "Lantern", category = "Utility", weight = 3, hp = 10, slab = true,
 	color = Color3.fromRGB(255, 220, 120), light = true, cost = { beli = 100 } })
 

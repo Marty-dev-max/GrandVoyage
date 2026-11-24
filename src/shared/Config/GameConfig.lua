@@ -4,10 +4,11 @@ return {
 	LogoLines = { "LARPTALES", "VOXEL SEAS" },
 	LogoImage = 133908417032160, -- v0.25.87: pixel logo board floating behind the menu character (tools/gen_logo.py); nil = text logo
 	-- bump on every change: shown bottom-right in game and printed in Output, so you can tell which code is running
-	Version = "0.25.149",
+	Version = "0.25.150",
 	SagaName = "Azure East Saga",
 	-- title menu UPDATE LOG lines (newest first, keep 3-4 short ones)
 	UpdateNotes = {
+		"Buy a Dinghy, Sloop or Galleon, sails furl + billow",
 		"No more flickering clothes, deep blue open sea",
 		"Mini bosses, crew tiers + Crew Contracts",
 		"Store fits every screen, egg models in the Bag",
@@ -119,7 +120,7 @@ return {
 	Ship = {
 		GridSize = 4,
 		PlotSize = Vector3.new(9, 6, 21), -- shipyard plot cells X,Y,Z
-		MaxParts = 140,
+		MaxParts = 320, -- v0.25.150: the Galleon preset is ~250 parts
 		MaxSpeed = 78,
 		WeightDrag = 0.04, -- v0.25.93 (owner): speed comes mostly from sails, weight matters less
 		BaseTurnRate = 0.7, -- radians/second

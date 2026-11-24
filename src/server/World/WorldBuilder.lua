@@ -216,26 +216,27 @@ local function buildShipyard(island)
 	group.Parent = Kit.parent
 	local prevParent = Kit.parent
 	Kit.parent = group
-	P(Vector3.new(totalW + 20, 2, l + 24), Color3.fromRGB(175, 125, 80), CFrame.new(baseX + totalW / 2 - 10, 4, platformZ), { material = M.WoodPlanks })
+	-- v0.25.150 (owner: the slipway platform did not fit the islands): no platform any more, the ship you build
+	-- hangs over the water so it can be seen from every side (even from below). Only a boardwalk along the near end
+	-- stays, for the builder to stand on.
+	P(Vector3.new(totalW + 20, 2, 10), Color3.fromRGB(175, 125, 80), CFrame.new(baseX + totalW / 2 - 10, 4, platformZ + l / 2 + 7), { material = M.WoodPlanks })
 	for i = 0, 6 do
-		Cyl(14, 2.4, Color3.fromRGB(110, 74, 46), Vector3.new(baseX - 8 + i * (totalW + 16) / 6, -3, platformZ + l / 2 + 10), { material = M.Wood })
-		Cyl(14, 2.4, Color3.fromRGB(110, 74, 46), Vector3.new(baseX - 8 + i * (totalW + 16) / 6, -3, platformZ - l / 2 - 10), { material = M.Wood })
+		Cyl(14, 2.4, Color3.fromRGB(110, 74, 46), Vector3.new(baseX - 8 + i * (totalW + 16) / 6, -3, platformZ + l / 2 + 11), { material = M.Wood })
 	end
 	for i = 0, count - 1 do
 		local x = baseX + i * (w + 10)
-		local origin = CFrame.new(x, 5, platformZ + l / 2)
-		-- v0.25.113 (owner: the build plots were huge glowing cyan slabs at night): a wooden slipway floor + plain rails
-		local plotPart = P(Vector3.new(w, 0.2, l), Color3.fromRGB(196, 160, 112), CFrame.new(x + w / 2, 5.05, platformZ), { collide = false, name = "Plot", material = M.WoodPlanks, shadow = false })
+		local origin = CFrame.new(x, 9, platformZ + l / 2 - 2)
+		-- the slip: invisible, only its tag + attributes (the builder's grid and camera use them)
+		local plotPart = P(Vector3.new(w, 0.2, l), Color3.fromRGB(196, 160, 112), CFrame.new(x + w / 2, 9, platformZ - 2), { collide = false, name = "Plot", material = M.WoodPlanks, shadow = false, transparency = 1 })
+		plotPart.CanQuery = false
 		plotPart:SetAttribute("Island", island.id)
 		plotPart:SetAttribute("Origin", origin)
-		plotPart:SetAttribute("StandCf", CFrame.new(x + w / 2, 8, platformZ + l / 2 + 6))
+		plotPart:SetAttribute("StandCf", CFrame.new(x + w / 2, 8, platformZ + l / 2 + 7))
 		CollectionService:AddTag(plotPart, "Plot")
+		-- two mooring posts per slip on the boardwalk
 		for _, sx in ipairs({ 0, w }) do
-			P(Vector3.new(0.6, 0.5, l), Color3.fromRGB(110, 76, 46), CFrame.new(x + sx, 5.3, platformZ), { material = M.Wood, collide = false, shadow = false })
+			P(Vector3.new(1.2, 3, 1.2), Color3.fromRGB(110, 76, 46), CFrame.new(x + sx, 6.5, platformZ + l / 2 + 3), { material = M.Wood })
 		end
-		-- crane
-		P(Vector3.new(1.4, 26, 1.4), Color3.fromRGB(240, 190, 60), CFrame.new(x + w + 5, 18, platformZ - l / 2 + 4), { material = M.Metal, decor = true })
-		P(Vector3.new(1, 1, 18), Color3.fromRGB(240, 190, 60), CFrame.new(x + w + 5, 30.5, platformZ - l / 2 + 12), { material = M.Metal, decor = true })
 	end
 	for _, sx in ipairs({ -16, 16 }) do
 		P(Vector3.new(1.6, 24, 1.6), Color3.fromRGB(120, 80, 50), CFrame.new(baseX + totalW / 2 + sx, 17, platformZ + l / 2 + 2), { material = M.Wood })
@@ -1017,7 +1018,7 @@ end
 -- away and rebuilt from code at server start (so the owner's published place updates through Rojo too).
 -- Hand-built content made in Studio goes in workspace.Handmade (never touched by rebuilds). Kit props placed there
 -- (tagged EnvProp/EnvPart) are dressed with the stylized meshes like the generated ones.
-WB.WORLD_VERSION = 45 -- v45 (v0.25.149): Courier Gull Post at every harbor, Marine Registrar by the Conch Bay stairs; v44 (v0.25.148): roof ridges sit on the stepped roof (no floating beam); v43 (v0.25.147): voxel stadium big top + the Confetti Crew occupying Marmalade; v42 (v0.25.146): Big Top for Captain Confetti, Epilogue execution platform; v41 (v0.25.143): a look of their own for every island quest giver; v40 (v0.25.142): one Tavern Keeper on Daybreak (inside the tavern); v39 (v0.25.141): tavern awning above the doorway; v38 (v0.25.140): enterable Daybreak tavern / smithy / store with their NPC inside; v37 (v0.25.134): organic voxel island outlines (IslandShape); v36 v36 (v0.25.133): Epilogue Town hand-laid; v35 v35 (v0.25.132): Mikan Isles hand-laid; v34 (v0.25.131): Barracuda Bistro hand-laid (World/Barracuda); v33 (v0.25.130): Honeyslope hand-laid (World/Honeyslope); v32 (v0.25.129): the Brig (jail cell) at the Conch Bay garrison; v31 (v0.25.120): Power board is a map piece in front of the west house; v30 (v0.25.119): Bounty Board moved to the west street house; v29 (v0.25.118): Job Master walk-in ring + new look; v28 (v0.25.115): DeFlicker stacks faces within 0.035 (grass under the plaza paving); v27 (v0.25.113): no Bay Serpent buoys/sign, wooden shipyard plots, voxel barrels/crates/chests; v26 (v0.25.112): DeFlicker pass, hill caps one step apart per lobe; v25 (v0.25.109): no island name signs at the docks; v24 (v0.25.108): Marine Registrar in Conch Bay, no Guild Registrar; v23 (v0.25.107): Tavern Keeper beside the Shipwright; v22 (v0.25.27): shipyards snap to the island side nearest the next island; v21 (v0.25.25): shipyards face the next island, circus ship offshore; v20 (v0.25.24): Marmalade Town hand-laid (World/Marmalade); v19 (v0.25.23): Conch Bay street spawns keep their houses; v18 (v0.25.22): Conch Bay terraced (quay, two terraces, garrison plateau, tapered towers); v17 (v0.25.21): islands turned to face the previous one, Conch Bay stairs; v16 (v0.25.20): Daybreak spawn by Rowan, Conch Bay hand-laid (World/ConchBay); v15 (v0.25.11): islands spread north/south, wider sea, islets; v14 (v0.25.6): Daybreak spawn by the campfire; v13: voxel NPCs; v12: Voxelize pass
+WB.WORLD_VERSION = 46 -- v46 (v0.25.150): no shipyard platform, the slips float (boardwalk only); v45 (v0.25.149): Courier Gull Post at every harbor, Marine Registrar by the Conch Bay stairs; v44 (v0.25.148): roof ridges sit on the stepped roof (no floating beam); v43 (v0.25.147): voxel stadium big top + the Confetti Crew occupying Marmalade; v42 (v0.25.146): Big Top for Captain Confetti, Epilogue execution platform; v41 (v0.25.143): a look of their own for every island quest giver; v40 (v0.25.142): one Tavern Keeper on Daybreak (inside the tavern); v39 (v0.25.141): tavern awning above the doorway; v38 (v0.25.140): enterable Daybreak tavern / smithy / store with their NPC inside; v37 (v0.25.134): organic voxel island outlines (IslandShape); v36 v36 (v0.25.133): Epilogue Town hand-laid; v35 v35 (v0.25.132): Mikan Isles hand-laid; v34 (v0.25.131): Barracuda Bistro hand-laid (World/Barracuda); v33 (v0.25.130): Honeyslope hand-laid (World/Honeyslope); v32 (v0.25.129): the Brig (jail cell) at the Conch Bay garrison; v31 (v0.25.120): Power board is a map piece in front of the west house; v30 (v0.25.119): Bounty Board moved to the west street house; v29 (v0.25.118): Job Master walk-in ring + new look; v28 (v0.25.115): DeFlicker stacks faces within 0.035 (grass under the plaza paving); v27 (v0.25.113): no Bay Serpent buoys/sign, wooden shipyard plots, voxel barrels/crates/chests; v26 (v0.25.112): DeFlicker pass, hill caps one step apart per lobe; v25 (v0.25.109): no island name signs at the docks; v24 (v0.25.108): Marine Registrar in Conch Bay, no Guild Registrar; v23 (v0.25.107): Tavern Keeper beside the Shipwright; v22 (v0.25.27): shipyards snap to the island side nearest the next island; v21 (v0.25.25): shipyards face the next island, circus ship offshore; v20 (v0.25.24): Marmalade Town hand-laid (World/Marmalade); v19 (v0.25.23): Conch Bay street spawns keep their houses; v18 (v0.25.22): Conch Bay terraced (quay, two terraces, garrison plateau, tapered towers); v17 (v0.25.21): islands turned to face the previous one, Conch Bay stairs; v16 (v0.25.20): Daybreak spawn by Rowan, Conch Bay hand-laid (World/ConchBay); v15 (v0.25.11): islands spread north/south, wider sea, islets; v14 (v0.25.6): Daybreak spawn by the campfire; v13: voxel NPCs; v12: Voxelize pass
 
 -- Old copies of the map can hide anywhere in Workspace: a renamed or regrouped World, an island dragged into
 -- Handmade, single NPCs / chests / docks pasted from an old bake. They draw on top of the new islands and register

@@ -1040,7 +1040,7 @@ local function setupHandlers()
 		local p = PS.Profile(player)
 		local island = Islands.ById[data.island]
 		if not island or not p.unlocked[island.id] then
-			return false, "Island not discovered yet (sail there first)"
+			return false, "Island not discovered yet (reach it first)"
 		end
 		if R.ShipService.GetShipOf(player) then
 			return false, "Dock your ship first"

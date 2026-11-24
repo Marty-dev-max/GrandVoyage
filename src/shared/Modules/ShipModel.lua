@@ -2,6 +2,7 @@
 -- Orientation: plot -Z = bow (LookVector), r = 90-degree yaw steps
 -- A model at ReplicatedStorage.Assets.ShipParts.<PartId> replaces the placeholder (PrimaryPart must match the grid size)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CollectionService = game:GetService("CollectionService")
 local Shared = script.Parent.Parent
 local GameConfig = require(Shared.Config.GameConfig)
 local ShipParts = require(Shared.Config.ShipParts).Parts
@@ -33,6 +34,35 @@ function SM.LocalCFrame(p)
 	local def = ShipParts[p.id]
 	local fp = ShipStats.Footprint(def, p.r or 0)
 	return CFrame.new((p.x + fp.X / 2) * G, (p.y + fp.Y / 2) * G, -(p.z + fp.Z / 2) * G) * CFrame.Angles(0, (p.r or 0) * math.pi / 2, 0)
+end
+
+local function dark(c, k)
+	return c:Lerp(Color3.new(0, 0, 0), k)
+end
+-- a stable per-cell shade so a wall of planks is not one flat color (voxel boat refs)
+local function cellShade(c, p)
+	local h = ((p.x or 0) * 73 + (p.y or 0) * 151 + (p.z or 0) * 37) % 3
+	return h == 0 and c or h == 1 and dark(c, 0.06) or c:Lerp(Color3.new(1, 1, 1), 0.05)
+end
+local function deco(part)
+	part.CanCollide = false
+	part.CanQuery = false
+	return part
+end
+
+-- v0.25.150 (owner): Marines sail in a uniform livery (white hull, navy rails); used by the builder AND the launch,
+-- so what you build is what you get. Pirates and the unaligned keep the block colors.
+local MARINE = {
+	PlankBlock = Color3.fromRGB(240, 241, 246), PlankWedge = Color3.fromRGB(240, 241, 246), OakBlock = Color3.fromRGB(220, 226, 238),
+	Railing = Color3.fromRGB(44, 74, 150), CrewCabin = Color3.fromRGB(236, 238, 244), Barrel = Color3.fromRGB(60, 90, 160),
+}
+function SM.FactionColorFn(faction)
+	if faction == "Marine" then
+		return function(p)
+			return MARINE[p.id] or p.c
+		end
+	end
+	return nil
 end
 
 -- Build one part model centered at cf
@@ -68,13 +98,63 @@ function SM.BuildPart(p, cf, colorOverride)
 		top.CanCollide = false
 		local low = mk(model, "Part", Vector3.new(sz.X * 0.7, sz.Y / 2, sz.Z / 2), color:Lerp(Color3.new(0, 0, 0), 0.15), cf * CFrame.new(0, -sz.Y / 4, sz.Z / 4), material)
 		low.CanCollide = false
-	elseif def.slab then
-		main = mk(model, "Part", Vector3.new(sz.X, G * 0.35, sz.Z), color, cf * CFrame.new(0, -G / 2 + G * 0.175, 0), material)
+	elseif def.slab and p.id ~= "Lantern" then
+		local base = colorOverride and color or cellShade(color, p)
+		main = mk(model, "Part", Vector3.new(sz.X, G * 0.35, sz.Z), base, cf * CFrame.new(0, -G / 2 + G * 0.175, 0), material)
+		for _, x in ipairs({ -sz.X / 4, sz.X / 4 }) do
+			deco(mk(model, "Part", Vector3.new(0.12, G * 0.35 + 0.03, sz.Z + 0.01), dark(base, 0.28), cf * CFrame.new(x, -G / 2 + G * 0.175, 0), material))
+		end
+	elseif def.stairs then
+		-- three walkable steps climbing toward the part's +Z (each step is its own collider)
+		local base = colorOverride and color or cellShade(color, p)
+		for i = 1, 3 do
+			local h = sz.Y * i / 3
+			local s = mk(model, "Part", Vector3.new(sz.X, h, sz.Z / 3), i % 2 == 0 and dark(base, 0.07) or base, cf * CFrame.new(0, -sz.Y / 2 + h / 2, -sz.Z / 2 + (i - 0.5) * sz.Z / 3), material)
+			if i == 1 then
+				main = s
+			end
+			deco(mk(model, "Part", Vector3.new(sz.X + 0.04, 0.14, 0.2), dark(base, 0.3), cf * CFrame.new(0, -sz.Y / 2 + h - 0.06, -sz.Z / 2 + (i - 1) * sz.Z / 3 + 0.1), material))
+		end
+		for _, sx in ipairs({ -1, 1 }) do
+			deco(mk(model, "Part", Vector3.new(0.3, sz.Y + 0.6, sz.Z + 0.04), dark(base, 0.35), cf * CFrame.new(sx * (sz.X / 2 - 0.13), 0.3, 0), Enum.Material.Wood))
+		end
+	elseif def.railing then
+		-- a fence along the part's X through the middle of the cell: posts at both ends, a top rail and a mid rail
+		main = mk(model, "Part", Vector3.new(sz.X, G * 0.8, 0.5), color, cf * CFrame.new(0, -G / 2 + G * 0.4, 0), material)
+		main.Transparency = 1
+		for _, sx in ipairs({ -1, 1 }) do
+			deco(mk(model, "Part", Vector3.new(0.55, G * 0.85, 0.55), dark(color, 0.2), cf * CFrame.new(sx * (sz.X / 2 - 0.27), -G / 2 + G * 0.425, 0), material))
+		end
+		deco(mk(model, "Part", Vector3.new(sz.X + 0.02, 0.42, 0.62), color, cf * CFrame.new(0, -G / 2 + G * 0.82, 0), material))
+		deco(mk(model, "Part", Vector3.new(sz.X - 0.6, 0.26, 0.3), color, cf * CFrame.new(0, -G / 2 + G * 0.45, 0), material))
+		for i = -1, 1 do
+			deco(mk(model, "Part", Vector3.new(0.22, G * 0.38, 0.22), dark(color, 0.1), cf * CFrame.new(i * sz.X / 4, -G / 2 + G * 0.62, 0), material))
+		end
 	elseif def.category == "Hull" then
-		main = mk(model, "Part", sz, color, cf, material)
-		-- Darker plank trim for a cartoon look
-		local trim = mk(model, "Part", Vector3.new(sz.X + 0.05, 0.25, sz.Z + 0.05), color:Lerp(Color3.new(0, 0, 0), 0.25), cf * CFrame.new(0, sz.Y / 2 - 0.12, 0), material)
-		trim.CanCollide = false
+		local base = colorOverride and color or cellShade(color, p)
+		main = mk(model, "Part", sz, base, cf, material)
+		local metal = def.material == "DiamondPlate"
+		-- top trim (cartoon edge) + plank seams on the sides: three boards per block like the voxel boat refs
+		deco(mk(model, "Part", Vector3.new(sz.X + 0.05, 0.25, sz.Z + 0.05), dark(base, 0.25), cf * CFrame.new(0, sz.Y / 2 - 0.12, 0), material))
+		if metal then
+			deco(mk(model, "Part", Vector3.new(sz.X + 0.04, 0.22, sz.Z + 0.04), dark(base, 0.35), cf * CFrame.new(0, -sz.Y / 2 + 0.11, 0), material))
+			for _, sx in ipairs({ -1, 1 }) do
+				for _, sz2 in ipairs({ -1, 1 }) do
+					deco(mk(model, "Part", Vector3.new(0.4, 0.4, 0.4), base:Lerp(Color3.new(1, 1, 1), 0.25), cf * CFrame.new(sx * (sz.X / 2 - 0.35), 0, sz2 * (sz.Z / 2 - 0.13)), Enum.Material.Metal))
+				end
+			end
+		else
+			for _, y in ipairs({ -sz.Y / 6, sz.Y / 6 }) do
+				deco(mk(model, "Part", Vector3.new(sz.X + 0.03, 0.14, sz.Z + 0.03), dark(base, 0.3), cf * CFrame.new(0, y, 0), material))
+			end
+			if p.id == "OakBlock" or p.id == "TreasureBlock" then
+				for _, sx in ipairs({ -1, 1 }) do
+					for _, sz2 in ipairs({ -1, 1 }) do
+						deco(mk(model, "Part", Vector3.new(0.5, sz.Y + 0.02, 0.5), dark(base, 0.4), cf * CFrame.new(sx * (sz.X / 2 - 0.22), 0, sz2 * (sz.Z / 2 - 0.22)), Enum.Material.Wood))
+					end
+				end
+			end
+		end
 	elseif p.id == "Helm" then
 		main = mk(model, "Part", Vector3.new(G, G * 0.25, G), color, cf * CFrame.new(0, -G / 2 + G * 0.125, 0), Enum.Material.WoodPlanks)
 		local post = mk(model, "Part", Vector3.new(0.6, G * 0.7, 0.6), color, cf * CFrame.new(0, 0, -G * 0.35), Enum.Material.Wood)
@@ -104,24 +184,14 @@ function SM.BuildPart(p, cf, colorOverride)
 		local sail = mk(model, "Part", Vector3.new(G * 2.6, h * 0.55, 0.3), sailColor, cf * CFrame.new(0, h * 0.08, -0.3), Enum.Material.Fabric)
 		sail.Name = "Sail"
 		sail.CanCollide = false
+		sail.CanQuery = false
+		-- v0.25.150: every client hides this flat sheet and draws a furling, billowing block sail with the emblem
+		sail:SetAttribute("Kind", def.faction or "")
+		CollectionService:AddTag(sail, "ShipSail")
 		local boom = cyl(model, G * 2.8, 0.4, Color3.fromRGB(130, 85, 50), cf * CFrame.new(0, h * 0.36, 0) * CFrame.Angles(0, math.pi / 2, 0) * CFrame.Angles(0, math.pi / 2, 0), Enum.Material.Wood)
 		boom.CanCollide = false
 		local nest = cyl(model, 0.8, 2.2, Color3.fromRGB(150, 100, 60), cf * CFrame.new(0, h / 2 - 0.3, 0) * CFrame.Angles(0, 0, math.pi / 2), Enum.Material.WoodPlanks)
 		nest.CanCollide = false
-		if def.faction == "Pirate" or def.faction == "Marine" then
-			local gui = Instance.new("SurfaceGui")
-			gui.Face = Enum.NormalId.Back
-			gui.LightInfluence = 0.5
-			gui.Parent = sail
-			local t = Instance.new("TextLabel")
-			t.BackgroundTransparency = 1
-			t.Size = UDim2.fromScale(1, 1)
-			t.TextScaled = true
-			t.Font = Enum.Font.Arcade
-			t.Text = def.faction == "Pirate" and "☠" or "MARINE"
-			t.TextColor3 = def.faction == "Pirate" and Color3.new(1, 1, 1) or Color3.fromRGB(40, 90, 200)
-			t.Parent = gui
-		end
 	elseif p.id == "OarBench" then
 		main = mk(model, "Part", Vector3.new(G, G * 0.3, G * 0.5), color, cf * CFrame.new(0, -G / 2 + G * 0.3, 0), Enum.Material.Wood)
 		for _, side in ipairs({ -1, 1 }) do
@@ -168,6 +238,13 @@ function SM.BuildPart(p, cf, colorOverride)
 			local mane = cyl(model, G * 0.35, G * 1.7, Color3.fromRGB(230, 120, 40), cf * CFrame.new(0, G * 0.25, 0) * CFrame.Angles(0, math.pi / 2, 0))
 			mane.CanCollide = false
 		end
+	elseif p.id == "Barrel" then
+		main = mk(model, "Part", Vector3.new(G * 0.66, G * 0.82, G * 0.66), color, cf * CFrame.new(0, -G / 2 + G * 0.41, 0), Enum.Material.Wood)
+		deco(mk(model, "Part", Vector3.new(G * 0.74, G * 0.36, G * 0.74), color:Lerp(Color3.new(1, 1, 1), 0.06), cf * CFrame.new(0, -G / 2 + G * 0.41, 0), Enum.Material.Wood))
+		for _, y in ipairs({ 0.12, 0.7 }) do
+			deco(mk(model, "Part", Vector3.new(G * 0.7, 0.2, G * 0.7), Color3.fromRGB(70, 70, 76), cf * CFrame.new(0, -G / 2 + G * y, 0), Enum.Material.Metal))
+		end
+		deco(mk(model, "Part", Vector3.new(G * 0.5, 0.12, G * 0.5), dark(color, 0.25), cf * CFrame.new(0, -G / 2 + G * 0.82 + 0.05, 0), Enum.Material.Wood))
 	elseif p.id == "Lantern" then
 		main = mk(model, "Part", Vector3.new(G * 0.3, G * 0.5, G * 0.3), color, cf * CFrame.new(0, -G * 0.2, 0), Enum.Material.Neon)
 		local light = Instance.new("PointLight")

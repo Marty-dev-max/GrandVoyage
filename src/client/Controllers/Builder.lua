@@ -616,12 +616,12 @@ function Builder.Start()
 		end
 		if input.UserInputType == Enum.UserInputType.MouseMovement and cam.turning then
 			cam.yaw -= input.Delta.X * 0.008
-			cam.pitch = math.clamp(cam.pitch + input.Delta.Y * 0.006, 0.08, 1.45)
+			cam.pitch = math.clamp(cam.pitch + input.Delta.Y * 0.006, -1.1, 1.45) -- v0.25.150: look from below too (the slip floats)
 		elseif input.UserInputType == Enum.UserInputType.MouseWheel and not processed then
 			cam.dist = math.clamp(cam.dist * (1 - input.Position.Z * 0.1), 18, 180)
 		elseif input.UserInputType == Enum.UserInputType.Touch and touchStart and not processed then
 			cam.yaw -= input.Delta.X * 0.01
-			cam.pitch = math.clamp(cam.pitch + input.Delta.Y * 0.008, 0.08, 1.45)
+			cam.pitch = math.clamp(cam.pitch + input.Delta.Y * 0.008, -1.1, 1.45)
 		end
 	end)
 	UserInputService.TouchPinch:Connect(function(_, scale, _, st)

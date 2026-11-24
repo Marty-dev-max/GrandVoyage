@@ -66,12 +66,16 @@ local function buildShip(design, cf, opts)
 	local originCf = cf * CFrame.new(-cx * G, -minV.Y * G, cz * G)
 	local model = ShipModel.BuildDesign(design, originCf, opts.colorFn)
 	model.Name = opts.name
-	-- a real hull around the block deck (dinghy / sloop / galleon by length)
-	local okHull, class = pcall(ShipModel.DressHull, model, design, originCf, opts.hullStyle)
-	if okHull and class then
-		model:SetAttribute("SizeClass", class)
-	elseif not okHull then
-		warn("[ShipService] hull dressing failed:", class)
+	-- a real hull around the block deck (dinghy / sloop / galleon by length): NPC ships only. v0.25.150 (owner):
+	-- a player ship is exactly what they built (presets give a good-looking base), nothing is added on launch
+	model:SetAttribute("SizeClass", ShipModel.SizeClass(maxV.Z - minV.Z))
+	if opts.dress ~= false then
+		local okHull, class = pcall(ShipModel.DressHull, model, design, originCf, opts.hullStyle)
+		if okHull and class then
+			model:SetAttribute("SizeClass", class)
+		elseif not okHull then
+			warn("[ShipService] hull dressing failed:", class)
+		end
 	end
 
 	local root = Instance.new("Part")
@@ -608,7 +612,7 @@ function Ship.Launch(player, slot, at)
 		p.shipSunk = false
 		R.PlayerService.Notify(player, "Ship repaired (🪙" .. cost .. ")", "info")
 	end
-	local ship = buildShip(design, at or dock.launchCf, { name = "Ship_" .. player.UserId, hullStyle = HULL_STYLES[p and p.faction or "None"] or HULL_STYLES.None })
+	local ship = buildShip(design, at or dock.launchCf, { name = "Ship_" .. player.UserId, dress = false, colorFn = ShipModel.FactionColorFn(p and p.faction) })
 	ship.owner = player
 	ship.stats = stats
 	ship.reloadMult = 1 - rb.reload
@@ -1458,6 +1462,12 @@ function Ship.Start()
 				local ok, err = pcall(stepShip, ship, dt, now)
 				if not ok then
 					warn("[ShipService]", err)
+				end
+				-- v0.25.150: sail level for every client's cloth (Controllers/SailCloth): 0 = furled, 1-3 = how far out
+				local lvl = (ship.throttle or 0) > 0.01 and math.clamp(math.round(ship.throttle * 3), 1, 3) or 0
+				if ship.sailLevel ~= lvl then
+					ship.sailLevel = lvl
+					ship.model:SetAttribute("Sails", lvl)
 				end
 				if ship.crew then
 					local okC, errC = pcall(crewStep, ship, dt, now)

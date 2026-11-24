@@ -31,7 +31,7 @@ local RAMP = {
 	{ 0.72, Color3.fromRGB(212, 243, 245) },
 	{ 1.0, Color3.fromRGB(250, 255, 255) },
 }
-local FLAT = Color3.fromRGB(28, 140, 172) -- the flat far sea = the ramp near 0 (slightly below: rest water)
+local FLAT = Color3.fromRGB(12, 54, 102) -- v0.25.149 (owner): the far, unloaded sea is DEEP blue (mysterious open ocean); the coarse rim fades into it
 local BANDS = 14
 local FADES = 4 -- color steps from the ramp into FLAT at the coarse rim
 local palette = {} -- [fade][band][variant] = Color3

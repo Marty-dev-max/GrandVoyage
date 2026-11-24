@@ -2,6 +2,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local CollectionService = game:GetService("CollectionService")
 
 local Shared = ReplicatedStorage.Shared
 local Accessory = require(game:GetService("ReplicatedStorage").Shared.Modules.Accessory)
@@ -1049,7 +1050,17 @@ local function setupHandlers()
 			return false, "Not enough Doubloons (" .. cost .. ")"
 		end
 		p.lastIsland = island.id
-		PS.TeleportTo(player, PS.SpawnCFrame(island.id))
+		-- v0.25.149 (owner): land in front of that island's Courier Gull Post (the island spawn if it has none)
+		local dest = PS.SpawnCFrame(island.id)
+		for _, m in ipairs(CollectionService:GetTagged("NPC")) do
+			if m:GetAttribute("Role") == "FastTravel" and m:GetAttribute("Island") == island.id and m:IsA("Model") then
+				local at = m:GetPivot()
+				local front = (at * CFrame.new(0, 0, -6)).Position
+				dest = CFrame.lookAt(front, Vector3.new(at.Position.X, front.Y, at.Position.Z))
+				break
+			end
+		end
+		PS.TeleportTo(player, dest)
 		return true, "Courier gull flight to " .. island.name
 	end, 2)
 end

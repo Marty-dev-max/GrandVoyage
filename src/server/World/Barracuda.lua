@@ -272,7 +272,6 @@ local function npcs(ctx, api)
 	end
 	put("Shop", "General Store", Color3.fromRGB(240, 170, 80), nil, -26, 114, { SubTitle = "Shop" })
 	put("Blacksmith", "Blacksmith", Color3.fromRGB(110, 90, 80), "bandana", 26, 114, { SubTitle = "Refine & Cards" })
-	put("FastTravel", "Courier Gull Post", Color3.fromRGB(240, 240, 240), "marine", 48, 124, { SubTitle = "Fast Travel" })
 	put("Guide", Quests.Guide[ctx.island.id] or "Guide", Color3.fromRGB(255, 200, 90), "captain", -14, 134, { SubTitle = "📜 Quests" })
 end
 

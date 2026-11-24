@@ -2236,10 +2236,13 @@ function Panels.Recruit(c)
 	-- v0.25.148 (owner: the name overflowed the title plaque): short title, the name lives in the card
 	local win = UI.Window("Recruit", "Recruit", UDim2.fromOffset(640, 470), T.Red, prof.icon or "🍺")
 	-- left: the sailor on a tier-colored stage with a tier ribbon
-	local stage = New("Frame", { BackgroundColor3 = T.PanelDeep, Size = UDim2.fromOffset(220, 330), ClipsDescendants = true, Parent = win.body })
+	-- v0.25.149 (owner: not a black box): white base so the tier gradient shows, pixel sparks + a halftone burst in the tier color
+	local stage = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), Size = UDim2.fromOffset(220, 330), ClipsDescendants = true, Parent = win.body })
 	UI.Corner(stage, 12)
-	UI.Gradient(stage, tier.color:Lerp(T.PanelDeep, 0.55), T.PanelDeep, 90)
+	UI.Gradient(stage, tier.color:Lerp(Color3.new(1, 1, 1), 0.15), tier.color:Lerp(Color3.new(0, 0, 0), 0.7), 90)
 	UI.Stroke(stage, tier.color, 2)
+	UI.Halftone(stage, tier.color:Lerp(Color3.new(1, 1, 1), 0.45), { size = UDim2.fromOffset(240, 240), pos = UDim2.fromOffset(110, 150) })
+	UI.Sparkles(stage, tier.color:Lerp(Color3.new(1, 1, 1), 0.5), 18, { float = true, star = 0.5, color2 = Color3.new(1, 1, 1) })
 	if typeof(c.model) == "Instance" and c.model.Parent then
 		local m = c.model:Clone()
 		for _, d in ipairs(m:GetDescendants()) do
@@ -2250,8 +2253,9 @@ function Panels.Recruit(c)
 		local vp = UI.ModelViewOf(stage, m, 220, 0.5)
 		vp.Position = UDim2.fromOffset(0, 20)
 	end
-	local ribbon = New("Frame", { BackgroundColor3 = tier.color, BorderSizePixel = 0, AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 0, 1, 0), Size = UDim2.new(1, 0, 0, 40), Parent = stage })
-	UI.Text(ribbon, stars(c.stars) .. "  " .. string.upper(tier.name), 16, Color3.fromRGB(24, 20, 34), "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center })
+	local ribbon = New("Frame", { BackgroundColor3 = tier.color:Lerp(Color3.new(0, 0, 0), 0.6), BorderSizePixel = 0, AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 0, 1, 0), Size = UDim2.new(1, 0, 0, 40), ZIndex = 5, Parent = stage })
+	New("Frame", { BackgroundColor3 = tier.color, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 3), ZIndex = 5, Parent = ribbon })
+	UI.Text(ribbon, stars(c.stars) .. "  " .. string.upper(tier.name), 16, T.Gold, "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 6 })
 	-- right: name, job, quote, stats, wants, buttons
 	local x = 238
 	local function line(text, size, color, font, y, h)

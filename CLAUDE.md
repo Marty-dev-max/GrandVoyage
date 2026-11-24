@@ -1068,6 +1068,16 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     (shirt x pants, pants x shoes, checked in Studio with VC.Preview) moved apart 0.01-0.04. Job Master aura lives in
     `bg` behind the view, plainLight. Map: sea gradient + hashed pixel crests, Crimson Wall = offset stone blocks.
     WORLD_VERSION 44.
+    v0.25.149 (owner: clothes still flickered): real avatars are ~1.06x the R15 rest sizes, so gaps tuned at rest broke.
+    VC.Apply now builds at REST (place() returns the rest pose) and scales each block with its limb (k = mean
+    live/rest ratio); `Shared/Modules/Coplanar.Fix(items, fixed)` runs on every built look (buildAll = buildBlocks +
+    Fix, rest space) and in Accessory.Wear (outfit vs VoxelBody + other outfits): a same-facing coplanar face pair of
+    different color/material overlapping > 0.01 grows the smaller block 0.024 on that axis (4 passes, ~20 ms/char).
+    Checked in Studio: every shirt x pants x shoes + every accessory = 0 left. Do not hand-tune 0.01 offsets any more.
+    Recruit stage = white base + tier gradient + UI.Halftone + UI.Sparkles, gold ribbon text. VoxelSea FLAT = deep blue
+    (12,54,102). Quest texts "Reach X". Courier Gull Post (FastTravel) stands in the turned shipyard group (Daybreak
+    keeps its harbor one), layouts no longer place one; FastTravel lands 6 studs in front of the destination's post.
+    Marine Registrar at Conch Bay (-13, 189) by the main stairs. WORLD_VERSION 45.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

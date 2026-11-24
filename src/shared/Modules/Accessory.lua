@@ -1,6 +1,7 @@
 -- Accessory (v0.25.32): builds a Config/Accessories model. The same code dresses players (worn items), monsters
 -- (Config/MonsterLooks) and offline previews (tools/export_char.luau), so an accessory always looks the same.
 local Cfg = require(script.Parent.Parent.Config.Accessories) -- relative: the Lune export tools load it too
+local Coplanar = require(script.Parent.Coplanar)
 
 local Accessory = {}
 Accessory.Cfg = Cfg
@@ -52,6 +53,21 @@ function Accessory.Wear(char, id, name)
 		w.Part1 = part
 		w.Parent = part
 	end)
+	-- v0.25.149: pieces lying in the same plane as a body / other outfit face flickered (Sailor Vest on the shirt)
+	local items, fixed = {}, {}
+	for _, p in ipairs(model:GetChildren()) do
+		table.insert(items, { p, p.CFrame })
+	end
+	for _, m in ipairs(char:GetChildren()) do
+		if m.Name == "VoxelBody" or m:GetAttribute("GVOutfit") then
+			for _, p in ipairs(m:GetDescendants()) do
+				if p:IsA("BasePart") then
+					table.insert(fixed, { p, p.CFrame })
+				end
+			end
+		end
+	end
+	Coplanar.Fix(items, fixed)
 	model.Parent = char
 	return model
 end

@@ -296,8 +296,7 @@ local function npcs(ctx, api)
 	put("Shop", "General Store", Color3.fromRGB(240, 170, 80), nil, -60, 182, { SubTitle = "Shop" })
 	put("Blacksmith", "Blacksmith", Color3.fromRGB(110, 90, 80), "bandana", 60, 182, { SubTitle = "Refine & Cards" })
 	-- v0.25.108 (owner): the Marines enlist here (the garrison town)
-	put("Marine", "Marine Registrar", Color3.fromRGB(70, 110, 200), "marine", -95, 182, { SubTitle = "Join the Marines" })
-	put("FastTravel", "Courier Gull Post", Color3.fromRGB(240, 240, 240), "marine", 95, 182, { SubTitle = "Fast Travel" })
+	put("Marine", "Marine Registrar", Color3.fromRGB(70, 110, 200), "marine", -13, 189, { SubTitle = "Join the Marines" }) -- v0.25.149 (owner): at the foot of the main stairs
 	put("Guide", Quests.Guide[ctx.island.id] or "Guide", Color3.fromRGB(255, 200, 90), "captain", 16, 224, { SubTitle = "📜 Quests" }, Vector2.new(0, 300))
 end
 

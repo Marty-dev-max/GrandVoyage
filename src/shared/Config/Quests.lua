@@ -131,7 +131,7 @@ Q.Main = {
 	{
 		id = "T13", island = "Daybreak", title = "Next Port: Conch Bay",
 		dialog = { "Sail east, follow the yellow dots and stay in the windy lane. The dark, still water at the edges is the Doldrums: no wind, and Leviathans." },
-		goal = { kind = "Reach", target = "ConchBay" }, text = "Sail to Conch Bay",
+		goal = { kind = "Reach", target = "ConchBay" }, text = "Reach Conch Bay",
 		hint = "Follow the dotted line east. Dock with E near the pier.",
 		at = { island = "ConchBay" }, reward = { beli = 800, exp = 400, job = 200 },
 	},
@@ -178,7 +178,7 @@ Q.Main = {
 	{
 		id = "C07", island = "ConchBay", title = "Circus Lights",
 		dialog = { "Word is a circus gang took over Marmalade Town to the east. Go see what's happening." },
-		goal = { kind = "Reach", target = "Marmalade" }, text = "Sail to Marmalade Town",
+		goal = { kind = "Reach", target = "Marmalade" }, text = "Reach Marmalade Town",
 		at = { island = "Marmalade" }, reward = { beli = 2000, exp = 2500, job = 1200 },
 	},
 
@@ -217,7 +217,7 @@ Q.Main = {
 	{
 		id = "M06", island = "Marmalade", title = "Up the Slope",
 		dialog = { "Thank you, sailor! Further east there's a quiet village on a hill. Too quiet, some say." },
-		goal = { kind = "Reach", target = "Honeyslope" }, text = "Sail to Honeyslope Village",
+		goal = { kind = "Reach", target = "Honeyslope" }, text = "Reach Honeyslope Village",
 		at = { island = "Honeyslope" }, reward = { beli = 3000, exp = 9000, job = 4500 },
 	},
 
@@ -249,7 +249,7 @@ Q.Main = {
 	{
 		id = "H05", island = "Honeyslope", title = "Smell of Dinner",
 		dialog = { "Sailors say there's a restaurant floating out at sea, shaped like a giant fish." },
-		goal = { kind = "Reach", target = "Barracuda" }, text = "Sail to Barracuda Bistro",
+		goal = { kind = "Reach", target = "Barracuda" }, text = "Reach Barracuda Bistro",
 		at = { island = "Barracuda" }, reward = { beli = 5000, exp = 24000, job = 12000 },
 	},
 
@@ -281,7 +281,7 @@ Q.Main = {
 	{
 		id = "B05", island = "Barracuda", title = "Tangerine Breeze",
 		dialog = { "You've a good appetite for trouble. The Mikan Isles are next. Watch out for the sharkfolk." },
-		goal = { kind = "Reach", target = "Mikan" }, text = "Sail to the Mikan Isles",
+		goal = { kind = "Reach", target = "Mikan" }, text = "Reach the Mikan Isles",
 		at = { island = "Mikan" }, reward = { beli = 10000, exp = 50000, job = 25000 },
 	},
 
@@ -313,7 +313,7 @@ Q.Main = {
 	{
 		id = "K05", island = "Mikan", title = "Last Harbor",
 		dialog = { "Every pirate's last stop before the Crimson Wall is Epilogue Town. Go, and don't forget us." },
-		goal = { kind = "Reach", target = "Epilogue" }, text = "Sail to Epilogue Town",
+		goal = { kind = "Reach", target = "Epilogue" }, text = "Reach Epilogue Town",
 		at = { island = "Epilogue" }, reward = { beli = 15000, exp = 100000, job = 50000 },
 	},
 

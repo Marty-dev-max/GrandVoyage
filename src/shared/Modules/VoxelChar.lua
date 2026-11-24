@@ -6,6 +6,7 @@
 --  * VoxelChar.Preview(look, heritage): a standalone anchored model in the R15 rest pose (menu, creator, slot cards).
 --    Its pivot is between the feet; move it with :PivotTo.
 local Looks = require(script.Parent.Parent.Config.Looks)
+local Coplanar = require(script.Parent.Coplanar)
 local okFaces, FaceImages = pcall(require, script.Parent.Parent.Config.FaceImages)
 if not okFaces then
 	FaceImages = {}
@@ -394,7 +395,7 @@ end
 -- build every block of a look. place(partName) -> CFrame, Size of that body part; emit(block, partName, cframe)
 VC.Rest = REST -- limb rest poses (tools/export_char.luau dresses previews with Accessory.Build)
 local LITE = false -- set by VC.Preview(..., { lite = true }): fewer hair blocks (NPC crews)
-local function buildAll(look, heritage, variant, mode, place, emit)
+local function buildBlocks(look, heritage, variant, mode, place, emit)
 	local mark = type(look) == "table" and look.mark or nil
 	look = Looks.Sanitize(look)
 	look.mark = mark -- monsters only (MonsterLooks); Sanitize drops unknown keys
@@ -964,6 +965,19 @@ local function buildAll(look, heritage, variant, mode, place, emit)
 	end
 end
 
+-- v0.25.149: every look is built in REST space (place() gives the rest pose), then blocks whose faces share a plane
+-- with a block of another color are pushed apart (Coplanar), then emitted. Real characters scale the result (Apply).
+local function buildAll(look, heritage, variant, mode, place, emit)
+	local q = {}
+	buildBlocks(look, heritage, variant, mode, place, function(b, partName, cf)
+		table.insert(q, { b, cf, partName })
+	end)
+	Coplanar.Fix(q)
+	for _, e in ipairs(q) do
+		emit(e[1], e[3], e[2])
+	end
+end
+
 -- ===== real characters (server) =====
 function VC.Apply(char, look, heritage, variant, mode)
 	local old = char:FindFirstChild("VoxelBody")
@@ -976,14 +990,20 @@ function VC.Apply(char, look, heritage, variant, mode)
 	for _, name in ipairs(VC.BODY_PARTS) do
 		parts[name] = char:FindFirstChild(name)
 	end
+	-- v0.25.149 (owner: clothes flickered on real characters only): build at the R15 rest sizes, then scale each block
+	-- with its limb (avatars are ~1.06x rest). Building from the live sizes broke every gap tuned at rest sizes.
 	buildAll(look, heritage, variant, mode, function(name)
-		local p = parts[name]
-		if not p then
+		local r = REST[name]
+		if not r or not parts[name] then
 			return nil
 		end
-		return p.CFrame, p.Size
+		return CFrame.new(r[2]), r[1]
 	end, function(b, partName, cf)
-		b.CFrame = cf
+		local p, r = parts[partName], REST[partName]
+		local k = (p.Size.X / r[1].X + p.Size.Y / r[1].Y + p.Size.Z / r[1].Z) / 3
+		local rel = CFrame.new(r[2]):ToObjectSpace(cf)
+		b.Size *= k
+		b.CFrame = p.CFrame * CFrame.new(rel.Position * k) * rel.Rotation
 		local w = Instance.new("WeldConstraint")
 		w.Part0 = parts[partName]
 		w.Part1 = b

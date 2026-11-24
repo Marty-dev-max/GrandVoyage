@@ -988,6 +988,20 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     the owner downloads them to Downloads, frames are cut with Blender's sequencer (blender -b script: strips
     new_movie + render per frame, contact sheets with PIL).
     v0.25.138 (owner): the boss lines are floating outlined text (no panel background), rows 14 px Display font.
+    v0.25.139 (owner): the BossIntro name + bar STAY at the top with live HP while the boss lives and you are near
+    (State.bossBar; gone after 3 s beyond 170 studs / 420 for sea bosses); the HUD target bar hides for that boss and
+    the boss text sits under the intro bar (y 200). DmgShare value = your damage / max HP (not a share of the total).
+    HUD target bar hides beyond 70 studs (bosses 170), selection cleared beyond 90 / 220. Readability: no white reach
+    ring and no red target ring in manual mode (Auto keeps both).
+    v0.25.140 (owner, Plan-Worldbuild-v2 pass 1): ENTERABLE buildings: Kit.House opts.hollow = "tavern" | "smithy" |
+    "shop" -> ground floor of 1-stud wall slabs with an open 6x7.6 doorway, plank floor (top y 1.4), ceiling beams,
+    warm PointLights, `Kit.Interior(cf, w, d, kind, fh)` furnishing (L bar + stools + bottle shelves / forge + anvil +
+    weapon rack / counter + goods shelves); `Kit.InteriorSpot(d)` = NPC local z at the back. No rng in interiors.
+    Wall furniture: local -Z must face INTO the room. api.npc extra.Lift raises an NPC onto a floor. Daybreak HALLS
+    (ring angle -> size/interior): Sunrise Tavern (+ a Tavern Keeper inside), Blacksmith, General Store (stall gone).
+    WORLD_VERSION 38. Owner next (24 Nov): monster zones readable from the map itself (no labels), and a quest
+    giver of its own on each island (not only Rowan). `python` in Git Bash is the Store stub (does nothing): use
+    Blender's python for scripts.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

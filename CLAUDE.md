@@ -908,6 +908,9 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     the badge, bottom corner, 7 up the side, top corner, 3 along the top. HUD close-up check in Play: multiply the ring
     frame's UIScale by ~3 from execute_luau (Client) and screen_capture.
     v0.25.122 (owner): ring h = RING_SIZE/2 - 18 (cells 12x12, pitch 14) hugs the gold portrait frame; card content x 96.
+    v0.25.123 (owner, Plan-Weapons-v2 sec 0): General Store first card = Mystery Blade (GameConfig.BladeRoll Fee /
+    TideChance / Seconds): `BladeLook` (near Shop, pays Fee, random id from ItemDB.Blades Fathom or Tide, kept per player)
+    -> Panels.BladeOffer (ItemReveal for Rare, WeaponView, BUY `BladeBuy` = def.price / PASS `BladePass`).
     If Studio is already in Play when you start_stop_play, that is the OWNER's session: do not stop it or change its UI.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).

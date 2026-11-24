@@ -12,49 +12,18 @@ local CELL = 8
 local TOP = 7.5 -- walkable grass top (GROUND 7.6 props sit on it)
 local M = Enum.Material
 
-local function hash(s: string): number
-	local h = 7
-	for i = 1, #s do
-		h = (h * 31 + string.byte(s, i)) % 2147483647
-	end
-	return h
-end
+local O = require(game:GetService("ReplicatedStorage").Shared.Modules.IslandOutline)
+local near = O.Near
+local beach = O.Beach
+S.Radius = O.Radius
 
-local cache = {}
 local function params(island)
-	local p = cache[island.id]
-	if not p then
-		local rnd = Random.new(hash(tostring(island.id)))
-		p = { rnd = rnd }
-		for i = 1, 6 do
-			p[i] = rnd:NextNumber(0, math.pi * 2)
-		end
-		cache[island.id] = p
+	-- build randomness: same seed as the outline phases, the 6 phase draws burned first
+	local rnd = Random.new(O.Hash(tostring(island.id)))
+	for _ = 1, 6 do
+		rnd:NextNumber(0, math.pi * 2)
 	end
-	return p
-end
-
-local function near(a: number, b: number, w: number): number
-	-- 1 at angle b, 0 beyond w radians
-	local d = math.abs(math.atan2(math.sin(a - b), math.cos(a - b)))
-	return math.clamp(1 - d / w, 0, 1)
-end
-
--- grass edge radius at local angle a (atan2(z, x))
-function S.Radius(island, r: number, a: number): number
-	local p = params(island)
-	local bump = 0.075 * math.sin(3 * a + p[1]) + 0.05 * math.sin(5 * a + p[2]) + 0.04 * math.sin(2 * a + p[3]) + 0.035
-	local R = r - 14 + r * math.max(0, bump)
-	-- docks east/west and the south harbor reach the old rim
-	local eastW = island.id == "Daybreak" and 1.05 or 0.35 -- Daybreak's stone quay spans +-0.5 rad
-	local keep = math.max(near(a, 0, eastW), near(a, math.pi, 0.35), near(a, math.pi / 2, 0.6))
-	return math.max(R, (r - 14) + 14 * math.min(1, keep * 2))
-end
-
--- sand beach width beyond the grass edge (0 = cliff straight into the sea)
-local function beach(island, r: number, a: number): number
-	local p = params(island)
-	return math.max(0, 26 * math.sin(4 * a + p[4]) + 10 * math.sin(7 * a + p[5]) - 4)
+	return { rnd = rnd }
 end
 
 -- cell kinds: 1 grass, 2 cliff ledge, 3 high sand, 4 low sand, 5 shallows; nil = open sea

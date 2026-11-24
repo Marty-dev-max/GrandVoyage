@@ -11,6 +11,7 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Islands = require(ReplicatedStorage.Shared.Config.Islands)
 local Settings = require(script.Parent.Settings)
+local Outline = require(ReplicatedStorage.Shared.Modules.IslandOutline)
 
 local WC = {}
 local BATCH = 500 -- parts moved per frame
@@ -24,6 +25,84 @@ local SCENERY = { EnvProp = true, EnvPart = true } -- (Decor stays: Settings hid
 -- big models spread over the whole sea are cut into square chunks that hide one by one
 local CHUNKED = { "Forts", "Islets", "RedLine", "SeaFloor" }
 local CHUNK = 600
+
+-- v0.25.135 (owner: far islands should still show faintly): while an island's scenery is culled, a light stand-in
+-- takes its place: the same organic outline (Shared IslandOutline) at 24-stud cells, rock body + grass cap, beaches,
+-- tree clumps and a few roofs. Atmosphere haze makes it read as a faint silhouette on the horizon.
+local impostorFolder
+local function impostor(isl)
+	local r = isl.radius
+	local pal = isl.palette or {}
+	local grass = pal.grass or Color3.fromRGB(120, 200, 90)
+	local sand = pal.sand or Color3.fromRGB(240, 220, 170)
+	local rockC = Color3.fromRGB(140, 128, 116)
+	local base = CFrame.new(isl.x, 0, isl.z or 0) * CFrame.Angles(0, isl.yaw or 0, 0)
+	local m = Instance.new("Model")
+	m.Name = "Far_" .. isl.id
+	local function part(size, lcf, color, mat)
+		local p = Instance.new("Part")
+		p.Anchored = true
+		p.CanCollide = false
+		p.CanQuery = false
+		p.CanTouch = false
+		p.CastShadow = false
+		p.Size = size
+		p.CFrame = base * lcf
+		p.Color = color
+		p.Material = mat
+		p.Parent = m
+	end
+	local CELL = 24
+	local ext = math.ceil((r * 1.3 + 30) / CELL)
+	for iz = -ext, ext do
+		local cur, from = nil, nil
+		local function flush(to)
+			if cur then
+				local x0, x1 = (from - 0.5) * CELL, (to + 0.5) * CELL
+				local w, cx, z = x1 - x0, (x0 + x1) / 2, iz * CELL
+				if cur == 1 then
+					part(Vector3.new(w, 11, CELL), CFrame.new(cx, 1, z), rockC, Enum.Material.Rock)
+					part(Vector3.new(w, 1, CELL), CFrame.new(cx, 7, z), grass, Enum.Material.Grass)
+				else
+					part(Vector3.new(w, 6, CELL), CFrame.new(cx, 0.6, z), sand, Enum.Material.Sand)
+				end
+			end
+		end
+		for ix = -ext, ext + 1 do
+			local k = nil
+			if ix <= ext then
+				local x, z = ix * CELL, iz * CELL
+				local d, a = math.sqrt(x * x + z * z), math.atan2(z, x)
+				local R = Outline.Radius(isl, r, a)
+				if d <= R then
+					k = 1
+				elseif d <= R + Outline.Beach(isl, r, a) then
+					k = 2
+				end
+			end
+			if k ~= cur then
+				flush(ix - 1)
+				cur, from = k, ix
+			end
+		end
+	end
+	-- tree clumps and roofs (deterministic per island)
+	local rnd = Random.new(Outline.Hash(isl.id) + 7)
+	for _ = 1, 46 do
+		local a = rnd:NextNumber(0, math.pi * 2)
+		local d = math.sqrt(rnd:NextNumber()) * (Outline.Radius(isl, r, a) - 18)
+		local s = rnd:NextNumber(12, 26)
+		local h = rnd:NextNumber(10, 22)
+		local x, z = math.cos(a) * d, math.sin(a) * d
+		if d < r * 0.42 and rnd:NextNumber() < 0.6 then
+			part(Vector3.new(s * 0.6, h * 0.45, s * 0.5), CFrame.new(x, 7.5 + h * 0.22, z) * CFrame.Angles(0, a, 0), pal.wall or Color3.fromRGB(245, 235, 215), Enum.Material.SmoothPlastic)
+			part(Vector3.new(s * 0.66, 3, s * 0.56), CFrame.new(x, 7.5 + h * 0.45 + 1.5, z) * CFrame.Angles(0, a, 0), pal.accent or Color3.fromRGB(220, 100, 70), Enum.Material.SmoothPlastic)
+		else
+			part(Vector3.new(s, h, s), CFrame.new(x, 7.5 + h / 2, z) * CFrame.Angles(0, a, 0), grass:Lerp(Color3.fromRGB(30, 90, 40), rnd:NextNumber(0.25, 0.45)), Enum.Material.Grass)
+		end
+	end
+	return m
+end
 
 local function protected(inst, root)
 	-- tagged itself or inside a tagged model (other than plain scenery), or something the player interacts with
@@ -60,12 +139,18 @@ local function hide(z)
 	WC.Stats.hidden += #z.stash
 	z.hidden = true
 	z.busy = false
+	if z.far then
+		z.far.Parent = impostorFolder
+	end
 end
 
 -- now = true: everything at once (you are standing on it: a teleport, a respawn), else spread over frames, the
 -- pieces nearest to the camera first
 local function show(z, now, at)
 	z.busy = true
+	if z.far then
+		z.far.Parent = nil
+	end
 	local stash = z.stash or {}
 	z.stash = nil
 	if at then
@@ -97,12 +182,16 @@ function WC.Start()
 		return
 	end
 	task.wait(4) -- let the map finish streaming in / being dressed
+	impostorFolder = Instance.new("Folder")
+	impostorFolder.Name = "FarIslands"
+	impostorFolder.Parent = workspace
 	for _, isl in ipairs(Islands.List) do
 		local m = world:FindFirstChild(isl.id)
 		if m and m:IsA("Model") then
 			local ok, cf, size = pcall(m.GetBoundingBox, m)
 			if ok then
-				table.insert(zones, { model = m, center = Vector3.new(cf.Position.X, 0, cf.Position.Z), radius = math.max(size.X, size.Z) / 2, hidden = false })
+				local okF, far = pcall(impostor, isl)
+				table.insert(zones, { model = m, center = Vector3.new(cf.Position.X, 0, cf.Position.Z), radius = math.max(size.X, size.Z) / 2, hidden = false, far = okF and far or nil })
 			end
 		end
 	end

@@ -96,7 +96,7 @@ local Islands = {
 		name = "Barracuda Bistro",
 		subtitle = "The Floating Restaurant",
 		x = 6800, z = -1250,
-		radius = 195,
+		radius = 160, -- v0.25.131: 195 left the raft mostly empty deck
 		levels = { 40, 50 },
 		palette = { sand = Color3.fromRGB(200, 150, 100), grass = Color3.fromRGB(226, 196, 148), dirt = Color3.fromRGB(150, 100, 64), accent = Color3.fromRGB(236, 78, 66), wall = Color3.fromRGB(255, 246, 232) },
 		theme = "FloatingRestaurant",
@@ -104,9 +104,9 @@ local Islands = {
 		townRadius = 70,
 		floating = true,
 		spawns = {
-			{ offset = Vector2.new(-100, 95), radius = 34, monster = "ArmadaRaider", count = 6 },
-			{ offset = Vector2.new(100, 95), radius = 34, monster = "StarvedPirate", count = 5 },
-			{ offset = Vector2.new(0, -110), radius = 34, monster = "ArmoredGunner", count = 4 },
+			{ offset = Vector2.new(-84, 70), radius = 30, monster = "ArmadaRaider", count = 6 }, -- v0.25.131: inside the smaller raft
+			{ offset = Vector2.new(84, 70), radius = 30, monster = "StarvedPirate", count = 5 },
+			{ offset = Vector2.new(0, -100), radius = 30, monster = "ArmoredGunner", count = 4 },
 		},
 		boss = { id = "ArmadaAdmiral", offset = Vector2.new(0, 285), respawn = 40 * 60, atSea = true },
 	},

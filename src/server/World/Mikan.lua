@@ -233,10 +233,27 @@ local function village(ctx)
 	end
 end
 
+-- green hills in the empty corners (layered cliffs + grass caps), palms on top
+local HILLS = { { 192, -192, 46, 18 }, { -196, -206, 42, 22 }, { 200, 204, 40, 14 } }
+local function hills(ctx)
+	local specs = {}
+	for _, h in ipairs(HILLS) do
+		table.insert(specs, { x = h[1], z = h[2], r = h[3], h = h[4], force = true, cap = { dx = -h[1] * 0.04, dz = -h[2] * 0.04, r = h[3] * 0.5, h = h[4] * 0.45 } })
+	end
+	L.Tiers(ctx, specs)
+	local rng = Kit.rng
+	for _, h in ipairs(HILLS) do
+		for _ = 1, 7 do
+			local a, d = rng:NextNumber(0, math.pi * 2), rng:NextNumber(4, h[3] - 8)
+			Kit.Palm(ctx.at(h[1] + math.cos(a) * d, h[2] + math.sin(a) * d) - Vector3.new(0, 3.2, 0))
+		end
+	end
+end
+
 -- tropical woods filling the open ground: palms near the shore, round trees inland, bushes + flowers between
 local function woods(ctx)
 	local rng = Kit.rng
-	for _ = 1, 320 do
+	for _ = 1, 560 do
 		local x, z = rng:NextNumber(-245, 245), rng:NextNumber(-245, 245)
 		local d = math.sqrt(x * x + z * z)
 		if ctx.free(x, z, 7) then
@@ -326,7 +343,8 @@ function MK.Build(island, api)
 	end
 	local ctx = api.makeCtx(island, c, r, GROUND)
 	ctx.foam = api.foam
-	-- 1. the big pieces + NPCs (they reserve their spots)
+	-- 1. landforms, the big pieces + NPCs (they reserve their spots)
+	hills(ctx)
 	palace(ctx)
 	npcs(ctx, api)
 	village(ctx)

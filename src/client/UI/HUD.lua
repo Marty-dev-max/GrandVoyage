@@ -1101,7 +1101,7 @@ function HUD.updateBossPanel(tgt)
 		row.dp.TextColor3 = (d and d[2] < 0.05) and Color3.fromRGB(255, 200, 80) or Color3.fromRGB(150, 230, 150)
 	end
 	local n = math.max(#drops, math.min(6, #share), 1)
-	bf.Size = UDim2.fromOffset(bf.Size.X.Offset, 48 + n * 17)
+	bf.Size = UDim2.fromOffset(bf.Size.X.Offset, 48 + n * 19)
 	bf.Position = UDim2.new(0.5, 0, 0, targetFrame.Position.Y.Offset + targetFrame.Size.Y.Offset + 6)
 end
 
@@ -1135,12 +1135,12 @@ local function buildTarget()
 	UI.Text(bf, "ITEM DROPS", 13, Color3.fromRGB(255, 220, 120), "Display", { Position = UDim2.new(0.52, 0, 0, 20), Size = UDim2.new(0.48, 0, 0, 16), TextXAlignment = Enum.TextXAlignment.Right })
 	HUD.bossRows = {}
 	for i = 1, 6 do
-		local y = 22 + i * 17
+		local y = 22 + i * 19
 		HUD.bossRows[i] = {
-			n = UI.Text(bf, "", 12, T.Text, "Semi", { Position = UDim2.fromOffset(0, y), Size = UDim2.new(0.34, 0, 0, 15), TextTruncate = Enum.TextTruncate.AtEnd }),
-			p = UI.Text(bf, "", 12, T.Text, "Number", { Position = UDim2.new(0.34, 0, 0, y), Size = UDim2.new(0.14, 0, 0, 15), TextXAlignment = Enum.TextXAlignment.Right }),
-			dn = UI.Text(bf, "", 12, T.Text, "Semi", { Position = UDim2.new(0.52, 0, 0, y), Size = UDim2.new(0.34, 0, 0, 15), TextTruncate = Enum.TextTruncate.AtEnd }),
-			dp = UI.Text(bf, "", 12, T.Text, "Number", { Position = UDim2.new(0.86, 0, 0, y), Size = UDim2.new(0.14, 0, 0, 15), TextXAlignment = Enum.TextXAlignment.Right }),
+			n = UI.Text(bf, "", 14, T.Text, "Display", { Position = UDim2.fromOffset(0, y), Size = UDim2.new(0.34, 0, 0, 17), TextTruncate = Enum.TextTruncate.AtEnd }),
+			p = UI.Text(bf, "", 14, T.Text, "Number", { Position = UDim2.new(0.34, 0, 0, y), Size = UDim2.new(0.14, 0, 0, 17), TextXAlignment = Enum.TextXAlignment.Right }),
+			dn = UI.Text(bf, "", 14, T.Text, "Display", { Position = UDim2.new(0.52, 0, 0, y), Size = UDim2.new(0.34, 0, 0, 17), TextTruncate = Enum.TextTruncate.AtEnd }),
+			dp = UI.Text(bf, "", 14, T.Text, "Number", { Position = UDim2.new(0.86, 0, 0, y), Size = UDim2.new(0.14, 0, 0, 17), TextXAlignment = Enum.TextXAlignment.Right }),
 		}
 	end
 	for _, d in ipairs(bf:GetDescendants()) do

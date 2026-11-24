@@ -987,6 +987,7 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     DROPS under the target bar. Reference findings + the next passes: docs/Plan-Worldbuild-v2.md. Video refs >10 MB:
     the owner downloads them to Downloads, frames are cut with Blender's sequencer (blender -b script: strips
     new_movie + render per frame, contact sheets with PIL).
+    v0.25.138 (owner): the boss lines are floating outlined text (no panel background), rows 14 px Display font.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

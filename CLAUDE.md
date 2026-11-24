@@ -952,6 +952,13 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     (disc rings water/rice/water + tufts), tangerine groves west, plaza village (12-slot ring minus road mouths),
     wreck SW, jetty south, 3 corner hills (keep x/z + r within ~218: the grass square ends ~230 out), tropical woods
     (palms near the shore). OctofolkBrute spawn (-90,-120). Daylight shots: server clock phase 0..0.7 is day (24 min).
+    v0.25.133 (owner): `World/Epilogue.lua` (LAYOUTS seed 20261127, WORLD_VERSION 36): NO execution platform (the old
+    HarborCity theme had one): the square's landmark is a BELL TOWER + two fountains; arched gate "EPILOGUE TOWN" on the
+    main street, ring road r 104 + radial streets, domed TOWN HALL (stepped `dome` of strip discs) north, red-dome church
+    west, Marine HQ east, 4 rings of white houses (terracotta / blue roofs), market stalls, PvP arena built here
+    (island.arena, PvPService reads its offset), Mist Commodore's broken square north, lighthouse east, 3 piers + quay.
+    Bounty Board + Job Master stand on the square sides (the last island keeps them). Roads reserve small spots along
+    their length: one circle per long segment blocked whole house rings. All six islands after Daybreak are hand-laid now.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

@@ -354,9 +354,9 @@ local function npcs(ctx, api)
 	put("Blacksmith", "Blacksmith", Color3.fromRGB(110, 90, 80), "bandana", 26, 226, { SubTitle = "Refine & Cards" }, v(0, 226))
 	put("FastTravel", "Courier Gull Post", Color3.fromRGB(240, 240, 240), "marine", 40, 196, { SubTitle = "Fast Travel" }, v(0, 196))
 	put("Guide", Quests.Guide[ctx.island.id] or "Guide", Color3.fromRGB(255, 200, 90), "captain", -14, 244, { SubTitle = "📜 Quests" }, v(0, 226))
-	-- the last island keeps the Bounty Board + Job Master (as Daybreak): on the square, facing the bell tower
-	put("BossBoard", "Bounty Board", Color3.fromRGB(255, 220, 120), nil, -14, 46, { SubTitle = "Bosses & Bounties" }, v(0, 0))
-	put("JobMaster", "Job Master", Color3.fromRGB(142, 28, 42), "master", 14, 46, { SubTitle = "Choose a Class" }, v(0, 0))
+	-- the last island keeps the Bounty Board + Job Master (as Daybreak): on the square sides, facing the bell tower (off the main street: the Power board stands beside the Bounty Board)
+	put("BossBoard", "Bounty Board", Color3.fromRGB(255, 220, 120), nil, -36, 30, { SubTitle = "Bosses & Bounties" }, v(0, 0))
+	put("JobMaster", "Job Master", Color3.fromRGB(142, 28, 42), "master", 36, 30, { SubTitle = "Choose a Class" }, v(0, 0))
 end
 
 function EP.Build(island, api)

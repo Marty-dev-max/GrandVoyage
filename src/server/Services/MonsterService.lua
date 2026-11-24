@@ -36,7 +36,97 @@ local function groundAt(x, z, fromY)
 end
 MS.GroundAt = groundAt
 
+-- v0.25.135 (owner reference): bosses show a card above the nameplate: DMG FOCUS = the type that beats them
+-- (MonsterTypes cycle, Bonus x) and their drop chances (drops table + card + blade roll), rarest last
+local function pct(c)
+	local v = c * 100
+	return (v >= 10 and string.format("%d%%", math.floor(v + 0.5))) or (v >= 1 and string.format("%.1f%%", v)) or string.format("%.2f%%", v)
+end
+local function makeBossInfo(mob)
+	local def = mob.def
+	local lines = {}
+	for _, d in ipairs(def.drops or {}) do
+		local it = ItemDB.Get(d[1])
+		if it then
+			table.insert(lines, { it.name, d[2] })
+		end
+	end
+	if def.card and def.cardChance and def.cardChance > 0 and ItemDB.Get(def.card) then
+		table.insert(lines, { "Card: " .. def.name, def.cardChance })
+	end
+	local bd = GameConfig.BladeDrop
+	if bd and bd.BossChance then
+		table.insert(lines, { "Mystery Blade", bd.BossChance })
+	end
+	table.sort(lines, function(a, b)
+		return a[2] > b[2]
+	end)
+	while #lines > 6 do
+		table.remove(lines, 1) -- keep the rare ones, they are what players hunt for
+	end
+	local bb = Instance.new("BillboardGui")
+	bb.Name = "BossInfo"
+	local h = 40 + #lines * 17
+	bb.Size = UDim2.fromOffset(250, h)
+	bb.StudsOffsetWorldSpace = Vector3.new(0, 3 + (def.style.scale or 1) * 2.5, 0)
+	bb.ExtentsOffsetWorldSpace = Vector3.new(0, 0, 0)
+	bb.SizeOffset = Vector2.new(0, 1.15)
+	bb.MaxDistance = 200
+	bb.Adornee = mob.root
+	local panel = Instance.new("Frame")
+	panel.Size = UDim2.fromScale(1, 1)
+	panel.BackgroundColor3 = Color3.fromRGB(18, 16, 30)
+	panel.BackgroundTransparency = 0.25
+	panel.BorderSizePixel = 0
+	panel.Parent = bb
+	local st = Instance.new("UIStroke")
+	st.Thickness = 2
+	st.Color = Color3.fromRGB(255, 200, 90)
+	st.Parent = panel
+	local function label(text, y, color, size)
+		local t = Instance.new("TextLabel")
+		t.BackgroundTransparency = 1
+		t.Position = UDim2.fromOffset(8, y)
+		t.Size = UDim2.new(1, -16, 0, size or 14)
+		t.Font = Enum.Font.Arcade
+		t.TextScaled = true
+		t.TextXAlignment = Enum.TextXAlignment.Left
+		t.TextColor3 = color
+		t.TextStrokeTransparency = 0.5
+		t.Text = text
+		t.Parent = panel
+		return t
+	end
+	local ty = def.mtype and MonsterTypes[def.mtype]
+	local focus
+	for k, v in pairs(MonsterTypes) do
+		if type(v) == "table" and v.beats and def.mtype and table.find(v.beats, def.mtype) then
+			focus = { id = k, t = v }
+		end
+	end
+	if focus then
+		label(string.format("DMG FOCUS: %s x%.1f", focus.t.name, MonsterTypes.Bonus or 1.2), 6, focus.t.color, 15)
+	else
+		label("DMG FOCUS: any", 6, Color3.new(1, 1, 1), 15)
+	end
+	if ty then
+		label("(" .. ty.name .. " type)", 23, ty.color, 11)
+	end
+	for i, l in ipairs(lines) do
+		local t = label(l[1], 24 + i * 17 - 4, Color3.fromRGB(235, 230, 215), 13)
+		t.Size = UDim2.new(0.72, -8, 0, 13)
+		local c = label(pct(l[2]), 24 + i * 17 - 4, l[2] < 0.05 and Color3.fromRGB(255, 200, 80) or Color3.fromRGB(150, 230, 150), 13)
+		c.Position = UDim2.new(0.72, 0, 0, 24 + i * 17 - 4)
+		c.Size = UDim2.new(0.28, -8, 0, 13)
+		c.TextXAlignment = Enum.TextXAlignment.Right
+	end
+	bb.Parent = mob.root
+end
+
 local function makeBar(mob)
+	if mob.def.isBoss then
+		pcall(makeBossInfo, mob)
+	end
 	local root = mob.root
 	local bb = ModelFactory.Billboard(root, mob.def.name, "Lv." .. mob.def.level .. "  " .. string.rep("★", mob.def.stars or 1), mob.def.isBoss and Color3.fromRGB(255, 90, 90) or Color3.new(1, 1, 1), 3 + (mob.def.style.scale or 1) * 2.5)
 	-- type badge (v0.25.18): colored square with the type's kanji left of the name

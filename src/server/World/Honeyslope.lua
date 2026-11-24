@@ -185,24 +185,30 @@ end
 -- woods between the fields and the hill, and along the east side
 local function woods(ctx)
 	local rng = Kit.rng
-	for _ = 1, 70 do
-		local x, z = rng:NextNumber(-230, 230), rng:NextNumber(-230, 60)
-		if ctx.free(x, z, 7) then
+	-- v0.25.130 (first look: the meadows were bare): a thick wood band round the village, thinner in the middle
+	for _ = 1, 260 do
+		local x, z = rng:NextNumber(-240, 240), rng:NextNumber(-240, 240)
+		local d = math.sqrt(x * x + (z - 40) * (z - 40))
+		if d > 120 and ctx.free(x, z, 7) then
 			Kit.RoundTree(ctx.at(x, z), rng:NextNumber(0.85, 1.35))
 			ctx.reserve(x, z, 6)
 		end
 	end
-	for _ = 1, 30 do
-		local x, z = rng:NextNumber(-220, 220), rng:NextNumber(-200, 200)
+	for _ = 1, 90 do
+		local x, z = rng:NextNumber(-230, 230), rng:NextNumber(-230, 230)
 		if ctx.free(x, z, 3) then
-			Kit.Bush(ctx.at(x, z), rng:NextNumber(2.5, 4))
+			if rng:NextNumber() > 0.6 then
+				Kit.Flowers(ctx.at(x, z), 4, 6)
+			else
+				Kit.Bush(ctx.at(x, z), rng:NextNumber(2.5, 4))
+			end
 		end
 	end
 end
 
 -- the south cove: a wooden jetty on posts with rowboats tied up
 local function cove(ctx)
-	local z0, z1 = 196, 262
+	local z0, z1 = 250, 318 -- from the beach out over the water (the square base reaches ~r)
 	local plank = Color3.fromRGB(150, 108, 70)
 	P(Vector3.new(10, 0.8, z1 - z0), plank, CFrame.new(ctx.c + Vector3.new(0, GROUND - 1.2, (z0 + z1) / 2)), { material = M.WoodPlanks })
 	for z = z0 + 4, z1, 8 do
@@ -210,13 +216,14 @@ local function cove(ctx)
 			P(Vector3.new(1.2, GROUND + 4, 1.2), TRIM, CFrame.new(ctx.c + Vector3.new(sx * 5.4, (GROUND + 4) / 2 - 2.6, z)), { material = M.Wood })
 		end
 	end
-	for _, b in ipairs({ { -10, 228, 0.25 }, { 10, 244, -0.2 } }) do
+	for _, b in ipairs({ { -10, 284, 0.25 }, { 10, 300, -0.2 } }) do
 		Kit.Rowboat(CFrame.new(ctx.c + Vector3.new(b[1], 0.4, b[2])) * CFrame.Angles(0, b[3], 0), Color3.fromRGB(110, 150, 190))
 	end
 	Kit.Lamp(ctx.c + Vector3.new(4.5, GROUND - 0.8, z1 - 2))
 	Kit.CrateStack(ctx.c + Vector3.new(-14, GROUND, 186))
 	Kit.Barrel(ctx.c + Vector3.new(14, GROUND + 0.5, 188))
-	ctx.reserve(0, 200, 16)
+	P(Vector3.new(9, 0.3, 60), DIRT, CFrame.new(ctx.c + Vector3.new(0, GROUND + 0.1, 222)), { material = M.Ground }) -- path down to the jetty
+	ctx.reserve(0, 222, 16)
 end
 
 local function shoreRocks(ctx)

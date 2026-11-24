@@ -574,7 +574,7 @@ function Kit.House(cf, w, d, wall, roof, opts)
 		P(Vector3.new(1.8, roofH + 2.5, 1.8), Color3.fromRGB(176, 92, 70), cf * CFrame.new(w * 0.3, 1.2 + h + roofH / 2 + 1.5, d * 0.22), decor({ material = M.Brick }))
 	end
 	if opts.sign then
-		Kit.Sign(opts.sign, cf * CFrame.new(0, hollow and 1.2 + DH + 2.6 or 1.2 + fh * 0.92 + 1.6, -d / 2 - 0.5), Vector2.new(math.min(w - 1, 12), 2.6), nil, opts.signBg)
+		Kit.Sign(opts.sign, cf * CFrame.new(0, (hollow and 1.2 + DH + 2.6 or 1.2 + fh * 0.92 + 1.6) + (opts.signLift or 0), -d / 2 - 0.5), Vector2.new(math.min(w - 1, 12), 2.6), nil, opts.signBg)
 	end
 	return 1.2 + h + roofH
 end

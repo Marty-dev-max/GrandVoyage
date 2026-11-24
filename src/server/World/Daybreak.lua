@@ -374,7 +374,7 @@ local function tavernPorch(ctx, front, dir2, w)
 	local depth = 7
 	P(Vector3.new(w - 4, 0.6, depth), Color3.fromRGB(176, 124, 78), cf * CFrame.new(0, 0.3, -depth / 2), { material = M.WoodPlanks })
 	for _, sx in ipairs({ -1, 1 }) do
-		P(Vector3.new(0.7, 7, 0.7), C.DarkWood, cf * CFrame.new(sx * (w / 2 - 2.6), 3.8, -depth + 0.4), { material = M.Wood })
+		P(Vector3.new(0.7, 9.6, 0.7), C.DarkWood, cf * CFrame.new(sx * (w / 2 - 2.6), 5.1, -depth + 0.4), { material = M.Wood })
 		-- lantern on each post
 		local lamp = P(Vector3.new(0.9, 1.2, 0.9), Color3.fromRGB(255, 210, 110), cf * CFrame.new(sx * (w / 2 - 2.6), 6.2, -depth - 0.2), decor({ material = M.Neon, collide = false }))
 		local light = Instance.new("PointLight")
@@ -383,11 +383,11 @@ local function tavernPorch(ctx, front, dir2, w)
 		light.Color = Color3.fromRGB(255, 200, 120)
 		light.Parent = lamp
 	end
-	-- striped awning sloping down toward the street
+	-- striped awning sloping down toward the street, ABOVE the doorway (v0.25.141: it crossed the open door at y 8)
 	for k = 0, 5 do
 		local stripe = (w - 3) / 6
-		Wedge(Vector3.new(stripe, 1.4, depth + 1), k % 2 == 0 and Color3.fromRGB(196, 52, 46) or Color3.fromRGB(250, 240, 220),
-			cf * CFrame.new(-(w - 3) / 2 + stripe * (k + 0.5), 8, -depth / 2) * CFrame.Angles(0, math.pi, 0), decor({ material = M.Fabric, collide = false }))
+		Wedge(Vector3.new(stripe, 3, depth + 1), k % 2 == 0 and Color3.fromRGB(196, 52, 46) or Color3.fromRGB(250, 240, 220),
+			cf * CFrame.new(-(w - 3) / 2 + stripe * (k + 0.5), 10.4, -depth / 2) * CFrame.Angles(0, math.pi, 0), decor({ material = M.Plaster, collide = false }))
 	end
 	-- hanging sign: an iron arm off the right post with a board and a big tankard on it
 	local arm = cf * CFrame.new(w / 2 - 2.6, 7.6, -depth - 0.2)
@@ -406,7 +406,7 @@ end
 -- (Kit.House opts.hollow -> Kit.Interior). angle on the plaza ring -> size + interior + sign
 local RING = 66
 local HALLS = {
-	[-0.62] = { w = 28, d = 20, floors = 2, hollow = "tavern", sign = "SUNRISE TAVERN" },
+	[-0.62] = { w = 28, d = 20, floors = 2, hollow = "tavern", sign = "SUNRISE TAVERN", signLift = 2.6 }, -- sign above the porch awning
 	[1.35] = { w = 24, d = 18, floors = 1, hollow = "smithy", sign = "BLACKSMITH" },
 	[-1.18] = { w = 24, d = 18, floors = 1, hollow = "shop", sign = "GENERAL STORE" },
 }
@@ -430,7 +430,7 @@ local function houses(ctx)
 		local hall = HALLS[a]
 		if hall then
 			w, d = hall.w, hall.d
-			opts = { floors = hall.floors, sign = hall.sign, hollow = hall.hollow, floorHeight = 11 }
+			opts = { floors = hall.floors, sign = hall.sign, hollow = hall.hollow, floorHeight = 11, signLift = hall.signLift }
 		end
 		timberHouse(ctx, x, z, w, d, opts, PLAZA)
 		local dir2 = (PLAZA - Vector2.new(x, z)).Unit

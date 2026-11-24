@@ -75,7 +75,7 @@ local function newPart(size, color, name)
 	p.Name = name
 	p.Size = size
 	p.Color = color
-	p.Material = Enum.Material.Fabric
+	p.Material = Enum.Material.Plaster -- Fabric's MaterialService variant renders dark blue
 	p.TopSurface = Enum.SurfaceType.Smooth
 	p.BottomSurface = Enum.SurfaceType.Smooth
 	p.CanCollide = false

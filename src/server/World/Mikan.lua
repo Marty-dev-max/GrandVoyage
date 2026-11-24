@@ -143,8 +143,8 @@ local function palace(ctx)
 	end
 	-- the tiered hall at the back (pagoda-like, coral roofs) with a shell crown
 	local hall = ctx.c + Vector3.new(cx + 24, GROUND, cz - 26)
-	Kit.Pagoda(hall, 1.15, CREAM, CORAL_D)
-	shell(CFrame.new(hall + Vector3.new(0, 44, 0)), 12)
+	Kit.Pagoda(hall, 1.45, CREAM, CORAL_D)
+	shell(CFrame.new(hall + Vector3.new(0, 36 * 1.45 - 1, 0)), 16)
 	-- the pool + pavilion on the west side of the yard
 	local px, pz = cx - 32, cz - 18
 	P(Vector3.new(30, 1, 24), STONE, CFrame.new(ctx.c + Vector3.new(px, GROUND + 0.5, pz)), { material = M.Cobblestone })
@@ -233,6 +233,33 @@ local function village(ctx)
 	end
 end
 
+-- tropical woods filling the open ground: palms near the shore, round trees inland, bushes + flowers between
+local function woods(ctx)
+	local rng = Kit.rng
+	for _ = 1, 320 do
+		local x, z = rng:NextNumber(-245, 245), rng:NextNumber(-245, 245)
+		local d = math.sqrt(x * x + z * z)
+		if ctx.free(x, z, 7) then
+			if d > 190 or rng:NextNumber() > 0.6 then
+				Kit.Palm(ctx.at(x, z) - Vector3.new(0, 3.2, 0))
+			else
+				Kit.RoundTree(ctx.at(x, z), rng:NextNumber(0.9, 1.4), Color3.fromRGB(60, 160, 70), rng:NextNumber() > 0.7 and ORANGE or nil)
+			end
+			ctx.reserve(x, z, 6)
+		end
+	end
+	for _ = 1, 110 do
+		local x, z = rng:NextNumber(-240, 240), rng:NextNumber(-240, 240)
+		if ctx.free(x, z, 3) then
+			if rng:NextNumber() > 0.55 then
+				Kit.Flowers(ctx.at(x, z), 4, 6)
+			else
+				Kit.Bush(ctx.at(x, z), rng:NextNumber(2.5, 4))
+			end
+		end
+	end
+end
+
 -- an old wreck beached on the south-west shore
 local function wreck(ctx)
 	local c = ctx.at(-168, 184)
@@ -318,8 +345,8 @@ function MK.Build(island, api)
 	-- 4. groves, palms + shore rocks, greenery, chests last
 	groves(ctx)
 	L.Coast(ctx, 34)
-	L.Greenery(ctx, 10, nil, ORANGE)
 	api.placeChests(ctx)
+	woods(ctx)
 	local spawnPart = P(Vector3.new(8, 1, 8), Color3.fromRGB(255, 240, 160), CFrame.new(ctx.c + Vector3.new(0, GROUND + 0.2, 204)), { name = "SpawnPoint", material = M.Neon, transparency = 1, collide = false, shadow = false })
 	spawnPart:SetAttribute("Island", island.id)
 	CollectionService:AddTag(spawnPart, "IslandSpawn")

@@ -262,6 +262,7 @@ local function sync(player)
 			ammo = p.ammo,
 			autoSkills = p.autoSkills,
 			inventory = p.inventory,
+			index = p.index,
 			equipment = p.equipment,
 			beli = p.beli,
 			faction = p.faction,

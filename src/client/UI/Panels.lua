@@ -4305,6 +4305,142 @@ function Panels.TokiColor(args)
 	onProfile(win, render)
 end
 
+-- ===================== INDEX (v0.25.127, owner: docs/Plan-Weapons-v2.md) =====================
+-- Blade Ledger (every blade: stats, where it comes from, found yet) + Monsters + Bosses (how many you defeated).
+-- p.index = { blades = { [id] = true }, kills = { [monsterId] = n } } (InventoryService / MonsterService).
+local BLADE_LEDGER = {
+	{ "Fathom", "Forty Fathoms", "General Store (Mystery Blade), monsters Lv.8+" },
+	{ "Tide", "Twenty Tides", "Mystery Blade (rare), MVP bosses" },
+	{ "Awakened", "Twenty Tides, Awakened", "Coming soon" },
+}
+local indexTab = "Blades"
+local Types = require(Shared.Config.MonsterTypes)
+function Panels.Index()
+	local win = UI.Window("Index", "Index", UDim2.fromOffset(980, 600), T.Gold, "📖", { fullscreen = true })
+	local body = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Parent = win.body })
+	local render
+	render = function()
+		clear(body)
+		local p = State.profile
+		if not p then
+			return
+		end
+		local ix = p.index or {}
+		local kills = ix.kills or {}
+		local have = {}
+		for id in pairs(ix.blades or {}) do
+			have[id] = true
+		end
+		for _, e in ipairs(p.inventory or {}) do
+			have[e.id] = true -- blades owned before the Index existed
+		end
+		UI.TabBar(body, { { "Blades", "⚔️", "Blades" }, { "Monsters", "💀", "Monsters" }, { "Bosses", "👑", "Bosses" } }, indexTab, function(t)
+			indexTab = t
+			render()
+		end)
+		local sc = UI.Scroll(body, UDim2.new(1, 0, 1, -50))
+		sc.Position = UDim2.fromOffset(0, 50)
+		UI.List(sc, nil, 10)
+		New("UIPadding", { PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6), PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 10), Parent = sc })
+		local order = 0
+		local function section(title, sub, count)
+			order += 1
+			local head = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 44), LayoutOrder = order, Parent = sc })
+			UI.Text(head, title, 20, T.Gold, "Display", { Size = UDim2.new(1, -140, 0, 26), TextXAlignment = Enum.TextXAlignment.Left })
+			UI.Text(head, sub, 13, T.TextSoft, "Semi", { Position = UDim2.fromOffset(0, 26), Size = UDim2.new(1, -140, 0, 18), TextXAlignment = Enum.TextXAlignment.Left })
+			UI.Text(head, count, 16, T.Text, "Number", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 4), Size = UDim2.fromOffset(140, 22), TextXAlignment = Enum.TextXAlignment.Right })
+			order += 1
+			local grid = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, LayoutOrder = order, Parent = sc })
+			New("UIGridLayout", { CellSize = UDim2.fromOffset(150, 196), CellPadding = UDim2.fromOffset(10, 10), SortOrder = Enum.SortOrder.LayoutOrder, Parent = grid })
+			return grid
+		end
+		local function cell(grid, i, rarity, lit)
+			local c = New("Frame", { BackgroundColor3 = T.PanelDeep, LayoutOrder = i, Parent = grid })
+			UI.Corner(c, 10)
+			if lit and rarity then
+				UI.RarityStyle(c, rarity)
+			else
+				UI.Stroke(c, T.Edge, 2)
+			end
+			return c
+		end
+		local function line(c, y, text, size, color, kind)
+			return UI.Text(c, text, size, color, kind or "Semi", { Position = UDim2.fromOffset(6, y), Size = UDim2.new(1, -12, 0, size + 6), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 4 })
+		end
+		if indexTab == "Blades" then
+			for _, tier in ipairs(BLADE_LEDGER) do
+				local ids = ItemDB.Blades[tier[1]] or {}
+				local n = 0
+				for _, id in ipairs(ids) do
+					n += have[id] and 1 or 0
+				end
+				local grid = section(tier[2], tier[3], n .. " / " .. #ids)
+				for i, id in ipairs(ids) do
+					local def = ItemDB.Get(id)
+					local got = have[id]
+					local c = cell(grid, i, def.rarity, got)
+					local img = UI.ItemIconId(def)
+					if img then
+						New("ImageLabel", { BackgroundTransparency = 1, Image = img, ScaleType = Enum.ScaleType.Fit, ResampleMode = Enum.ResamplerMode.Pixelated, ImageColor3 = got and Color3.new(1, 1, 1) or Color3.fromRGB(70, 70, 90), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 10), Size = UDim2.fromOffset(78, 78), ZIndex = 4, Parent = c })
+					end
+					local nm = line(c, 94, def.name, 14, T.Text)
+					UI.RarityText(nm, def.rarity)
+					line(c, 118, "ATK " .. def.atk .. "  " .. (def.typeLabel or "Sword"), 12, T.TextSoft)
+					line(c, 136, def.dex and ("DEX +" .. def.dex .. " LUK +" .. (def.luk or 0)) or ("STR +" .. (def.str or 0) .. " VIT +" .. (def.vit or 0)), 12, T.TextSoft)
+					line(c, 166, got and "FOUND" or "NOT FOUND", 13, got and T.Green or T.TextSoft, "Display")
+				end
+			end
+		else
+			local bosses = indexTab == "Bosses"
+			for _, isl in ipairs(Islands.List) do
+				local ids = {}
+				if bosses then
+					if isl.boss then
+						table.insert(ids, isl.boss.id)
+					end
+				else
+					for _, sp in ipairs(isl.spawns or {}) do
+						if not table.find(ids, sp.monster) then
+							table.insert(ids, sp.monster)
+						end
+					end
+				end
+				local defs = {}
+				for _, id in ipairs(ids) do
+					local d = MonstersCfg[id]
+					if d then
+						table.insert(defs, d)
+					end
+				end
+				if #defs > 0 then
+					local n = 0
+					for _, d in ipairs(defs) do
+						n += (kills[d.id] or 0) > 0 and 1 or 0
+					end
+					local lv = isl.levels and ("Lv." .. isl.levels[1] .. "-" .. isl.levels[2]) or ""
+					local grid = section(ChartsView.Name(isl), lv, n .. " / " .. #defs)
+					for i, d in ipairs(defs) do
+						local k = kills[d.id] or 0
+						local c = cell(grid, i, bosses and "Epic" or "Common", k > 0)
+						if k > 0 then
+							UI.MonsterView(c, d.id, 96, false, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 2), ZIndex = 4 })
+						else
+							line(c, 26, "?", 44, T.TextSoft, "Display")
+						end
+						line(c, 100, k > 0 and d.name or "???", 14, T.Text)
+						local ty = Types[d.mtype or ""]
+						local tl = line(c, 122, "Lv." .. d.level .. (ty and ("  " .. d.mtype) or ""), 12, ty and ty.color or T.TextSoft)
+						tl.TextColor3 = ty and ty.color or T.TextSoft
+						line(c, 144, string.rep("★", d.stars or 1), 12, T.Gold)
+						line(c, 166, k > 0 and ("Defeated " .. UI.Format(k)) or "Not met yet", 12, k > 0 and T.Green or T.TextSoft, "Display")
+					end
+				end
+			end
+		end
+	end
+	render()
+end
+
 function Panels.Open(name, args)
 	local f = Panels[name]
 	if f then

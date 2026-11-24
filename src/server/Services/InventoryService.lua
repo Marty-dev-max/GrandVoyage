@@ -64,6 +64,11 @@ function Inv.AddItem(player, id, qty, extra)
 			end
 			table.insert(p.inventory, entry)
 		end
+		if def.blade then -- v0.25.127 Index: the Blade Ledger remembers every blade you ever got
+			p.index = p.index or {}
+			p.index.blades = p.index.blades or {}
+			p.index.blades[id] = true
+		end
 	end
 	R.PlayerService.MarkDirty(player)
 	return true

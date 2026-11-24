@@ -504,6 +504,7 @@ local MENU = {
 	{ "🏴", "Guild", hex("A44C64"), "G", "Crew", bg = { hex("A44C64"), hex("58293F") }, stripes = hex("FFC6A8"), fx = { icons = { "flag" }, faction = true, color = hex("FFC6A8") } },
 	{ "👥", "Party", T.Green, "P", "Party", fx = { plus = true, star = 0.9, color = hex("C8FFC8") } },
 	{ "👑", "BossBoard", hex("AC404F"), "B", "Bosses", bg = { hex("AC404F"), hex("541E35") }, fx = { icons = { "skull" }, iconFrac = 0.35, color = hex("FF9373"), star = 0 } },
+	{ "📖", "Index", T.Gold:Lerp(T.Orange, 0.3), nil, "Index", fx = { icons = { "book" }, iconFrac = 0.35, color = hex("FFE7B0") } }, -- v0.25.127 Blade Ledger + Monsters + Bosses
 	{ "⚙️", "Settings", T.Grey, "O", "Settings", fx = { icons = { "gear" }, color = hex("D8DCEA") } },
 }
 HUD.Menu = MENU

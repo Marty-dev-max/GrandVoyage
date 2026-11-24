@@ -915,6 +915,12 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     MobChance, Tide from isBoss at BossChance, x drop mult; boss blades Announce).
     v0.25.125: a bash heredoc turned "\n" into a real newline inside a Lua string -> Panels.lua failed to load = no menu,
     no HUD, plain avatar. Write Lua through files/Edit, never through shell-escaped strings, and read Output after sync.
+    v0.25.126 (owner): UI.ModelViewOf spins models around their bounding-box middle (blades pivot at the grip);
+    Blacksmith gear list keeps CanvasPosition across render(); fullscreen windows open FRAMED by default
+    (UI.FullPref default true only for PearlShop; Job sets its own); Greenhorn title shows as "Larper" (id kept).
+    v0.25.127: Panels.Index (MENU entry "Index"): tabs Blades (ItemDB.Blades by tier, FOUND = p.index.blades or in
+    the bag) / Monsters / Bosses (Islands spawns + boss, p.index.kills from MonsterService die). Profile push sends
+    `index`. No onProfile re-render (kills would rebuild every viewport).
     If Studio is already in Play when you start_stop_play, that is the OWNER's session: do not stop it or change its UI.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).

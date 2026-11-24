@@ -282,6 +282,12 @@ local function die(mob, killer)
 			local share = math.clamp(dmg / mob.maxHp, 0, 1)
 			R.PartyService.ShareExp(pl, def.exp * share, def.jobExp * share, mob.root.Position)
 			R.QuestService.Event(pl, "Kill", def.id)
+			local pp = R.PlayerService.Profile(pl) -- v0.25.127 Index: defeated count per monster
+			if pp then
+				pp.index = pp.index or {}
+				pp.index.kills = pp.index.kills or {}
+				pp.index.kills[def.id] = (pp.index.kills[def.id] or 0) + 1
+			end
 			if dmg > topDmg then
 				top, topDmg = pl, dmg
 			end

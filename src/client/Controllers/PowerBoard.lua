@@ -14,6 +14,11 @@ local function fmt(n)
 	return s:reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "")
 end
 
+local PPS = 22
+local dress
+
+-- v0.25.120: map-built boards (World, tag "PowerBoard", part "Board") get the list; a Bounty Board NPC without one
+-- nearby (other islands) still gets a local board
 local function build(npc)
 	if npc:GetAttribute("Role") ~= "BossBoard" or npc:GetAttribute("HasPowerBoard") then
 		return
@@ -22,6 +27,11 @@ local function build(npc)
 	if not root then
 		return
 	end
+	for _, m in ipairs(CollectionService:GetTagged("PowerBoard")) do
+		if m:IsA("Model") and (m:GetPivot().Position - root.Position).Magnitude < 40 then
+			return
+		end
+	end
 	npc:SetAttribute("HasPowerBoard", true)
 	local folder = workspace:FindFirstChild("PowerBoards") or Instance.new("Folder")
 	folder.Name = "PowerBoards"
@@ -29,7 +39,7 @@ local function build(npc)
 	-- to the NPC's right, facing the same way it looks; feet are 2.6 below the root
 	local base = root.CFrame * CFrame.new(9.5, -2.6, 0.5)
 	-- big enough that 0.5-stud rows read from the plaza (v0.25.118: 9x11 at 60 px/stud was unreadable)
-	local W, H, PPS = 13, 16, 22
+	local W, H = 13, 16
 	local function part(size, cf, color, mat)
 		local p = Instance.new("Part")
 		p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch = true, true, false, false
@@ -43,7 +53,15 @@ local function build(npc)
 	local board = part(Vector3.new(W, H, 0.4), base * CFrame.new(0, 1.6 + H / 2, 0), Color3.fromRGB(60, 40, 28), Enum.Material.WoodPlanks)
 	part(Vector3.new(W + 0.6, 0.5, 0.7), base * CFrame.new(0, 1.6 + H + 0.2, 0), Color3.fromRGB(140, 30, 40))
 	part(Vector3.new(W + 0.4, 0.3, 0.6), base * CFrame.new(0, 1.45, 0), Color3.fromRGB(92, 60, 36))
+	dress(board)
+end
 
+function dress(board)
+	if board:GetAttribute("HasPowerList") then
+		return
+	end
+	board:SetAttribute("HasPowerList", true)
+	local W, H = board.Size.X, board.Size.Y
 	local sg = Instance.new("SurfaceGui")
 	sg.Name = "PowerBoard"
 	sg.Face = Enum.NormalId.Front
@@ -128,6 +146,18 @@ local function refresh()
 end
 
 function PowerBoard.Start()
+	local function dressModel(m)
+		local b = m:FindFirstChild("Board")
+		if b and b:IsA("BasePart") then
+			dress(b)
+		end
+	end
+	for _, m in ipairs(CollectionService:GetTagged("PowerBoard")) do
+		dressModel(m)
+	end
+	CollectionService:GetInstanceAddedSignal("PowerBoard"):Connect(function(m)
+		task.defer(dressModel, m)
+	end)
 	for _, m in ipairs(CollectionService:GetTagged("NPC")) do
 		build(m)
 	end

@@ -968,7 +968,29 @@ local function npcs(ctx, api)
 	put("Guide", Quests.Guide.Daybreak or "Guide", Color3.fromRGB(255, 200, 90), "captain", CAMP + Vector2.new(-2, -14), { SubTitle = "📜 Quests" }, SPAWN)
 	-- plaza: Job Master and the Bounty Board at the trail entrance, shops around the fountain
 	put("JobMaster", "Job Master", Color3.fromRGB(142, 28, 42), "master", onPlaza(2.75), { SubTitle = "Choose a Class" }, P0)
-	put("BossBoard", "Bounty Board", Color3.fromRGB(255, 220, 120), nil, onPlaza(-2.7, 50), { SubTitle = "Bosses & Bounties" }, P0) -- v0.25.119 (owner): by the small house at the west street
+	local bb = onPlaza(-2.7, 50)
+	put("BossBoard", "Bounty Board", Color3.fromRGB(255, 220, 120), nil, bb, { SubTitle = "Bosses & Bounties" }, P0) -- v0.25.119 (owner): by the small house at the west street
+	-- v0.25.120 (owner): the TOP 50 POWER board stands on the NPC's left, in front of the house (off the trail), and is
+	-- part of the map so it shows in Studio Edit; Controllers/PowerBoard puts the list on its "Board" part
+	do
+		local f = (P0 - bb).Unit
+		local spot = bb + Vector2.new(f.Y, -f.X) * 9.5
+		local g = ctx.at(spot.X, spot.Y)
+		local base = CFrame.lookAt(g, g + Vector3.new(f.X, 0, f.Y))
+		local model = Instance.new("Model")
+		model.Name = "PowerBoard"
+		model.Parent = Kit.parent
+		CollectionService:AddTag(model, "PowerBoard")
+		local W, H = 13, 16
+		local wood = Color3.fromRGB(92, 60, 36)
+		for _, sx in ipairs({ -1, 1 }) do
+			P(Vector3.new(0.6, H + 2.2, 0.6), wood, base * CFrame.new(sx * (W / 2 + 0.2), (H + 2.2) / 2, 0.25), { material = M.Wood, parent = model })
+		end
+		P(Vector3.new(W, H, 0.4), Color3.fromRGB(60, 40, 28), base * CFrame.new(0, 1.6 + H / 2, 0), { material = M.WoodPlanks, parent = model, name = "Board" })
+		P(Vector3.new(W + 0.6, 0.5, 0.7), Color3.fromRGB(140, 30, 40), base * CFrame.new(0, 1.6 + H + 0.2, 0), { material = M.Wood, parent = model })
+		P(Vector3.new(W + 0.4, 0.3, 0.6), wood, base * CFrame.new(0, 1.45, 0), { material = M.Wood, parent = model })
+		model.PrimaryPart = model:FindFirstChild("Board")
+	end
 	put("Shop", "General Store", Color3.fromRGB(240, 170, 80), nil, onPlaza(-1.25), { SubTitle = "Shop" }, P0)
 	put("Blacksmith", "Blacksmith", Color3.fromRGB(110, 90, 80), "bandana", onPlaza(1.05), { SubTitle = "Refine & Cards" }, P0)
 	-- harbor: shipwright by the shipyard, courier gulls by the north dock

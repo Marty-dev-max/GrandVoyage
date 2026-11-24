@@ -402,19 +402,35 @@ local function tavernPorch(ctx, front, dir2, w)
 	Kit.Barrel(f + d3 * 3.5 + cf.RightVector * (w / 2 - 1.4))
 end
 
+-- v0.25.140 (owner reference clip): the important plaza buildings are bigger and ENTERABLE, their NPC inside
+-- (Kit.House opts.hollow -> Kit.Interior). angle on the plaza ring -> size + interior + sign
+local RING = 66
+local HALLS = {
+	[-0.62] = { w = 28, d = 20, floors = 2, hollow = "tavern", sign = "SUNRISE TAVERN" },
+	[1.35] = { w = 24, d = 18, floors = 1, hollow = "smithy", sign = "BLACKSMITH" },
+	[-1.18] = { w = 24, d = 18, floors = 1, hollow = "shop", sign = "GENERAL STORE" },
+}
+local function hallSpot(ctx, a)
+	-- where the NPC stands inside the hall at ring angle a (local x, z) + its floor lift above the fixed NPC ground
+	local h = HALLS[a]
+	local r = RING + Kit.InteriorSpot(h.d)
+	local x, z = PLAZA.X + math.cos(a) * r, PLAZA.Y + math.sin(a) * r
+	return Vector2.new(x, z), ctx.at(PLAZA.X + math.cos(a) * RING, PLAZA.Y + math.sin(a) * RING).Y + 1.4 - 7.6
+end
+
 local function houses(ctx)
 	-- ring around the plaza; gaps for the trail (west), the harbor street (east), the meadow lane (south) and
 	-- the lighthouse lane (north-east)
-	local ring = 66
+	local ring = RING
 	local angles = { 0.55, 1.35, 1.8, 2.3, 2.62, -2.62, -2.3, -1.85, -1.18, -0.62 }
 	for i, a in ipairs(angles) do
 		local x, z = PLAZA.X + math.cos(a) * ring, PLAZA.Y + math.sin(a) * ring
 		local w, d = rng:NextNumber(15, 20), rng:NextNumber(12, 14)
 		local opts = { floors = (i % 3 == 0) and 1 or 2 }
-		if a == -0.62 then
-			w, d, opts = 26, 16, { floors = 2, sign = "SUNRISE TAVERN" }
-		elseif a == 1.35 then
-			opts.sign = "BLACKSMITH" -- v0.25.112 (owner): the Blacksmith stands by this house
+		local hall = HALLS[a]
+		if hall then
+			w, d = hall.w, hall.d
+			opts = { floors = hall.floors, sign = hall.sign, hollow = hall.hollow, floorHeight = 11 }
 		end
 		timberHouse(ctx, x, z, w, d, opts, PLAZA)
 		local dir2 = (PLAZA - Vector2.new(x, z)).Unit
@@ -984,18 +1000,17 @@ local function npcs(ctx, api)
 		P(Vector3.new(W + 0.4, 0.3, 0.6), wood, base * CFrame.new(0, 1.45, 0), { material = M.Wood, parent = model })
 		model.PrimaryPart = model:FindFirstChild("Board")
 	end
-	put("Shop", "General Store", Color3.fromRGB(240, 170, 80), nil, onPlaza(-1.25), { SubTitle = "Shop" }, P0)
-	put("Blacksmith", "Blacksmith", Color3.fromRGB(110, 90, 80), "bandana", onPlaza(1.05), { SubTitle = "Refine & Cards" }, P0)
+	-- v0.25.140: the shopkeepers stand inside their buildings (behind the counter / at the anvil), the barkeep too
+	local spot, lift = hallSpot(ctx, -1.18)
+	put("Shop", "General Store", Color3.fromRGB(240, 170, 80), nil, spot, { SubTitle = "Shop", Lift = lift }, P0)
+	spot, lift = hallSpot(ctx, 1.35)
+	put("Blacksmith", "Blacksmith", Color3.fromRGB(110, 90, 80), "bandana", spot, { SubTitle = "Refine & Cards", Lift = lift }, P0)
+	spot, lift = hallSpot(ctx, -0.62)
+	put("Tavern", "Tavern Keeper", Color3.fromRGB(200, 90, 90), nil, spot, { SubTitle = "Hire Crew", Lift = lift }, P0)
 	-- harbor: shipwright by the shipyard, courier gulls by the north dock
 	put("Shipwright", "Shipwright", Color3.fromRGB(90, 140, 200), "bandana", Vector2.new(230, -58), { SubTitle = "Shipyard & Launch" }, Vector2.new(150, -40))
 	put("Tavern", "Tavern Keeper", Color3.fromRGB(200, 90, 90), nil, Vector2.new(230, -42), { SubTitle = "Hire Crew" }, Vector2.new(150, -40)) -- v0.25.107: beside the Shipwright
 	put("FastTravel", "Courier Gull Post", Color3.fromRGB(240, 240, 240), "marine", Vector2.new(228, 50), { SubTitle = "Fast Travel" }, PLAZA)
-	-- props that dress the shops
-	local smith = ctx.at(onPlaza(1.05, 36).X, onPlaza(1.05, 36).Y)
-	P(Vector3.new(3, 2, 1.8), Color3.fromRGB(70, 70, 76), CFrame.new(smith + Vector3.new(0, 1, 0)), decor({ material = M.Metal }))
-	P(Vector3.new(4, 0.8, 2), Color3.fromRGB(90, 90, 96), CFrame.new(smith + Vector3.new(0, 2.4, 0)), decor({ material = M.Metal }))
-	local store = onPlaza(-1.25, 36)
-	Kit.Stall(L.YawToward(ctx.at(store.X, store.Y), ctx.at(P0.X, P0.Y)), Color3.fromRGB(250, 170, 60))
 	-- post with a gull on it
 	local post = ctx.at(228, 56)
 	P(Vector3.new(1, 6, 1), C.DarkWood, CFrame.new(post + Vector3.new(0, 3, 0)), { material = M.Wood })

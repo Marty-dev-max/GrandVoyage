@@ -455,7 +455,32 @@ function Kit.House(cf, w, d, wall, roof, opts)
 	local shutter = opts.shutter or roof:Lerp(Color3.new(1, 1, 1), 0.25)
 	local h = fh * floors
 	P(Vector3.new(w + 1.2, 1.2, d + 1.2), opts.stone or C.Stone, cf * CFrame.new(0, 0.6, 0), { material = M.Cobblestone })
-	P(Vector3.new(w, h, d), wall, cf * CFrame.new(0, 1.2 + h / 2, 0), { material = M.Plaster })
+	local hollow = opts.hollow
+	local DW, DH = 6, 7.6 -- open doorway of an enterable house
+	if hollow then
+		local t = 1
+		local y0 = 1.2 + fh / 2
+		P(Vector3.new(w, fh, t), wall, cf * CFrame.new(0, y0, d / 2 - t / 2), { material = M.Plaster })
+		for _, sx in ipairs({ -1, 1 }) do
+			P(Vector3.new(t, fh, d - 2 * t), wall, cf * CFrame.new(sx * (w / 2 - t / 2), y0, 0), { material = M.Plaster })
+			local pw = (w - DW) / 2
+			P(Vector3.new(pw, fh, t), wall, cf * CFrame.new(sx * (DW / 2 + pw / 2), y0, -d / 2 + t / 2), { material = M.Plaster })
+		end
+		P(Vector3.new(DW, fh - DH, t), wall, cf * CFrame.new(0, 1.2 + DH + (fh - DH) / 2, -d / 2 + t / 2), { material = M.Plaster })
+		if floors > 1 then
+			P(Vector3.new(w, h - fh, d), wall, cf * CFrame.new(0, 1.2 + fh + (h - fh) / 2, 0), { material = M.Plaster })
+		else
+			P(Vector3.new(w, 0.8, d), wall, cf * CFrame.new(0, 1.2 + fh - 0.4, 0), { material = M.Plaster })
+		end
+		-- ceiling beams + plank floor
+		P(Vector3.new(w - 2 * t, 0.2, d - 2 * t), Color3.fromRGB(150, 102, 64), cf * CFrame.new(0, 1.3, 0), { material = M.WoodPlanks })
+		for i = 1, 3 do
+			P(Vector3.new(0.8, 0.7, d - 2 * t), trim, cf * CFrame.new(-w / 2 + w * i / 4, 1.2 + fh - 1.15, 0), decor({ material = M.Wood, collide = false }))
+		end
+		Kit.Interior(cf, w, d, hollow, fh)
+	else
+		P(Vector3.new(w, h, d), wall, cf * CFrame.new(0, 1.2 + h / 2, 0), { material = M.Plaster })
+	end
 	for _, sx in ipairs({ -1, 1 }) do
 		for _, sz in ipairs({ -1, 1 }) do
 			P(Vector3.new(0.9, h, 0.9), trim, cf * CFrame.new(sx * w / 2, 1.2 + h / 2, sz * d / 2), decor({ material = M.Wood }))
@@ -468,7 +493,7 @@ function Kit.House(cf, w, d, wall, roof, opts)
 		local cols = math.max(1, math.floor(w / 7))
 		for i = 1, cols do
 			local x = -w / 2 + w * (i - 0.5) / cols
-			if not (f == 1 and math.abs(x) < 2.5) then
+			if not (f == 1 and math.abs(x) < (hollow and DW / 2 + 1.6 or 2.5)) then
 				for _, side in ipairs({ -1, 1 }) do
 					local zc = side * (d / 2 + 0.12)
 					local frame = cf * CFrame.new(x, wy, zc)
@@ -496,9 +521,19 @@ function Kit.House(cf, w, d, wall, roof, opts)
 				local zc = side * (d / 2 + 0.16)
 				for i = 1, cols - 1 do
 					local x = -w / 2 + w * i / cols
+					if hollow and f == 1 and side < 0 and math.abs(x) < DW / 2 + 0.6 then
+						continue
+					end
 					P(Vector3.new(0.6, fh, 0.25), trim, cf * CFrame.new(x, y + fh / 2, zc), decor({ material = M.Wood, collide = false }))
 				end
-				P(Vector3.new(w, 0.45, 0.25), trim, cf * CFrame.new(0, y + fh * 0.28, zc), decor({ material = M.Wood, collide = false }))
+				if hollow and f == 1 and side < 0 then
+					local pw = (w - DW) / 2
+					for _, sx in ipairs({ -1, 1 }) do
+						P(Vector3.new(pw, 0.45, 0.25), trim, cf * CFrame.new(sx * (DW / 2 + pw / 2), y + fh * 0.28, zc), decor({ material = M.Wood, collide = false }))
+					end
+				else
+					P(Vector3.new(w, 0.45, 0.25), trim, cf * CFrame.new(0, y + fh * 0.28, zc), decor({ material = M.Wood, collide = false }))
+				end
 				for _, sx in ipairs({ -1, 1 }) do
 					local len = math.sqrt(2.6 ^ 2 + (fh * 0.62) ^ 2)
 					local ang = math.atan2(fh * 0.62, 2.6)
@@ -513,10 +548,21 @@ function Kit.House(cf, w, d, wall, roof, opts)
 		end
 	end
 	-- door + step
-	P(Vector3.new(3.2, 5.6, 0.4), Color3.fromRGB(110, 70, 42), cf * CFrame.new(0, 1.2 + 2.8, -d / 2 - 0.1), { material = M.Wood })
-	P(Vector3.new(3.8, 6.2, 0.3), trim, cf * CFrame.new(0, 1.2 + 3, -d / 2 - 0.02), decor())
-	Ball(0.4, Color3.fromRGB(255, 210, 80), (cf * CFrame.new(1, 4, -d / 2 - 0.35)).Position, decor({ collide = false }))
-	P(Vector3.new(4.6, 0.5, 2), C.Stone, cf * CFrame.new(0, 0.25, -d / 2 - 1.4), { material = M.Cobblestone })
+	if hollow then
+		-- open doorway: a thick frame (posts + lintel), the doors swung open against the wall
+		for _, sx in ipairs({ -1, 1 }) do
+			P(Vector3.new(0.8, DH + 0.8, 0.6), trim, cf * CFrame.new(sx * (DW / 2 + 0.4), 1.2 + (DH + 0.8) / 2, -d / 2 - 0.2), decor({ material = M.Wood }))
+			P(Vector3.new(0.3, DH - 0.6, DW / 2 - 0.2), Color3.fromRGB(110, 70, 42), cf * CFrame.new(sx * (DW / 2 + 1.05), 1.2 + (DH - 0.6) / 2, -d / 2 - DW / 4 - 0.4), decor({ material = M.WoodPlanks, collide = false }))
+		end
+		P(Vector3.new(DW + 2.4, 0.9, 0.7), trim, cf * CFrame.new(0, 1.2 + DH + 0.45, -d / 2 - 0.2), decor({ material = M.Wood }))
+		P(Vector3.new(DW + 0.6, 0.5, 2.4), C.Stone, cf * CFrame.new(0, 0.25, -d / 2 - 1.6), { material = M.Cobblestone })
+		P(Vector3.new(DW, 0.2, 1.2), Color3.fromRGB(150, 102, 64), cf * CFrame.new(0, 1.1, -d / 2 + 0.5), { material = M.WoodPlanks })
+	else
+		P(Vector3.new(3.2, 5.6, 0.4), Color3.fromRGB(110, 70, 42), cf * CFrame.new(0, 1.2 + 2.8, -d / 2 - 0.1), { material = M.Wood })
+		P(Vector3.new(3.8, 6.2, 0.3), trim, cf * CFrame.new(0, 1.2 + 3, -d / 2 - 0.02), decor())
+		Ball(0.4, Color3.fromRGB(255, 210, 80), (cf * CFrame.new(1, 4, -d / 2 - 0.35)).Position, decor({ collide = false }))
+		P(Vector3.new(4.6, 0.5, 2), C.Stone, cf * CFrame.new(0, 0.25, -d / 2 - 1.4), { material = M.Cobblestone })
+	end
 	-- roof with overhang + ridge
 	local roofH = math.min(w, d) * 0.45 + 2
 	local ry = 1.2 + h + roofH / 2
@@ -528,9 +574,155 @@ function Kit.House(cf, w, d, wall, roof, opts)
 		P(Vector3.new(1.8, roofH + 2.5, 1.8), Color3.fromRGB(176, 92, 70), cf * CFrame.new(w * 0.3, 1.2 + h + roofH / 2 + 1.5, d * 0.22), decor({ material = M.Brick }))
 	end
 	if opts.sign then
-		Kit.Sign(opts.sign, cf * CFrame.new(0, 1.2 + fh * 0.92 + 1.6, -d / 2 - 0.5), Vector2.new(math.min(w - 1, 12), 2.6), nil, opts.signBg)
+		Kit.Sign(opts.sign, cf * CFrame.new(0, hollow and 1.2 + DH + 2.6 or 1.2 + fh * 0.92 + 1.6, -d / 2 - 0.5), Vector2.new(math.min(w - 1, 12), 2.6), nil, opts.signBg)
 	end
 	return 1.2 + h + roofH
+end
+
+-- ===== interiors (v0.25.140, owner reference clip: enterable important buildings with their NPC inside) =====
+-- cf = the house's ground-center CFrame (door at -Z); the room spans +-(w/2-1) x +-(d/2-1), floor top at y 1.4.
+-- The NPC stands at the back middle (Kit.InteriorSpot). No rng here: houses around it keep their random layout.
+local FLOOR = 1.4
+function Kit.InteriorSpot(d)
+	return d / 2 - 3.2 -- local z of the NPC
+end
+
+local function lightAt(cf, range, brightness)
+	local bulb = P(Vector3.new(1, 1, 1), Color3.fromRGB(255, 214, 140), cf, decor({ material = M.Neon, collide = false, shadow = false }))
+	local l = Instance.new("PointLight")
+	l.Range = range or 24
+	l.Brightness = brightness or 1.3
+	l.Color = Color3.fromRGB(255, 196, 130)
+	l.Shadows = true
+	l.Parent = bulb
+	return bulb
+end
+
+local function stool(cf, color)
+	P(Vector3.new(1.8, 0.5, 1.8), color, cf * CFrame.new(0, FLOOR + 2.1, 0), { material = M.Fabric })
+	P(Vector3.new(0.6, 1.9, 0.6), C.DarkWood, cf * CFrame.new(0, FLOOR + 0.95, 0), decor({ material = M.Wood }))
+	P(Vector3.new(1.4, 0.3, 1.4), C.DarkWood, cf * CFrame.new(0, FLOOR + 0.15, 0), decor({ material = M.Wood }))
+end
+
+local function table1(cf)
+	P(Vector3.new(4, 0.5, 4), C.LightWood, cf * CFrame.new(0, FLOOR + 2.9, 0), { material = M.WoodPlanks })
+	P(Vector3.new(0.9, 2.7, 0.9), C.DarkWood, cf * CFrame.new(0, FLOOR + 1.35, 0), decor({ material = M.Wood }))
+	P(Vector3.new(2.4, 0.3, 2.4), C.DarkWood, cf * CFrame.new(0, FLOOR + 0.15, 0), decor({ material = M.Wood }))
+	P(Vector3.new(0.6, 0.8, 0.6), Color3.fromRGB(240, 196, 70), cf * CFrame.new(0.8, FLOOR + 3.55, -0.5), decor({ material = M.Metal, collide = false }))
+end
+
+local function shelf(cf, width, rows, fill)
+	-- wall shelf unit: back board, shelves, and goods (fill(i, x, y) returns a color or nil)
+	P(Vector3.new(width, rows * 2.4 + 0.6, 0.3), C.DarkWood, cf * CFrame.new(0, FLOOR + (rows * 2.4 + 0.6) / 2, 0), decor({ material = M.WoodPlanks }))
+	for r = 0, rows do
+		P(Vector3.new(width, 0.25, 1.4), C.Wood, cf * CFrame.new(0, FLOOR + 0.4 + r * 2.4, -0.7), decor({ material = M.Wood, collide = false }))
+	end
+	for r = 0, rows - 1 do
+		local n = math.floor(width / 1.1)
+		for i = 1, n do
+			local col = fill(r * n + i, i, r)
+			if col then
+				local hgt = 1 + ((r * 7 + i * 3) % 3) * 0.35
+				P(Vector3.new(0.7, hgt, 0.7), col, cf * CFrame.new(-width / 2 + (i - 0.5) * width / n, FLOOR + 0.55 + r * 2.4 + hgt / 2, -0.75), decor({ material = M.Glass, collide = false, shadow = false }))
+			end
+		end
+	end
+end
+
+local function poster(cf, color)
+	P(Vector3.new(2.6, 3.4, 0.12), Color3.fromRGB(236, 214, 168), cf, decor({ collide = false }))
+	P(Vector3.new(1.8, 1.6, 0.14), color, cf * CFrame.new(0, 0.3, 0), decor({ collide = false }))
+	P(Vector3.new(1.8, 0.3, 0.14), Color3.fromRGB(90, 60, 40), cf * CFrame.new(0, -1.1, 0), decor({ collide = false }))
+end
+
+local BOTTLES = { Color3.fromRGB(70, 150, 80), Color3.fromRGB(160, 70, 40), Color3.fromRGB(80, 110, 190), Color3.fromRGB(230, 190, 80), Color3.fromRGB(170, 60, 110) }
+
+function Kit.Interior(cf, w, d, kind, fh)
+	local iw, id = w / 2 - 1, d / 2 - 1 -- inner half sizes
+	local npcZ = Kit.InteriorSpot(d)
+	lightAt(cf * CFrame.new(0, FLOOR + fh - 2.6, 0), math.max(w, d) * 1.2, 1.4)
+	lightAt(cf * CFrame.new(0, FLOOR + fh - 2.6, npcZ - 1), 16, 0.8)
+	if kind == "tavern" then
+		-- L-shaped bar in front of the keeper, red stools, bottle shelves on the back wall, tables by the windows
+		local barZ = npcZ - 2.6
+		local barW = math.min(w - 8, 18)
+		P(Vector3.new(barW, 3.4, 1.6), Color3.fromRGB(120, 76, 44), cf * CFrame.new(-1, FLOOR + 1.7, barZ), { material = M.WoodPlanks })
+		P(Vector3.new(barW + 0.6, 0.4, 2.2), C.LightWood, cf * CFrame.new(-1, FLOOR + 3.6, barZ), { material = M.Wood })
+		local armX = -1 + barW / 2 - 0.8
+		P(Vector3.new(1.6, 3.4, id - barZ - 0.6), Color3.fromRGB(120, 76, 44), cf * CFrame.new(armX, FLOOR + 1.7, (barZ + id) / 2 + 0.5), { material = M.WoodPlanks })
+		P(Vector3.new(2.2, 0.4, id - barZ - 0.6), C.LightWood, cf * CFrame.new(armX, FLOOR + 3.6, (barZ + id) / 2 + 0.5), { material = M.Wood })
+		for i = 0, math.floor(barW / 3.2) - 1 do
+			stool(cf * CFrame.new(-1 - barW / 2 + 1.8 + i * 3.2, 0, barZ - 2.2), Color3.fromRGB(200, 50, 50))
+		end
+		shelf(cf * CFrame.new(-1, 0, id - 0.15) * CFrame.Angles(0, math.pi, 0), barW - 2, 3, function(n)
+			return n % 4 ~= 0 and BOTTLES[n % #BOTTLES + 1] or nil
+		end)
+		for _, sx in ipairs({ -1, 1 }) do
+			local tx = sx * (iw - 3.2)
+			table1(cf * CFrame.new(tx, 0, -id + 4))
+			stool(cf * CFrame.new(tx - 2.6, 0, -id + 4), Color3.fromRGB(200, 50, 50))
+			stool(cf * CFrame.new(tx + 2.6, 0, -id + 4), Color3.fromRGB(200, 50, 50))
+			poster(cf * CFrame.new(sx * (iw - 0.1), FLOOR + 5.4, -1) * CFrame.Angles(0, sx * math.pi / 2, 0), Color3.fromRGB(150, 60, 50))
+		end
+		-- barrels behind the bar end
+		for k = 0, 1 do
+			Kit.Barrel((cf * CFrame.new(-iw + 1.6, FLOOR, id - 1.6 - k * 2.6)).Position)
+		end
+	elseif kind == "smithy" then
+		-- forge (glowing coals under a brick hood) back left, anvil in the middle, weapon rack right, water barrel
+		local fx, fz = -iw + 2.6, id - 2.6
+		P(Vector3.new(5, 2.6, 4.4), Color3.fromRGB(120, 60, 46), cf * CFrame.new(fx, FLOOR + 1.3, fz), { material = M.Brick })
+		local coals = P(Vector3.new(3.6, 0.4, 3), Color3.fromRGB(255, 120, 30), cf * CFrame.new(fx, FLOOR + 2.7, fz), decor({ material = M.Neon, collide = false }))
+		local glow = Instance.new("PointLight")
+		glow.Range = 18
+		glow.Brightness = 2
+		glow.Color = Color3.fromRGB(255, 130, 50)
+		glow.Parent = coals
+		local fire = Instance.new("Fire")
+		fire.Size = 3
+		fire.Heat = 4
+		fire.Color = Color3.fromRGB(255, 140, 40)
+		fire.SecondaryColor = Color3.fromRGB(255, 60, 20)
+		fire.Parent = coals
+		P(Vector3.new(5.4, 1.2, 4.8), Color3.fromRGB(96, 50, 40), cf * CFrame.new(fx, FLOOR + 6.4, fz), decor({ material = M.Brick }))
+		P(Vector3.new(3, fh - 7, 3), Color3.fromRGB(96, 50, 40), cf * CFrame.new(fx, FLOOR + 7 + (fh - 7) / 2 - 0.4, fz + 0.4), decor({ material = M.Brick }))
+		for _, sx in ipairs({ -1, 1 }) do
+			P(Vector3.new(0.6, 3.6, 0.6), Color3.fromRGB(96, 50, 40), cf * CFrame.new(fx + sx * 2.3, FLOOR + 4.4, fz - 1.9), decor({ material = M.Brick }))
+		end
+		-- anvil on a stump, in front of the smith
+		local ax = 0
+		P(Vector3.new(2, 2, 2), C.DarkWood, cf * CFrame.new(ax, FLOOR + 1, npcZ - 3), { material = M.Wood })
+		P(Vector3.new(1.2, 1, 1), Color3.fromRGB(60, 60, 66), cf * CFrame.new(ax, FLOOR + 2.5, npcZ - 3), decor({ material = M.Metal }))
+		P(Vector3.new(3.2, 0.8, 1.4), Color3.fromRGB(70, 70, 78), cf * CFrame.new(ax + 0.3, FLOOR + 3.4, npcZ - 3), decor({ material = M.Metal }))
+		P(Vector3.new(1, 0.5, 0.9), Color3.fromRGB(70, 70, 78), cf * CFrame.new(ax - 1.8, FLOOR + 3.5, npcZ - 3), decor({ material = M.Metal }))
+		-- weapon rack on the right wall: blades + a hammer
+		local rack = cf * CFrame.new(iw - 0.3, 0, 0) * CFrame.Angles(0, -math.pi / 2, 0)
+		P(Vector3.new(7, 0.4, 0.5), C.DarkWood, rack * CFrame.new(0, FLOOR + 1.2, -0.3), decor({ material = M.Wood }))
+		P(Vector3.new(7, 0.4, 0.5), C.DarkWood, rack * CFrame.new(0, FLOOR + 5.2, -0.3), decor({ material = M.Wood }))
+		for i = -2, 2 do
+			P(Vector3.new(0.35, 4.6, 0.2), Color3.fromRGB(205, 210, 220), rack * CFrame.new(i * 1.3, FLOOR + 3.6, -0.7), decor({ material = M.Metal, collide = false }))
+			P(Vector3.new(1.1, 0.3, 0.35), Color3.fromRGB(200, 160, 60), rack * CFrame.new(i * 1.3, FLOOR + 1.6, -0.7), decor({ material = M.Metal, collide = false }))
+		end
+		Kit.Barrel((cf * CFrame.new(iw - 1.8, FLOOR, -id + 2)).Position)
+		P(Vector3.new(2.6, 1.2, 2.6), Color3.fromRGB(40, 40, 44), cf * CFrame.new(-iw + 1.8, FLOOR + 0.6, -id + 2.2), decor({ material = M.Slate }))
+	elseif kind == "shop" then
+		-- counter across the room, shelves of goods on the back + side walls, sacks and crates
+		local cz = npcZ - 2.6
+		P(Vector3.new(w - 8, 3.4, 1.8), Color3.fromRGB(120, 76, 44), cf * CFrame.new(0, FLOOR + 1.7, cz), { material = M.WoodPlanks })
+		P(Vector3.new(w - 7.4, 0.4, 2.4), C.LightWood, cf * CFrame.new(0, FLOOR + 3.6, cz), { material = M.Wood })
+		P(Vector3.new(1.6, 0.6, 1.2), Color3.fromRGB(240, 196, 70), cf * CFrame.new(2.4, FLOOR + 4.1, cz), decor({ material = M.Metal, collide = false }))
+		shelf(cf * CFrame.new(0, 0, id - 0.15) * CFrame.Angles(0, math.pi, 0), w - 6, 3, function(n)
+			return ({ Color3.fromRGB(196, 120, 72), Color3.fromRGB(230, 70, 70), Color3.fromRGB(80, 170, 230), Color3.fromRGB(250, 220, 90) })[n % 4 + 1]
+		end)
+		for _, sx in ipairs({ -1, 1 }) do
+			shelf(cf * CFrame.new(sx * (iw - 0.15), 0, -1) * CFrame.Angles(0, -sx * math.pi / 2, 0), d - 10, 2, function(n)
+				return n % 3 ~= 0 and BOTTLES[(n + 2) % #BOTTLES + 1] or nil
+			end)
+		end
+		Kit.Crate((cf * CFrame.new(-iw + 2, FLOOR, -id + 2)).Position, 2.4, 0.3)
+		Kit.Crate((cf * CFrame.new(iw - 2, FLOOR, -id + 2)).Position, 2.4, -0.2)
+		P(Vector3.new(1.8, 2.2, 1.6), Color3.fromRGB(214, 190, 140), cf * CFrame.new(-iw + 4.6, FLOOR + 1.1, -id + 1.6), decor({ material = M.Fabric }))
+	end
 end
 
 function Kit.Tower(pos, diameter, height, wall, roof, opts)

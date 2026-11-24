@@ -938,6 +938,13 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     look (world rebuilds at runtime), or restart Studio before the Edit build. Aerial shots in Play: click PLAY, anchor
     the root over the island, BindToRenderStep a Scriptable camera, disable ScreenGuis, screen_capture.
     If Studio is already in Play when you start_stop_play, that is the OWNER's session: do not stop it or change its UI.
+    v0.25.131 (owner): `World/Barracuda.lua` (LAYOUTS seed 20261125, island radius 160, WORLD_VERSION 34): a floating
+    restaurant on its OWN round plank raft (api.base is not called: the voxelized base cylinder became a sandy cross;
+    a big ctx.foam disc also voxelizes into a white plus, so none: Ocean's shore foam rings the raft). Round slabs =
+    parallel plank strips clipped to the circle (`disc`; two overlapping squares read as a star), walls = facet `ring`.
+    Mint 2-storey hall + balcony + east stairs, stepped orange/white striped roof, mast with striped sails, dining deck
+    with umbrella tables, GALLEY house, lamps + bunting, deck sheds by the rim (r - 20: at r - 30 the mob spawn
+    reserves refused them), south pier + rowboats. Cloth uses Plaster (Fabric renders dark/blue). Spawns moved inside.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

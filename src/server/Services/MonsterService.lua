@@ -37,7 +37,7 @@ end
 MS.GroundAt = groundAt
 
 -- v0.25.137 (owner reference clip): bosses publish their drop table + the focus type as model attributes; the HUD
--- target panel shows them with the live DAMAGE PROGRESS (each player's share of the damage, attribute DmgShare)
+-- target panel shows them with the live DAMAGE PROGRESS (damage each player dealt / max HP, attribute DmgShare)
 local function bossAttrs(mob)
 	local def = mob.def
 	local lines = {}
@@ -75,7 +75,7 @@ end
 local function shareUpdate(mob)
 	-- throttled: "Name|UserId|share;..." best first, at most 8 players
 	local now = os.clock()
-	if now - (mob.shareAt or 0) < 0.4 then
+	if now - (mob.shareAt or 0) < 0.2 then
 		return
 	end
 	mob.shareAt = now
@@ -92,7 +92,8 @@ local function shareUpdate(mob)
 	local parts = {}
 	for i = 1, math.min(8, #list) do
 		local pl = list[i][1]
-		table.insert(parts, (pl.DisplayName:gsub("[|;]", "")) .. "|" .. pl.UserId .. "|" .. string.format("%.4f", list[i][2] / math.max(1, total)))
+		-- v0.25.139 (owner): progress = damage dealt / the boss's max HP (grows as you hit, not a 100% share)
+		table.insert(parts, (pl.DisplayName:gsub("[|;]", "")) .. "|" .. pl.UserId .. "|" .. string.format("%.4f", math.min(1, list[i][2] / math.max(1, mob.maxHp))))
 	end
 	mob.model:SetAttribute("DmgShare", table.concat(parts, ";"))
 end

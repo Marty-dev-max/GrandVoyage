@@ -487,7 +487,8 @@ function R.Start()
 				radius = (skill.kind == "AoE" or skill.kind == "PartyHeal" or skill.kind == "PartyBuff") and (skill.radius or 10) or (skill.range or 10)
 				color = Color3.fromRGB(255, 210, 80)
 			end
-			local show = skill ~= nil or State.target ~= nil or State.auto
+			-- v0.25.139 (owner): manual mode shows no white reach ring (only the yellow one while aiming a skill)
+			local show = skill ~= nil or State.auto
 			if show then
 				local y = root.Position.Y - hum.HipHeight - root.Size.Y / 2 + 0.15
 				ring("player", radius, color):PivotTo(CFrame.new(root.Position.X, y, root.Position.Z) * CFrame.Angles(0, os.clock() * 0.4, 0))
@@ -507,7 +508,7 @@ function R.Start()
 		end
 		-- target ring
 		local tgt = State.target
-		if tgt and tgt.Parent and tgt.PrimaryPart then
+		if tgt and tgt.Parent and tgt.PrimaryPart and State.auto then -- v0.25.139: no red target ring in manual
 			local pp = tgt.PrimaryPart
 			local mon = Monsters[tgt:GetAttribute("MonsterId") or ""]
 			local radius = 3 + (mon and mon.style.scale or 1) * 2

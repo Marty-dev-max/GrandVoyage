@@ -102,10 +102,33 @@ local function play(model)
 		cam.CFrame = cam.CFrame * CFrame.new((math.random() - 0.5) * 0.5 * k, (math.random() - 0.5) * 0.5 * k, 0)
 		task.wait()
 	end
-	-- 5) music in, the intro fades away (the HUD target bar takes over once you fight it)
+	-- 5) music in. v0.25.139 (owner): the name + bar STAY at the top while the boss lives and you are near it (live
+	-- HP); the HUD target bar steps aside for it (State.bossBar). Gone when the boss dies or you leave for 3 s.
 	State.bossIntroUntil = 0
 	State.lastBoss = os.clock()
-	task.wait(1.1)
+	State.bossBar = model
+	local far = model:GetAttribute("SeaState") ~= nil and 420 or 170
+	local away = 0
+	while model.Parent and (model:GetAttribute("HP") or 0) > 0 do
+		local hp, mx = model:GetAttribute("HP") or 0, model:GetAttribute("MaxHP") or maxHp
+		fill.Size = UDim2.fromScale(math.clamp(hp / math.max(1, mx), 0, 1), 1)
+		num.Text = UI.Format(math.max(0, math.floor(hp))) .. " / " .. UI.Format(mx)
+		local char = Players.LocalPlayer.Character
+		local r = char and char:FindFirstChild("HumanoidRootPart")
+		local p = model:GetPivot().Position
+		if not r or Vector2.new(p.X - r.Position.X, p.Z - r.Position.Z).Magnitude > far then
+			away += 0.2
+		else
+			away = 0
+		end
+		if away >= 3 then
+			break
+		end
+		task.wait(0.2)
+	end
+	if State.bossBar == model then
+		State.bossBar = nil
+	end
 	for _, d in ipairs(root:GetDescendants()) do
 		if d:IsA("TextLabel") then
 			Tween(d, 0.4, { TextTransparency = 1 })
@@ -149,6 +172,7 @@ function BossIntro.Start()
 									-- never leave the music muted or the next intro blocked
 									warn("[BossIntro]", err)
 									State.bossIntroUntil = 0
+									State.bossBar = nil
 									State.lastBoss = os.clock()
 									local g = Players.LocalPlayer.PlayerGui:FindFirstChild("BossIntro")
 									if g then

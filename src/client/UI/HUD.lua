@@ -1055,7 +1055,7 @@ local function pctText(v)
 	return (v >= 10 and string.format("%d%%", math.floor(v + 0.5))) or (v >= 1 and string.format("%.1f%%", v)) or string.format("%.2f%%", v)
 end
 
-function HUD.updateBossPanel(tgt)
+function HUD.updateBossPanel(tgt, underIntro)
 	local bf = HUD.bossFrame
 	if not bf then
 		return
@@ -1102,7 +1102,8 @@ function HUD.updateBossPanel(tgt)
 	end
 	local n = math.max(#drops, math.min(6, #share), 1)
 	bf.Size = UDim2.fromOffset(bf.Size.X.Offset, 48 + n * 19)
-	bf.Position = UDim2.new(0.5, 0, 0, targetFrame.Position.Y.Offset + targetFrame.Size.Y.Offset + 6)
+	-- under the boss intro bar (its box ends at 192 in its own scaled frame) or under the HUD target bar
+	bf.Position = underIntro and UDim2.new(0.5, 0, 0, 200) or UDim2.new(0.5, 0, 0, targetFrame.Position.Y.Offset + targetFrame.Size.Y.Offset + 6)
 end
 
 local function buildTarget()
@@ -1444,6 +1445,24 @@ local function refresh()
 		end
 	end
 	local fighting = tgt and (tgt:GetAttribute("Boss") or os.clock() - (HUD.tgtHitAt or 0) < 6)
+	-- v0.25.139 (owner): a monster you walked away from drops its bar (and the selection) instead of following you
+	local myRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if tgt and tgt.Parent and tgt.PrimaryPart and myRoot then
+		local d = (tgt.PrimaryPart.Position - myRoot.Position) * Vector3.new(1, 0, 1)
+		if d.Magnitude > (tgt:GetAttribute("Boss") and 170 or 70) then
+			fighting = false
+			if d.Magnitude > (tgt:GetAttribute("Boss") and 220 or 90) then
+				State.target = nil
+				State.Fire("target")
+			end
+		end
+	end
+	-- the boss intro bar stays at the top while that boss lives (BossIntro): no second bar for it
+	local bossBar = State.bossBar and State.bossBar.Parent and State.bossBar or nil
+	if bossBar and tgt == bossBar then
+		fighting = false
+	end
+	HUD.updateBossPanel(bossBar or (fighting and tgt and tgt.Parent and tgt:GetAttribute("Boss") and tgt) or nil, bossBar ~= nil)
 	if tgt and tgt.Parent and tgt.PrimaryPart and fighting then
 		targetFrame.Visible = true
 		local mon = Monsters[tgt:GetAttribute("MonsterId") or ""]
@@ -1460,13 +1479,11 @@ local function refresh()
 			end
 		end
 		HUD.captureBtn.Visible = tameable and hasBait and hp / max <= PetsCfg.Capture.MaxHpRatio
-		HUD.updateBossPanel(tgt)
 		HUD.captureBtn.Position = UDim2.new(0.5, 0, 0, targetFrame.Position.Y.Offset + targetFrame.Size.Y.Offset + 8)
 		setHighlight(tgt)
 	else
 		targetFrame.Visible = false
 		HUD.captureBtn.Visible = false
-		HUD.updateBossPanel(nil)
 		setHighlight(tgt and tgt.Parent and tgt or nil) -- still outlined while selected
 	end
 end

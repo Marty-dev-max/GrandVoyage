@@ -897,6 +897,13 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     v0.25.119 (owner): Daybreak BossBoard at onPlaza(-2.7, 50) (in front of the small west-street house). PowerBoard
     SurfaceGui ResetOnSpawn = false (a PlayerGui gui is wiped when the character spawns: blank board in the live game).
     HUD status card x 60 / width 460 with content at x 110: it tucks under the ring (ring in front). WORLD_VERSION 30.
+    v0.25.120 (owner): the Daybreak Power board is a map piece (Model tagged PowerBoard, part "Board", left of the
+    Bounty Board NPC); Controllers/PowerBoard dresses tagged boards, builds a local one only for BossBoards without one.
+    MAP IN STUDIO EDIT (owner wants to see/move things): after a WORLD_VERSION bump, Stop Play, check the Edit source
+    synced, then execute_luau (Edit) `require(game.ServerScriptService.Server.World.WorldBuilder).Build()` (the MCP call
+    may time out but finishes; check workspace.World WorldVersion), owner saves. Play then keeps it ("built in 0.02s").
+    The owner's moves in Studio are lost at the next WORLD_VERSION bump: read their positions from Studio into World/*.lua
+    first. Edit shows placeholders (Env meshes, plants, monsters are dressed only at runtime). WORLD_VERSION 31.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

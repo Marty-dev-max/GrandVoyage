@@ -1278,6 +1278,11 @@ local function step(mob, now)
 end
 
 function MS.SpawnIslandMobs()
+	-- v0.25.143: dress each monster area first (clearing, border, lair) so it reads from the map
+	local ok, err = pcall(require(script.Parent.Parent.World.MobZones).Build)
+	if not ok then
+		warn("[MobZones]", err)
+	end
 	for _, island in ipairs(Islands.List) do
 		for _, sp in ipairs(island.spawns) do
 			local cx, cz = island.x + sp.offset.X, (island.z or 0) + sp.offset.Y

@@ -301,6 +301,40 @@ local NPC_LOOK = {
 		shirt1 = "8E1C2A", shirt2 = "E8B84A", pants1 = "1C1A22", pants2 = "3A2A30", shoes1 = "1C1A22", shoes2 = "E8B84A",
 		eyes1 = "D8A030", skin = "D6A478",
 	},
+	-- v0.25.143 (owner: every island's quest giver should be someone else, not Rowan's twin). shirt/pants/shoes = Looks
+	-- names, hat = voxelHat kind (overrides the caller's), race/variant = a Heritage body.
+	["Lieutenant Pell"] = {
+		shirt = "Captain Coat", pants = "Long Pants", shoes = "Tall Boots", hat = "marine", hair = "Side Part",
+		eyes = "Determined", mouth = "Flat", hair1 = "243A96", hair2 = "1C1A22", shirt1 = "F4F4F4", shirt2 = "2850B4",
+		pants1 = "1C2A5A", pants2 = "F4F4F4", shoes1 = "1C1A22", shoes2 = "1C1A22", skin = "EABE96",
+	},
+	["Mayor Biscuit"] = {
+		shirt = "Open Jacket", pants = "Baggy", shoes = "Buckle Boots", hat = "tophat", hair = "Fluffy", eyes = "Happy",
+		mouth = "Laugh", mark = "Stubble", race = "Beastkin", variant = 3, hair1 = "C48646", hair2 = "7A4A28",
+		shirt1 = "E07828", shirt2 = "FFD860", pants1 = "6A3C1E", pants2 = "E8B84A", shoes1 = "462C1E", shoes2 = "E8B84A",
+		skin = "F6D0AA",
+	},
+	["Nanny Clove"] = {
+		shirt = "Wrap Top", pants = "Skirt", shoes = "Clogs", hat = "headscarf", hair = "Bun", eyes = "Gentle",
+		mouth = "Small Smile", hair1 = "96989F", hair2 = "F4F4F4", shirt1 = "6E9A48", shirt2 = "F4ECD0",
+		pants1 = "8C5A3A", pants2 = "F4ECD0", shoes1 = "8C6E46", shoes2 = "462C1E", skin = "D6A478",
+	},
+	["Head Chef Gusto"] = {
+		shirt = "Cook Apron", pants = "Side Stripe", shoes = "Clogs", hat = "toque", hair = "Pompadour", eyes = "Fierce",
+		mouth = "Grin", mark = "Stubble", race = "Oni", variant = 2, hair1 = "1C1A22", hair2 = "462C1E",
+		shirt1 = "F4F4F4", shirt2 = "D83A3A", pants1 = "1C1A22", pants2 = "F4F4F4", shoes1 = "F4F4F4", shoes2 = "1C1A22",
+		skin = "BE8860",
+	},
+	["Granny Rind"] = {
+		shirt = "Belted Tunic", pants = "Wide Hakama", shoes = "Sandals", hat = "none", hair = "Bun", eyes = "Closed", mouth = "Happy",
+		race = "Tidekin", variant = 1, hair1 = "F4F4F4", hair2 = "C8E6FA", shirt1 = "F08A2A", shirt2 = "FFE0A0",
+		pants1 = "2A6E8C", pants2 = "FFE0A0", shoes1 = "8C6E46", shoes2 = "462C1E", skin = "FFE2C4",
+	},
+	["Harbor Master Vane"] = {
+		shirt = "Captain Coat", pants = "Cargo", shoes = "Tall Boots", hat = "captain", hair = "Long Straight",
+		eyes = "Cool", mouth = "Smirk", mark = "Scar", hair1 = "545662", hair2 = "1C1A22", shirt1 = "1E3A5A",
+		shirt2 = "E8B84A", pants1 = "3A2A20", pants2 = "1C1A22", shoes1 = "1C1A22", shoes2 = "8C6E46", skin = "A06C48",
+	},
 }
 local function nameHash(s, salt)
 	local h = salt or 7
@@ -352,6 +386,18 @@ local function voxelHat(model, kind)
 		blk(Vector3.new(0.5, 0.26, 0.12), Color3.fromRGB(232, 184, 74), Vector3.new(0, top - 0.55, -1.06), Enum.Material.Metal)
 		blk(Vector3.new(0.22, 0.2, 1.1), Color3.fromRGB(150, 20, 32), Vector3.new(-0.25, top - 0.75, 1.5))
 		blk(Vector3.new(0.22, 0.2, 0.9), Color3.fromRGB(150, 20, 32), Vector3.new(0.25, top - 0.95, 1.4))
+	elseif kind == "tophat" then
+		blk(Vector3.new(2.6, 0.18, 2.6), Color3.fromRGB(36, 30, 34), Vector3.new(0, top + 0.08, 0))
+		blk(Vector3.new(1.6, 1.5, 1.6), Color3.fromRGB(40, 34, 38), Vector3.new(0, top + 0.9, 0))
+		blk(Vector3.new(1.65, 0.3, 1.65), Color3.fromRGB(200, 60, 40), Vector3.new(0, top + 0.35, 0))
+	elseif kind == "toque" then
+		blk(Vector3.new(1.9, 0.5, 1.9), Color3.new(1, 1, 1), Vector3.new(0, top + 0.2, 0))
+		blk(Vector3.new(2.3, 1.1, 2.3), Color3.fromRGB(248, 248, 248), Vector3.new(0, top + 1.0, 0))
+		blk(Vector3.new(1.6, 0.5, 1.6), Color3.fromRGB(240, 240, 240), Vector3.new(0.2, top + 1.7, -0.1))
+	elseif kind == "headscarf" then
+		blk(Vector3.new(2.08, 0.7, 2.08), Color3.fromRGB(200, 70, 80), Vector3.new(0, top - 0.05, 0.05))
+		blk(Vector3.new(0.5, 0.4, 0.3), Color3.fromRGB(170, 50, 60), Vector3.new(0, top - 0.4, 1.15))
+		blk(Vector3.new(0.3, 0.6, 0.15), Color3.fromRGB(170, 50, 60), Vector3.new(0.15, top - 0.85, 1.2))
 	elseif kind == "clown" then
 		blk(Vector3.new(0.45, 0.45, 0.45), Color3.fromRGB(255, 40, 40), Vector3.new(0, 5.35, -0.95))
 	end
@@ -395,14 +441,22 @@ function MF.NPC(name, color, hatKind)
 				look.eyes = idx(Looks.Eyes, v)
 			elseif k == "mouth" then
 				look.mouth = idx(Looks.Mouths, v)
-			elseif k ~= "mark" then
+			elseif k == "shirt" then
+				look.shirt = idx(Looks.Shirts, v)
+			elseif k == "pants" then
+				look.pants = idx(Looks.Pants, v)
+			elseif k == "shoes" then
+				look.shoes = idx(Looks.Shoes, v)
+			elseif k == "hat" then
+				hatKind = v
+			elseif k ~= "mark" and k ~= "race" and k ~= "variant" then
 				look[k] = v
 			end
 		end
 	end
 	local clean = Looks.Sanitize(look)
 	clean.mark = fixed and fixed.mark or nil -- (Sanitize drops it; VoxelChar draws it for monsters and this NPC)
-	local m = VoxelChar.Preview(clean, nil, 1, nil, { lite = true })
+	local m = VoxelChar.Preview(clean, fixed and fixed.race or nil, fixed and fixed.variant or 1, nil, { lite = true })
 	m.Name = name
 	voxelHat(m, hatKind)
 	for _, p in ipairs(m:GetDescendants()) do

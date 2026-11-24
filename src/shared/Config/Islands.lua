@@ -23,7 +23,7 @@ local Islands = {
 			{ offset = Vector2.new(-150, 88), radius = 26, monster = "ForestMonkey", count = 6, area = "Monkey Grove" },
 			{ offset = Vector2.new(-145, -100), radius = 28, monster = "JungleTiger", count = 5, area = "Tiger Den" },
 			{ offset = Vector2.new(75, -155), radius = 30, monster = "WildBoar", count = 5, area = "Boar Meadow" },
-			{ offset = Vector2.new(-27, -100), radius = 17, monster = "MountainBandit", count = 5, area = "Bandit Hill" },
+			{ offset = Vector2.new(-27, -100), radius = 17, monster = "MountainBandit", count = 5, area = "Bandit Hill", lair = false },
 		},
 		-- the Bay Serpent guards the way out, at sea in front of the harbor on the route to Conch Bay. v0.23.0 (owner):
 		-- no arena; it lies under the water there and rises to fight ships that sail within wakeRadius.

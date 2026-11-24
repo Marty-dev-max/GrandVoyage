@@ -181,7 +181,7 @@ function SM.BuildPart(p, cf, colorOverride)
 		local h = sz.Y
 		main = cyl(model, h, 0.9, Color3.fromRGB(130, 85, 50), cf * CFrame.Angles(0, 0, math.pi / 2), Enum.Material.Wood)
 		local sailColor = color
-		local sail = mk(model, "Part", Vector3.new(G * 2.6, h * 0.55, 0.3), sailColor, cf * CFrame.new(0, h * 0.08, -0.3), Enum.Material.Fabric)
+		local sail = mk(model, "Part", Vector3.new(G * 2.6, h * 0.55, 0.3), sailColor, cf * CFrame.new(0, h * 0.08, -0.3), Enum.Material.Plaster) -- Fabric renders dark blue here
 		sail.Name = "Sail"
 		sail.CanCollide = false
 		sail.CanQuery = false

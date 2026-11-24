@@ -1091,6 +1091,10 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     + SurfaceGui emblem from `Config/SailArt` (16x16 hex-palette strings: ship attr SailArt, else Pirate skull / Marine
     anchor-star by Kind or ship Faction; SailColor attr overrides the cloth). Emblem editor in Crew = next version.
     WORLD_VERSION 46.
+    v0.25.151: sail cloth + the server Sail part use Plaster (Fabric's MaterialService variant renders dark blue).
+    Presets sit on a V keel (y0: PlankWedge r1 / r3 bilge sides + OakBlock keel, bow wedge), deck at y1, bulwarks y2,
+    castles y2 + rails y3; masts start at y0 (through the keel). Checked in Play: furl/unfurl, emblems, Buy a Ship page.
+    Rojo serves the MAIN checkout: merge before testing in Studio.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

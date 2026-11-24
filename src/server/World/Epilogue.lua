@@ -40,7 +40,12 @@ local function road(ctx, pts, width, color)
 		local y = 0.12 + (roadK % 3) * 0.04
 		local mid, len = (a + b) / 2, (b - a).Magnitude
 		P(Vector3.new(width or 10, 0.3, len + (width or 10) * 0.5), color or PAVE, CFrame.lookAt(mid + Vector3.new(0, y, 0), b + Vector3.new(0, y, 0)), { material = M.Cobblestone })
-		ctx.reserve((pts[i - 1].X + pts[i].X) / 2, (pts[i - 1].Y + pts[i].Y) / 2, len / 2 + (width or 10) / 2)
+		-- small spots along the road (one circle over a long segment blocked whole house rings)
+		local n = math.max(1, math.ceil(len / 8))
+		for k = 0, n do
+			local t = k / n
+			ctx.reserve(pts[i - 1].X + (pts[i].X - pts[i - 1].X) * t, pts[i - 1].Y + (pts[i].Y - pts[i - 1].Y) * t, (width or 10) / 2 + 2)
+		end
 	end
 end
 
@@ -225,8 +230,9 @@ local function houses(ctx)
 		end
 	end
 	ring(72, 16, 1, 0.1)
-	ring(136, 24, 1, 0) -- the ring road reserves ~18 either side of r 104
-	ring(168, 28, 1, 0.12)
+	ring(124, 26, 1, 0)
+	ring(152, 30, 1, 0.12)
+	ring(182, 34, 1, 0.05)
 end
 
 -- market stalls along the ring road
@@ -315,7 +321,7 @@ local function trees(ctx)
 	for _ = 1, 420 do
 		local x, z = rng:NextNumber(-255, 255), rng:NextNumber(-255, 255)
 		local d = math.sqrt(x * x + z * z)
-		if d > 178 and ctx.free(x, z, 6) then
+		if d > 196 and ctx.free(x, z, 6) then
 			local roll = rng:NextNumber()
 			if roll < 0.35 then
 				Kit.PineTree(ctx.at(x, z), rng:NextNumber(0.8, 1.2)) -- cypress

@@ -4,6 +4,7 @@
 -- headlands. Docks (local +-x) and the south harbor (+z) are forced out to r. Rows of equal cells are merged into
 -- one part each (about 1000 parts per island). Own Random per island id: the shared Kit.rng is never touched.
 local CollectionService = game:GetService("CollectionService")
+local Kit = require(script.Parent.Kit)
 
 local S = {}
 
@@ -42,7 +43,7 @@ end
 -- grass edge radius at local angle a (atan2(z, x))
 function S.Radius(island, r: number, a: number): number
 	local p = params(island)
-	local bump = 0.09 * math.sin(3 * a + p[1]) + 0.06 * math.sin(5 * a + p[2]) + 0.05 * math.sin(2 * a + p[3]) + 0.05
+	local bump = 0.075 * math.sin(3 * a + p[1]) + 0.05 * math.sin(5 * a + p[2]) + 0.04 * math.sin(2 * a + p[3]) + 0.035
 	local R = r - 14 + r * math.max(0, bump)
 	-- docks east/west and the south harbor reach the old rim
 	local eastW = island.id == "Daybreak" and 1.05 or 0.35 -- Daybreak's stone quay spans +-0.5 rad
@@ -189,6 +190,36 @@ function S.Build(island, c: Vector3, r: number, parent: Instance, pal)
 			end
 		end
 	end
+	-- headlands beyond the old disc (no layout ever used them): woods, palms by the beaches, bushes and boulders.
+	-- Own stream through Kit.WithRng so the shared Kit.rng never moves.
+	Kit.WithRng(rnd, function()
+		for iz = -ext, ext do
+			for ix = -ext, ext do
+				if grid[iz][ix] == 1 then
+					local x, z = ix * CELL + rnd:NextNumber(-3, 3), iz * CELL + rnd:NextNumber(-3, 3)
+					local a = math.atan2(z, x)
+					local d = math.sqrt(x * x + z * z)
+					local R = S.Radius(island, r, a)
+					local free = near(a, 0, 0.6) + near(a, math.pi, 0.6) + near(a, math.pi / 2, 0.9) == 0
+					if free and d > r - 8 and d < R - 4 then
+						local roll = rnd:NextNumber()
+						local pos = c + Vector3.new(x, TOP, z)
+						if roll < 0.2 then
+							if beach(island, r, a) > 8 and d > R - 16 then
+								Kit.Palm(pos - Vector3.new(0, 3.2, 0), rnd:NextNumber(14, 20))
+							else
+								Kit.RoundTree(pos, rnd:NextNumber(0.9, 1.35))
+							end
+						elseif roll < 0.3 then
+							Kit.Bush(pos, rnd:NextNumber(3, 5))
+						elseif roll < 0.34 then
+							Kit.RockCluster(pos, rnd:NextNumber(3, 6))
+						end
+					end
+				end
+			end
+		end
+	end)
 	for _ = 1, 7 do
 		local a = rnd:NextNumber(0, math.pi * 2)
 		if near(a, 0, 0.5) + near(a, math.pi, 0.5) + near(a, math.pi / 2, 0.8) == 0 then

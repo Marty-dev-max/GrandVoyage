@@ -959,6 +959,18 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     (island.arena, PvPService reads its offset), Mist Commodore's broken square north, lighthouse east, 3 piers + quay.
     Bounty Board + Job Master stand on the square sides (the last island keeps them). Roads reserve small spots along
     their length: one circle per long segment blocked whole house rings. All six islands after Daybreak are hand-laid now.
+    v0.25.134 (owner: islands felt fixed to a circle): `World/IslandShape` = organic outline on an 8-stud voxel grid
+    (grass over a rock body, cliff ledges with rock blocks, 2-step sand beaches, see-through shallows, block surf
+    "ShoreFoam" tagged Foam, sea stacks, trees/bushes/rocks on the new headlands). Land never shrinks below r - 14
+    (every hand-laid prop stays on grass); docks (+-x) and the south harbor are kept at r; Daybreak's quay arc wider.
+    `S.Radius(island, r, a)` also drives ctx.free. Own Random per island id + Kit.WithRng (shared Kit.rng untouched:
+    buildBase still burns the old lobe draws). Ocean shore rings only for floating islands. GrassField also sways
+    dressed EnvProp trees/bushes near the camera from their foot (Base attr, Collider part stays). WORLD_VERSION 37.
+    Owner refs for the worldbuild pass (24 Nov): compact block houses with plank/stone walls, framed pixel windows
+    + sills, stepped roofs, small lamps, enterable buildings with an NPC inside; dense house blocks along paved
+    spines, trees on the edges/hills; boss nameplate with damage focus + drop chances; bosses inside big structures
+    (clown boss in a circus tent); bring the execution platform back on Epilogue. This quality is the standard for
+    every later sea.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

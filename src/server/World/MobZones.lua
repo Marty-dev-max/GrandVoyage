@@ -19,8 +19,8 @@ local THEME = {
 	GuardWolf = "den", SharkfolkBrawler = "camp", SawfolkRaider = "camp", OctofolkBrute = "camp",
 }
 local GROUND = {
-	camp = Color3.fromRGB(150, 116, 80), den = Color3.fromRGB(122, 104, 84), grove = Color3.fromRGB(96, 120, 60),
-	wallow = Color3.fromRGB(104, 78, 52),
+	camp = Color3.fromRGB(196, 150, 100), den = Color3.fromRGB(178, 150, 112), grove = Color3.fromRGB(150, 160, 90),
+	wallow = Color3.fromRGB(160, 120, 80),
 }
 local OK_MAT = { [M.Grass] = true, [M.Ground] = true, [M.Sand] = true, [M.Mud] = true, [M.LeafyGrass] = true, [M.Slate] = true, [M.Rock] = true }
 
@@ -44,9 +44,12 @@ end
 
 local params = RaycastParams.new()
 params.FilterType = Enum.RaycastFilterType.Include
-local function ground(x, z)
+local function ground(x, z, grassOnly)
 	local hit = workspace:Raycast(Vector3.new(x, 400, z), Vector3.new(0, -800, 0), params)
 	if hit and OK_MAT[hit.Material] and hit.Normal.Y > 0.9 and hit.Position.Y > 4 then
+		if grassOnly and hit.Material ~= M.Grass and hit.Material ~= M.LeafyGrass then
+			return nil
+		end
 		return hit.Position
 	end
 	return nil
@@ -64,11 +67,11 @@ local function clearing(c, r, color)
 		for gz = -r, r, step do
 			local d = math.sqrt(gx * gx + gz * gz)
 			local n = hash(c.X + gx, c.Z + gz)
-			if d < r * (0.75 + n * 0.3) and n > 0.12 then
-				local p = ground(c.X + gx, c.Z + gz)
+			if d < r * (0.7 + n * 0.25) and n > 0.03 then
+				local p = ground(c.X + gx, c.Z + gz, true)
 				if p then
 					local shade = color:Lerp(Color3.new(0, 0, 0), n * 0.12)
-					blk(Vector3.new(step, 0.3, step), shade, CFrame.new(p + Vector3.new(0, 0.12, 0)), M.Ground, { flat = true })
+					blk(Vector3.new(step, 0.3, step), shade, CFrame.new(p + Vector3.new(0, 0.12, 0)), M.Sand, { flat = true })
 				end
 			end
 		end
@@ -240,7 +243,7 @@ function Z.Build()
 			if sp.radius >= 12 and sp.lair ~= false then
 				local cx, cz = island.x + sp.offset.X, (island.z or 0) + sp.offset.Y
 				local c = ground(cx, cz) or Vector3.new(cx, 8, cz)
-				local theme = THEME[sp.monster] or (MonsterLooks[sp.monster] and "camp" or "den")
+				local theme = THEME[sp.monster] or (MonsterLooks.ById[sp.monster] and "camp" or "den")
 				local inward = (mid - Vector3.new(cx, 0, cz))
 				inward = inward.Magnitude > 1 and inward.Unit or Vector3.xAxis
 				clearing(c, sp.radius, GROUND[theme])

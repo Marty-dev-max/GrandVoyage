@@ -971,6 +971,16 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     spines, trees on the edges/hills; boss nameplate with damage focus + drop chances; bosses inside big structures
     (clown boss in a circus tent); bring the execution platform back on Epilogue. This quality is the standard for
     every later sea.
+    v0.25.135: bosses get a `BossInfo` billboard above the nameplate (MonsterService makeBossInfo): DMG FOCUS = the
+    MonsterTypes type that beats the boss (x Bonus) + its own type, then drop chances (drops + card + Mystery Blade
+    BladeDrop.BossChance), max 6 lines, rarest kept. Testing tip: a module required from execute_luau is a separate
+    copy (MS.Spawn there parents to nil); wait for BossService (first spawn 60 + index x 20 s after start).
+    v0.25.136 (owner: far islands should show faintly): outline math moved to `Shared/Modules/IslandOutline`
+    (Radius / Beach / Near / Hash; World/IslandShape uses it). WorldCull builds a stand-in per island (24-stud
+    outline rows, rock + grass + sand, tree clumps, a few roofs; folder workspace.FarIslands) shown only while that
+    island's scenery is culled. Owner, next pass: important buildings designed properly (bigger, enterable, NPC
+    inside), filler houses stay simple models; buildings bigger than now; redesign mountains as real ranges/ridges
+    (they shape rivers, climate, borders) instead of round mesa blobs.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

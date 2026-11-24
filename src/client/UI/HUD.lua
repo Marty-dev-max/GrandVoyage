@@ -77,7 +77,7 @@ end
 
 -- ===== Level ring: left half = Base EXP (green), right half = Job EXP (class color) =====
 -- Both halves fill from the bottom up to the top. Built from chunky rotated segments (no image assets needed).
-local SEGMENTS = 15
+local SEGMENTS = 13
 local RING_SIZE = 148
 local ring -- { frame, scale, base = {segs}, job = {segs}, shown = {base, job}, target = {base, job}, hold, jobColor }
 
@@ -97,50 +97,37 @@ local function buildRing(parent, pos)
 	-- v0.25.113 (owner drew it): the ring is a SQUARE frame of segments around the square portrait. Each half runs
 	-- from the level badge (bottom middle) along the bottom edge, up its side and along the top to the middle.
 	local c, h = RING_SIZE / 2, RING_SIZE / 2 - 13
-	local B0, T0 = 30, 6 -- gap kept clear at the bottom (badge) and at the top middle
-	local function squarePoint(s)
-		-- s along the left half path, 0 = bottom middle
-		if s <= h then
-			return c - s, c + h, 0
-		elseif s <= 3 * h then
-			return c - h, c + h - (s - h), 90
-		end
-		return c - h + (s - 3 * h), c - h, 0
+	-- v0.25.121 (owner: uneven ticks, jumbled corners): equal square cells on one pitch, a cell ON each corner, so the
+	-- column and the rows join into one closed square. Per half: 1 bottom cell beside the badge, bottom corner, 7 up
+	-- the side, top corner, 3 along the top (gap at the top middle) = SEGMENTS
+	local pitch = 2 * h / 8
+	local cells = { { c - h + pitch, c + h } }
+	for k = 0, 8 do
+		table.insert(cells, { c - h, c + h - k * pitch })
 	end
+	for k = 1, 3 do
+		table.insert(cells, { c - h + k * pitch, c - h })
+	end
+	assert(#cells == SEGMENTS)
 	local segs = { base = {}, job = {} }
 	for _, half in ipairs({ "base", "job" }) do
 		for i = 1, SEGMENTS do
-			local x, y, rot = squarePoint(B0 + (i - 0.5) * (4 * h - B0 - T0) / SEGMENTS)
+			local x, y = cells[i][1], cells[i][2]
 			if half == "job" then
 				x = 2 * c - x
 			end
 			local seg = New("Frame", {
 				AnchorPoint = Vector2.new(0.5, 0.5),
 				Position = UDim2.fromOffset(x, y),
-				Size = UDim2.fromOffset(11, 17),
-				Rotation = rot,
+				Size = UDim2.fromOffset(13, 13),
 				BackgroundColor3 = T.PanelDeep,
 				ZIndex = 4,
 				Parent = frame,
 			})
-			UI.Corner(seg, 4)
+			UI.Corner(seg, 3)
 			UI.Stroke(seg, T.Edge, 1.5)
 			segs[half][i] = seg
 		end
-		-- v0.25.121 (owner): the side column runs on through the top corner (in front of the top row), so the two
-		-- edges join into one closed square instead of leaving a notch at the corner
-		local cx = half == "job" and c + h or c - h
-		local corner = New("Frame", {
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromOffset(cx, c - h),
-			Size = UDim2.fromOffset(17, 17),
-			BackgroundColor3 = T.PanelDeep,
-			ZIndex = 5,
-			Parent = frame,
-		})
-		UI.Corner(corner, 4)
-		UI.Stroke(corner, T.Edge, 1.5)
-		segs[half].corner = corner
 	end
 	-- portrait
 	local face = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(RING_SIZE - 58, RING_SIZE - 58), BackgroundColor3 = T.Ocean, ZIndex = 5, Parent = frame })
@@ -194,16 +181,6 @@ local function paintHalf(half, ratio, color)
 		else
 			seg.BackgroundColor3 = T.PanelDeep:Lerp(T.Panel, 0.6)
 		end
-	end
-	-- the corner piece sits between the last column segment and the first top one: it takes the column's color
-	local cornerAt = 0
-	for i, seg in ipairs(segs) do
-		if seg.Rotation == 90 then
-			cornerAt = i
-		end
-	end
-	if segs.corner and segs[cornerAt] then
-		segs.corner.BackgroundColor3 = segs[cornerAt].BackgroundColor3
 	end
 end
 

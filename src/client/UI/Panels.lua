@@ -1835,7 +1835,9 @@ function Panels.Refine(opts)
 		end
 	end
 
+	local listScroll
 	render = function()
+		local keepY = listScroll and listScroll.CanvasPosition.Y or 0
 		clear(side)
 		clear(listPane)
 		clear(stage)
@@ -1861,6 +1863,10 @@ function Panels.Refine(opts)
 		eh.Position = UDim2.fromOffset(0, 0)
 		local list = UI.Scroll(listPane, UDim2.new(1, 0, 1, -48))
 		list.Position = UDim2.fromOffset(0, 48)
+		listScroll = list
+		task.defer(function()
+			list.CanvasPosition = Vector2.new(0, keepY)
+		end)
 		UI.List(list, nil, 8)
 		New("UIPadding", { PaddingLeft = UDim.new(0, 5), PaddingTop = UDim.new(0, 5), PaddingBottom = UDim.new(0, 5), Parent = list }) -- v0.25.106: tile rims were clipped
 		local first

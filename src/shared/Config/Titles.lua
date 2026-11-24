@@ -28,7 +28,7 @@ T.Categories = { "Voyage", "Pirate", "Marine", "Class", "Fruit", "Feats", "Speci
 T.Default = "Greenhorn"
 
 -- ===== Voyage (base level, sea by sea) =====
-add("Greenhorn", "Greenhorn", "Common", "Voyage", { level = 1 }, "Every voyage starts somewhere.")
+add("Greenhorn", "Larper", "Common", "Voyage", { level = 1 }, "Every voyage starts somewhere.")
 add("Deckhand", "Deckhand", "Common", "Voyage", { level = 10 }, "Reach Base Lv.10.")
 add("SeaRookie", "Sea Rookie", "Uncommon", "Voyage", { level = 20 }, "Reach Base Lv.20.")
 add("SaltedSailor", "Salted Sailor", "Uncommon", "Voyage", { level = 35 }, "Reach Base Lv.35.")

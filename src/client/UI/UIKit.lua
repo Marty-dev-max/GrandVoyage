@@ -938,7 +938,8 @@ function UI.ModelViewOf(parent, m, size, spin, props)
 	end
 	m:PivotTo(CFrame.new())
 	m.Parent = vp
-	local _, ext = m:GetBoundingBox()
+	local box, ext = m:GetBoundingBox()
+	local mid = CFrame.new(-box.Position) -- v0.25.126 (owner): spin around the middle (blades pivot at the grip)
 	local cam = Instance.new("Camera")
 	cam.FieldOfView = 30
 	local dist = math.max(ext.X, ext.Y, ext.Z) * 0.62 / math.tan(math.rad(15))
@@ -946,7 +947,7 @@ function UI.ModelViewOf(parent, m, size, spin, props)
 	cam.Parent = vp
 	vp.CurrentCamera = cam
 	local yaw = math.rad(-25)
-	m:PivotTo(CFrame.Angles(0, yaw, 0))
+	m:PivotTo(CFrame.Angles(0, yaw, 0) * mid)
 	if spin ~= false then
 		local conn
 		conn = RunService.RenderStepped:Connect(function(dt)
@@ -955,7 +956,7 @@ function UI.ModelViewOf(parent, m, size, spin, props)
 				return
 			end
 			yaw += dt * (tonumber(spin) or 0.8)
-			m:PivotTo(CFrame.Angles(0, yaw, 0))
+			m:PivotTo(CFrame.Angles(0, yaw, 0) * mid)
 		end)
 	end
 	return vp
@@ -1712,7 +1713,7 @@ function UI.Window(id, title, size, color, icon, opts)
 	local restPos = UDim2.fromScale(0.5, 0.53)
 	if opts.fullscreen then
 		if UI.FullPref[id] == nil then
-			UI.FullPref[id] = true
+			UI.FullPref[id] = id == "PearlShop" -- v0.25.126 (owner): other big windows open framed
 		end
 		local maxBtn = New("TextButton", {
 			AnchorPoint = Vector2.new(0, 0),

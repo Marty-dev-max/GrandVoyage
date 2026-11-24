@@ -127,6 +127,20 @@ local function buildRing(parent, pos)
 			UI.Stroke(seg, T.Edge, 1.5)
 			segs[half][i] = seg
 		end
+		-- v0.25.121 (owner): the side column runs on through the top corner (in front of the top row), so the two
+		-- edges join into one closed square instead of leaving a notch at the corner
+		local cx = half == "job" and c + h or c - h
+		local corner = New("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromOffset(cx, c - h),
+			Size = UDim2.fromOffset(17, 17),
+			BackgroundColor3 = T.PanelDeep,
+			ZIndex = 5,
+			Parent = frame,
+		})
+		UI.Corner(corner, 4)
+		UI.Stroke(corner, T.Edge, 1.5)
+		segs[half].corner = corner
 	end
 	-- portrait
 	local face = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(RING_SIZE - 58, RING_SIZE - 58), BackgroundColor3 = T.Ocean, ZIndex = 5, Parent = frame })
@@ -180,6 +194,16 @@ local function paintHalf(half, ratio, color)
 		else
 			seg.BackgroundColor3 = T.PanelDeep:Lerp(T.Panel, 0.6)
 		end
+	end
+	-- the corner piece sits between the last column segment and the first top one: it takes the column's color
+	local cornerAt = 0
+	for i, seg in ipairs(segs) do
+		if seg.Rotation == 90 then
+			cornerAt = i
+		end
+	end
+	if segs.corner and segs[cornerAt] then
+		segs.corner.BackgroundColor3 = segs[cornerAt].BackgroundColor3
 	end
 end
 

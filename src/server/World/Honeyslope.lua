@@ -57,7 +57,28 @@ local function green(ctx)
 		table.insert(pts, v(gx + math.cos(a) * 30, gz + math.sin(a) * 30))
 	end
 	road(ctx, pts, 8)
-	Kit.RoundTree(ctx.at(gx, gz), 2.8)
+	-- the giant tree, built here in blocks (the dressed BroadTree mesh scaled this big showed a black trunk):
+	-- thick brown trunk + root flares + a crown of 4-stud leaf cubes in three greens
+	local rng = Kit.rng
+	local foot = ctx.at(gx, gz)
+	local BARK = Color3.fromRGB(122, 86, 58)
+	P(Vector3.new(5, 20, 5), BARK, CFrame.new(foot + Vector3.new(0, 10, 0)), { material = M.Wood })
+	for i = 0, 3 do
+		local a = i * math.pi / 2 + 0.4
+		P(Vector3.new(3, 3, 6), BARK, CFrame.new(foot + Vector3.new(math.cos(a) * 3.5, 1.5, math.sin(a) * 3.5)) * CFrame.Angles(0, -a + math.pi / 2, 0), { material = M.Wood })
+	end
+	local LEAVES = { Color3.fromRGB(86, 168, 72), Color3.fromRGB(70, 146, 62), Color3.fromRGB(110, 188, 84) }
+	local crown = foot + Vector3.new(0, 25, 0)
+	for x = -4, 4 do
+		for y = -2, 3 do
+			for z = -4, 4 do
+				local d = Vector3.new(x, y * 1.3, z).Magnitude
+				if d <= 4.3 and (d > 2.6 or y == 3) and rng:NextNumber() > 0.08 then
+					P(Vector3.new(4, 4, 4), LEAVES[rng:NextInteger(1, 3)], CFrame.new(crown + Vector3.new(x * 4, y * 4, z * 4)), Kit.decor({ material = M.Grass, collide = false }))
+				end
+			end
+		end
+	end
 	for i = 0, 5 do
 		local a = i / 6 * math.pi * 2 + 0.3
 		local p = ctx.at(gx + math.cos(a) * 19, gz + math.sin(a) * 19)

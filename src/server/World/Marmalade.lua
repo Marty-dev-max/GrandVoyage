@@ -99,7 +99,7 @@ end
 -- the grand boulevard: lighter paving, planters with flowers down the middle, lamps on both sides
 local function boulevard(ctx)
 	slab(ctx, { -30, 30, HALL[4], QUAY_Z - 4 }, GROUND - 0.2, GROUND + 0.06, PAVE2, M.Cobblestone)
-	for _, z in ipairs({ -34, 14, 62, 110 }) do
+	for _, z in ipairs({ -18, 14, 62, 110 }) do -- v0.25.146: -34 -> -18 (the big top stands in the square)
 		P(Vector3.new(7, 1.4, 18), STONE, CFrame.new(ctx.c + Vector3.new(0, GROUND + 0.7, z)), { material = M.Brick })
 		P(Vector3.new(5.6, 0.3, 16.6), Color3.fromRGB(110, 78, 50), CFrame.new(ctx.c + Vector3.new(0, GROUND + 1.45, z)), Kit.decor({ material = M.Ground }))
 		Kit.Flowers(ctx.c + Vector3.new(0, GROUND + 1.6, z), 3, 9)
@@ -112,6 +112,88 @@ local function boulevard(ctx)
 			Kit.Lamp(ctx.c + Vector3.new(sx * 31, GROUND, z))
 		end
 	end
+end
+
+-- v0.25.146 (owner: bosses live inside their structures; the clown boss in a circus tent): the BIG TOP in the town
+-- hall square, Captain Confetti's ring. Faceted striped wall with the entrance toward the harbor (+Z), a stepped
+-- striped roof of block rings, inside: sawdust ring + red/white curb, stepped bleachers round the back, hanging lamps.
+-- Plaster cloth (Fabric renders dark). No rng: the town's random stream is unchanged.
+local BIGTOP = { x = 0, z = -56, r = 22 }
+local function bigTop(ctx)
+	local c = ctx.c + Vector3.new(BIGTOP.x, GROUND, BIGTOP.z)
+	local R = BIGTOP.r
+	local red, white, blue = Color3.fromRGB(226, 56, 60), Color3.fromRGB(252, 246, 236), Color3.fromRGB(60, 80, 190)
+	local N, WALL_H = 20, 9
+	local fw = 2 * R * math.sin(math.pi / N) + 0.5
+	for i = 0, N - 1 do
+		local a = (i + 0.5) / N * math.pi * 2
+		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+		local yaw = math.atan2(dir.X, dir.Z)
+		local cf = CFrame.new(c + dir * R) * CFrame.Angles(0, yaw, 0)
+		if dir.Z > 0.96 then
+			-- the entrance: flaps tied back to both sides, a gold frame + sign over it
+			for _, sx in ipairs({ -1, 1 }) do
+				P(Vector3.new(1.6, WALL_H - 1, 0.6), red, cf * CFrame.new(sx * (fw / 2 + 0.3), (WALL_H - 1) / 2, -0.6), Kit.decor({ material = M.Plaster }))
+			end
+			P(Vector3.new(fw + 1.4, 1.6, 1), GOLD, cf * CFrame.new(0, WALL_H - 0.8, 0), { material = M.Wood })
+			Kit.Sign("BIG TOP", CFrame.new(c + dir * (R + 0.9) + Vector3.new(0, WALL_H + 1.6, 0)) * CFrame.Angles(0, yaw + math.pi, 0), Vector2.new(10, 2.6), Color3.fromRGB(255, 230, 120), red)
+		else
+			P(Vector3.new(fw, WALL_H, 0.8), i % 2 == 0 and red or white, cf * CFrame.new(0, WALL_H / 2, 0), { material = M.Plaster })
+			P(Vector3.new(fw, 0.6, 1.1), GOLD, cf * CFrame.new(0, WALL_H - 0.3, 0), Kit.decor({ material = M.Wood }))
+		end
+	end
+	-- stepped roof: block rings shrinking upward, stripes per facet
+	local ROOF_N = 16
+	for layer = 0, 5 do
+		local rr = R + 1.5 - layer * 4
+		local y = WALL_H + 1 + layer * 2.6
+		local w = 2 * rr * math.sin(math.pi / ROOF_N) + 0.6
+		for i = 0, ROOF_N - 1 do
+			local a = (i + 0.5) / ROOF_N * math.pi * 2
+			local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+			P(Vector3.new(w, 2.6, 4.6), (i + layer) % 2 == 0 and red or white, CFrame.new(c + dir * (rr - 2.2) + Vector3.new(0, y, 0)) * CFrame.Angles(0, math.atan2(dir.X, dir.Z), 0), { material = M.Plaster })
+		end
+	end
+	local top = WALL_H + 1 + 6 * 2.6
+	P(Vector3.new(4, 2, 4), red, CFrame.new(c + Vector3.new(0, top, 0)), { material = M.Plaster })
+	P(Vector3.new(0.8, 9, 0.8), GOLD, CFrame.new(c + Vector3.new(0, top + 5, 0)), { material = M.Wood })
+	P(Vector3.new(0.2, 2.6, 4.4), blue, CFrame.new(c + Vector3.new(0, top + 8, 2.3)), Kit.decor({ material = M.Plaster }))
+	-- inside: sawdust ring + curb
+	for gx = -12, 12, 3 do
+		for gz = -12, 12, 3 do
+			if gx * gx + gz * gz <= 12.5 * 12.5 then
+				P(Vector3.new(3, 0.2, 3), Color3.fromRGB(226, 196, 140), CFrame.new(c + Vector3.new(gx, 0.18 + ((gx + gz) % 2) * 0.02, gz)), Kit.decor({ material = M.Sand }))
+			end
+		end
+	end
+	for i = 0, 23 do
+		local a = i / 24 * math.pi * 2
+		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+		P(Vector3.new(3.6, 0.9, 1), i % 2 == 0 and red or white, CFrame.new(c + dir * 13.5 + Vector3.new(0, 0.45, 0)) * CFrame.Angles(0, math.atan2(dir.X, dir.Z), 0), { material = M.Plaster })
+	end
+	-- bleachers: three stepped plank rows round the back half
+	for row = 0, 2 do
+		local rr = R - 2 - row * 1.8
+		for i = 0, 13 do
+			local a = math.pi + (i + 0.5) / 14 * math.pi -- the back half (-Z)
+			local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+			local h = 1.2 + (2 - row) * 1.2
+			P(Vector3.new(2 * rr * math.sin(math.pi / 28) + 0.4, h, 1.8), row % 2 == 0 and blue or Color3.fromRGB(80, 104, 210), CFrame.new(c + dir * rr + Vector3.new(0, h / 2, 0)) * CFrame.Angles(0, math.atan2(dir.X, dir.Z), 0), { material = M.WoodPlanks })
+		end
+	end
+	-- hanging lamps (warm light under the roof)
+	for i = 0, 3 do
+		local a = i / 4 * math.pi * 2 + math.pi / 4
+		local pos = c + Vector3.new(math.cos(a) * 9, WALL_H + 2, math.sin(a) * 9)
+		P(Vector3.new(0.2, 4, 0.2), Color3.fromRGB(60, 50, 40), CFrame.new(pos + Vector3.new(0, 2, 0)), Kit.decor())
+		local bulb = P(Vector3.new(1.2, 1.2, 1.2), Color3.fromRGB(255, 220, 140), CFrame.new(pos), Kit.decor({ material = M.Neon }))
+		local l = Instance.new("PointLight")
+		l.Range = 26
+		l.Brightness = 1.3
+		l.Color = Color3.fromRGB(255, 210, 150)
+		l.Parent = bulb
+	end
+	ctx.reserve(BIGTOP.x, BIGTOP.z, R + 3)
 end
 
 -- house blocks either side: three columns per side, doors toward the boulevard, one cross street at z ~ 38
@@ -346,6 +428,7 @@ function MT.Build(island, api)
 	townHall(ctx)
 	clockTower(ctx, 58, -106)
 	boulevard(ctx)
+	bigTop(ctx)
 	harbor(ctx)
 	houseBlocks(ctx)
 	coastPaths(ctx)

@@ -5,7 +5,8 @@
 --   fountains, the domed TOWN HALL north of it, a church with a red dome west, the Marine HQ east, white houses with
 --   terracotta / blue roofs all round. North: the Mist Commodore's broken watch square. North-west: the PvP arena.
 --   East shore: the lighthouse on its rocks. Cypress + olive trees and palms outside the walls.
--- Never an execution platform (that belongs to another work): the square's landmark is the bell tower.
+-- The square's landmark is the bell tower. v0.25.146 (owner): the old EXECUTION PLATFORM is back as the Mist Commodore's
+-- stage at the north end of his square (our own: stone plinth, timber deck, stairs, rail, lantern posts; no rope).
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Kit = require(script.Parent.Kit)
@@ -284,6 +285,44 @@ local function bossSquare(ctx)
 		local h = rng:NextNumber(4, 14)
 		P(Vector3.new(3, h, 3), STONE, CFrame.new(ctx.c + Vector3.new(x + math.cos(a) * 38, GROUND + h / 2, z + math.sin(a) * 38)), { material = M.Brick })
 	end
+	-- the platform at the north end, facing the square (+Z). No rng (the columns above keep their draws).
+	local base = ctx.c + Vector3.new(x, GROUND + 0.38, z - 26)
+	local WOOD, DARK = Color3.fromRGB(150, 104, 64), Color3.fromRGB(92, 62, 40)
+	local W, D, H = 18, 12, 7
+	P(Vector3.new(W + 2, 2, D + 2), STONE, CFrame.new(base + Vector3.new(0, 1, 0)), { material = M.Brick })
+	for _, sx in ipairs({ -1, 1 }) do
+		for _, sz in ipairs({ -1, 1 }) do
+			P(Vector3.new(1.4, H - 2, 1.4), DARK, CFrame.new(base + Vector3.new(sx * (W / 2 - 1), 2 + (H - 2) / 2, sz * (D / 2 - 1))), { material = M.Wood })
+		end
+	end
+	for k = 0, 2 do
+		-- cross braces under the deck
+		P(Vector3.new(W - 2, 0.6, 0.6), DARK, CFrame.new(base + Vector3.new(0, 3 + k * 1.4, -(D / 2 - 1))), Kit.decor({ material = M.Wood }))
+	end
+	P(Vector3.new(W, 1, D), WOOD, CFrame.new(base + Vector3.new(0, H + 0.5, 0)), { material = M.WoodPlanks })
+	-- rail round the back + sides
+	for _, r in ipairs({ { 0, -D / 2 + 0.3, W, 0.5 }, { -W / 2 + 0.3, 0, 0.5, D }, { W / 2 - 0.3, 0, 0.5, D } }) do
+		P(Vector3.new(r[3], 0.5, r[4]), DARK, CFrame.new(base + Vector3.new(r[1], H + 3.4, r[2])), { material = M.Wood })
+	end
+	for i = 0, 6 do
+		P(Vector3.new(0.5, 2.6, 0.5), DARK, CFrame.new(base + Vector3.new(-W / 2 + 0.3 + i * (W - 0.6) / 6, H + 2.3, -D / 2 + 0.3)), Kit.decor({ material = M.Wood }))
+	end
+	-- stairs down the front (+Z), 1 stud steps
+	for st = 0, H do
+		P(Vector3.new(6, 1, 1.6), WOOD, CFrame.new(base + Vector3.new(0, H - st - 0.5 + 1, D / 2 + 0.8 + st * 1.6)), { material = M.WoodPlanks })
+	end
+	-- two tall lantern posts at the back corners with a crossbeam (banners hang from it)
+	for _, sx in ipairs({ -1, 1 }) do
+		P(Vector3.new(1.2, 12, 1.2), DARK, CFrame.new(base + Vector3.new(sx * (W / 2 - 1.5), H + 1 + 6, -D / 2 + 1.5)), { material = M.Wood })
+		local lamp = P(Vector3.new(1.2, 1.4, 1.2), Color3.fromRGB(255, 200, 120), CFrame.new(base + Vector3.new(sx * (W / 2 - 1.5), H + 11, -D / 2 + 2.6)), Kit.decor({ material = M.Neon }))
+		local l = Instance.new("PointLight")
+		l.Range = 22
+		l.Brightness = 1.2
+		l.Color = Color3.fromRGB(255, 200, 140)
+		l.Parent = lamp
+		P(Vector3.new(4, 7, 0.2), Color3.fromRGB(70, 80, 100), CFrame.new(base + Vector3.new(sx * 4.5, H + 8, -D / 2 + 1.5)), Kit.decor({ material = M.Plaster }))
+	end
+	P(Vector3.new(W - 1, 1, 1), DARK, CFrame.new(base + Vector3.new(0, H + 13, -D / 2 + 1.5)), { material = M.Wood })
 end
 
 local function lighthouse(ctx)

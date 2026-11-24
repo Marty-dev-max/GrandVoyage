@@ -70,7 +70,7 @@ local Islands = {
 			{ offset = Vector2.new(152, 0), radius = 16, monster = "CircusAcrobat", count = 5 }, -- clear of the turned shipyard (v0.25.25)
 			{ offset = Vector2.new(0, -192), radius = 20, monster = "CircusLion", count = 4 },
 		},
-		boss = { id = "CaptainConfetti", offset = Vector2.new(0, -58), respawn = 30 * 60 },
+		boss = { id = "CaptainConfetti", offset = Vector2.new(0, -58), respawn = 30 * 60, indoorY = 20 }, -- v0.25.146: inside the Big Top
 		dungeon = "CircusTent",
 	},
 	{

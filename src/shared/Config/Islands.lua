@@ -100,6 +100,7 @@ local Islands = {
 		levels = { 40, 50 },
 		palette = { sand = Color3.fromRGB(200, 150, 100), grass = Color3.fromRGB(226, 196, 148), dirt = Color3.fromRGB(150, 100, 64), accent = Color3.fromRGB(236, 78, 66), wall = Color3.fromRGB(255, 246, 232) },
 		theme = "FloatingRestaurant",
+		layout = "Barracuda", -- v0.25.131: hand-laid in World/Barracuda.lua (owner concept notes)
 		townRadius = 70,
 		floating = true,
 		spawns = {

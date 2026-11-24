@@ -1016,6 +1016,14 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     cannons, Rower at OarBench, rest on deck) with a name tag. `Controllers/RecruitLife` walks the tavern sailors around
     their spot locally (legs/arms swing, stop + face you within 8 studs). Daybreak: only the tavern's keeper (harbor one
     removed). UI.Button returns (button, HOLDER): position the holder. WORLD_VERSION 40.
+    v0.25.143 (owner: monster spots should read from the map, no labels; quest givers all looked like Rowan):
+    `World/MobZones.Build` (runtime, from MS.SpawnIslandMobs: needs raycasts) dresses every Islands spawn with radius
+    >= 12 (sp.lair = false skips one, e.g. Daybreak Bandit Hill which has its own camp): 4-stud worn tiles on ground
+    materials, a border open toward the island middle (camp stakes / rocks + bones), a lair at the back by THEME
+    (camp tents+fire+flag for humanoids, den rock cave, grove giant stump for monkeys, wallow mud + broken fence for
+    boars). CanQuery off (mob ground rays + clicks pass). Raft / paved spots get nothing (OK_MAT). ModelFactory NPC_LOOK
+    now takes shirt/pants/shoes names, hat (overrides the caller's; "none" = bare), race + variant; one entry per
+    Quests.Guide name; new voxelHat kinds tophat / toque / headscarf. WORLD_VERSION 41.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

@@ -1024,6 +1024,14 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     boars). Tiles = Sand material in dirt colors, only on plain Grass (farm plots, paths, raft, paving stay). Humanoid = MonsterLooks.ById. CanQuery off (mob ground rays + clicks pass). ModelFactory NPC_LOOK
     now takes shirt/pants/shoes names, hat (overrides the caller's; "none" = bare), race + variant; one entry per
     Quests.Guide name; new voxelHat kinds tophat / toque / headscarf. WORLD_VERSION 41.
+    v0.25.144 (owner refs: block-column sea, white crests, dark troughs, LOW waves): `Shared/Modules/Waves` (3 sine
+    trains, Amp 1.5, Damp = Doldrums 0.25 + fade near island edges, Now = GetServerTimeNow) is the ONE sea surface:
+    ShipService stepShip heaves to the mean of 4 hull samples and pitches/rolls from their slope; client
+    `Controllers/VoxelSea` draws it as CELL 4 block columns (N 40/52/64 by quality, off on Low) around the camera,
+    toroidal recycling (only new cells raycast: land = hidden, shallow sand = clear turquoise), 0.5-stud steps, 12-band
+    color ramp, edge fade into the flat Ocean parts which it lowers locally by Amp + 0.3. Narrator TTS Pitch -2.5 /
+    Speed 0.95 (owner: deep is fine but hard to understand); gen_voice DEEPEN milder (regenerate the wavs before the
+    6 Dec upload). Owner plans a cutscene after character creation -> PLAY (not started).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

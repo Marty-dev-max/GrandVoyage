@@ -1042,6 +1042,15 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     boss `indoorY` (Islands) = BossService ground ray starts there (under the roof). Epilogue bossSquare: Mist
     Commodore's execution stage (brick plinth, deck H 7, front stairs into the square, rails, lantern posts, banners).
     WORLD_VERSION 42.
+    v0.25.147 (owner ref: block-built circus big top, bigger/taller; the clown gang has taken the town): Marmalade
+    BIGTOP = stadium tent (poles x +-22, rs 28, centre local (0,-40)) on a 2-stud grid: roof block per cell (concave
+    curve, sag between the poles, block reaches its lowest neighbour), stripes by `redStripe` (odd counts: colors
+    alternate at the seams, asserted), wall ring with the door at +Z, marquee sign CONFETTI CIRCUS; inside = the show
+    (plank floor, ring, grid bleachers, stage + curtain, tightrope, trapeze, SpotLights, garlands, drums, fire hoop,
+    cannon). `townStory`: barricade + KEEP OUT at z 60, Crew checkpoint camp on the crossroads (ClownGrunt spawn moved
+    to (0,38), lair = false), wagons, crew bunting, empty lion cages, hashed confetti, Crew flag on the town hall.
+    First column of houses skipped for cz < -2. Story-layout rules + mini-boss proposal: docs/Plan-Worldbuild-v2.md.
+    WORLD_VERSION 43.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

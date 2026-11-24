@@ -49,3 +49,21 @@ as hazy silhouettes (done), light pillars for events (fruit spawn beacon exists)
 2. Mountains v2: ridge generator (spine polyline + noise peaks on the voxel grid, cliff sides, grass shelves).
 3. Re-lay each island with v2 pieces following its concept art (Daybreak first), bosses moved into their
    structures, execution platform on Epilogue.
+
+## Story-driven town layout (owner, 24 Nov: "the clown gang has taken the town")
+Rules we follow when laying out an island so it tells its story without text:
+1. One story per island, told in a walk: safe arrival (harbor, townsfolk, shops) -> the edge of trouble (a barricade,
+   a sign) -> occupied ground (the gang's camp = the first mob spot) -> signs of what happened (props that imply an event:
+   open empty cages = the lions got loose) -> the villain's lair (boss inside a landmark everyone can see from the harbor).
+2. Mob levels follow the walk: weakest nearest the harbor, the boss at the far end of the main street.
+3. The villain marks territory: their colors (Confetti Crew purple + gold) on flags, bunting, wagons, the flag on the
+   town hall, litter (confetti) that thins out toward the safe harbor.
+4. The landmark is visible from the arrival point and the main street points at it (sightline).
+5. Every prop answers "who put this here and why"; props with no story stay out.
+Marmalade v0.25.147 is the first island done this way; next: each island's concept gets the same 5-beat walk.
+
+## Mini bosses (proposal, waiting for the owner)
+One mini boss per island at the middle beat of the walk (e.g. Marmalade: the crew's checkpoint boss among the grunts),
+stronger elite of the area mob (x3-4 HP, one telegraphed special), respawn 5-8 min, name bar but no boss intro/music,
+drops: a guaranteed material for the island's gear + a small chance of the boss's item; counts for hunts/quests.
+

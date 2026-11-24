@@ -1036,6 +1036,12 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     TWO tiers (fine 4-stud cells every frame + coarse 12-stud cells every other frame out to ~290 studs, coarse hides
     where the fine one is), coarse rim fades height + color (FADES palette) into the flat sea, which is recolored
     locally to FLAT (SmoothPlastic, opaque) and lowered by Amp + 0.4. ~4600 parts on High, ~72 fps in Studio.
+    v0.25.146 (owner refs: bosses inside big structures, execution platform back on Epilogue): Marmalade `bigTop`
+    (BIGTOP local (0,-56) r 22 on the boulevard: 20 striped wall facets, tied-back entrance flaps toward +Z + sign,
+    stepped striped roof, sawdust ring, blue bleachers on the back half, 4 hanging lamps) around Captain Confetti;
+    boss `indoorY` (Islands) = BossService ground ray starts there (under the roof). Epilogue bossSquare: Mist
+    Commodore's execution stage (brick plinth, deck H 7, front stairs into the square, rails, lantern posts, banners).
+    WORLD_VERSION 42.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

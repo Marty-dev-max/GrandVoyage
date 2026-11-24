@@ -162,7 +162,7 @@ local function bigTop(ctx)
 	for gx = -12, 12, 3 do
 		for gz = -12, 12, 3 do
 			if gx * gx + gz * gz <= 12.5 * 12.5 then
-				P(Vector3.new(3, 0.2, 3), Color3.fromRGB(226, 196, 140), CFrame.new(c + Vector3.new(gx, 0.18 + ((gx + gz) % 2) * 0.02, gz)), Kit.decor({ material = M.Sand }))
+				P(Vector3.new(3, 0.2, 3), Color3.fromRGB(196, 158, 108), CFrame.new(c + Vector3.new(gx, 0.18 + ((gx + gz) % 2) * 0.02, gz)), Kit.decor({ material = M.Sand }))
 			end
 		end
 	end
@@ -188,8 +188,8 @@ local function bigTop(ctx)
 		P(Vector3.new(0.2, 4, 0.2), Color3.fromRGB(60, 50, 40), CFrame.new(pos + Vector3.new(0, 2, 0)), Kit.decor())
 		local bulb = P(Vector3.new(1.2, 1.2, 1.2), Color3.fromRGB(255, 220, 140), CFrame.new(pos), Kit.decor({ material = M.Neon }))
 		local l = Instance.new("PointLight")
-		l.Range = 26
-		l.Brightness = 1.3
+		l.Range = 18
+		l.Brightness = 0.55
 		l.Color = Color3.fromRGB(255, 210, 150)
 		l.Parent = bulb
 	end

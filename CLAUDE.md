@@ -904,6 +904,9 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     may time out but finishes; check workspace.World WorldVersion), owner saves. Play then keeps it ("built in 0.02s").
     The owner's moves in Studio are lost at the next WORLD_VERSION bump: read their positions from Studio into World/*.lua
     first. Edit shows placeholders (Env meshes, plants, monsters are dressed only at runtime). WORLD_VERSION 31.
+    v0.25.121 (owner): level ring = SEGMENTS 13 equal 13x13 square cells per half on one pitch (2h/8): 1 bottom cell by
+    the badge, bottom corner, 7 up the side, top corner, 3 along the top. HUD close-up check in Play: multiply the ring
+    frame's UIScale by ~3 from execute_luau (Client) and screen_capture.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

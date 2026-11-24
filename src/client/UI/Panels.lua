@@ -2183,6 +2183,7 @@ function Panels.Recruit(c)
 		return
 	end
 	local prof = Recruits.Professions[c.prof] or {}
+	UI.CloseWindow("Recruit") -- talking to the next sailor replaces the card
 	local win = UI.Window("Recruit", c.name, UDim2.fromOffset(560, 470), T.Red, prof.icon or "🍺")
 	local stage = New("Frame", { BackgroundColor3 = T.PanelDeep, Position = UDim2.fromOffset(0, 0), Size = UDim2.fromOffset(200, 260), Parent = win.body })
 	UI.Corner(stage, 12)

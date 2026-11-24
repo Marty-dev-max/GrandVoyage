@@ -1004,6 +1004,18 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     Blender's python for scripts.
     v0.25.141 (owner): Sunrise Tavern porch awning raised above the doorway (posts 9.6, stepped striped Plaster wedges
     at y 10.4), Kit.House opts.signLift (tavern sign 3.6 up, over the awning). WORLD_VERSION 39.
+    v0.25.142 (owner: buying crew felt like a slave trade): RECRUIT crew. `Config/Recruits` (one seed -> name, race +
+    variant, job Gunner/Rower/Carpenter/Cook, 1-3 stars, what they want = Doubloons or a job item, a line; Look(c) on the
+    SERVER only (Looks.Random iterates pairs); Bonus(list) capped). `Services/RecruitService`: 4 sailors per Tavern
+    Keeper (spots in the keeper's space, outside its ring), rotate every 15 min, prompt Talk (E) -> push OpenPanel
+    Recruit -> `Panels.Recruit` (portrait = clone of the world model) -> `RecruitCrew` { key } (near check, bunks, pays
+    coin or RemoveItem) -> p.recruits { seed, name, race, variant, prof, stars } + p.crew. `DismissRecruit` { seed } or
+    { deckhand = true } (old unnamed crew = p.crew - #recruits). New saves start crew 0. Effects: Launch adds
+    Bonus.speed to shipSpeed, ship.reloadMult; RecruitService 1 s tick: Carpenter `ShipService.Patch`, Cook heals players
+    aboard. `addRecruits` (ShipService, forward-declared above Launch) welds their figures at posts (Gunner behind
+    cannons, Rower at OarBench, rest on deck) with a name tag. `Controllers/RecruitLife` walks the tavern sailors around
+    their spot locally (legs/arms swing, stop + face you within 8 studs). Daybreak: only the tavern's keeper (harbor one
+    removed). UI.Button returns (button, HOLDER): position the holder. WORLD_VERSION 40.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

@@ -599,7 +599,7 @@ local function lightAt(cf, range, brightness)
 end
 
 local function stool(cf, color)
-	P(Vector3.new(1.8, 0.5, 1.8), color, cf * CFrame.new(0, FLOOR + 2.1, 0), { material = M.Fabric })
+	P(Vector3.new(1.8, 0.5, 1.8), color, cf * CFrame.new(0, FLOOR + 2.1, 0), { material = M.Plaster }) -- Fabric renders dark
 	P(Vector3.new(0.6, 1.9, 0.6), C.DarkWood, cf * CFrame.new(0, FLOOR + 0.95, 0), decor({ material = M.Wood }))
 	P(Vector3.new(1.4, 0.3, 1.4), C.DarkWood, cf * CFrame.new(0, FLOOR + 0.15, 0), decor({ material = M.Wood }))
 end
@@ -654,7 +654,7 @@ function Kit.Interior(cf, w, d, kind, fh)
 		for i = 0, math.floor(barW / 3.2) - 1 do
 			stool(cf * CFrame.new(-1 - barW / 2 + 1.8 + i * 3.2, 0, barZ - 2.2), Color3.fromRGB(200, 50, 50))
 		end
-		shelf(cf * CFrame.new(-1, 0, id - 0.15) * CFrame.Angles(0, math.pi, 0), barW - 2, 3, function(n)
+		shelf(cf * CFrame.new(-1, 0, id - 0.15), barW - 2, 3, function(n)
 			return n % 4 ~= 0 and BOTTLES[n % #BOTTLES + 1] or nil
 		end)
 		for _, sx in ipairs({ -1, 1 }) do
@@ -696,7 +696,7 @@ function Kit.Interior(cf, w, d, kind, fh)
 		P(Vector3.new(3.2, 0.8, 1.4), Color3.fromRGB(70, 70, 78), cf * CFrame.new(ax + 0.3, FLOOR + 3.4, npcZ - 3), decor({ material = M.Metal }))
 		P(Vector3.new(1, 0.5, 0.9), Color3.fromRGB(70, 70, 78), cf * CFrame.new(ax - 1.8, FLOOR + 3.5, npcZ - 3), decor({ material = M.Metal }))
 		-- weapon rack on the right wall: blades + a hammer
-		local rack = cf * CFrame.new(iw - 0.3, 0, 0) * CFrame.Angles(0, -math.pi / 2, 0)
+		local rack = cf * CFrame.new(iw - 0.3, 0, 0) * CFrame.Angles(0, math.pi / 2, 0) -- local -Z faces into the room
 		P(Vector3.new(7, 0.4, 0.5), C.DarkWood, rack * CFrame.new(0, FLOOR + 1.2, -0.3), decor({ material = M.Wood }))
 		P(Vector3.new(7, 0.4, 0.5), C.DarkWood, rack * CFrame.new(0, FLOOR + 5.2, -0.3), decor({ material = M.Wood }))
 		for i = -2, 2 do
@@ -711,11 +711,11 @@ function Kit.Interior(cf, w, d, kind, fh)
 		P(Vector3.new(w - 8, 3.4, 1.8), Color3.fromRGB(120, 76, 44), cf * CFrame.new(0, FLOOR + 1.7, cz), { material = M.WoodPlanks })
 		P(Vector3.new(w - 7.4, 0.4, 2.4), C.LightWood, cf * CFrame.new(0, FLOOR + 3.6, cz), { material = M.Wood })
 		P(Vector3.new(1.6, 0.6, 1.2), Color3.fromRGB(240, 196, 70), cf * CFrame.new(2.4, FLOOR + 4.1, cz), decor({ material = M.Metal, collide = false }))
-		shelf(cf * CFrame.new(0, 0, id - 0.15) * CFrame.Angles(0, math.pi, 0), w - 6, 3, function(n)
+		shelf(cf * CFrame.new(0, 0, id - 0.15), w - 6, 3, function(n)
 			return ({ Color3.fromRGB(196, 120, 72), Color3.fromRGB(230, 70, 70), Color3.fromRGB(80, 170, 230), Color3.fromRGB(250, 220, 90) })[n % 4 + 1]
 		end)
 		for _, sx in ipairs({ -1, 1 }) do
-			shelf(cf * CFrame.new(sx * (iw - 0.15), 0, -1) * CFrame.Angles(0, -sx * math.pi / 2, 0), d - 10, 2, function(n)
+			shelf(cf * CFrame.new(sx * (iw - 0.15), 0, -1) * CFrame.Angles(0, sx * math.pi / 2, 0), d - 10, 2, function(n)
 				return n % 3 ~= 0 and BOTTLES[(n + 2) % #BOTTLES + 1] or nil
 			end)
 		end

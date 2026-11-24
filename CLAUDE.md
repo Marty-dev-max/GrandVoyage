@@ -1002,6 +1002,8 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     WORLD_VERSION 38. Owner next (24 Nov): monster zones readable from the map itself (no labels), and a quest
     giver of its own on each island (not only Rowan). `python` in Git Bash is the Store stub (does nothing): use
     Blender's python for scripts.
+    v0.25.141 (owner): Sunrise Tavern porch awning raised above the doorway (posts 9.6, stepped striped Plaster wedges
+    at y 10.4), Kit.House opts.signLift (tavern sign 3.6 up, over the awning). WORLD_VERSION 39.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

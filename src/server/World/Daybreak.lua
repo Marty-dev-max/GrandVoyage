@@ -406,7 +406,7 @@ end
 -- (Kit.House opts.hollow -> Kit.Interior). angle on the plaza ring -> size + interior + sign
 local RING = 66
 local HALLS = {
-	[-0.62] = { w = 28, d = 20, floors = 2, hollow = "tavern", sign = "SUNRISE TAVERN", signLift = 2.6 }, -- sign above the porch awning
+	[-0.62] = { w = 28, d = 20, floors = 2, hollow = "tavern", sign = "SUNRISE TAVERN", signLift = 3.6 }, -- sign above the porch awning
 	[1.35] = { w = 24, d = 18, floors = 1, hollow = "smithy", sign = "BLACKSMITH" },
 	[-1.18] = { w = 24, d = 18, floors = 1, hollow = "shop", sign = "GENERAL STORE" },
 }

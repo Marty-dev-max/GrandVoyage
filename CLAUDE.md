@@ -894,6 +894,9 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     22 px/stud, PxKeep) right of every BossBoard NPC = top 50 players in the server by the Power attribute, refreshed
     every 3 s. Job Master = ZONE_ROLES red ring + NPC_LOOK["Job Master"] (crimson Captain Coat, white swept hair, scar,
     voxelHat "master" = red headband with tails). WORLD_VERSION 29.
+    v0.25.119 (owner): Daybreak BossBoard at onPlaza(-2.7, 50) (in front of the small west-street house). PowerBoard
+    SurfaceGui ResetOnSpawn = false (a PlayerGui gui is wiped when the character spawns: blank board in the live game).
+    HUD status card x 60 / width 460 with content at x 110: it tucks under the ring (ring in front). WORLD_VERSION 30.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

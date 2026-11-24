@@ -119,13 +119,14 @@ local Islands = {
 		levels = { 50, 60 },
 		palette = { sand = Color3.fromRGB(250, 226, 170), grass = Color3.fromRGB(118, 200, 88), dirt = Color3.fromRGB(150, 104, 68), accent = Color3.fromRGB(255, 166, 28), wall = Color3.fromRGB(250, 240, 220) },
 		theme = "SawtoothPark",
+		layout = "Mikan", -- v0.25.132: hand-laid (World/Mikan.lua)
 		townRadius = 95,
 		spawns = {
 			{ offset = Vector2.new(-135, 120), radius = 44, monster = "SharkfolkBrawler", count = 6 },
 			{ offset = Vector2.new(135, 120), radius = 44, monster = "SawfolkRaider", count = 5 },
-			{ offset = Vector2.new(-45, -170), radius = 44, monster = "OctofolkBrute", count = 4 },
+			{ offset = Vector2.new(-150, -120), radius = 44, monster = "OctofolkBrute", count = 4 },
 		},
-		boss = { id = "SawtoothOverlord", offset = Vector2.new(145, -130), respawn = 45 * 60 },
+		boss = { id = "SawtoothOverlord", offset = Vector2.new(20, -140), respawn = 45 * 60 }, -- the palace courtyard
 		dungeon = "SawtoothDepths",
 	},
 	{

@@ -209,6 +209,13 @@ function RS.Start()
 	Net.Handle("DismissRecruit", function(player, data)
 		local p = R.DataService.Get(player)
 		local seed = type(data) == "table" and tonumber(data.seed)
+		-- an old unnamed deckhand (saves from before recruiting) frees a bunk too
+		if type(data) == "table" and data.deckhand == true and p.crew > #(p.recruits or {}) then
+			p.crew -= 1
+			player:SetAttribute("Crew", p.crew)
+			R.PlayerService.MarkDirty(player)
+			return true, "A deckhand left your crew"
+		end
 		for i, r in ipairs(p.recruits or {}) do
 			if r.seed == seed then
 				table.remove(p.recruits, i)

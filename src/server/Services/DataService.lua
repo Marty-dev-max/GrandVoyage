@@ -70,7 +70,7 @@ local function template()
 		ships = { ShipStats.StarterDesign() },
 		activeShip = 1,
 		shipSunk = false,
-		crew = 2,
+		crew = 0, -- v0.25.142: new players recruit their first sailors (tutorial step) instead of starting with 2
 		recruits = {}, -- v0.25.142: named crew (Config/Recruits); crew - #recruits = old unnamed deckhands
 		unlocked = { [Islands.StartIsland] = true },
 		lastIsland = Islands.StartIsland,

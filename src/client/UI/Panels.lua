@@ -2160,8 +2160,19 @@ function Panels.Tavern()
 		btn.Position = UDim2.new(1, -8, 0.5, 0)
 	end
 	if old > 0 then
-		UI.Text(scroll, "+ " .. old .. " deckhand" .. (old > 1 and "s" or "") .. " (from before: they man cannons and oars)", 14, T.TextSoft, "Semi", { Size = UDim2.new(1, -8, 0, 24), LayoutOrder = 999 })
-	elseif #list == 0 then
+		local row = New("Frame", { BackgroundColor3 = T.PanelDeep, Size = UDim2.new(1, -8, 0, 48), LayoutOrder = 998, Parent = scroll })
+		UI.Corner(row, 8)
+		UI.Text(row, old .. " deckhand" .. (old > 1 and "s" or "") .. " (unnamed, from before: they man cannons and oars)", 14, T.TextSoft, "Semi", { Position = UDim2.fromOffset(10, 0), Size = UDim2.new(0.75, 0, 1, 0) })
+		local _, h = UI.Button(row, "DISMISS 1", T.Panel, UDim2.fromOffset(120, 36), function()
+			if req("DismissRecruit", { deckhand = true }).ok then
+				win:Destroy()
+				Panels.Tavern()
+			end
+		end)
+		h.AnchorPoint = Vector2.new(1, 0.5)
+		h.Position = UDim2.new(1, -8, 0.5, 0)
+	end
+	if #list == 0 then
 		UI.Text(scroll, "No one yet. Sailors looking for a ship hang around this tavern: walk up and press E.", 15, T.TextSoft, "Semi", { Size = UDim2.new(1, -8, 0, 44), LayoutOrder = 999 })
 	end
 end

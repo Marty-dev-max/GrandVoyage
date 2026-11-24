@@ -216,7 +216,7 @@ local function sheds(ctx)
 	for i, s in ipairs(list) do
 		local a = s[1]
 		local x, z = math.cos(a) * (ctx.r - 30), math.sin(a) * (ctx.r - 30)
-		if ctx.free(x, z, 8) then
+		if ctx.free(x, z, 3) then -- radius 8 refused 5 of 6 (bench/lamp reserves near the rim)
 			local p = ctx.c + Vector3.new(x, GROUND, z)
 			Kit.House(CFrame.lookAt(p, ctx.c + Vector3.new(0, GROUND, 0)), 10, 8, walls[i % #walls + 1], i % 2 == 0 and ORANGE or Color3.fromRGB(90, 160, 190), { floors = 1, floorHeight = 8, trim = WOOD_D, shutter = WOOD, chimney = false, sign = s[2] })
 			Kit.Crate(p + Vector3.new(math.sin(a) * 8, 0, -math.cos(a) * 8), 3, rng:NextNumber(0, 1))

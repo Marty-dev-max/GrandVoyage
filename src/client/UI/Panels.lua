@@ -4379,14 +4379,14 @@ function Panels.Index()
 					local def = ItemDB.Get(id)
 					local got = have[id]
 					local c = cell(grid, i, def.rarity, got)
-					local img = UI.ItemIconId(def)
-					if img then
-						New("ImageLabel", { BackgroundTransparency = 1, Image = img, ScaleType = Enum.ScaleType.Fit, ResampleMode = Enum.ResamplerMode.Pixelated, ImageColor3 = got and Color3.new(1, 1, 1) or Color3.fromRGB(70, 70, 90), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 10), Size = UDim2.fromOffset(78, 78), ZIndex = 4, Parent = c })
+					-- v0.25.128 (owner): each blade's own block model; not found yet = a black silhouette, no stats
+					UI.WeaponView(c, def, 96, false, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 0), ImageColor3 = got and Color3.new(1, 1, 1) or Color3.new(0, 0, 0), ZIndex = 4 })
+					local nm = line(c, 96, got and def.name or "???", 14, T.Text)
+					if got then
+						UI.RarityText(nm, def.rarity)
+						line(c, 118, "ATK " .. def.atk .. "  " .. (def.typeLabel or "Sword"), 12, T.TextSoft)
+						line(c, 136, def.dex and ("DEX +" .. def.dex .. " LUK +" .. (def.luk or 0)) or ("STR +" .. (def.str or 0) .. " VIT +" .. (def.vit or 0)), 12, T.TextSoft)
 					end
-					local nm = line(c, 94, def.name, 14, T.Text)
-					UI.RarityText(nm, def.rarity)
-					line(c, 118, "ATK " .. def.atk .. "  " .. (def.typeLabel or "Sword"), 12, T.TextSoft)
-					line(c, 136, def.dex and ("DEX +" .. def.dex .. " LUK +" .. (def.luk or 0)) or ("STR +" .. (def.str or 0) .. " VIT +" .. (def.vit or 0)), 12, T.TextSoft)
 					line(c, 166, got and "FOUND" or "NOT FOUND", 13, got and T.Green or T.TextSoft, "Display")
 				end
 			end

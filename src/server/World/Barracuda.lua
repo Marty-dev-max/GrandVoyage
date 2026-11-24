@@ -208,6 +208,23 @@ local function lamps(ctx)
 	end
 end
 
+-- small deck sheds out on the raft (bait shop, net store, ice house, tackle) with crates beside them
+local function sheds(ctx)
+	local rng = Kit.rng
+	local list = { { -0.55, "BAIT" }, { -2.6, "NETS" }, { 2.2, "ICE" }, { 0.95, "TACKLE" }, { -1.35, nil }, { -1.85, nil } }
+	local walls = { Color3.fromRGB(250, 236, 210), MINT, Color3.fromRGB(240, 200, 170), WHITE }
+	for i, s in ipairs(list) do
+		local a = s[1]
+		local x, z = math.cos(a) * (ctx.r - 30), math.sin(a) * (ctx.r - 30)
+		if ctx.free(x, z, 8) then
+			local p = ctx.c + Vector3.new(x, GROUND, z)
+			Kit.House(CFrame.lookAt(p, ctx.c + Vector3.new(0, GROUND, 0)), 10, 8, walls[i % #walls + 1], i % 2 == 0 and ORANGE or Color3.fromRGB(90, 160, 190), { floors = 1, floorHeight = 8, trim = WOOD_D, shutter = WOOD, chimney = false, sign = s[2] })
+			Kit.Crate(p + Vector3.new(math.sin(a) * 8, 0, -math.cos(a) * 8), 3, rng:NextNumber(0, 1))
+			ctx.reserve(x, z, 9)
+		end
+	end
+end
+
 -- the raft itself: a round hull of dark planks, a plank deck on top, a white rail with gaps for the pier + docks
 local function raft(ctx)
 	local r = ctx.r
@@ -275,6 +292,7 @@ function BB.Build(island, api)
 	diningDeck(ctx)
 	galleyAndStores(ctx)
 	lamps(ctx)
+	sheds(ctx)
 	pier(ctx)
 	deckDressing(ctx)
 	api.dock(island, 1)

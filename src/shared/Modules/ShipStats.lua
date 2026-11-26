@@ -35,8 +35,27 @@ function S.CellKey(v)
 end
 
 -- bonus = { shipSpeed=0.1, shipHp=0.15 } from cards/class
+-- v0.25.152: every part entry of a design, in model Index order (v2 = items + their mirror copies)
+function S.Parts(design)
+	if design.v == 2 then
+		return require(Shared.Modules.ShipHull).Expand(design)
+	end
+	return design.parts or {}
+end
+
 function S.Compute(design, crew, bonus)
 	bonus = bonus or {}
+	if design.v == 2 then
+		local r = require(Shared.Modules.ShipHull).Compute(design)
+		r.hp = math.floor(r.hp * (1 + (bonus.shipHp or 0)))
+		r.crewCap = math.max(r.crewCap, cfg.BaseCrewCapacity)
+		r.crew = math.min(crew or 0, r.crewCap)
+		r.speedBonus += bonus.shipSpeed or 0
+		r.turnRate = cfg.BaseTurnRate * 300 / (300 + r.weight * 0.25) * r.lengthTurn
+		r.cannonsManned = math.min(#r.cannons, r.crew)
+		r.valid = r.helm == 1 and r.thrust + r.oars > 0 and not r.problem
+		return r
+	end
 	local r = {
 		weight = 0,
 		hp = 0,
@@ -94,25 +113,9 @@ function S.Speed(stats, windFactor, extraBonus)
 	return cfg.MaxSpeed * t / (t + stats.weight * cfg.WeightDrag)
 end
 
--- Starter ship for new players
+-- Starter ship for new players (v0.25.152: a free-form v2 dinghy, Config/ShipPresets)
 function S.StarterDesign()
-	local parts = {}
-	local function add(id, x, y, z, rr)
-		table.insert(parts, { id = id, x = x, y = y, z = z, r = rr or 0 })
-	end
-	-- v0.24.0 (owner): a real dinghy, 3 cells wide x 6 long (12 x 24 studs + the bow): one sailor fits nicely
-	for x = 3, 5 do
-		for z = 4, 9 do
-			add("PlankBlock", x, 0, z)
-		end
-	end
-	add("PlankWedge", 4, 0, 10)
-	add("Helm", 4, 1, 4)
-	add("SmallMast", 4, 1, 7)
-	add("LightCannon", 3, 1, 6, 1) -- r=1 faces port (-X)
-	add("LightCannon", 5, 1, 6, 3) -- r=3 faces starboard (+X)
-	add("OarBench", 4, 1, 9)
-	return { name = "Little Dinghy", parts = parts }
+	return require(Shared.Config.ShipPresets).Starter()
 end
 
 return S

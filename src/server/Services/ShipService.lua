@@ -11,6 +11,7 @@ local NPCShips = require(Shared.Config.NPCShips)
 local ShipParts = require(Shared.Config.ShipParts).Parts
 local ShipStats = require(Shared.Modules.ShipStats)
 local ShipModel = require(Shared.Modules.ShipModel)
+local ShipHull = require(Shared.Modules.ShipHull)
 local SeaZones = require(Shared.Modules.SeaZones)
 local Net = require(Shared.Modules.Net)
 local Recruits = require(Shared.Config.Recruits)
@@ -64,6 +65,12 @@ local function buildShip(design, cf, opts)
 	local cx, cz = (minV.X + maxV.X) / 2, (minV.Z + maxV.Z) / 2
 	local width, length = (maxV.X - minV.X) * G, (maxV.Z - minV.Z) * G
 	local originCf = cf * CFrame.new(-cx * G, -minV.Y * G, cz * G)
+	local phys
+	if design.v == 2 then
+		-- v0.25.152: a free-form hull sits as deep as its weight pushes it (ShipHull.Physics draft): keel at sea level - draft
+		phys = ShipHull.Physics(design)
+		originCf = originCf * CFrame.new(0, G * 0.5 - phys.draft, 0)
+	end
 	local model = ShipModel.BuildDesign(design, originCf, opts.colorFn)
 	model.Name = opts.name
 	-- a real hull around the block deck (dinghy / sloop / galleon by length): NPC ships only. v0.25.150 (owner):
@@ -91,10 +98,11 @@ local function buildShip(design, cf, opts)
 	model.PrimaryPart = root
 
 	local cannonParts = {}
+	local partList = ShipStats.Parts(design)
 	for _, child in ipairs(model:GetChildren()) do
 		if child:IsA("Model") then
 			local idx = child:GetAttribute("Index")
-			local pdef = idx and design.parts[idx] and ShipParts[design.parts[idx].id]
+			local pdef = idx and partList[idx] and ShipParts[partList[idx].id]
 			if pdef and pdef.cannon then
 				local barrel = child:FindFirstChild("Barrel", true)
 				table.insert(cannonParts, { model = child, muzzle = barrel and barrel:FindFirstChild("Muzzle"), damage = pdef.cannon.damage, range = pdef.cannon.range })
@@ -155,6 +163,9 @@ local function buildShip(design, cf, opts)
 		seaKings = {},
 		cannons = cannonParts,
 		seat = model:FindFirstChild("HelmSeat", true),
+		list = phys and phys.list or 0, -- static lean from an off-centre load (v2 hulls)
+		trim = phys and phys.trim or 0,
+		heel = phys and phys.heel or 0, -- extra lean in turns under tall sails
 		calmTime = 0,
 		outCalmTime = 0,
 		lostParts = 0,
@@ -598,7 +609,7 @@ function Ship.Launch(player, slot, at)
 	local rb = Recruits.Bonus(p.recruits) -- v0.25.142: Rowers add speed, Gunners cut the reload
 	local stats = ShipStats.Compute(design, p.crew, { shipSpeed = (derived.shipSpeed or 0) + rb.speed, shipHp = derived.shipHp })
 	if not stats.valid then
-		return false, "A ship needs 1 helm and at least 1 sail or oar bench"
+		return false, stats.problem or "A ship needs 1 helm and at least 1 sail or oar bench"
 	end
 	local dock = R.WorldBuilder.NearestDock(R.PlayerService.Root(player).Position)
 	if not at and (not dock or dock.distance > 160) then
@@ -1341,8 +1352,8 @@ local function stepShip(ship, dt, now)
 	local targetY = GameConfig.SeaLevel - G * 0.5 + 1 + (hBow + hStern + hR + hL) / 4
 	local vy = math.clamp((targetY - pos.Y) * 4, -25, 25)
 	ship.lv.VectorVelocity = vel + Vector3.new(0, vy, 0)
-	local roll = math.clamp(math.atan2(hR - hL, 8) * 0.7, -0.12, 0.12) + ship.steer * -0.05 * math.clamp(ship.speed / 40, 0, 1)
-	local pitch = math.clamp(math.atan2(hBow - hStern, 16) * 0.7, -0.1, 0.1)
+	local roll = math.clamp(math.atan2(hR - hL, 8) * 0.7, -0.12, 0.12) + ship.steer * -(0.05 + (ship.heel or 0)) * math.clamp(ship.speed / 40, 0, 1) + (ship.list or 0)
+	local pitch = math.clamp(math.atan2(hBow - hStern, 16) * 0.7, -0.1, 0.1) + (ship.trim or 0)
 	ship.ao.CFrame = CFrame.Angles(0, ship.yaw, 0) * CFrame.Angles(pitch, 0, roll)
 end
 

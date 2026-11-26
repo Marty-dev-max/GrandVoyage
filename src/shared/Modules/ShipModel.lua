@@ -55,6 +55,9 @@ end
 local MARINE = {
 	PlankBlock = Color3.fromRGB(240, 241, 246), PlankWedge = Color3.fromRGB(240, 241, 246), OakBlock = Color3.fromRGB(220, 226, 238),
 	Railing = Color3.fromRGB(44, 74, 150), CrewCabin = Color3.fromRGB(236, 238, 244), Barrel = Color3.fromRGB(60, 90, 160),
+	-- v2 hull paint zones (ShipHull.PaintOf asks for "Paint:<zone>")
+	["Paint:hull"] = Color3.fromRGB(240, 241, 246), ["Paint:bottom"] = Color3.fromRGB(40, 60, 120), ["Paint:stripe"] = Color3.fromRGB(232, 192, 80),
+	["Paint:rail"] = Color3.fromRGB(44, 74, 150), ["Paint:sail"] = Color3.fromRGB(245, 248, 255),
 }
 function SM.FactionColorFn(faction)
 	if faction == "Marine" then
@@ -72,7 +75,7 @@ function SM.BuildPart(p, cf, colorOverride)
 	model.Name = p.id
 	local color = colorOverride or def.color
 	local material = def.material and Enum.Material[def.material] or Enum.Material.SmoothPlastic
-	local sz = def.size * G
+	local sz = def.size * G * Vector3.new(p.sx or 1, p.sy or 1, p.sz or 1) -- v2 designs scale blocks, cabins, masts, rails
 
 	local assets = ReplicatedStorage:FindFirstChild("Assets")
 	local custom = assets and assets:FindFirstChild("ShipParts") and assets.ShipParts:FindFirstChild(p.id)
@@ -100,9 +103,10 @@ function SM.BuildPart(p, cf, colorOverride)
 		low.CanCollide = false
 	elseif def.slab and p.id ~= "Lantern" then
 		local base = colorOverride and color or cellShade(color, p)
-		main = mk(model, "Part", Vector3.new(sz.X, G * 0.35, sz.Z), base, cf * CFrame.new(0, -G / 2 + G * 0.175, 0), material)
+		local t = sz.Y * 0.35
+		main = mk(model, "Part", Vector3.new(sz.X, t, sz.Z), base, cf * CFrame.new(0, -sz.Y / 2 + t / 2, 0), material)
 		for _, x in ipairs({ -sz.X / 4, sz.X / 4 }) do
-			deco(mk(model, "Part", Vector3.new(0.12, G * 0.35 + 0.03, sz.Z + 0.01), dark(base, 0.28), cf * CFrame.new(x, -G / 2 + G * 0.175, 0), material))
+			deco(mk(model, "Part", Vector3.new(0.12, t + 0.03, sz.Z + 0.01), dark(base, 0.28), cf * CFrame.new(x, -sz.Y / 2 + t / 2, 0), material))
 		end
 	elseif def.stairs then
 		-- three walkable steps climbing toward the part's +Z (each step is its own collider)
@@ -120,15 +124,16 @@ function SM.BuildPart(p, cf, colorOverride)
 		end
 	elseif def.railing then
 		-- a fence along the part's X through the middle of the cell: posts at both ends, a top rail and a mid rail
-		main = mk(model, "Part", Vector3.new(sz.X, G * 0.8, 0.5), color, cf * CFrame.new(0, -G / 2 + G * 0.4, 0), material)
+		local Y = sz.Y
+		main = mk(model, "Part", Vector3.new(sz.X, Y * 0.8, 0.5), color, cf * CFrame.new(0, -Y / 2 + Y * 0.4, 0), material)
 		main.Transparency = 1
 		for _, sx in ipairs({ -1, 1 }) do
-			deco(mk(model, "Part", Vector3.new(0.55, G * 0.85, 0.55), dark(color, 0.2), cf * CFrame.new(sx * (sz.X / 2 - 0.27), -G / 2 + G * 0.425, 0), material))
+			deco(mk(model, "Part", Vector3.new(0.55, Y * 0.85, 0.55), dark(color, 0.2), cf * CFrame.new(sx * (sz.X / 2 - 0.27), -Y / 2 + Y * 0.425, 0), material))
 		end
-		deco(mk(model, "Part", Vector3.new(sz.X + 0.02, 0.42, 0.62), color, cf * CFrame.new(0, -G / 2 + G * 0.82, 0), material))
-		deco(mk(model, "Part", Vector3.new(sz.X - 0.6, 0.26, 0.3), color, cf * CFrame.new(0, -G / 2 + G * 0.45, 0), material))
+		deco(mk(model, "Part", Vector3.new(sz.X + 0.02, 0.42, 0.62), color, cf * CFrame.new(0, -Y / 2 + Y * 0.82, 0), material))
+		deco(mk(model, "Part", Vector3.new(math.max(sz.X - 0.6, 0.2), 0.26, 0.3), color, cf * CFrame.new(0, -Y / 2 + Y * 0.45, 0), material))
 		for i = -1, 1 do
-			deco(mk(model, "Part", Vector3.new(0.22, G * 0.38, 0.22), dark(color, 0.1), cf * CFrame.new(i * sz.X / 4, -G / 2 + G * 0.62, 0), material))
+			deco(mk(model, "Part", Vector3.new(0.22, Y * 0.38, 0.22), dark(color, 0.1), cf * CFrame.new(i * sz.X / 4, -Y / 2 + Y * 0.62, 0), material))
 		end
 	elseif def.category == "Hull" then
 		local base = colorOverride and color or cellShade(color, p)
@@ -181,14 +186,14 @@ function SM.BuildPart(p, cf, colorOverride)
 		local h = sz.Y
 		main = cyl(model, h, 0.9, Color3.fromRGB(130, 85, 50), cf * CFrame.Angles(0, 0, math.pi / 2), Enum.Material.Wood)
 		local sailColor = color
-		local sail = mk(model, "Part", Vector3.new(G * 2.6, h * 0.55, 0.3), sailColor, cf * CFrame.new(0, h * 0.08, -0.3), Enum.Material.Plaster) -- Fabric renders dark blue here
+		local sail = mk(model, "Part", Vector3.new(sz.X * 2.6, h * 0.55, 0.3), sailColor, cf * CFrame.new(0, h * 0.08, -0.3), Enum.Material.Plaster) -- Fabric renders dark blue here
 		sail.Name = "Sail"
 		sail.CanCollide = false
 		sail.CanQuery = false
 		-- v0.25.150: every client hides this flat sheet and draws a furling, billowing block sail with the emblem
 		sail:SetAttribute("Kind", def.faction or "")
 		CollectionService:AddTag(sail, "ShipSail")
-		local boom = cyl(model, G * 2.8, 0.4, Color3.fromRGB(130, 85, 50), cf * CFrame.new(0, h * 0.36, 0) * CFrame.Angles(0, math.pi / 2, 0) * CFrame.Angles(0, math.pi / 2, 0), Enum.Material.Wood)
+		local boom = cyl(model, sz.X * 2.8, 0.4, Color3.fromRGB(130, 85, 50), cf * CFrame.new(0, h * 0.36, 0) * CFrame.Angles(0, math.pi / 2, 0) * CFrame.Angles(0, math.pi / 2, 0), Enum.Material.Wood)
 		boom.CanCollide = false
 		local nest = cyl(model, 0.8, 2.2, Color3.fromRGB(150, 100, 60), cf * CFrame.new(0, h / 2 - 0.3, 0) * CFrame.Angles(0, 0, math.pi / 2), Enum.Material.WoodPlanks)
 		nest.CanCollide = false
@@ -262,6 +267,9 @@ end
 
 -- Build a whole (anchored) ship from a design
 function SM.BuildDesign(design, originCf, colorFn)
+	if design.v == 2 then
+		return require(Shared.Modules.ShipHull).Build(design, originCf, colorFn, SM.BuildPart)
+	end
 	local model = Instance.new("Model")
 	model.Name = design.name or "Ship"
 	for i, p in ipairs(design.parts) do
@@ -472,6 +480,10 @@ end
 
 -- Design bounds in grid cells (used to center the root)
 function SM.Bounds(design)
+	if design.v == 2 then
+		local a, b = require(Shared.Modules.ShipHull).Bounds(design)
+		return a / G, b / G
+	end
 	local minV = Vector3.new(math.huge, math.huge, math.huge)
 	local maxV = Vector3.new(-math.huge, -math.huge, -math.huge)
 	for _, p in ipairs(design.parts) do

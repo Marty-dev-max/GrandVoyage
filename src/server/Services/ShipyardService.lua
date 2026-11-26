@@ -1,4 +1,4 @@
--- ShipyardService: free-form grid ship building + crew hiring
+-- ShipyardService: free-form ship building (v0.25.152: v2 node hulls + free items, Modules/ShipHull) + presets
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
@@ -8,6 +8,7 @@ local ShipStats = require(Shared.Modules.ShipStats)
 local ShipModel = require(Shared.Modules.ShipModel)
 local Net = require(Shared.Modules.Net)
 local ShipPresets = require(Shared.Config.ShipPresets)
+local ShipHull = require(Shared.Modules.ShipHull)
 
 local ShipParts = ShipPartsCfg.Parts
 local Yard = {}
@@ -32,38 +33,21 @@ local function statsFor(player, d)
 	return ShipStats.Compute(d, p.crew, { shipSpeed = derived.shipSpeed, shipHp = derived.shipHp })
 end
 
+-- v0.25.152: the builder edits a local copy and previews it on the client (free-form v2 designs), so nothing is
+-- built on the slip here; the state push carries the saved design
 local function render(player)
 	local s = sessions[player]
 	if not s then
 		return
 	end
-	if s.model then
-		s.model:Destroy()
-	end
 	local d = design(player, s.slot)
-	s.model = ShipModel.BuildDesign(d, s.plot.origin, ShipModel.FactionColorFn(R.DataService.Get(player).faction))
-	s.model.Name = "Build_" .. player.Name
-	s.model:SetAttribute("Faction", R.DataService.Get(player).faction) -- the sail emblem (Controllers/SailCloth)
-	s.model.Parent = s.plot.folder
 	local st = statsFor(player, d)
 	Net.Push(player, "BuildState", {
 		active = true,
 		origin = s.plot.origin,
 		slot = s.slot,
 		design = d,
-		stats = {
-			weight = st.weight,
-			hp = st.hp,
-			thrust = st.thrust,
-			oars = st.oars,
-			cannons = #st.cannons,
-			crewCap = st.crewCap,
-			crew = st.crew,
-			parts = st.partCount,
-			speedLane = math.floor(ShipStats.Speed(st, 1)),
-			speedCalm = math.floor(ShipStats.Speed(st, 0)),
-			valid = st.valid,
-		},
+		stats = { hp = st.hp, cannons = #st.cannons, crewCap = st.crewCap, crew = st.crew, speedLane = math.floor(ShipStats.Speed(st, 1)), valid = st.valid, problem = st.problem },
 	})
 end
 
@@ -82,25 +66,6 @@ function Yard.ExitBuild(player)
 	end
 end
 
-local function inBounds(v)
-	local size = cfg.PlotSize
-	return v.X >= 0 and v.Y >= 0 and v.Z >= 0 and v.X < size.X and v.Y < size.Y and v.Z < size.Z
-end
-
-local function occupancy(d)
-	local occ = {}
-	for i, p in ipairs(d.parts) do
-		if ShipParts[p.id] then
-			for _, c in ipairs(ShipStats.Cells(p)) do
-				occ[ShipStats.CellKey(c)] = i
-			end
-		end
-	end
-	return occ
-end
-
-local dirs = { Vector3.new(1, 0, 0), Vector3.new(-1, 0, 0), Vector3.new(0, 1, 0), Vector3.new(0, -1, 0), Vector3.new(0, 0, 1), Vector3.new(0, 0, -1) }
-
 local function setup()
 	Net.Handle("BuildEnter", function(player, data)
 		local p = R.DataService.Get(player)
@@ -114,7 +79,21 @@ local function setup()
 		end
 		Yard.ExitBuild(player)
 		if not p.ships[slot] then
-			p.ships[slot] = { name = "Ship " .. slot, parts = { { id = "Helm", x = 4, y = 0, z = 6, r = 0 } } }
+			p.ships[slot] = ShipHull.New("Ship " .. slot)
+			p.ships[slot].paid = {}
+		elseif p.ships[slot].v ~= 2 then
+			-- an old grid ship becomes a free-form one; what its blocks cost stays in it (refunded if you shrink it)
+			local old = p.ships[slot]
+			local paid = {}
+			for _, part in ipairs(old.parts or {}) do
+				local def = ShipParts[part.id]
+				for k, v in pairs(def and def.cost or {}) do
+					paid[k] = (paid[k] or 0) + v
+				end
+			end
+			local d2 = ShipHull.FromV1(old)
+			d2.paid = paid
+			p.ships[slot] = d2
 		end
 		p.activeShip = slot
 		sessions[player] = { plot = plot, slot = slot }
@@ -130,85 +109,38 @@ local function setup()
 		return true
 	end, 0.5)
 
-	Net.Handle("BuildPlace", function(player, data)
+	-- the whole edited design at once: sanitized, then only the cost difference is paid (or refunded) against what
+	-- already went into this ship (design.paid)
+	Net.Handle("BuildSave", function(player, data)
 		local s = sessions[player]
 		if not s then
 			return false, "Not in build mode"
 		end
-		local def = ShipParts[data.id]
-		if not def then
-			return false, "Invalid part"
-		end
 		local p = R.DataService.Get(player)
-		local d = design(player, s.slot)
-		local np = {
-			id = def.id,
-			x = math.floor(tonumber(data.x) or -1),
-			y = math.floor(tonumber(data.y) or -1),
-			z = math.floor(tonumber(data.z) or -1),
-			r = math.floor(tonumber(data.r) or 0) % 4,
-		}
-		if #d.parts >= cfg.MaxParts then
-			return false, "Part limit reached (" .. cfg.MaxParts .. ")"
-		end
-		if def.faction and p.faction ~= def.faction then
-			return false, "Only for the " .. def.faction .. " faction"
-		end
-		if def.max then
-			local n = 0
-			for _, q in ipairs(d.parts) do
-				if q.id == def.id then
-					n += 1
-				end
-			end
-			if n >= def.max then
-				return false, "Max " .. def.max .. " of this part"
-			end
-		end
-		local occ = occupancy(d)
-		local cells = ShipStats.Cells(np)
-		local touching = #d.parts == 0
-		for _, c in ipairs(cells) do
-			if not inBounds(c) then
-				return false, "Outside the slip"
-			end
-			if occ[ShipStats.CellKey(c)] then
-				return false, "Overlaps another part"
-			end
-			for _, dir in ipairs(dirs) do
-				if occ[ShipStats.CellKey(c + dir)] then
-					touching = true
-				end
-			end
-		end
-		if not touching then
-			return false, "Must touch another part"
-		end
-		local ok, msg = R.InventoryService.Pay(player, def.cost)
-		if not ok then
+		local old = design(player, s.slot)
+		local clean, msg = ShipHull.Sanitize(data.design, p.faction)
+		if not clean then
 			return false, msg
 		end
-		table.insert(d.parts, np)
+		clean.name = old.name
+		local cost = ShipHull.Cost(clean)
+		local pay, refund = ShipHull.Delta(cost, old.paid or ShipHull.Cost(old))
+		if next(pay) then
+			local ok, why = R.InventoryService.Pay(player, pay)
+			if not ok then
+				return false, why
+			end
+		end
+		if next(refund) then
+			R.InventoryService.Refund(player, refund)
+		end
+		clean.paid = cost
+		p.ships[s.slot] = clean
+		p.shipSunk = p.shipSunk and s.slot == p.activeShip
+		R.PlayerService.MarkDirty(player)
 		render(player)
 		return true
-	end, 0.06)
-
-	Net.Handle("BuildRemove", function(player, data)
-		local s = sessions[player]
-		if not s then
-			return false
-		end
-		local d = design(player, s.slot)
-		local key = ShipStats.CellKey(Vector3.new(math.floor(tonumber(data.x) or -1), math.floor(tonumber(data.y) or -1), math.floor(tonumber(data.z) or -1)))
-		local idx = occupancy(d)[key]
-		if not idx then
-			return false
-		end
-		local removed = table.remove(d.parts, idx)
-		R.InventoryService.Refund(player, ShipParts[removed.id].cost)
-		render(player)
-		return true
-	end, 0.06)
+	end, 0.5)
 
 	Net.Handle("BuildRename", function(player, data)
 		local s = sessions[player]
@@ -230,7 +162,7 @@ end
 -- v0.25.150 (owner): buy a ready-made Dinghy / Sloop / Galleon at the Shipwright. It costs its blocks, goes into the
 -- slot you pick and replaces what was there (that ship's parts are refunded first, like deleting them one by one).
 local function setupPresets()
-	local problems = ShipPresets.Check(ShipStats.Cells)
+	local problems = ShipPresets.Check()
 	for _, msg in ipairs(problems) do
 		warn("[ShipPresets] " .. msg)
 	end
@@ -255,7 +187,9 @@ local function setupPresets()
 			return false, msg
 		end
 		local old = p.ships[slot]
-		if old then
+		if old and old.v == 2 then
+			R.InventoryService.Refund(player, old.paid or {})
+		elseif old then
 			for _, part in ipairs(old.parts or {}) do
 				local def = ShipParts[part.id]
 				if def then
@@ -263,10 +197,8 @@ local function setupPresets()
 				end
 			end
 		end
-		local d = { name = preset.name, parts = {} }
-		for i, part in ipairs(preset.design.parts) do
-			d.parts[i] = table.clone(part)
-		end
+		local d = ShipHull.Clone(preset.design)
+		d.paid = ShipHull.Cost(d) -- as if its materials were paid (they were, in Doubloons)
 		p.ships[slot] = d
 		p.activeShip = slot
 		p.shipSunk = false

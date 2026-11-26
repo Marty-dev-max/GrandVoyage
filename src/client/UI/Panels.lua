@@ -16,6 +16,7 @@ local Formulas = require(Shared.Modules.Formulas)
 local ShipStats = require(Shared.Modules.ShipStats)
 local ShipModel = require(Shared.Modules.ShipModel)
 local ShipPresets = require(Shared.Config.ShipPresets)
+local ShipHull = require(Shared.Modules.ShipHull)
 local Rarity = require(Shared.Modules.Rarity)
 local Net = require(Shared.Modules.Net)
 local UI = require(script.Parent.UIKit)
@@ -2427,11 +2428,7 @@ local function shipShop(body, reopen)
 			local function go()
 				local res = req("BuyShipPreset", { id = e.id, slot = pick }, "Purchase")
 				if res.ok then
-					local d = { name = e.name, parts = {} }
-					for j, part in ipairs(e.design.parts) do
-						d.parts[j] = table.clone(part)
-					end
-					p.ships[pick] = d
+					p.ships[pick] = ShipHull.Clone(e.design)
 					p.activeShip = pick
 					shipwrightTab = "ships"
 					reopen()

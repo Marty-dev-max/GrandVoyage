@@ -187,17 +187,22 @@ local function rebuildHull()
 	local function handle(kind, node, side, pos, color)
 		local p = Instance.new("Part")
 		p.Name = "Handle"
-		p.Size = Vector3.new(1.3, 1.3, 1.3)
+		p.Size = Vector3.new(1.1, 1.1, 1.1)
 		p.Color = color
-		p.Material = Enum.Material.Neon
+		p.Material = Enum.Material.SmoothPlastic -- Neon bloomed into blobs at night
 		p.Anchored, p.CanCollide, p.CanTouch, p.CastShadow = true, false, false, false
 		p.CFrame = cf * CFrame.new(pos.X, pos.Y, -pos.Z)
 		p:SetAttribute("Kind", kind)
 		p:SetAttribute("Node", node)
 		p:SetAttribute("Side", side)
 		if node == selNode and kind ~= "rake" then
-			p.Size = Vector3.new(1.7, 1.7, 1.7)
+			p.Size = Vector3.new(1.5, 1.5, 1.5)
 		end
+		local box = Instance.new("SelectionBox")
+		box.Adornee = p
+		box.Color3 = Color3.new(0, 0, 0)
+		box.LineThickness = 0.06
+		box.Parent = p
 		p.Parent = f
 	end
 	if tab == "hull" then
@@ -556,7 +561,11 @@ function refreshStats()
 	ui.ready.TextColor3 = st.valid and T.Green or T.Red
 	-- what SAVE costs / gives back
 	clearKids(ui.cost)
-	local pay, refund = ShipHull.Delta(ShipHull.Cost(work), saved and (saved.paid or ShipHull.Cost(saved)) or {})
+	local d = isDirty()
+	local pay, refund = {}, {}
+	if d then
+		pay, refund = ShipHull.Delta(ShipHull.Cost(work), saved and (saved.paid or ShipHull.Cost(saved)) or {})
+	end
 	local can = true
 	if next(pay) then
 		UI.Text(ui.cost, "SAVE COSTS", 11, T.Gold, "Display", { AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 18), TextWrapped = false })
@@ -572,7 +581,6 @@ function refreshStats()
 			chip(ui.cost, iconOf(k), "+" .. UI.Format(refund[k]), T.Green, 18)
 		end
 	end
-	local d = isDirty()
 	if not d then
 		UI.Text(ui.cost, "ALL SAVED", 11, T.TextSoft, "Display", { AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 18), TextWrapped = false })
 	end
@@ -1265,7 +1273,8 @@ local function startCamera()
 	cam.target = plotCenter()
 	local look = o.LookVector
 	cam.yaw = math.atan2(-look.X, -look.Z) + math.rad(140)
-	cam.pitch, cam.dist = 0.5, 95
+	cam.pitch, cam.dist = 0.5, math.clamp(hullLength() * 1.5 + 20, 45, 150)
+	pcall(UI.CloseAll) -- the Shipwright window (and its blur) must not stay behind the builder
 	ContextActionService:BindActionAtPriority("GVBuildKeys", sinkKeys, false, Enum.ContextActionPriority.High.Value + 100, table.unpack(SINK_KEYS))
 	UI.Root.Enabled = false -- full screen: the HUD hides while building
 end

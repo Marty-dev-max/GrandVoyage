@@ -248,7 +248,7 @@ local function paintSelection()
 	local hl = Instance.new("Folder")
 	for _, m in ipairs(view.items:GetChildren()) do
 		if m:GetAttribute("Item") == selItem then
-			New("Highlight", { FillColor = Color3.fromRGB(255, 214, 60), OutlineColor = Color3.new(1, 1, 1), FillTransparency = 0.6,
+			New("Highlight", { FillColor = Color3.fromRGB(255, 214, 60), OutlineColor = Color3.new(1, 1, 1), FillTransparency = 0.82,
 				DepthMode = Enum.HighlightDepthMode.AlwaysOnTop, Adornee = m, Parent = hl })
 		end
 	end
@@ -358,7 +358,9 @@ end
 local function newItem(spot)
 	local x = spot.X
 	local m = mirror and math.abs(x) >= 0.5 and not Parts[pick].max
-	return { id = pick, x = x, y = spot.Y, z = spot.Z, r = rot, sx = 1, sy = 1, sz = 1, m = m or nil }
+	-- cannons off the centre line face outward by themselves (R still turns them)
+	local base = (Parts[pick].cannon and math.abs(x) >= 0.5) and (x > 0 and 270 or 90) or 0
+	return { id = pick, x = x, y = spot.Y, z = spot.Z, r = (base + rot) % 360, sx = 1, sy = 1, sz = 1, m = m or nil }
 end
 
 local function showGhost(spot)
@@ -380,6 +382,7 @@ local function showGhost(spot)
 		if ok and m then
 			for _, d in ipairs(m:GetDescendants()) do
 				if d:IsA("BasePart") then
+					d.Color = d.Color:Lerp(Color3.fromRGB(80, 255, 120), 0.55)
 					d.Transparency = math.max(d.Transparency, 0.45)
 					d.CanCollide, d.CanQuery, d.CanTouch, d.CastShadow = false, false, false, false
 				end
@@ -1161,10 +1164,7 @@ local function updateItemDrag(screenPos)
 			table.insert(undoStack, drag.before)
 		end
 		drag.moved = true
-		it.x, it.y, it.z = spot.X, spot.Y, spot.Z
-		if math.abs(it.x) < 0.5 then
-			it.m = nil
-		end
+		it.x, it.y, it.z = spot.X, spot.Y, spot.Z -- the mirror copy just hides while the part sits on the centre line
 		changed(false, true)
 	end
 end
@@ -1277,6 +1277,10 @@ local function startCamera()
 	pcall(UI.CloseAll) -- the Shipwright window (and its blur) must not stay behind the builder
 	ContextActionService:BindActionAtPriority("GVBuildKeys", sinkKeys, false, Enum.ContextActionPriority.High.Value + 100, table.unpack(SINK_KEYS))
 	UI.Root.Enabled = false -- full screen: the HUD hides while building
+	local menuGui = player.PlayerGui:FindFirstChild("MenuButton")
+	if menuGui and menuGui:IsA("ScreenGui") then
+		menuGui.Enabled = false
+	end
 end
 
 local function stopCamera()
@@ -1286,6 +1290,10 @@ local function stopCamera()
 	UserInputService.MouseBehavior = Enum.MouseBehavior.Default
 	cam.turning = false
 	UI.Root.Enabled = true
+	local menuGui = player.PlayerGui:FindFirstChild("MenuButton")
+	if menuGui and menuGui:IsA("ScreenGui") then
+		menuGui.Enabled = true
+	end
 end
 
 local function stepCamera(dt)

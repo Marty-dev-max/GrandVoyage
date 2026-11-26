@@ -1095,6 +1095,17 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     Presets sit on a V keel (y0: PlankWedge r1 / r3 bilge sides + OakBlock keel, bow wedge), deck at y1, bulwarks y2,
     castles y2 + rails y3; masts start at y0 (through the keel). Checked in Play: furl/unfurl, emblems, Buy a Ship page.
     Rojo serves the MAIN checkout: merge before testing in Studio.
+    v0.25.152 (owner: ship builder felt locked to a grid, wants a free Shipshaper-style editor): ship design v2 =
+    `Shared/Modules/ShipHull` ({ v = 2, hull = { nodes = {{z, w, d, s}}, bow, stern, wall }, items = {{ id, x, y, z, r,
+    sx, sy, sz, m }}, paint, paid }; x across, y 0 = deck top, z from the stern; m = mirrored pair). Hull = 1-stud voxel
+    slices from Catmull-Rom node widths x section curve (V/U/F), raked bow/stern, stripe + deck + keel + bulwarks
+    (model "Shell", Smash never breaks it). Physics-lite: waterline from layer volume, GM stars, problem sinks /
+    floods / capsizes -> not valid. Cost = hull volume + items; ShipyardService `BuildSave` sanitizes the whole design
+    and pays/refunds only the delta vs design.paid (BuildPlace/BuildRemove gone); BuildEnter converts v1 grid ships
+    (ShipHull.FromV1, paid = their part costs). ShipStats.Parts(design) = Expand (mirror copies, model Index order) for
+    cannons; ShipService sits the keel at SeaLevel - draft + list/trim/heel. Presets are v2 builders. Builder.lua =
+    client-side preview with tabs HULL (drag node handles) / PARTS (place, drag, turn, scale, mirror, clone) / PAINT,
+    live stats, SAVE / UNDO / LAUNCH / EXIT. Studio MCP clicks use GUI AbsolutePosition (screenshot y - 58).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

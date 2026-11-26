@@ -118,23 +118,15 @@ end
 -- v0.25.154 (owner: "rebuild the ships we have"): old grid ships (v1) and the lumpy hulls fitted from them
 -- (ShipHull.FromV1: every point "U", no bulwark, no stern rake) become the preset of their length. The new ship is a
 -- gift; whatever the old one was worth beyond it stays refundable.
-function P.IsOld(design)
+-- loose = the one-time pass on load: any hull without a bulwark counts (FromV1 never gave one; presets and new hulls do)
+function P.IsOld(design, loose)
 	if type(design) ~= "table" then
 		return false
 	end
 	if design.v ~= 2 then
 		return true
 	end
-	local h = design.hull
-	if not h or (h.wall or 0) > 0 or (h.stern or 0) > 0 or (h.bow or 0) ~= 2 then
-		return false
-	end
-	for _, n in ipairs(h.nodes or {}) do
-		if n.s ~= "U" then
-			return false
-		end
-	end
-	return true
+	return loose == true and type(design.hull) == "table" and (design.hull.wall or 0) <= 0
 end
 
 function P.Rebuild(old)

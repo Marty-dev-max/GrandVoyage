@@ -213,8 +213,10 @@ function DataService.Load(player, slot)
 	-- v0.25.154 (owner): old grid ships + the lumpy hulls fitted from them are rebuilt as the preset of their size;
 	-- starter boats saved with paid = {} get their cost as a gift (the first SAVE billed the whole boat)
 	local Presets = require(Shared.Config.ShipPresets)
+	local once = not data.shipsRebuilt -- the loose check runs once per save, so a hull later set to no bulwark stays
+	data.shipsRebuilt = true
 	for i, sh in ipairs(data.ships or {}) do
-		if Presets.IsOld(sh) then
+		if Presets.IsOld(sh, once) then
 			local ok, d = pcall(Presets.Rebuild, sh)
 			if ok and d then
 				data.ships[i] = d

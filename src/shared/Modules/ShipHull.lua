@@ -80,8 +80,14 @@ function H.ScaleRule(id)
 		return { axes = "xyz", min = 0.25, max = 6 }
 	elseif def.cannon then
 		return { axes = "xz", min = H.CannonScale.min, max = H.CannonScale.max }
-	elseif def.rudder or def.keel then
+	elseif def.rudder or def.keel or def.spar then
 		return { axes = "yz", min = 0.5, max = 2.5 }
+	elseif def.conform then
+		return { axes = "yz", min = 0.5, max = 6 } -- width follows the hull (H.Expand)
+	elseif def.flagLine then
+		return { axes = "yz", min = 0.5, max = 3 }
+	elseif def.wall then
+		return { axes = "xy", min = 0.5, max = 3 }
 	elseif id == "Stairs" or id == "CrewCabin" then
 		return { axes = "xyz", min = 0.5, max = 2.5 }
 	elseif id == "Railing" then
@@ -108,6 +114,31 @@ function H.Color(s, fallback)
 	local ok, c = pcall(Color3.fromHex, s or "")
 	return ok and c or fallback or Color3.new(1, 0, 1)
 end
+
+-- ===== bow / stern styles (#3 #4) =====
+-- p = how the stem / stern post rakes with height (1 straight, 2 curved, 4 a long spoon), taper = plan-view shape of
+-- the last taper length (u 0 at the tip .. 1), square = the stern keeps this share of the widest beam (transom),
+-- flare = upper layers widen toward the stern (galleon counter)
+local function quarter(u)
+	return math.sqrt(math.max(0, 1 - (1 - u) ^ 2))
+end
+H.BowStyles = { "standard", "clipper", "round", "spoon" }
+H.SternStyles = { "standard", "transom", "round", "galleon" }
+H.StyleName = { standard = "STANDARD", clipper = "CLIPPER", round = "ROUND", spoon = "SPOON", transom = "TRANSOM", galleon = "GALLEON" }
+local BOW_STYLE = {
+	standard = { p = 2 },
+	clipper = { p = 1, taper = function(u)
+		return u
+	end },
+	round = { p = 2, taper = quarter },
+	spoon = { p = 4, taper = quarter },
+}
+local STERN_STYLE = {
+	standard = { p = 2 },
+	transom = { p = 1, square = 0.75 },
+	round = { p = 2, taper = quarter },
+	galleon = { p = 0.6, square = 0.8, flare = 0.12 },
+}
 
 -- ===== the profile =====
 local function catmull(p0, p1, p2, p3, t)
@@ -154,6 +185,12 @@ function H.Slices(hull)
 		D = math.max(D, nd.d)
 	end
 	local bowR, sternR = hull.bow or 0, hull.stern or 0
+	local bs, ss = BOW_STYLE[hull.bowStyle] or BOW_STYLE.standard, STERN_STYLE[hull.sternStyle] or STERN_STYLE.standard
+	local wMax = 0
+	for _, nd in ipairs(hull.nodes) do
+		wMax = math.max(wMax, nd.w)
+	end
+	local TL = clamp(L * 0.22, 3, 14)
 	local out = { L = L, D = D, layers = {}, zMin = 0, zMax = L }
 	local nLayers = math.ceil(D - 1e-6)
 	for j = nLayers, 1, -1 do
@@ -161,7 +198,7 @@ function H.Slices(hull)
 		local y0 = math.max(-D, -j)
 		local ym = (y0 + y1) / 2
 		local tl = 1 + ym / D -- 0 at the keel, ~1 at the deck
-		local zA, zB = -sternR * tl * tl, L + bowR * tl * tl
+		local zA, zB = -sternR * math.max(tl, 0) ^ ss.p, L + bowR * math.max(tl, 0) ^ bs.p
 		out.zMin, out.zMax = math.min(out.zMin, zA), math.max(out.zMax, zB)
 		local runs = {}
 		local cur
@@ -175,7 +212,21 @@ function H.Slices(hull)
 			if -ym <= d then
 				local f = 1 + ym / d
 				local s = SECTION[sa](f) * (1 - t) + SECTION[sb](f) * t
-				hw = snap(w * s, 0.5)
+				local raw = w * s
+				local dB, dS = zB - zc, zc - zA
+				if bs.taper and dB < TL then
+					raw *= bs.taper(dB / TL)
+				end
+				if ss.taper and dS < TL then
+					raw *= ss.taper(dS / TL)
+				end
+				if ss.square and dS < TL and tl > 0.35 then
+					raw = math.max(raw, wMax * ss.square * s)
+				end
+				if ss.flare and dS < TL then
+					raw *= 1 + ss.flare * tl * (1 - dS / TL)
+				end
+				hw = snap(math.min(raw, H.MaxBeam / 2), 0.5)
 			end
 			if hw >= 0.5 then
 				local z0 = zA + k * step
@@ -202,6 +253,51 @@ local function layerVolume(layer)
 	return v
 end
 
+local function topHalfWidth(sl)
+	local top = sl.layers[#sl.layers]
+	local runs = top and top.runs or {}
+	return function(z)
+		for _, r in ipairs(runs) do
+			if z >= r.z0 and z <= r.z1 then
+				return r.hw
+			end
+		end
+		return 0
+	end
+end
+
+-- conform superstructures: how far in from the hull edge they stand (a castle on a castle steps in more)
+local function conformInset(def, it)
+	if def.conform == "house" then
+		return (it.y or 0) > 0.5 and 1.5 or 1
+	elseif def.conform == "rail" then
+		return (it.y or 0) > 0.5 and 1.4 or 0.6
+	end
+	return 0.6
+end
+H.ConformInset = conformInset
+
+-- the hull's deck rows under a conform item: { { z0, z1, hw } } (hw = the item's own half width there)
+function H.ConformRows(design, it)
+	local def = ShipParts[it.id]
+	local sl = H.Slices(design.hull)
+	local top = sl.layers[#sl.layers]
+	local half = def.size.Z * G * (it.sz or 1) / 2
+	local z0, z1 = it.z - half, it.z + half
+	local inset = conformInset(def, it)
+	local rows = {}
+	for _, r in ipairs(top and top.runs or {}) do
+		local a, b = math.max(r.z0, z0), math.min(r.z1, z1)
+		if b - a > 0.05 and r.hw - inset >= 0.5 then
+			table.insert(rows, { z0 = a, z1 = b, hw = r.hw - inset })
+		end
+	end
+	if #rows == 0 then
+		rows = { { z0 = z0, z1 = z1, hw = def.size.X * G / 2 } } -- off the hull: its nominal width
+	end
+	return rows
+end
+
 -- ===== items =====
 local function itemSize(it)
 	local def = ShipParts[it.id]
@@ -212,8 +308,23 @@ H.ItemSize = itemSize
 -- every item plus its mirror copy: { id, x, y, z, r, sx, sy, sz, src = index in design.items, mirror = bool }
 function H.Expand(design)
 	local out = {}
+	local hwAt
 	for i, it in ipairs(design.items or {}) do
-		if ShipParts[it.id] then
+		local def = ShipParts[it.id]
+		if def and def.conform then
+			-- v0.25.154 (#5): centred, its width = the narrowest hull row it covers (stats + arcs; the model follows every row)
+			hwAt = hwAt or topHalfWidth(H.Slices(design.hull))
+			local half = def.size.Z * G * (it.sz or 1) / 2
+			local w = math.huge
+			for z = it.z - half, it.z + half + 1e-6, 1 do
+				local hw = hwAt(z)
+				if hw > 0 then
+					w = math.min(w, hw)
+				end
+			end
+			local width = w < math.huge and math.max(1, 2 * (w - conformInset(def, it))) or def.size.X * G
+			table.insert(out, { id = it.id, x = 0, y = it.y, z = it.z, r = 0, sx = width / (def.size.X * G), sy = it.sy or 1, sz = it.sz or 1, src = i, conform = true })
+		elseif def then
 			table.insert(out, { id = it.id, x = it.x, y = it.y, z = it.z, r = it.r or 0, sx = it.sx or 1, sy = it.sy or 1, sz = it.sz or 1, src = i })
 			if it.m and math.abs(it.x) >= 0.5 then
 				table.insert(out, { id = it.id, x = -it.x, y = it.y, z = it.z, r = (360 - (it.r or 0)) % 360, sx = it.sx or 1, sy = it.sy or 1, sz = it.sz or 1, src = i, mirror = true })
@@ -485,6 +596,12 @@ function H.Sanitize(raw, faction)
 	end
 	local h = raw.hull
 	local hull = { nodes = nodes, bow = num(h.bow, 0, 16, 1, 0), stern = num(h.stern, 0, 10, 1, 0), wall = num(h.wall, 0, H.MaxWall, 0.5, 1), material = H.Materials[h.material] and h.material or "Pine" }
+	-- v0.25.154: bow / stern style (#3 #4), hull details (#15), name on the stern (#17, noName = hidden)
+	hull.bowStyle = BOW_STYLE[h.bowStyle] and h.bowStyle ~= "standard" and h.bowStyle or nil
+	hull.sternStyle = STERN_STYLE[h.sternStyle] and h.sternStyle ~= "standard" and h.sternStyle or nil
+	for _, k in ipairs({ "seams", "rivets", "trim", "noName" }) do
+		hull[k] = h[k] == true or nil
+	end
 	local L = nodes[#nodes].z
 	local items = {}
 	local count, perId = 0, {}
@@ -494,6 +611,9 @@ function H.Sanitize(raw, faction)
 			local rule = H.ScaleRule(def.id)
 			local m = it.m == true
 			local x = num(it.x, -H.MaxBeam / 2 - 12, H.MaxBeam / 2 + 12, 0.25, 0)
+			if def.conform then
+				x = 0 -- #11: superstructures stay symmetric
+			end
 			if math.abs(x) < 0.5 then
 				m = false
 			end
@@ -522,7 +642,7 @@ function H.Sanitize(raw, faction)
 					x = x,
 					y = num(it.y, -H.MaxDepth - 2, 40, 0.25, 0),
 					z = num(it.z, -24, L + 30, 0.25, 0),
-					r = num(it.r, 0, 345, 15, 0) % 360,
+					r = def.conform and 0 or num(it.r, 0, 345, 15, 0) % 360,
 					sx = sx, sy = sy, sz = sz,
 					m = m or nil,
 				})
@@ -550,18 +670,6 @@ local function wrap180(a)
 end
 H.Wrap180 = wrap180
 
-local function topHalfWidth(sl)
-	local top = sl.layers[#sl.layers]
-	local runs = top and top.runs or {}
-	return function(z)
-		for _, r in ipairs(runs) do
-			if z >= r.z0 and z <= r.z1 then
-				return r.hw
-			end
-		end
-		return 0
-	end
-end
 
 function H.Arcs(design)
 	local list = H.Expand(design)
@@ -575,6 +683,8 @@ function H.Arcs(design)
 		local hx, hz = size.X / 2, size.Z / 2
 		if def.thrust and not def.jib then
 			hx, hz = 0.5, 0.5 -- only the mast post stands in the way, the sail is up high
+		elseif def.conform == "rail" or def.conform == "awning" or def.flagLine then
+			hx, hz = 0, 0 -- open rails / canvas overhead / flag strings: the guns shoot through
 		end
 		local a = math.rad(it.r or 0)
 		boxes[i] = { x = it.x, z = it.z, y0 = it.y, y1 = it.y + size.Y, hx = hx, hz = hz, c = math.cos(a), s = math.sin(a) }
@@ -807,6 +917,8 @@ function H.PaintOf(design, colorFn)
 	return out
 end
 
+local GOLD = Color3.fromRGB(232, 192, 80)
+
 -- the hull ("Shell" model: never broken off by ShipService.Smash, which only takes "Hull" / "Wedge" models)
 function H.BuildHull(design, originCf, colorFn, parent)
 	local hull = design.hull
@@ -819,6 +931,11 @@ function H.BuildHull(design, originCf, colorFn, parent)
 	local mat = H.MaterialOf(hull)
 	local hullMat = Enum.Material[mat.mat] or Enum.Material.Wood
 	local iron = Color3.fromRGB(64, 66, 72)
+	local function detail(size, color, cf, material)
+		local p = mk(shell, size, color, cf, material, "Detail")
+		p.CanCollide, p.CanQuery, p.CanTouch, p.CastShadow = false, false, false, false
+		return p
+	end
 	for j, layer in ipairs(sl.layers) do
 		local top = j == nL
 		local h = layer.y1 - layer.y0
@@ -834,6 +951,22 @@ function H.BuildHull(design, originCf, colorFn, parent)
 				mk(shell, Vector3.new(2 * r.hw, h - bh, len), paint.deck, originCf * CFrame.new(0, layer.y1 - (h - bh) / 2, -zc), Enum.Material.WoodPlanks, "Deck")
 			else
 				mk(shell, Vector3.new(2 * r.hw, h, len), base, originCf * CFrame.new(0, (layer.y0 + layer.y1) / 2, -zc), hullMat)
+				-- #15 plank seams: a dark line where two strakes meet
+				if hull.seams then
+					detail(Vector3.new(2 * r.hw + 0.06, 0.12, len + 0.02), shade(base, -0.4), originCf * CFrame.new(0, layer.y1 - 0.06, -zc), hullMat)
+				end
+			end
+			if top and hull.rivets then
+				local z = math.ceil(r.z0 / 2) * 2
+				while z <= r.z1 - 0.3 do
+					for _, side in ipairs({ -1, 1 }) do
+						detail(Vector3.new(0.3, 0.3, 0.3), iron, originCf * CFrame.new(side * r.hw, layer.y0 + 0.35, -z), Enum.Material.Metal)
+					end
+					z += 2
+				end
+			end
+			if top and hull.trim then
+				detail(Vector3.new(2 * r.hw + 0.14, 0.22, len + 0.02), GOLD, originCf * CFrame.new(0, layer.y0 + 0.11, -zc), Enum.Material.SmoothPlastic)
 			end
 			-- iron-banded hulls (#16): dark iron straps every 4 studs, a hair proud of the planks
 			if mat.bands and not top then
@@ -846,6 +979,29 @@ function H.BuildHull(design, originCf, colorFn, parent)
 				end
 			end
 		end
+	end
+	-- #17: the ship's name on the stern, gold letters on a rail-colored board
+	local topL = sl.layers[nL]
+	local stern = topL and topL.runs[1]
+	if stern and not hull.noName and type(design.name) == "string" and #design.name > 0 then
+		local w = math.max(1.5, 2 * stern.hw * 0.8)
+		local board = detail(Vector3.new(w, 0.8, 0.1), paint.rail, originCf * CFrame.new(0, -0.45, -stern.z0 + 0.06), Enum.Material.Wood)
+		board.Name = "NameBoard"
+		local gui = Instance.new("SurfaceGui")
+		gui.Face = Enum.NormalId.Back -- +Z = astern
+		gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		gui.PixelsPerStud = 40
+		gui.LightInfluence = 0.4
+		local t = Instance.new("TextLabel")
+		t.BackgroundTransparency = 1
+		t.Size = UDim2.fromScale(1, 1)
+		t.Font = Enum.Font.Arcade
+		t.TextScaled = true
+		t.Text = string.upper(design.name)
+		t.TextColor3 = GOLD
+		t.TextStrokeTransparency = 0.2
+		t.Parent = gui
+		gui.Parent = board
 	end
 	-- keel strip under the bottom layer
 	local bottom = sl.layers[1]
@@ -917,8 +1073,91 @@ function H.BuildHull(design, originCf, colorFn, parent)
 	return shell
 end
 
--- one item (or its mirror copy) as a part model at its spot
-function H.BuildItem(it, originCf, colorFn, buildPart)
+-- #5 #10: a superstructure that follows the hull rows (house = block per row, rail = both edges, awning = canvas)
+local function buildConform(it, originCf, colorFn, design)
+	local def = ShipParts[it.id]
+	local paint = H.PaintOf(design, colorFn)
+	local model = Instance.new("Model")
+	model.Name = it.id
+	local rows = H.ConformRows(design, it)
+	local Hh = def.size.Y * G * (it.sy or 1)
+	local y0 = it.y
+	local color = (colorFn and colorFn({ id = it.id })) or def.color
+	local main
+	local function part(size, c, cf, material, collide)
+		local p = mk(model, size, c, originCf * cf, material or Enum.Material.Wood, "Part")
+		p.CanCollide = collide ~= false
+		main = main or p
+		return p
+	end
+	if def.conform == "house" then
+		local L = H.Slices(design.hull).L
+		for i, r in ipairs(rows) do
+			local len, zc = r.z1 - r.z0, (r.z0 + r.z1) / 2
+			part(Vector3.new(2 * r.hw, Hh, len), i % 2 == 0 and shade(color, -0.05) or color, CFrame.new(0, y0 + Hh / 2, -zc), Enum.Material.WoodPlanks)
+			part(Vector3.new(2 * r.hw + 0.12, 0.3, len + 0.02), paint.rail, CFrame.new(0, y0 + Hh - 0.15, -zc), Enum.Material.Wood, false)
+			-- lit windows along both sides
+			if Hh >= 2.5 then
+				local z = math.ceil((r.z0 + 1) / 4) * 4
+				while z <= r.z1 - 1 do
+					for _, side in ipairs({ -1, 1 }) do
+						local wdw = part(Vector3.new(0.12, 1, 1.2), Color3.fromRGB(255, 224, 150), CFrame.new(side * (r.hw + 0.04), y0 + Hh * 0.55, -z), Enum.Material.Neon, false)
+						wdw.CanQuery = false
+					end
+					z += 4
+				end
+			end
+		end
+		-- a door on the end that faces the middle of the ship
+		local a, b = rows[1], rows[#rows]
+		local toBow = it.z < L / 2
+		local endZ = toBow and b.z1 or a.z0
+		local dh = math.min(Hh - 0.4, 3.4)
+		if dh > 1.5 then
+			local d = part(Vector3.new(1.6, dh, 0.14), Color3.fromRGB(90, 55, 30), CFrame.new(0, y0 + dh / 2, -(endZ + (toBow and 0.06 or -0.06))), Enum.Material.Wood, false)
+			d.CanQuery = false
+		end
+	elseif def.conform == "rail" then
+		for _, r in ipairs(rows) do
+			local len, zc = r.z1 - r.z0, (r.z0 + r.z1) / 2
+			for _, side in ipairs({ -1, 1 }) do
+				part(Vector3.new(0.3, 0.25, len + 0.02), color, CFrame.new(side * (r.hw - 0.15), y0 + Hh - 0.12, -zc), Enum.Material.Wood)
+				local z = math.ceil(r.z0 / 2) * 2
+				while z <= r.z1 do
+					part(Vector3.new(0.22, Hh - 0.2, 0.22), shade(color, -0.15), CFrame.new(side * (r.hw - 0.15), y0 + (Hh - 0.2) / 2, -z), Enum.Material.Wood, false)
+					z += 2
+				end
+			end
+		end
+	else -- awning: striped canvas on four posts
+		local a, b = rows[1], rows[#rows]
+		for _, pt in ipairs({ { a.hw, a.z0 + 0.2 }, { -a.hw, a.z0 + 0.2 }, { b.hw, b.z1 - 0.2 }, { -b.hw, b.z1 - 0.2 } }) do
+			part(Vector3.new(0.3, Hh, 0.3), Color3.fromRGB(130, 85, 50), CFrame.new(pt[1], y0 + Hh / 2, -pt[2]), Enum.Material.Wood, false)
+		end
+		for _, r in ipairs(rows) do
+			local z = r.z0
+			while z < r.z1 - 0.05 do
+				local z2 = math.min(r.z1, math.floor(z / 2 + 1) * 2)
+				local stripe = math.floor(z / 2 + 0.001) % 2 == 0
+				local c = part(Vector3.new(2 * r.hw + 0.6, 0.25, z2 - z), stripe and paint.sail or paint.stripe, CFrame.new(0, y0 + Hh + 0.12, -(z + z2) / 2), Enum.Material.Plaster, false)
+				c.CanQuery = false
+				z = z2
+			end
+		end
+	end
+	main.Name = "Main"
+	model.PrimaryPart = main
+	return model
+end
+
+-- one item (or its mirror copy) as a part model at its spot; `design` lets conform superstructures follow the hull
+function H.BuildItem(it, originCf, colorFn, buildPart, design)
+	if ShipParts[it.id].conform and design then
+		local m = buildConform(it, originCf, colorFn, design)
+		m:SetAttribute("Item", it.src)
+		m:SetAttribute("Mirror", false)
+		return m, itemSize(it)
+	end
 	local rule = H.ScaleRule(it.id)
 	local cf, size = H.ItemCFrame(it)
 	local p = { id = it.id, x = math.floor(it.x), y = math.floor(it.y), z = math.floor(it.z), r = 0 }
@@ -946,7 +1185,7 @@ function H.Build(design, originCf, colorFn, buildPart)
 	model.Name = design.name or "Ship"
 	H.BuildHull(design, originCf, colorFn, model)
 	for i, it in ipairs(H.Expand(design)) do
-		local ok, m = pcall(H.BuildItem, it, originCf, colorFn, buildPart)
+		local ok, m = pcall(H.BuildItem, it, originCf, colorFn, buildPart, design)
 		if ok and m then
 			m:SetAttribute("Index", i)
 			m.Parent = model

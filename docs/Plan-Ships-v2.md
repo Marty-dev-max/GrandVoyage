@@ -49,7 +49,7 @@ picked ones become the remake scope (column "Pick").
 | 34 | Broadside hatches open/close, close when heeling | gun ports that open to fire, shut when heeling | none | YES |
 | 35 | Windows, balconies, entry ports, ladders, ropes | decor set | part | YES |
 | **G** | **Sailing** | | | |
-| 36 | Click on the ocean to steer, or WASD | WASD only | part | YES |
+| 36 | Click on the ocean to steer, or WASD | WASD only | part | NO (owner 27 Nov: WASD only, no clicking) |
 | 37 | Speed gauges, furl sails | SAIL- / SAIL+ | have | YES |
 | 38 | Multiplayer modes with era rules, balance checks | crew war / ship duel modes (docs/GuildWar.md) | none | no (later) |
 
@@ -62,11 +62,10 @@ Built in three versions (each pushed on its own):
   Carronade / Mortar with bore + barrel scaling (24), firing arcs computed from the design (blocked by own parts) and
   used by the server (25), propulsion = the stronger of sails or oars with diminishing returns (26), power parts
   (jib, topsail, oar benches) shown green (27), SAIL AREA / ROW POWER readouts (28).
-- **Phase 2 = editor**: hold / "+" to add and remove hull points (2), bow + stern styles cycled with the wheel (3, 4),
+- **Phase 2 = editor** (v0.25.154, DONE 27 Nov): hold / "+" to add and remove hull points (2), bow + stern styles cycled with the wheel (3, 4),
   superstructures that follow the hull (5), right-click menu of parts that fit the spot (7), in-world stretch + turn
   handles (8), stacking superstructures for balconies (9), rails / awnings along the deck edge (10), symmetry rules +
   CLONE (11), bowsprit, flags, flag lines (12), saved paint themes (14), hull details (15), name on the stern (17),
   decor set (35).
 - **Phase 3 = at sea**: harpoon gun + fire-pot thrower (29), powder kegs (30), crow's nest range readout (31), bilge
-  pumps (32), working lanterns + searchlight (33), gun ports that close when heeling (34), click the sea to steer
-  (36), TEST SAIL with wind / time controls (21), Easy / Full ship physics setting (23).
+  pumps (32), working lanterns + searchlight (33), gun ports that close when heeling (34), TEST SAIL with wind / time controls (21), Easy / Full ship physics setting (23).

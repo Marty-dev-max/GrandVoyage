@@ -39,6 +39,16 @@ part("Keel", { name = "Keel", category = "Hull", weight = 40, hp = 120, size = V
 	color = Color3.fromRGB(70, 50, 36), material = "Wood", cost = { beli = 400, Wood = 3, IronIngot = 1 } })
 part("TreasureBlock", { name = "Treasure Wood Block", category = "Hull", weight = 12, hp = 320,
 	color = Color3.fromRGB(230, 200, 140), material = "Wood", cost = { beli = 5000, TreasureWood = 1 } })
+-- v0.25.154 (Plan-Ships-v2 #5 #9 #10): superstructures that FOLLOW THE HULL: conform = "house" (castle / deckhouse
+-- block whose width is the hull's at every stud, minus an inset), "rail" (rails along both deck edges), "awning"
+-- (striped canvas on posts). Always on the centre line; the builder scales HEIGHT + LENGTH, the width comes from the
+-- hull (ShipHull.Expand). Stack a shorter castle on a castle for tiers, add a Balcony to its stern.
+part("Deckhouse", { name = "Castle Deck", category = "Hull", weight = 30, hp = 160, size = Vector3.new(2, 0.75, 2), conform = "house",
+	color = Color3.fromRGB(176, 128, 84), material = "WoodPlanks", cost = { beli = 300, Wood = 6 } })
+part("EdgeRail", { name = "Edge Rail", category = "Hull", weight = 6, hp = 30, size = Vector3.new(2, 0.375, 2), conform = "rail",
+	color = Color3.fromRGB(150, 100, 62), material = "Wood", cost = { beli = 60, Wood = 2 } })
+part("Balcony", { name = "Balcony", category = "Hull", weight = 14, hp = 60, size = Vector3.new(1.5, 1, 1), balcony = true,
+	color = Color3.fromRGB(150, 100, 62), material = "WoodPlanks", cost = { beli = 300, Wood = 4 } })
 -- Sails
 part("SmallMast", { name = "Small Mast", category = "Sail", weight = 25, hp = 80, size = Vector3.new(1, 4, 1),
 	thrust = 30, color = Color3.fromRGB(250, 245, 230), cost = { beli = 500, Wood = 4, SailCloth = 3 } })
@@ -52,6 +62,9 @@ part("MarineSail", { name = "Marine Mast", category = "Sail", weight = 50, hp = 
 -- one a bit less; ShipHull.Compute)
 part("Jib", { name = "Jib Sail", category = "Sail", weight = 12, hp = 50, size = Vector3.new(0.25, 3, 1.5), thrust = 22, jib = true,
 	color = Color3.fromRGB(250, 245, 230), cost = { beli = 600, Wood = 2, SailCloth = 3 } })
+-- v0.25.154 (#12): bowsprit = a spar out over the bow (a little extra speed: the jib sets further out)
+part("Bowsprit", { name = "Bowsprit", category = "Sail", weight = 10, hp = 40, size = Vector3.new(0.25, 0.25, 2), spar = true, speedBonus = 0.02, max = 1,
+	color = Color3.fromRGB(130, 85, 50), material = "Wood", cost = { beli = 400, Wood = 3 } })
 part("OarBench", { name = "Oar Bench", category = "Sail", weight = 15, hp = 50, size = Vector3.new(1, 1, 1),
 	oar = 7, color = Color3.fromRGB(170, 120, 75), cost = { beli = 300, Wood = 3 } })
 -- Weapons
@@ -82,5 +95,24 @@ part("Barrel", { name = "Barrel", category = "Utility", weight = 6, hp = 20,
 	color = Color3.fromRGB(160, 108, 64), cost = { beli = 60, Wood = 1 } })
 part("Lantern", { name = "Lantern", category = "Utility", weight = 3, hp = 10, slab = true,
 	color = Color3.fromRGB(255, 220, 120), light = true, cost = { beli = 100 } })
+part("Awning", { name = "Awning", category = "Utility", weight = 8, hp = 20, size = Vector3.new(2, 1.1, 2), conform = "awning",
+	color = Color3.fromRGB(246, 241, 226), cost = { beli = 250, Wood = 2, SailCloth = 2 } })
+-- v0.25.154 (#12 #35): decor. wall = true parts stick to walls and hull sides (they face out of the face you click)
+part("Flag", { name = "Flag", category = "Decor", weight = 2, hp = 10, size = Vector3.new(0.25, 1.5, 0.25), flag = true,
+	color = Color3.fromRGB(190, 50, 45), cost = { beli = 80, SailCloth = 1 } })
+part("FlagLine", { name = "Signal Flags", category = "Decor", weight = 2, hp = 10, size = Vector3.new(0.25, 1, 3), flagLine = true,
+	color = Color3.fromRGB(230, 70, 60), cost = { beli = 120, SailCloth = 1 } })
+part("Window", { name = "Window", category = "Decor", weight = 2, hp = 10, size = Vector3.new(0.5, 0.5, 0.1), wall = true,
+	color = Color3.fromRGB(110, 72, 42), cost = { beli = 60, Wood = 1 } })
+part("EntryPort", { name = "Entry Port", category = "Decor", weight = 3, hp = 15, size = Vector3.new(0.6, 0.9, 0.1), wall = true,
+	color = Color3.fromRGB(110, 72, 42), cost = { beli = 80, Wood = 1 } })
+part("Ladder", { name = "Ladder", category = "Decor", weight = 3, hp = 15, size = Vector3.new(0.4, 1, 0.1), wall = true, ladder = true,
+	color = Color3.fromRGB(150, 100, 62), cost = { beli = 40, Wood = 1 } })
+part("Hatch", { name = "Hatch", category = "Decor", weight = 4, hp = 20, size = Vector3.new(0.75, 0.1, 0.75),
+	color = Color3.fromRGB(120, 82, 50), cost = { beli = 60, Wood = 1 } })
+part("RopeCoil", { name = "Rope Coil", category = "Decor", weight = 2, hp = 10, size = Vector3.new(0.5, 0.15, 0.5),
+	color = Color3.fromRGB(205, 175, 120), cost = { beli = 30 } })
+part("Crate", { name = "Crate", category = "Decor", weight = 6, hp = 25, size = Vector3.new(0.6, 0.6, 0.6),
+	color = Color3.fromRGB(180, 130, 80), cost = { beli = 50, Wood = 1 } })
 
-return { Parts = P, Order = order, Categories = { "Core", "Hull", "Sail", "Weapon", "Utility" } }
+return { Parts = P, Order = order, Categories = { "Core", "Hull", "Sail", "Weapon", "Utility", "Decor" } }

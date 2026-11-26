@@ -44,6 +44,7 @@ local function cellShade(c, p)
 	local h = ((p.x or 0) * 73 + (p.y or 0) * 151 + (p.z or 0) * 37) % 3
 	return h == 0 and c or h == 1 and dark(c, 0.06) or c:Lerp(Color3.new(1, 1, 1), 0.05)
 end
+local GOLD_TRIM = Color3.fromRGB(214, 170, 74)
 local function deco(part)
 	part.CanCollide = false
 	part.CanQuery = false
@@ -135,7 +136,7 @@ function SM.BuildPart(p, cf, colorOverride)
 		for i = -1, 1 do
 			deco(mk(model, "Part", Vector3.new(0.22, Y * 0.38, 0.22), dark(color, 0.1), cf * CFrame.new(i * sz.X / 4, -Y / 2 + Y * 0.62, 0), material))
 		end
-	elseif def.category == "Hull" then
+	elseif def.category == "Hull" and def.conform ~= "rail" and not def.balcony then
 		local base = colorOverride and color or cellShade(color, p)
 		main = mk(model, "Part", sz, base, cf, material)
 		local metal = def.material == "DiamondPlate"
@@ -288,8 +289,161 @@ function SM.BuildPart(p, cf, colorOverride)
 			deco(mk(model, "Part", Vector3.new(G * 0.7, 0.2, G * 0.7), Color3.fromRGB(70, 70, 76), cf * CFrame.new(0, -G / 2 + G * y, 0), Enum.Material.Metal))
 		end
 		deco(mk(model, "Part", Vector3.new(G * 0.5, 0.12, G * 0.5), dark(color, 0.25), cf * CFrame.new(0, -G / 2 + G * 0.82 + 0.05, 0), Enum.Material.Wood))
+	elseif def.conform == "rail" then
+		-- card / ghost preview of the edge rail (on a ship it follows the hull: ShipHull buildConform)
+		main = mk(model, "Part", Vector3.new(sz.X, 0.25, 0.3), color, cf * CFrame.new(0, sz.Y / 2 - 0.12, 0), material)
+		for i = -2, 2 do
+			deco(mk(model, "Part", Vector3.new(0.22, sz.Y - 0.2, 0.22), dark(color, 0.15), cf * CFrame.new(i * sz.X / 4.4, -0.1, 0), material))
+		end
+	elseif def.conform == "awning" then
+		main = mk(model, "Part", Vector3.new(sz.X, 0.25, sz.Z), color, cf * CFrame.new(0, sz.Y / 2 - 0.12, 0), Enum.Material.Plaster)
+		for i = 0, 3 do
+			deco(mk(model, "Part", Vector3.new(sz.X + 0.02, 0.27, sz.Z / 8), Color3.fromRGB(200, 60, 55), cf * CFrame.new(0, sz.Y / 2 - 0.12, -sz.Z / 2 + (i * 2 + 1.5) * sz.Z / 8), Enum.Material.Plaster))
+		end
+		for _, sx in ipairs({ -1, 1 }) do
+			for _, sz2 in ipairs({ -1, 1 }) do
+				deco(mk(model, "Part", Vector3.new(0.25, sz.Y, 0.25), Color3.fromRGB(130, 85, 50), cf * CFrame.new(sx * (sz.X / 2 - 0.2), 0, sz2 * (sz.Z / 2 - 0.2)), Enum.Material.Wood))
+			end
+		end
+	elseif def.balcony then
+		-- stern gallery: plank floor on brackets, a rail on three sides (open toward the ship = +Z)
+		local fl = 0.35
+		main = mk(model, "Part", Vector3.new(sz.X, fl, sz.Z), color, cf * CFrame.new(0, -sz.Y / 2 + fl / 2, 0), Enum.Material.WoodPlanks)
+		deco(mk(model, "Part", Vector3.new(sz.X + 0.1, 0.15, sz.Z + 0.1), dark(color, 0.3), cf * CFrame.new(0, -sz.Y / 2 + fl, 0), Enum.Material.Wood))
+		for _, sx in ipairs({ -1, 1 }) do
+			deco(mk(model, "Part", Vector3.new(0.3, 0.9, 0.3), dark(color, 0.35), cf * CFrame.new(sx * sz.X * 0.3, -sz.Y / 2 - 0.3, sz.Z / 2 - 0.4), Enum.Material.Wood))
+			deco(mk(model, "Part", Vector3.new(0.25, 0.22, sz.Z), GOLD_TRIM, cf * CFrame.new(sx * (sz.X / 2 - 0.12), -sz.Y / 2 + 2.6, 0), Enum.Material.Wood))
+		end
+		deco(mk(model, "Part", Vector3.new(sz.X, 0.22, 0.25), GOLD_TRIM, cf * CFrame.new(0, -sz.Y / 2 + 2.6, -sz.Z / 2 + 0.12), Enum.Material.Wood))
+		-- balusters
+		local n = math.max(2, math.floor(sz.X / 0.9))
+		for i = 0, n do
+			local x = -sz.X / 2 + 0.12 + i * (sz.X - 0.24) / n
+			deco(mk(model, "Part", Vector3.new(0.18, 2.2, 0.18), dark(color, 0.1), cf * CFrame.new(x, -sz.Y / 2 + fl + 1.1, -sz.Z / 2 + 0.12), Enum.Material.Wood))
+		end
+		for _, sx in ipairs({ -1, 1 }) do
+			for j = 1, math.max(1, math.floor(sz.Z / 0.9)) - 1 do
+				deco(mk(model, "Part", Vector3.new(0.18, 2.2, 0.18), dark(color, 0.1), cf * CFrame.new(sx * (sz.X / 2 - 0.12), -sz.Y / 2 + fl + 1.1, -sz.Z / 2 + j * 0.9), Enum.Material.Wood))
+			end
+		end
+	elseif def.spar then
+		-- bowsprit: a square spar raking up over the bow (-Z), iron bands, a little cap
+		local len = sz.Z
+		local th = math.max(0.5, sz.X)
+		local sparCf = cf * CFrame.new(0, -sz.Y / 2 + th / 2, len * 0.05) * CFrame.Angles(math.rad(14), 0, 0)
+		main = mk(model, "Part", Vector3.new(th, th, len), color, sparCf, Enum.Material.Wood)
+		for _, f in ipairs({ 0.15, 0.45 }) do
+			deco(mk(model, "Part", Vector3.new(th + 0.12, th + 0.12, 0.22), Color3.fromRGB(70, 70, 76), sparCf * CFrame.new(0, 0, len / 2 - len * f), Enum.Material.Metal))
+		end
+		deco(mk(model, "Part", Vector3.new(th * 0.7, th * 0.7, 0.6), Color3.fromRGB(232, 192, 80), sparCf * CFrame.new(0, 0, -len / 2 - 0.2), Enum.Material.Wood))
+	elseif def.flagLine then
+		-- signal flags: a line falling from the top (bow end, -Z) to the deck, alternating pennants hanging on it
+		local len, Y = sz.Z, sz.Y
+		local a = Vector3.new(0, Y / 2, -len / 2)
+		local b = Vector3.new(0, -Y / 2, len / 2)
+		local d = (b - a)
+		main = mk(model, "Part", Vector3.new(0.08, 0.08, d.Magnitude), Color3.fromRGB(60, 45, 35), cf * CFrame.lookAt(a + d / 2, b), Enum.Material.Fabric)
+		main.CanCollide = false
+		local cols = { Color3.fromRGB(220, 60, 55), Color3.fromRGB(250, 210, 70), Color3.fromRGB(60, 120, 220), Color3.fromRGB(245, 245, 245), Color3.fromRGB(70, 170, 90) }
+		local n = math.max(3, math.floor(d.Magnitude / 1.3))
+		for i = 1, n do
+			local pt = a + d * ((i - 0.5) / n)
+			local c = cols[(i - 1) % #cols + 1]
+			for k = 0, 2 do
+				-- a stepped triangle: 3 rows shrinking downward
+				deco(mk(model, "Part", Vector3.new(0.06, 0.25, 0.9 - k * 0.3), c, cf * CFrame.new(pt + Vector3.new(0, -0.15 - k * 0.25, 0)), Enum.Material.Plaster))
+			end
+		end
+	elseif def.flag then
+		-- pole + gold finial + a two-tone flag flying aft (+Z)
+		local Y = sz.Y
+		main = mk(model, "Part", Vector3.new(0.22, Y, 0.22), Color3.fromRGB(130, 85, 50), cf, Enum.Material.Wood)
+		deco(mk(model, "Part", Vector3.new(0.4, 0.3, 0.4), Color3.fromRGB(232, 192, 80), cf * CFrame.new(0, Y / 2 + 0.15, 0), Enum.Material.Wood))
+		local fw, fh = math.max(1.6, Y * 0.42), math.max(1, Y * 0.26)
+		for i = 0, 3 do
+			local c = i % 2 == 0 and color or color:Lerp(Color3.new(1, 1, 1), 0.75)
+			local wave = (i % 2 == 0) and 0 or 0.1
+			deco(mk(model, "Part", Vector3.new(0.12, fh / 4, fw - i * 0.12), c, cf * CFrame.new(wave, Y / 2 - 0.3 - (i + 0.5) * fh / 4, fw / 2 + 0.1 - i * 0.06), Enum.Material.Plaster))
+		end
+	elseif def.wall and def.ladder then
+		-- rails + rungs flat against the hull side (the side is at local +Z)
+		local W, Y = sz.X, sz.Y
+		main = mk(model, "Part", Vector3.new(W, Y, 0.2), color, cf * CFrame.new(0, 0, sz.Z / 2 - 0.1), Enum.Material.Wood)
+		main.Transparency = 1
+		for _, sx in ipairs({ -1, 1 }) do
+			deco(mk(model, "Part", Vector3.new(0.2, Y, 0.25), dark(color, 0.2), cf * CFrame.new(sx * (W / 2 - 0.1), 0, 0), Enum.Material.Wood))
+		end
+		local n = math.max(2, math.floor(Y / 0.8))
+		for i = 1, n do
+			deco(mk(model, "Part", Vector3.new(W, 0.16, 0.22), color, cf * CFrame.new(0, -Y / 2 + i * Y / (n + 1), 0), Enum.Material.Wood))
+		end
+	elseif def.wall then
+		-- window / entry port: a frame on the hull side, warm glass with mullions (window) or a plank door (port)
+		local W, Y = sz.X, sz.Y
+		local back = sz.Z / 2
+		main = mk(model, "Part", Vector3.new(W, Y, 0.2), dark(color, 0.1), cf * CFrame.new(0, 0, back - 0.1), Enum.Material.Wood)
+		local fr = 0.22
+		for _, sx in ipairs({ -1, 1 }) do
+			deco(mk(model, "Part", Vector3.new(fr, Y, 0.3), GOLD_TRIM, cf * CFrame.new(sx * (W / 2 - fr / 2), 0, back - 0.25), Enum.Material.Wood))
+		end
+		for _, sy in ipairs({ -1, 1 }) do
+			deco(mk(model, "Part", Vector3.new(W, fr, 0.3), GOLD_TRIM, cf * CFrame.new(0, sy * (Y / 2 - fr / 2), back - 0.25), Enum.Material.Wood))
+		end
+		if p.id == "Window" then
+			local glass = deco(mk(model, "Part", Vector3.new(W - 2 * fr, Y - 2 * fr, 0.1), Color3.fromRGB(255, 214, 130), cf * CFrame.new(0, 0, back - 0.22), Enum.Material.Neon))
+			glass.Transparency = 0.15
+			deco(mk(model, "Part", Vector3.new(0.12, Y - 2 * fr, 0.2), dark(color, 0.3), cf * CFrame.new(0, 0, back - 0.28), Enum.Material.Wood))
+			deco(mk(model, "Part", Vector3.new(W - 2 * fr, 0.12, 0.2), dark(color, 0.3), cf * CFrame.new(0, 0, back - 0.28), Enum.Material.Wood))
+			deco(mk(model, "Part", Vector3.new(W + 0.2, 0.18, 0.45), dark(color, 0.2), cf * CFrame.new(0, -Y / 2 - 0.05, back - 0.3), Enum.Material.Wood))
+		else
+			local door = deco(mk(model, "Part", Vector3.new(W - 2 * fr, Y - fr, 0.14), Color3.fromRGB(96, 60, 34), cf * CFrame.new(0, -fr / 2, back - 0.24), Enum.Material.WoodPlanks))
+			deco(mk(model, "Part", Vector3.new(0.2, 0.2, 0.2), Color3.fromRGB(232, 192, 80), cf * CFrame.new(door.Size.X * 0.3, -fr / 2, back - 0.34), Enum.Material.Metal))
+			for _, y in ipairs({ 0.25, -0.25 }) do
+				deco(mk(model, "Part", Vector3.new(W - 2 * fr, 0.14, 0.18), Color3.fromRGB(70, 70, 76), cf * CFrame.new(0, y * Y, back - 0.3), Enum.Material.Metal))
+			end
+		end
+	elseif p.id == "Hatch" then
+		main = mk(model, "Part", Vector3.new(sz.X, sz.Y, sz.Z), dark(color, 0.15), cf, Enum.Material.Wood)
+		local n = math.max(2, math.floor(sz.X / 0.6))
+		for i = 0, n do
+			deco(mk(model, "Part", Vector3.new(0.14, 0.08, sz.Z), color, cf * CFrame.new(-sz.X / 2 + 0.07 + i * (sz.X - 0.14) / n, sz.Y / 2, 0), Enum.Material.Wood))
+			deco(mk(model, "Part", Vector3.new(sz.X, 0.08, 0.14), color, cf * CFrame.new(0, sz.Y / 2, -sz.Z / 2 + 0.07 + i * (sz.Z - 0.14) / n), Enum.Material.Wood))
+		end
+		deco(mk(model, "Part", Vector3.new(sz.X + 0.3, sz.Y * 0.8, sz.Z + 0.3), dark(color, 0.35), cf * CFrame.new(0, -sz.Y * 0.1, 0), Enum.Material.Wood))
+	elseif p.id == "RopeCoil" then
+		-- stacked square rings, each a bit smaller (a voxel coil)
+		main = mk(model, "Part", Vector3.new(sz.X * 0.5, sz.Y, sz.Z * 0.5), dark(color, 0.3), cf, Enum.Material.Fabric)
+		local layers = 3
+		for k = 0, layers - 1 do
+			local w = sz.X * (1 - k * 0.15)
+			local y = -sz.Y / 2 + (k + 0.5) * sz.Y / layers
+			for _, s in ipairs({ -1, 1 }) do
+				deco(mk(model, "Part", Vector3.new(w, sz.Y / layers, 0.3), k % 2 == 0 and color or dark(color, 0.12), cf * CFrame.new(0, y, s * (w / 2 - 0.15)), Enum.Material.Fabric))
+				deco(mk(model, "Part", Vector3.new(0.3, sz.Y / layers, w), k % 2 == 0 and color or dark(color, 0.12), cf * CFrame.new(s * (w / 2 - 0.15), y, 0), Enum.Material.Fabric))
+			end
+		end
+	elseif p.id == "Crate" then
+		main = mk(model, "Part", sz, color, cf, Enum.Material.WoodPlanks)
+		local fr = 0.22
+		for _, a in ipairs({ -1, 1 }) do
+			for _, b in ipairs({ -1, 1 }) do
+				deco(mk(model, "Part", Vector3.new(fr, sz.Y + 0.04, fr), dark(color, 0.35), cf * CFrame.new(a * (sz.X / 2 - fr / 2 + 0.02), 0, b * (sz.Z / 2 - fr / 2 + 0.02)), Enum.Material.Wood))
+				deco(mk(model, "Part", Vector3.new(sz.X + 0.04, fr, fr), dark(color, 0.35), cf * CFrame.new(0, a * (sz.Y / 2 - fr / 2 + 0.02), b * (sz.Z / 2 - fr / 2 + 0.02)), Enum.Material.Wood))
+				deco(mk(model, "Part", Vector3.new(fr, fr, sz.Z + 0.04), dark(color, 0.35), cf * CFrame.new(a * (sz.X / 2 - fr / 2 + 0.02), b * (sz.Y / 2 - fr / 2 + 0.02), 0), Enum.Material.Wood))
+			end
+		end
 	elseif p.id == "Lantern" then
-		main = mk(model, "Part", Vector3.new(G * 0.3, G * 0.5, G * 0.3), color, cf * CFrame.new(0, -G * 0.2, 0), Enum.Material.Neon)
+		-- iron cage: base, roof, 4 corner bars, warm glow inside, a hanging ring
+		local iron = Color3.fromRGB(60, 60, 66)
+		main = mk(model, "Part", Vector3.new(G * 0.22, G * 0.36, G * 0.22), color, cf * CFrame.new(0, -G * 0.2, 0), Enum.Material.Neon)
+		deco(mk(model, "Part", Vector3.new(G * 0.36, 0.18, G * 0.36), iron, cf * CFrame.new(0, -G * 0.2 - G * 0.18 - 0.09, 0), Enum.Material.Metal))
+		deco(mk(model, "Part", Vector3.new(G * 0.4, 0.22, G * 0.4), iron, cf * CFrame.new(0, -G * 0.2 + G * 0.18 + 0.11, 0), Enum.Material.Metal))
+		deco(mk(model, "Part", Vector3.new(G * 0.18, 0.18, G * 0.18), iron, cf * CFrame.new(0, -G * 0.2 + G * 0.18 + 0.3, 0), Enum.Material.Metal))
+		for _, a in ipairs({ -1, 1 }) do
+			for _, b in ipairs({ -1, 1 }) do
+				deco(mk(model, "Part", Vector3.new(0.1, G * 0.36, 0.1), iron, cf * CFrame.new(a * G * 0.15, -G * 0.2, b * G * 0.15), Enum.Material.Metal))
+			end
+		end
 		local light = Instance.new("PointLight")
 		light.Range = 22
 		light.Brightness = 1.6

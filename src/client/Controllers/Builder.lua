@@ -52,13 +52,17 @@ local last = { hull = 0, items = 0 }
 local drag = nil
 local adoptSave = false
 local cam = { yaw = 0, pitch = 0.55, dist = 80, target = Vector3.zero, turning = false }
-local CAT_ICON = { Core = "ship", Hull = "wood", Sail = "cloth", Weapon = "gunpowder", Utility = "anchor" }
+local CAT_ICON = { Core = "ship", Hull = "wood", Sail = "cloth", Weapon = "gunpowder", Utility = "anchor", Decor = "flag" }
+local selMirror = false -- the clicked model was the mirror copy (#11: delete only that side)
+local themes = nil -- saved paint themes (#14), loaded from the server on the PAINT tab
 local SINK_KEYS = { Enum.KeyCode.W, Enum.KeyCode.A, Enum.KeyCode.S, Enum.KeyCode.D, Enum.KeyCode.Q, Enum.KeyCode.E, Enum.KeyCode.Space,
 	Enum.KeyCode.R, Enum.KeyCode.X, Enum.KeyCode.Z, Enum.KeyCode.C, Enum.KeyCode.F, Enum.KeyCode.T, Enum.KeyCode.V, Enum.KeyCode.Tab, Enum.KeyCode.LeftShift,
 	Enum.KeyCode.M, Enum.KeyCode.Delete, Enum.KeyCode.G }
-local HANDLE = { w = Color3.fromRGB(255, 214, 60), d = Color3.fromRGB(70, 160, 255), z = Color3.fromRGB(245, 245, 245), rake = Color3.fromRGB(255, 80, 70) }
+local HANDLE = { w = Color3.fromRGB(255, 214, 60), d = Color3.fromRGB(70, 160, 255), z = Color3.fromRGB(245, 245, 245), rake = Color3.fromRGB(255, 80, 70),
+	add = Color3.fromRGB(80, 230, 110), sx = Color3.fromRGB(255, 150, 50), sy = Color3.fromRGB(70, 220, 230), sz = Color3.fromRGB(255, 150, 50), turn = Color3.fromRGB(190, 110, 255) }
+local HOLD_DELETE = 0.7 -- hold a white point handle this long without moving it = remove that point (#2)
 
-local renderTab, refreshStats, rebuildAll
+local renderTab, refreshStats, rebuildAll, cycleStyle
 
 -- ===== helpers =====
 local function owned(id)
@@ -214,6 +218,11 @@ local function rebuildHull()
 			if i > 1 then
 				handle("z", i, 0, Vector3.new(0, wall + 2.5, nd.z), HANDLE.z)
 			end
+			-- #2: a green "+" between two points adds one there (click it)
+			local nx = nodes()[i + 1]
+			if nx and nx.z - nd.z >= 4 and #nodes() < ShipHull.MaxNodes then
+				handle("add", i, 0, Vector3.new(0, wall + 2.5, (nd.z + nx.z) / 2), HANDLE.add)
+			end
 		end
 		handle("rake", 0, 1, Vector3.new(0, 0.8, hullLength() + (work.hull.bow or 0)), HANDLE.rake)
 		handle("rake", 0, -1, Vector3.new(0, 0.8, -(work.hull.stern or 0)), HANDLE.rake)
@@ -276,6 +285,48 @@ local function paintSelection()
 			end
 		end
 	end
+	-- #8: in-world handles on the selected part: ORANGE stretch (width / length), CYAN height (or size), PURPLE turn
+	if sel and not pick and Parts[sel.id] then
+		local e
+		for _, x in ipairs(ShipHull.Expand(work)) do
+			if x.src == selItem and (x.mirror == true) == selMirror then
+				e = x
+			end
+		end
+		if e then
+			local cf = shipCf()
+			local icf, size = ShipHull.ItemCFrame(e)
+			local wcf = cf * icf
+			local rule = ShipHull.ScaleRule(e.id)
+			local axes = rule.axes
+			local conform = Parts[e.id].conform ~= nil
+			local function h(kind, pos, axis, half)
+				local p = New("Part", { Name = "ItemHandle", Size = Vector3.new(1.1, 1.1, 1.1), Color = HANDLE[kind] or HANDLE.sy, Material = Enum.Material.SmoothPlastic,
+					Anchored = true, CanCollide = false, CanTouch = false, CastShadow = false, CFrame = CFrame.new(pos), Parent = hl })
+				p:SetAttribute("Kind", "i_" .. kind)
+				p:SetAttribute("Half", half)
+				p:SetAttribute("Axis", axis)
+				p:SetAttribute("Center", wcf.Position)
+				New("SelectionBox", { Adornee = p, Color3 = Color3.new(0, 0, 0), LineThickness = 0.06, Parent = p })
+			end
+			if axes == "u" then
+				h("su", wcf.Position + wcf.UpVector * (size.Y / 2 + 0.9), wcf.UpVector, size.Y)
+			else
+				if axes:find("x") and not conform then
+					h("sx", wcf.Position + wcf.RightVector * (size.X / 2 + 0.9), wcf.RightVector, size.X / 2)
+				end
+				if axes:find("y") then
+					h("sy", wcf.Position + wcf.UpVector * (size.Y / 2 + 0.9), wcf.UpVector, size.Y)
+				end
+				if axes:find("z") then
+					h("sz", wcf.Position + wcf.LookVector * (size.Z / 2 + 0.9), wcf.LookVector, size.Z / 2)
+				end
+			end
+			if not conform then
+				h("turn", wcf.Position - wcf.LookVector * (size.Z / 2 + 1.4) + wcf.UpVector * 0.3, Vector3.yAxis, 0)
+			end
+		end
+	end
 	hl.Parent = view.items
 	view.selHl = hl
 end
@@ -287,7 +338,7 @@ local function rebuildItems()
 	local m = Instance.new("Model")
 	m.Name = "GVBuildItems"
 	for i, it in ipairs(ShipHull.Expand(work)) do
-		local ok, im = pcall(ShipHull.BuildItem, it, cf, colorFn(), ShipModel.BuildPart)
+		local ok, im = pcall(ShipHull.BuildItem, it, cf, colorFn(), ShipModel.BuildPart, work)
 		if ok and im then
 			im:SetAttribute("Index", i)
 			nonQuery(im)
@@ -333,7 +384,7 @@ local function itemModels(idx)
 end
 
 -- a deck / roof spot under the pointer, in ship space (nil + why when there is none)
-local function surfaceSpot(screenPos, skipItem)
+local function surfaceSpot(screenPos, skipItem, wallId)
 	local include = { view.hull }
 	for _, m in ipairs(view.items and view.items:GetChildren() or {}) do
 		if m:IsA("Model") and (not skipItem or m:GetAttribute("Item") ~= skipItem) then
@@ -344,7 +395,20 @@ local function surfaceSpot(screenPos, skipItem)
 	if not hit then
 		return nil
 	end
-	if hit.Normal:Dot(shipCf().UpVector) < 0.6 then
+	local up = hit.Normal:Dot(shipCf().UpVector)
+	-- #35: windows, ports and ladders stick to walls / hull sides and face out of them (returns the turn as 3rd value)
+	local def = wallId and Parts[wallId]
+	if def and def.wall then
+		if math.abs(up) > 0.35 then
+			return nil, "Place it on a wall or the hull side"
+		end
+		local size = def.size * G
+		local nm = shipCf():VectorToObjectSpace(hit.Normal)
+		local r = snap(math.deg(math.atan2(-nm.X, -nm.Z)) % 360, 15) % 360
+		local sp = toShip(hit.Position + hit.Normal * size.Z / 2)
+		return Vector3.new(snap(sp.X, 0.25), snap(sp.Y - size.Y / 2, 0.25), snap(sp.Z, 0.25)), nil, r
+	end
+	if up < 0.6 then
 		return nil, "Place it on a deck or a roof"
 	end
 	local sp = toShip(hit.Position)
@@ -357,7 +421,7 @@ local function itemUnder(screenPos)
 	while m and m:GetAttribute("Item") == nil do
 		m = m.Parent and m.Parent:FindFirstAncestorWhichIsA("Model")
 	end
-	return m and m:GetAttribute("Item")
+	return m and m:GetAttribute("Item"), m and m:GetAttribute("Mirror") == true
 end
 
 -- t along the line p0 + a*t that comes closest to the pointer ray
@@ -379,16 +443,21 @@ local function clearGhost()
 	ghostKey = nil
 end
 
-local function newItem(spot)
+local function newItem(spot, wallR)
+	local def = Parts[pick]
+	if def.conform then
+		-- superstructures follow the hull: always on the centre line, never mirrored
+		return { id = pick, x = 0, y = spot.Y, z = spot.Z, r = 0, sx = 1, sy = 1, sz = 1 }
+	end
 	local x = spot.X
-	local m = mirror and math.abs(x) >= 0.5 and not Parts[pick].max
-	-- cannons off the centre line face outward by themselves (R still turns them)
-	local base = (Parts[pick].cannon and math.abs(x) >= 0.5) and (x > 0 and 270 or 90) or 0
-	return { id = pick, x = x, y = spot.Y, z = spot.Z, r = (base + rot) % 360, sx = 1, sy = 1, sz = 1, m = m or nil }
+	local m = mirror and math.abs(x) >= 0.5 and not def.max
+	-- cannons off the centre line face outward by themselves (R still turns them); wall parts face out of their wall
+	local base = wallR or ((def.cannon and math.abs(x) >= 0.5) and (x > 0 and 270 or 90) or 0)
+	return { id = pick, x = x, y = spot.Y, z = spot.Z, r = (base + (wallR and 0 or rot)) % 360, sx = 1, sy = 1, sz = 1, m = m or nil }
 end
 
-local function showGhost(spot)
-	local it = newItem(spot)
+local function showGhost(spot, wallR)
+	local it = newItem(spot, wallR)
 	local key = table.concat({ it.id, it.x, it.y, it.z, it.r, tostring(it.m) }, ":")
 	if key == ghostKey then
 		return
@@ -402,7 +471,7 @@ local function showGhost(spot)
 		table.insert(list, { id = it.id, x = -it.x, y = it.y, z = it.z, r = (360 - it.r) % 360, sx = 1, sy = 1, sz = 1, src = 0, mirror = true })
 	end
 	for _, e in ipairs(list) do
-		local ok, m = pcall(ShipHull.BuildItem, e, shipCf(), colorFn(), ShipModel.BuildPart)
+		local ok, m = pcall(ShipHull.BuildItem, e, shipCf(), colorFn(), ShipModel.BuildPart, work)
 		if ok and m then
 			for _, d in ipairs(m:GetDescendants()) do
 				if d:IsA("BasePart") then
@@ -421,17 +490,18 @@ local function showGhost(spot)
 end
 
 -- ===== editing actions =====
-local function selectItem(idx)
+local function selectItem(idx, isMirror)
 	selItem = idx
+	selMirror = idx ~= nil and isMirror == true
 	paintSelection()
 	if renderTab then
 		renderTab()
 	end
 end
 
-local function placeAt(spot)
+local function placeAt(spot, wallR)
 	local count = #ShipHull.Expand(work)
-	local it = newItem(spot)
+	local it = newItem(spot, wallR)
 	if count + (it.m and 2 or 1) > ShipHull.MaxItems then
 		status("Part limit reached (" .. ShipHull.MaxItems .. ")", T.Red)
 		return
@@ -458,11 +528,25 @@ local function placeAt(spot)
 	status("Placed " .. def.name .. (it.m and " (mirrored)" or ""), T.Green)
 end
 
-local function deleteSelected()
+local function deleteSelected(both)
 	if not selItem or not work.items[selItem] then
 		return
 	end
 	snapshot()
+	local cur = work.items[selItem]
+	if cur.m and not both then
+		-- #11: a mirrored pair loses only the side you clicked; the other one stays (unpaired)
+		if not selMirror then
+			cur.x, cur.r = -cur.x, (360 - (cur.r or 0)) % 360
+		end
+		cur.m = nil
+		selMirror = false
+		changed(false, true)
+		refreshStats()
+		renderTab()
+		status("Removed one side of " .. Parts[cur.id].name, T.Red)
+		return
+	end
 	local it = table.remove(work.items, selItem)
 	selItem = nil
 	changed(false, true)
@@ -478,6 +562,32 @@ local function editSelected(fn)
 	end
 	snapshot()
 	fn(it, ShipHull.ScaleRule(it.id))
+	changed(false, true)
+	refreshStats()
+	renderTab()
+end
+
+-- #11 CLONE: an unpaired part off the centre line gets its mirror twin first; otherwise a copy 3 studs aft of it
+local function cloneSelected()
+	local it = selItem and work.items[selItem]
+	if not it then
+		return
+	end
+	local def = Parts[it.id]
+	if def.max then
+		status("Only one of this part", T.Red)
+		return
+	end
+	snapshot()
+	if not it.m and math.abs(it.x) >= 0.5 and not def.conform then
+		it.m = true
+		status("Mirrored to the other side", T.Green)
+	else
+		local c = table.clone(it)
+		c.z = c.z + 3
+		table.insert(work.items, c)
+		selItem, selMirror = #work.items, false
+	end
 	changed(false, true)
 	refreshStats()
 	renderTab()
@@ -663,6 +773,17 @@ local function fmt(v)
 	return (math.abs(v - math.floor(v)) < 0.01) and tostring(math.floor(v)) or string.format("%.1f", v)
 end
 
+-- #3 #4: next / previous bow or stern shape
+function cycleStyle(key, d)
+	local list = key == "bowStyle" and ShipHull.BowStyles or ShipHull.SternStyles
+	local i = table.find(list, work.hull[key] or "standard") or 1
+	local nxt = list[(i - 1 + d) % #list + 1]
+	editHull(function(h)
+		h[key] = nxt ~= "standard" and nxt or nil
+	end)
+	status((key == "bowStyle" and "Bow: " or "Stern: ") .. (ShipHull.StyleName[nxt] or nxt), T.Gold)
+end
+
 local function hullTab(outer)
 	-- scrolls: the hull controls are taller than the panel on small screens
 	local body = UI.Scroll(outer)
@@ -676,8 +797,8 @@ local function hullTab(outer)
 		o += 1
 		return o
 	end
-	local hint = UI.Text(body, "Drag the handles on the hull: YELLOW = width, BLUE = depth, WHITE = slide a point, RED = bow / stern rake.", 11, T.TextSoft, "Semi",
-		{ Size = UDim2.new(1, 0, 0, 30), LayoutOrder = nexto() })
+	local hint = UI.Text(body, "Drag the handles: YELLOW width, BLUE depth, WHITE slide a point (hold it to remove), GREEN + adds a point, RED bow / stern rake. Wheel over the bow / stern changes its shape.", 11, T.TextSoft, "Semi",
+		{ Size = UDim2.new(1, 0, 0, 44), LayoutOrder = nexto() })
 	hint.TextWrapped = true
 	local r1 = buttonRow(body, nexto(), 36)
 	UI.Button(r1, "<", T.Ocean, UDim2.fromOffset(44, 32), function()
@@ -742,6 +863,16 @@ local function hullTab(outer)
 		UI.Tooltip(b, function()
 			local m = ShipHull.Materials[id]
 			return string.format("%s hull: HP x%.1f, weight x%.2f, cost x%.1f%s", m.name, m.hp, m.dens, m.beli, m.iron and " + iron ingots" or "")
+		end)
+	end
+	-- #3 #4 bow + stern shapes (also: mouse wheel over the bow / stern end of the hull)
+	for _, end_ in ipairs({ { "BOW", "bowStyle" }, { "STERN", "sternStyle" } }) do
+		local key = end_[2]
+		local cur = work.hull[key] or "standard"
+		stepper(body, nexto(), end_[1], ShipHull.StyleName[cur] or string.upper(cur), function()
+			cycleStyle(key, -1)
+		end, function()
+			cycleStyle(key, 1)
 		end)
 	end
 	stepper(body, nexto(), "WIDTH", fmt(nd.w * 2), function()
@@ -825,7 +956,7 @@ local function partsTab(body)
 	end)
 	local tabs = buttonRow(body, 2, 34)
 	for _, cat in ipairs(ShipPartsCfg.Categories) do
-		local b = New("TextButton", { Text = "", AutoButtonColor = false, Size = UDim2.new(0.2, -5, 1, 0), BackgroundColor3 = cat == category and T.Gold:Lerp(T.PanelDeep, 0.4) or T.PanelDeep, Parent = tabs })
+		local b = New("TextButton", { Text = "", AutoButtonColor = false, Size = UDim2.new(1 / 6, -5, 1, 0), BackgroundColor3 = cat == category and T.Gold:Lerp(T.PanelDeep, 0.4) or T.PanelDeep, Parent = tabs })
 		UI.Stroke(b, T.Edge, 2)
 		UI.Icon(b, CAT_ICON[cat] or "gear", 22, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5) })
 		UI.Tooltip(b, function()
@@ -872,13 +1003,16 @@ local function partsTab(body)
 				paintSelection()
 				clearGhost()
 				renderTab()
-				status("Click a deck or a roof to place " .. def.name .. "  •  R turns  •  M mirror", T.Green)
+				status((def.wall and "Click a wall or the hull side to place " or "Click a deck or a roof to place ") .. def.name .. "  •  R turns  •  M mirror", T.Green)
 			end)
 		end
 	end
 end
 
-local function paintTab(body)
+local function paintTab(outer)
+	local body = UI.Scroll(outer)
+	UI.List(body, nil, 5)
+	New("UIPadding", { PaddingRight = UDim.new(0, 10), Parent = body })
 	local faction = State.profile and State.profile.faction
 	if faction == "Marine" then
 		local t = UI.Text(body, "Marine ships sail in the Marine livery (white hull, navy rails). Deck color can still be changed.", 12, T.TextSoft, "Semi",
@@ -932,6 +1066,75 @@ local function paintTab(body)
 		refreshStats()
 		renderTab()
 	end)
+	-- #15 #17 hull details: plank seams, rivets, a gold trim line, the name on the stern
+	UI.Text(body, "DETAILS", 12, T.Gold, "Display", { Size = UDim2.new(1, 0, 0, 16), LayoutOrder = 4, TextWrapped = false })
+	local det = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 34), LayoutOrder = 5, Parent = body })
+	New("UIGridLayout", { CellSize = UDim2.new(0.25, -5, 0, 32), CellPadding = UDim2.fromOffset(5, 5), SortOrder = Enum.SortOrder.LayoutOrder, Parent = det })
+	for i, d in ipairs({ { "seams", "SEAMS" }, { "rivets", "RIVETS" }, { "trim", "TRIM" }, { "noName", "NAME" } }) do
+		local key = d[1]
+		local on = work.hull[key] == true
+		if key == "noName" then
+			on = not on
+		end
+		local b = UI.Button(det, d[2], on and T.Gold or T.Grey, UDim2.new(1, 0, 1, 0), function()
+			editHull(function(h)
+				if key == "noName" then
+					h.noName = (not h.noName) or nil
+				else
+					h[key] = (not h[key]) or nil
+				end
+			end)
+		end)
+		b.TextScaled = true
+		b.Parent.LayoutOrder = i
+	end
+	-- #14 paint themes: save this color set, apply a saved one with a click (kept on your profile, up to 8)
+	UI.Text(body, "THEMES", 12, T.Gold, "Display", { Size = UDim2.new(1, 0, 0, 16), LayoutOrder = 6, TextWrapped = false })
+	local th = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 86), LayoutOrder = 7, Parent = body })
+	New("UIGridLayout", { CellSize = UDim2.new(0.2, -5, 0, 40), CellPadding = UDim2.fromOffset(5, 5), SortOrder = Enum.SortOrder.LayoutOrder, Parent = th })
+	local function useThemes(res)
+		if res.ok and type(res.data) == "table" then
+			themes = res.data
+			renderTab()
+		elseif res.msg then
+			status(res.msg, T.Red)
+		end
+	end
+	if not themes then
+		themes = {}
+		task.spawn(function()
+			useThemes(Net.Request("ShipTheme", { op = "list" }))
+		end)
+	end
+	local saveB = UI.Button(th, "+ SAVE", T.Green, UDim2.new(1, 0, 1, 0), function()
+		useThemes(Net.Request("ShipTheme", { op = "save", paint = work.paint }))
+	end)
+	saveB.TextScaled = true
+	saveB.Parent.LayoutOrder = 0
+	for i, pnt in ipairs(themes) do
+		local b = New("TextButton", { Text = "", AutoButtonColor = false, LayoutOrder = i, BackgroundColor3 = T.PanelDeep, Parent = th })
+		UI.Stroke(b, T.Edge, 2)
+		UI.Tactile(b)
+		-- a mini flag of the theme: hull / stripe / bottom bands + a sail dot
+		for k, z in ipairs({ "stripe", "hull", "bottom" }) do
+			New("Frame", { BorderSizePixel = 0, BackgroundColor3 = ShipHull.Color(pnt[z] or "#888888"), Position = UDim2.new(0, 4, (k - 1) / 3, 3), Size = UDim2.new(1, -22, 1 / 3, -3), Parent = b })
+		end
+		New("Frame", { BorderSizePixel = 0, BackgroundColor3 = ShipHull.Color(pnt.sail or "#FFFFFF"), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -4, 0, 4), Size = UDim2.new(0, 12, 1, -8), Parent = b })
+		b.Activated:Connect(function()
+			snapshot()
+			for _, z in ipairs(ShipHull.Zones) do
+				work.paint[z] = pnt[z] or work.paint[z]
+			end
+			changed(true, true)
+			refreshStats()
+			renderTab()
+		end)
+		local x = New("TextButton", { Text = "x", FontFace = UI.Fonts.Display, TextSize = 10, TextColor3 = T.Text, BackgroundColor3 = T.Red, AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, 2, 0, -2), Size = UDim2.fromOffset(14, 14), ZIndex = 5, Parent = b })
+		x.Activated:Connect(function()
+			useThemes(Net.Request("ShipTheme", { op = "delete", i = i }))
+		end)
+	end
 end
 
 -- the selected part: turn / size / raise / mirror / clone / delete (right side of the screen)
@@ -1023,26 +1226,26 @@ local function itemCard()
 		end)
 	end)
 	mb.TextScaled = true
-	UI.Button(r1, "CLONE", T.Green, UDim2.new(0.5, -3, 1, -4), function()
-		if Parts[it.id].max then
-			status("Only one of this part", T.Red)
-			return
-		end
-		snapshot()
-		local c = table.clone(it)
-		c.z = c.z + 3
-		table.insert(work.items, c)
-		selItem = #work.items
-		changed(false, true)
-		refreshStats()
-		renderTab()
-	end)
+	UI.Button(r1, "CLONE", T.Green, UDim2.new(0.5, -3, 1, -4), cloneSelected)
 	local r2 = buttonRow(card, nexto(), 40)
-	UI.Button(r2, "DELETE", T.Red, UDim2.new(0.5, -3, 1, -4), deleteSelected)
-	UI.Button(r2, "DONE", T.Grey, UDim2.new(0.5, -3, 1, -4), function()
+	if it.m then
+		local d1 = UI.Button(r2, "DEL SIDE", T.Red, UDim2.new(1 / 3, -4, 1, -4), function()
+			deleteSelected(false)
+		end)
+		d1.TextScaled = true
+		local d2 = UI.Button(r2, "DEL BOTH", T.Red, UDim2.new(1 / 3, -4, 1, -4), function()
+			deleteSelected(true)
+		end)
+		d2.TextScaled = true
+	else
+		UI.Button(r2, "DELETE", T.Red, UDim2.new(0.5, -3, 1, -4), function()
+			deleteSelected(true)
+		end)
+	end
+	UI.Button(r2, "DONE", T.Grey, UDim2.new(it.m and 1 / 3 or 0.5, -4, 1, -4), function()
 		selectItem(nil)
 	end)
-	UI.Text(card, "Drag the part to move it  •  R turn  •  X delete", 10, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 14), LayoutOrder = nexto(), TextWrapped = false })
+	UI.Text(card, "Drag the part or its handles  •  R turn  •  X delete  •  right-click: menu", 10, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 14), LayoutOrder = nexto(), TextWrapped = false, TextScaled = true })
 end
 
 function renderTab()
@@ -1173,15 +1376,94 @@ end
 
 -- ===== mouse: handles, placing, selecting, dragging =====
 local function handleUnder(screenPos)
-	if not view.handles then
+	local inc = {}
+	for _, k in ipairs({ "handles", "selHl" }) do
+		if view[k] then
+			table.insert(inc, view[k])
+		end
+	end
+	if #inc == 0 then
 		return nil
 	end
-	local hit = cast(screenPos, { view.handles })
-	return hit and hit.Instance
+	local hit = cast(screenPos, inc)
+	return hit and hit.Instance:GetAttribute("Kind") and hit.Instance
+end
+
+-- the pointer on the horizontal plane through `center` -> yaw (degrees, ship space, same sense as item.r)
+local function angleAt(screenPos, center)
+	local ray = rayAt(screenPos)
+	local n = shipCf().UpVector
+	local den = ray.Direction:Dot(n)
+	if math.abs(den) < 1e-3 then
+		return nil
+	end
+	local p = ray.Origin + ray.Direction * ((center - ray.Origin):Dot(n) / den)
+	local v = shipCf():VectorToObjectSpace(p - center)
+	if v.Magnitude < 0.3 then
+		return nil
+	end
+	return math.deg(math.atan2(-v.X, -v.Z))
+end
+
+-- #2: a new hull point halfway between point i and i + 1
+local function addNode(i)
+	local n = nodes()
+	local a, b = n[i], n[i + 1]
+	if not (a and b) or #n >= ShipHull.MaxNodes or b.z - a.z < 4 then
+		return
+	end
+	editHull(function()
+		table.insert(n, i + 1, { z = snap((a.z + b.z) / 2, 1), w = snap((a.w + b.w) / 2, 0.5), d = snap((a.d + b.d) / 2, 0.5), s = a.s })
+		selNode = i + 1
+	end)
+	status("Point added", T.Green)
+end
+
+local function removeNode(i)
+	local n = nodes()
+	if #n <= 2 or i <= 1 then
+		status("A hull needs 2 points", T.Red)
+		return
+	end
+	editHull(function()
+		table.remove(n, i)
+		n[1].z = 0
+		selNode = math.clamp(i - 1, 1, #n)
+	end)
+	status("Point removed", T.Red)
+end
+
+local function startItemHandle(h, screenPos)
+	local kind = h:GetAttribute("Kind"):sub(3)
+	local it = selItem and work.items[selItem]
+	if not it then
+		return
+	end
+	local center = h:GetAttribute("Center")
+	if kind == "turn" then
+		drag = { kind = "iturn", idx = selItem, center = center, a0 = angleAt(screenPos, center), r0 = it.r or 0, before = ShipHull.Clone(work) }
+		return
+	end
+	local axis = h:GetAttribute("Axis")
+	local t0 = axisParam(rayAt(screenPos), h.Position, axis)
+	if not t0 then
+		return
+	end
+	local key = kind == "su" and "sx" or kind
+	drag = { kind = "iscale", hk = kind, key = key, idx = selItem, p0 = h.Position, axis = axis, t0 = t0, half = math.max(h:GetAttribute("Half") or 1, 0.2),
+		v0 = it[key] or 1, before = ShipHull.Clone(work) }
 end
 
 local function startHandleDrag(h, screenPos)
 	local kind, ni, side = h:GetAttribute("Kind"), h:GetAttribute("Node"), h:GetAttribute("Side")
+	if kind == "add" then
+		addNode(ni)
+		return
+	end
+	if kind:sub(1, 2) == "i_" then
+		startItemHandle(h, screenPos)
+		return
+	end
 	local cf = shipCf()
 	local axis
 	if kind == "w" then
@@ -1199,8 +1481,11 @@ local function startHandleDrag(h, screenPos)
 		selNode = ni
 	end
 	local nd = ni and ni > 0 and nodes()[ni]
-	drag = { kind = "handle", hk = kind, node = ni, side = side, p0 = h.Position, axis = axis, t0 = t0, before = ShipHull.Clone(work),
+	drag = { kind = "handle", hk = kind, node = ni, side = side, p0 = h.Position, axis = axis, t0 = t0, before = ShipHull.Clone(work), at = os.clock(),
 		v0 = kind == "w" and nd.w or kind == "d" and nd.d or kind == "z" and nd.z or (side > 0 and (work.hull.bow or 0) or (work.hull.stern or 0)) }
+	if kind == "z" then
+		status("Drag to slide the point  •  hold still to remove it", T.TextSoft)
+	end
 	renderTab()
 end
 
@@ -1233,48 +1518,221 @@ local function updateHandleDrag(screenPos)
 	end
 end
 
+local function updateItemHandle(screenPos)
+	local it = work.items[drag.idx]
+	if not it then
+		drag = nil
+		return
+	end
+	local before = table.concat({ it.r or 0, it.sx or 1, it.sy or 1, it.sz or 1 }, ":")
+	if drag.kind == "iturn" then
+		local a = angleAt(screenPos, drag.center)
+		if a and drag.a0 then
+			local d = a - drag.a0
+			if selMirror then
+				d = -d -- the mirror copy turns the other way
+			end
+			it.r = snap((drag.r0 + d) % 360, 15) % 360
+		end
+	else
+		local t = axisParam(rayAt(screenPos), drag.p0, drag.axis)
+		if not t then
+			return
+		end
+		local rule = ShipHull.ScaleRule(it.id)
+		local v = math.clamp(snap(drag.v0 * (drag.half + (t - drag.t0)) / drag.half, 0.05), rule.min, rule.max)
+		it[drag.key] = v
+		if drag.hk == "su" then
+			it.sy, it.sz = v, v
+		end
+	end
+	if table.concat({ it.r or 0, it.sx or 1, it.sy or 1, it.sz or 1 }, ":") ~= before then
+		if not drag.moved then
+			table.insert(undoStack, drag.before)
+		end
+		drag.moved = true
+		changed(false, true)
+	end
+end
+
 local function updateItemDrag(screenPos)
 	local it = work.items[drag.idx]
 	if not it then
 		drag = nil
 		return
 	end
-	local spot = surfaceSpot(screenPos, drag.idx)
-	if spot and (spot.X ~= it.x or spot.Y ~= it.y or spot.Z ~= it.z) then
-		if not drag.moved then
-			table.insert(undoStack, drag.before)
+	local spot, _, wallR = surfaceSpot(screenPos, drag.idx, it.id)
+	if spot then
+		local x, r = spot.X, wallR or it.r
+		if Parts[it.id].conform then
+			x = 0
+		elseif selMirror then
+			-- dragging the mirror copy: the original follows on the other side
+			x = -x
+			r = wallR and (360 - wallR) % 360 or r
 		end
-		drag.moved = true
-		it.x, it.y, it.z = spot.X, spot.Y, spot.Z -- the mirror copy just hides while the part sits on the centre line
-		changed(false, true)
+		if x ~= it.x or spot.Y ~= it.y or spot.Z ~= it.z or r ~= it.r then
+			if not drag.moved then
+				table.insert(undoStack, drag.before)
+			end
+			drag.moved = true
+			it.x, it.y, it.z, it.r = x, spot.Y, spot.Z, r -- the mirror copy just hides while the part sits on the centre line
+			changed(false, true)
+		end
 	end
+end
+
+-- ===== right-click menu (#7): what fits where you clicked, or quick actions on a part =====
+local SUGGEST = {
+	bow = { "Bowsprit", "Jib", "RamHead", "LionHead", "Swivel", "Flag", "Lantern" },
+	stern = { "Deckhouse", "Balcony", "Lantern", "Flag", "Swivel", "Hatch" },
+	side = { "LightCannon", "HeavyCannon", "Carronade", "Railing", "Lantern", "Barrel" },
+	middle = { "SmallMast", "LargeMast", "Deckhouse", "CrewCabin", "OarBench", "Mortar", "Hatch", "Awning", "Crate" },
+	roof = { "EdgeRail", "Swivel", "Lantern", "Balcony", "Flag", "Deckhouse", "FlagLine" },
+	wall = { "Window", "EntryPort", "Ladder" },
+}
+local ZONE_TITLE = { bow = "BOW", stern = "STERN", side = "DECK EDGE", middle = "MIDSHIPS", roof = "ROOF", wall = "WALL" }
+
+local function closeMenu()
+	if ui.menu then
+		ui.menu:Destroy()
+		ui.menu = nil
+	end
+end
+
+local function openMenu(screenPos)
+	closeMenu()
+	if not (gui and work) then
+		return
+	end
+	local entries, title = {}, ""
+	local idx, isMir = itemUnder(screenPos)
+	if idx then
+		selectItem(idx, isMir)
+		local it = work.items[idx]
+		title = string.upper(Parts[it.id].name)
+		entries = {
+			{ "TURN 15", T.Ocean, function()
+				rotate(15)
+			end },
+			{ "CLONE", T.Green, cloneSelected },
+			{ it.m and "MIRROR OFF" or "MIRROR ON", T.Ocean, function()
+				if Parts[it.id].max or Parts[it.id].conform then
+					status("This part cannot be mirrored", T.Red)
+					return
+				end
+				editSelected(function(x)
+					x.m = not x.m or nil
+				end)
+			end },
+			{ it.m and "DELETE SIDE" or "DELETE", T.Red, function()
+				deleteSelected(false)
+			end },
+		}
+		if it.m then
+			table.insert(entries, { "DELETE BOTH", T.Red, function()
+				deleteSelected(true)
+			end })
+		end
+	else
+		-- a wall face first (windows / ports / ladders), else a deck spot and its zone
+		local wallSpots = {}
+		for _, id in ipairs(SUGGEST.wall) do
+			local s, _, r = surfaceSpot(screenPos, nil, id)
+			if s then
+				wallSpots[id] = { s, r }
+			end
+		end
+		local z, spot
+		if next(wallSpots) then
+			z = "wall"
+		else
+			spot = surfaceSpot(screenPos)
+			if not spot then
+				return
+			end
+			local L = hullLength()
+			local sl = ShipHull.Slices(work.hull)
+			local hw = 0
+			local top = sl.layers[#sl.layers]
+			for _, r in ipairs(top and top.runs or {}) do
+				if spot.Z >= r.z0 and spot.Z <= r.z1 then
+					hw = r.hw
+				end
+			end
+			z = spot.Y > 0.6 and "roof" or spot.Z > L * 0.75 and "bow" or spot.Z < L * 0.25 and "stern" or math.abs(spot.X) > hw - 3 and "side" or "middle"
+		end
+		title = "ADD HERE: " .. ZONE_TITLE[z]
+		local faction = State.profile and State.profile.faction
+		for _, id in ipairs(SUGGEST[z]) do
+			local def = Parts[id]
+			if def and not (def.faction and def.faction ~= faction) then
+				table.insert(entries, { string.upper(def.name), T.Grey, function()
+					local was = pick
+					pick = id
+					if z == "wall" then
+						placeAt(wallSpots[id][1], wallSpots[id][2])
+					else
+						placeAt(spot)
+					end
+					pick = was
+				end })
+			end
+		end
+	end
+	if #entries == 0 then
+		return
+	end
+	local scale = gui:FindFirstChildOfClass("UIScale")
+	local k = scale and scale.Scale or 1
+	local inset = game:GetService("GuiService"):GetGuiInset()
+	local pos = (screenPos - inset) / k
+	local card = UI.Card(gui, UDim2.fromOffset(210, 0), T.Panel)
+	card.AutomaticSize = Enum.AutomaticSize.Y
+	card.ZIndex = 20
+	local vs = workspace.CurrentCamera.ViewportSize / k
+	card.Position = UDim2.fromOffset(math.min(pos.X + 8, vs.X - 220), math.min(pos.Y, vs.Y - 40 - #entries * 34))
+	UI.Pad(card, 8)
+	local lay = UI.List(card, nil, 4)
+	lay.SortOrder = Enum.SortOrder.LayoutOrder
+	UI.Text(card, title, 11, T.Gold, "Display", { Size = UDim2.new(1, 0, 0, 16), LayoutOrder = 0, TextWrapped = false, TextScaled = true })
+	for i, e in ipairs(entries) do
+		local b, holder = UI.Button(card, e[1], e[2], UDim2.new(1, 0, 0, 30), function()
+			closeMenu()
+			e[3]()
+		end)
+		b.TextScaled = true
+		;(holder or b).LayoutOrder = i
+	end
+	ui.menu = card
 end
 
 local function pointerDown(screenPos)
 	if not work then
 		return
 	end
-	local h = tab == "hull" and handleUnder(screenPos)
+	closeMenu()
+	local h = handleUnder(screenPos)
 	if h then
 		startHandleDrag(h, screenPos)
 		return
 	end
 	if tab == "parts" and pick then
-		local spot, why = surfaceSpot(screenPos)
+		local spot, why, wallR = surfaceSpot(screenPos, nil, pick)
 		if spot then
-			placeAt(spot)
+			placeAt(spot, wallR)
 		elseif why then
 			status(why, T.Red)
 		end
 		return
 	end
-	local idx = itemUnder(screenPos)
+	local idx, isMir = itemUnder(screenPos)
 	if idx then
 		if tab ~= "parts" then
 			tab = "parts"
 			changed(true, false)
 		end
-		selectItem(idx)
+		selectItem(idx, isMir)
 		drag = { kind = "item", idx = idx, before = ShipHull.Clone(work) }
 	elseif selItem then
 		selectItem(nil)
@@ -1291,7 +1749,7 @@ local function pointerUp()
 	end
 	if drag.moved then
 		refreshStats()
-		if drag.kind == "item" then
+		if drag.kind ~= "handle" then
 			renderTab()
 		end
 	end
@@ -1302,15 +1760,23 @@ local function hover(screenPos)
 	if drag then
 		if drag.kind == "handle" then
 			updateHandleDrag(screenPos)
-		else
+			-- #2: holding a white point handle still removes that point
+			if drag and drag.hk == "z" and not drag.moved and os.clock() - drag.at >= HOLD_DELETE then
+				local ni = drag.node
+				drag = nil
+				removeNode(ni)
+			end
+		elseif drag.kind == "item" then
 			updateItemDrag(screenPos)
+		else
+			updateItemHandle(screenPos)
 		end
 		return
 	end
 	if tab == "parts" and pick then
-		local spot, why = surfaceSpot(screenPos)
+		local spot, why, wallR = surfaceSpot(screenPos, nil, pick)
 		if spot then
-			showGhost(spot)
+			showGhost(spot, wallR)
 		else
 			clearGhost()
 			if why then
@@ -1318,6 +1784,27 @@ local function hover(screenPos)
 			end
 		end
 	end
+end
+
+-- #3 #4: the mouse wheel over the bow / stern end of the hull (HULL tab) changes its shape instead of zooming
+local function wheelStyle(screenPos, d)
+	if tab ~= "hull" or not view.hull then
+		return false
+	end
+	local hit = cast(screenPos, { view.hull })
+	if not hit then
+		return false
+	end
+	local z = toShip(hit.Position).Z
+	local L = hullLength()
+	if z > L * 0.75 then
+		cycleStyle("bowStyle", d)
+	elseif z < L * 0.25 then
+		cycleStyle("sternStyle", d)
+	else
+		return false
+	end
+	return true
 end
 
 -- ===== free camera =====
@@ -1446,11 +1933,13 @@ end
 
 function Builder.Start()
 	local touchStart
+	local rmb -- a right click (short, no drag) opens the menu; a right drag turns the camera
 	UserInputService.InputBegan:Connect(function(input, processed)
 		if not State.build.active then
 			return
 		end
 		if input.UserInputType == Enum.UserInputType.MouseButton2 then
+			rmb = { t = os.clock(), moved = 0, processed = processed, pos = UserInputService:GetMouseLocation() }
 			cam.turning = true
 			UserInputService.MouseBehavior = Enum.MouseBehavior.LockCurrentPosition
 		elseif processed then
@@ -1460,6 +1949,7 @@ function Builder.Start()
 		elseif input.UserInputType == Enum.UserInputType.Touch then
 			touchStart = Vector2.new(input.Position.X, input.Position.Y)
 		elseif input.KeyCode == Enum.KeyCode.Escape then
+			closeMenu()
 			pick = nil
 			clearGhost()
 			selectItem(nil)
@@ -1469,6 +1959,10 @@ function Builder.Start()
 		if input.UserInputType == Enum.UserInputType.MouseButton2 then
 			cam.turning = false
 			UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+			if rmb and State.build.active and not rmb.processed and rmb.moved < 6 and os.clock() - rmb.t < 0.4 then
+				openMenu(rmb.pos)
+			end
+			rmb = nil
 		elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
 			pointerUp()
 		elseif input.UserInputType == Enum.UserInputType.Touch and touchStart and State.build.active and not processed then
@@ -1486,9 +1980,15 @@ function Builder.Start()
 			return
 		end
 		if input.UserInputType == Enum.UserInputType.MouseMovement and cam.turning then
+			if rmb then
+				rmb.moved += input.Delta.Magnitude
+			end
 			cam.yaw -= input.Delta.X * 0.008
 			cam.pitch = math.clamp(cam.pitch + input.Delta.Y * 0.006, -1.1, 1.45)
 		elseif input.UserInputType == Enum.UserInputType.MouseWheel and not processed then
+			if wheelStyle(UserInputService:GetMouseLocation(), input.Position.Z > 0 and 1 or -1) then
+				return
+			end
 			cam.dist = math.clamp(cam.dist * (1 - input.Position.Z * 0.1), 14, 200)
 		elseif input.UserInputType == Enum.UserInputType.Touch and touchStart and not processed then
 			cam.yaw -= input.Delta.X * 0.01

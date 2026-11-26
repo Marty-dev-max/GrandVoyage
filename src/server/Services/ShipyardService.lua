@@ -160,6 +160,37 @@ local function setup()
 		return true
 	end, 2)
 
+	-- v0.25.154 (#14): saved paint themes (up to 8 color sets on the profile), list / save / delete
+	Net.Handle("ShipTheme", function(player, data)
+		local p = R.DataService.Get(player)
+		p.shipThemes = type(p.shipThemes) == "table" and p.shipThemes or {}
+		local list = p.shipThemes
+		local op = type(data) == "table" and data.op
+		if op == "save" then
+			if #list >= 8 then
+				return false, "8 themes at most: delete one first"
+			end
+			local t = {}
+			for _, z in ipairs(ShipHull.Zones) do
+				local hex = type(data.paint) == "table" and data.paint[z]
+				if type(hex) ~= "string" or not hex:match("^#%x%x%x%x%x%x$") then
+					return false, "Bad colors"
+				end
+				t[z] = hex:upper()
+			end
+			table.insert(list, t)
+			R.PlayerService.MarkDirty(player)
+		elseif op == "delete" then
+			local i = math.floor(tonumber(data.i) or 0)
+			if not list[i] then
+				return false, "No such theme"
+			end
+			table.remove(list, i)
+			R.PlayerService.MarkDirty(player)
+		end
+		return true, nil, list
+	end, 0.4)
+
 end
 
 -- v0.25.150 (owner): buy a ready-made Dinghy / Sloop / Galleon at the Shipwright. It costs its blocks, goes into the

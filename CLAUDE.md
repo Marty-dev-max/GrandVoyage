@@ -1143,10 +1143,12 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     lobbed, burns 8 s) in ship.specials (not the broadside, ShipHull.Compute r.specials), R at the helm / HUD (`FireSpecial`).
     KegRack (`kegs`): X / HUD drops a PowderKeg astern (`DropKeg`, arms 2 s, blows under a hostile hull, refills 1 / 20 s).
     Flooding: hits add water (FLOOD_PER_DMG), slowTick turns it into hull damage, BilgePump cuts it; HP bar says LEAKING.
-    CrowsNest (`spyglass`) = range text on the aim mark (BillboardGui did NOT show in the test: still to fix). Lamps:
+    CrowsNest (`spyglass`) = range text on the aim mark (v0.25.156: a ScreenGui label at the mark's screen point; a BillboardGui never drew there). Lamps:
     PointLight/SpotLight named ShipLamp, ship attr Lights auto/on/off (`ShipLights`, HUD LAMPS), Searchlight part. Gun-port
     lids PortShut/PortOpen in the hull shell (ShipHull.PortSide), open 8 s after firing, shut on the low side when the
     steady lean > PORT_HEEL 0.15 (guns there cannot fire). Settings `shipEasy` (Interface toggle) = level hull.
+    v0.25.156: title menu = DataService.PrefetchSlots on PlayerAdded (slot keys + account read in parallel, the first
+    MenuSlots takes it, menuCache edits win); Menu shows no character until MenuSlots answers (was the default look).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

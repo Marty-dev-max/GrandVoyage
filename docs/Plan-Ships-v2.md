@@ -67,5 +67,5 @@ Built in three versions (each pushed on its own):
   handles (8), stacking superstructures for balconies (9), rails / awnings along the deck edge (10), symmetry rules +
   CLONE (11), bowsprit, flags, flag lines (12), saved paint themes (14), hull details (15), name on the stern (17),
   decor set (35).
-- **Phase 3 = at sea**: harpoon gun + fire-pot thrower (29), powder kegs (30), crow's nest range readout (31), bilge
+- **Phase 3 (DONE v0.25.155, 27 Nov) = at sea**: harpoon gun + fire-pot thrower (29), powder kegs (30), crow's nest range readout (31), bilge
   pumps (32), working lanterns + searchlight (33), gun ports that close when heeling (34), TEST SAIL with wind / time controls (21), Easy / Full ship physics setting (23).

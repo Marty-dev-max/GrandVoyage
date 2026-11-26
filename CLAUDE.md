@@ -1136,6 +1136,17 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     `ShipPresets.IsOld(d, loose)` (v1, no bulwark = FromV1 fit, bare "Ship N" hull without sail/oar) ->
     `ShipPresets.Rebuild` (preset by old row class, name kept, old real paid on top of a gifted hull). #36 dropped
     (owner: WASD only). Studio MCP: never send Escape (opens the Roblox menu, MenuIsOpen swallows every input after).
+    v0.25.155 (owner pick, Plan-Ships-v2 phase 3): TEST SAIL (Builder TEST -> `TestSail` { design } launches the unsaved
+    design free at the yard dock: ship.test = no damage, hostile() false, TEST_RADIUS 380, `ShipTestWind`, client panel
+    wind +-/DAY/DUSK/NIGHT/LIVE (Atmos.SetClock), `TestSailEnd` -> back in the builder with the edits (Builder testWork)).
+    Special weapons = cannon defs with `special` (Harpoon slows the hit ship HARPOON_SLOW 6 s + HarpoonLine beam; FirePot
+    lobbed, burns 8 s) in ship.specials (not the broadside, ShipHull.Compute r.specials), R at the helm / HUD (`FireSpecial`).
+    KegRack (`kegs`): X / HUD drops a PowderKeg astern (`DropKeg`, arms 2 s, blows under a hostile hull, refills 1 / 20 s).
+    Flooding: hits add water (FLOOD_PER_DMG), slowTick turns it into hull damage, BilgePump cuts it; HP bar says LEAKING.
+    CrowsNest (`spyglass`) = range text on the aim mark (BillboardGui did NOT show in the test: still to fix). Lamps:
+    PointLight/SpotLight named ShipLamp, ship attr Lights auto/on/off (`ShipLights`, HUD LAMPS), Searchlight part. Gun-port
+    lids PortShut/PortOpen in the hull shell (ShipHull.PortSide), open 8 s after firing, shut on the low side when the
+    steady lean > PORT_HEEL 0.15 (guns there cannot fire). Settings `shipEasy` (Interface toggle) = level hull.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

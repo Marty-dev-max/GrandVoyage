@@ -1635,22 +1635,22 @@ local function openMenu(screenPos)
 			end })
 		end
 	else
-		-- a wall face first (windows / ports / ladders), else a deck spot and its zone
+		-- a deck / roof spot and its zone, else a wall face (windows / ports / ladders)
 		local wallSpots = {}
-		for _, id in ipairs(SUGGEST.wall) do
-			local s, _, r = surfaceSpot(screenPos, nil, id)
-			if s then
-				wallSpots[id] = { s, r }
+		local z
+		local spot = surfaceSpot(screenPos)
+		if not spot then
+			for _, id in ipairs(SUGGEST.wall) do
+				local s, _, r = surfaceSpot(screenPos, nil, id)
+				if s then
+					wallSpots[id] = { s, r }
+				end
 			end
-		end
-		local z, spot
-		if next(wallSpots) then
-			z = "wall"
-		else
-			spot = surfaceSpot(screenPos)
-			if not spot then
+			if not next(wallSpots) then
 				return
 			end
+			z = "wall"
+		else
 			local L = hullLength()
 			local sl = ShipHull.Slices(work.hull)
 			local hw = 0

@@ -722,7 +722,7 @@ function refreshStats()
 	local d = isDirty()
 	local pay, refund = {}, {}
 	if d then
-		pay, refund = ShipHull.Delta(ShipHull.Cost(work), saved and (saved.paid or ShipHull.Cost(saved)) or {})
+		pay, refund = ShipHull.Delta(ShipHull.Cost(work), saved and (saved.paid or ShipHull.Cost(saved)) or {}, saved and saved.gift)
 	end
 	local can = true
 	if next(pay) then
@@ -797,7 +797,7 @@ local function hullTab(outer)
 		o += 1
 		return o
 	end
-	local hint = UI.Text(body, "Drag the handles: YELLOW width, BLUE depth, WHITE slide a point (hold it to remove), GREEN + adds a point, RED bow / stern rake. Wheel over the bow / stern changes its shape.", 11, T.TextSoft, "Semi",
+	local hint = UI.Text(body, "Drag the handles: YELLOW width, BLUE depth, WHITE slide a point (hold it to remove), GREEN + adds a point, RED bow / stern rake. Shift + wheel over the bow / stern changes its shape.", 11, T.TextSoft, "Semi",
 		{ Size = UDim2.new(1, 0, 0, 44), LayoutOrder = nexto() })
 	hint.TextWrapped = true
 	local r1 = buttonRow(body, nexto(), 36)
@@ -1786,9 +1786,10 @@ local function hover(screenPos)
 	end
 end
 
--- #3 #4: the mouse wheel over the bow / stern end of the hull (HULL tab) changes its shape instead of zooming
+-- #3 #4: Shift + mouse wheel over the bow / stern end of the hull (HULL tab) changes its shape (a plain wheel always
+-- zooms: zooming in onto the bow kept switching its shape)
 local function wheelStyle(screenPos, d)
-	if tab ~= "hull" or not view.hull then
+	if tab ~= "hull" or not view.hull or not (UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.RightShift)) then
 		return false
 	end
 	local hit = cast(screenPos, { view.hull })

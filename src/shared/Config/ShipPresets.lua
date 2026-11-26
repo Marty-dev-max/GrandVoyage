@@ -106,11 +106,66 @@ for _, e in ipairs(P.List) do
 	P.ById[e.id] = e
 end
 
--- the free starter boat (nothing paid into it, so taking it apart refunds nothing)
-function P.Starter()
-	local d = dinghy("Little Dinghy")
-	d.paid = {}
+-- the free starter boat. v0.25.154: paid = its cost but all of it a gift (before, paid = {} billed the WHOLE boat on
+-- the first SAVE after adding one part); taking it apart still refunds nothing (ShipHull.Delta)
+function P.Starter(name)
+	local d = dinghy(name or "Little Dinghy")
+	d.paid = ShipHull.Cost(d)
+	d.gift = table.clone(d.paid)
 	return d
+end
+
+-- v0.25.154 (owner: "rebuild the ships we have"): old grid ships (v1) and the lumpy hulls fitted from them
+-- (ShipHull.FromV1: every point "U", no bulwark, no stern rake) become the preset of their length. The new ship is a
+-- gift; whatever the old one was worth beyond it stays refundable.
+function P.IsOld(design)
+	if type(design) ~= "table" then
+		return false
+	end
+	if design.v ~= 2 then
+		return true
+	end
+	local h = design.hull
+	if not h or (h.wall or 0) > 0 or (h.stern or 0) > 0 or (h.bow or 0) ~= 2 then
+		return false
+	end
+	for _, n in ipairs(h.nodes or {}) do
+		if n.s ~= "U" then
+			return false
+		end
+	end
+	return true
+end
+
+function P.Rebuild(old)
+	local fitted = old.v == 2 and old or ShipHull.FromV1(old)
+	local n = fitted.hull.nodes
+	local L = n[#n].z
+	local id = L <= 24 and "Dinghy" or L <= 40 and "Sloop" or "Galleon"
+	local d = ShipHull.Clone(P.ById[id].design)
+	d.name = type(old.name) == "string" and old.name or d.name
+	local was = old.paid
+	if old.name == "Little Dinghy" then
+		was = {} -- the old free starter: nothing in it was paid for
+	elseif not was then
+		was = {}
+		local Parts = require(Shared.Config.ShipParts).Parts
+		for _, part in ipairs(old.parts or {}) do
+			for k, v in pairs(Parts[part.id] and Parts[part.id].cost or {}) do
+				was[k] = (was[k] or 0) + v
+			end
+		end
+	end
+	local cost = ShipHull.Cost(d)
+	d.gift = table.clone(cost)
+	d.paid = table.clone(cost)
+	for k, v in pairs(was) do
+		d.paid[k] = (d.paid[k] or 0) + v -- the old ship's real worth sits on top of the free new hull
+	end
+	for k, v in pairs(old.gift or {}) do
+		d.paid[k] = math.max((d.paid[k] or 0) - v, d.gift[k] or 0) -- a free starter stays free
+	end
+	return d, id
 end
 
 -- what a design costs to buy outright: { beli = n, Wood = n } (other materials paid in Doubloons)

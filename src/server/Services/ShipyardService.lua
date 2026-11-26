@@ -79,24 +79,12 @@ local function setup()
 		end
 		Yard.ExitBuild(player)
 		if not p.ships[slot] then
-			p.ships[slot] = ShipHull.New("Ship " .. slot)
-			p.ships[slot].paid = {}
-		elseif p.ships[slot].v ~= 2 then
-			-- an old grid ship becomes a free-form one; what its blocks cost stays in it (refunded if you shrink it)
-			local old = p.ships[slot]
-			local paid = {}
-			for _, part in ipairs(old.parts or {}) do
-				local def = ShipParts[part.id]
-				for k, v in pairs(def and def.cost or {}) do
-					paid[k] = (paid[k] or 0) + v
-				end
-			end
-			local d2 = ShipHull.FromV1(old)
-			for k, v in pairs(ShipParts.Rudder.cost) do
-				paid[k] = (paid[k] or 0) + v -- FromV1 adds a rudder for free
-			end
-			d2.paid = paid
-			p.ships[slot] = d2
+			-- v0.25.154 (owner review of the first build): an empty slot starts as a free Dinghy that can sail at once
+			-- (it used to be a bare hull with a helm and no sail)
+			p.ships[slot] = ShipPresets.Starter("Ship " .. slot)
+		elseif ShipPresets.IsOld(p.ships[slot]) then
+			-- an old grid ship (DataService rebuilds them on load; this catches one that slipped through)
+			p.ships[slot] = ShipPresets.Rebuild(p.ships[slot])
 		end
 		p.activeShip = slot
 		sessions[player] = { plot = plot, slot = slot }
@@ -127,7 +115,7 @@ local function setup()
 		end
 		clean.name = old.name
 		local cost = ShipHull.Cost(clean)
-		local pay, refund = ShipHull.Delta(cost, old.paid or ShipHull.Cost(old))
+		local pay, refund, gift = ShipHull.Delta(cost, old.paid or ShipHull.Cost(old), old.gift)
 		if next(pay) then
 			local ok, why = R.InventoryService.Pay(player, pay)
 			if not ok then
@@ -138,6 +126,7 @@ local function setup()
 			R.InventoryService.Refund(player, refund)
 		end
 		clean.paid = cost
+		clean.gift = next(gift) and gift or nil
 		p.ships[s.slot] = clean
 		p.shipSunk = p.shipSunk and s.slot == p.activeShip
 		R.PlayerService.MarkDirty(player)
@@ -222,7 +211,7 @@ local function setupPresets()
 		end
 		local old = p.ships[slot]
 		if old and old.v == 2 then
-			R.InventoryService.Refund(player, old.paid or {})
+			R.InventoryService.Refund(player, ShipHull.RealPaid(old)) -- a free boat's gift is not paid out
 		elseif old then
 			for _, part in ipairs(old.parts or {}) do
 				local def = ShipParts[part.id]

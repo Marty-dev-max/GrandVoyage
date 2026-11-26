@@ -530,25 +530,48 @@ function H.Cost(design)
 	return c
 end
 
--- what a save costs (+) or refunds (-) against what went into the ship so far: pay, refund
-function H.Delta(newCost, paid)
-	local pay, refund = {}, {}
+-- what a save costs (+) or refunds (-) against what went into the ship so far: pay, refund, gift left.
+-- v0.25.154: `gift` = the part of `paid` that came free (starter boat, rebuilt old ships). Shrinking the ship uses the
+-- gift up first, so a free boat taken apart pays nothing out; only what the player really paid comes back.
+function H.Delta(newCost, paid, gift)
+	paid, gift = paid or {}, gift or {}
+	local pay, refund, left = {}, {}, {}
 	local keys = {}
 	for k in pairs(newCost) do
 		keys[k] = true
 	end
-	for k in pairs(paid or {}) do
+	for k in pairs(paid) do
 		keys[k] = true
 	end
 	for k in pairs(keys) do
-		local d = (newCost[k] or 0) - ((paid or {})[k] or 0)
-		if d > 0 then
-			pay[k] = d
-		elseif d < 0 then
-			refund[k] = -d
+		local c, p = newCost[k] or 0, paid[k] or 0
+		local g = math.min(gift[k] or 0, p)
+		if c > p then
+			pay[k] = c - p
+		elseif c < p then
+			-- real money in the ship before minus real money left in it after
+			local back = (p - g) - (c - math.min(g, c))
+			if back > 0 then
+				refund[k] = back
+			end
+		end
+		if math.min(g, c) > 0 then
+			left[k] = math.min(g, c)
 		end
 	end
-	return pay, refund
+	return pay, refund, left
+end
+
+-- what taking the whole ship apart (or replacing it) pays back: paid minus what came free
+function H.RealPaid(design)
+	local out = {}
+	for k, v in pairs(design.paid or {}) do
+		local r = v - math.min(v, (design.gift or {})[k] or 0)
+		if r > 0 then
+			out[k] = r
+		end
+	end
+	return out
 end
 
 -- ===== sanitize (server trust boundary; the client runs it too so its preview matches) =====
@@ -797,6 +820,8 @@ function H.EnsureRudder(design)
 	table.insert(design.items, { id = "Rudder", x = 0, y = -(nd and nd.d or 3), z = -(design.hull.stern or 0) * 0.3 - 0.5, r = 0, sx = 1, sy = 1, sz = 1 })
 	if type(design.paid) == "table" then
 		addCost(design.paid, ShipParts.Rudder.cost, 1) -- free: SAVE must not bill it
+		design.gift = design.gift or {}
+		addCost(design.gift, ShipParts.Rudder.cost, 1) -- ...nor pay it out when taken apart
 	end
 	return true
 end

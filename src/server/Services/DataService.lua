@@ -210,6 +210,20 @@ function DataService.Load(player, slot)
 	for _, sh in ipairs(data.ships or {}) do
 		pcall(ShipHull.EnsureRudder, sh)
 	end
+	-- v0.25.154 (owner): old grid ships + the lumpy hulls fitted from them are rebuilt as the preset of their size;
+	-- starter boats saved with paid = {} get their cost as a gift (the first SAVE billed the whole boat)
+	local Presets = require(Shared.Config.ShipPresets)
+	for i, sh in ipairs(data.ships or {}) do
+		if Presets.IsOld(sh) then
+			local ok, d = pcall(Presets.Rebuild, sh)
+			if ok and d then
+				data.ships[i] = d
+			end
+		elseif type(sh) == "table" and sh.v == 2 and not next(sh.paid or {}) then
+			sh.paid = ShipHull.Cost(sh)
+			sh.gift = table.clone(sh.paid)
+		end
+	end
 	-- v0.24.0: the old 5 x 11 starter "dinghy" was the size of a sloop; swap it for the new small one
 	for i, sh in ipairs(data.ships or {}) do
 		if sh.name == "Little Dinghy" and #(sh.parts or {}) == 63 then

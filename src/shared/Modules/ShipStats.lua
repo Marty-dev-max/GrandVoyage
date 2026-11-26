@@ -101,12 +101,24 @@ function S.Compute(design, crew, bonus)
 	return r
 end
 
+-- rowing power: benches with a rower each (crew), the best fully and each next one a bit less (v2 hulls)
+function S.RowPower(stats)
+	local n = math.min(stats.oars or 0, stats.crew or 0)
+	if not stats.oarList then
+		return n * (stats.oarPower or 0)
+	end
+	local t = 0
+	for i = 1, n do
+		t += stats.oarList[i] * 0.9 ^ (i - 1)
+	end
+	return t
+end
+
 -- Top speed for a given wind (studs/s)
 function S.Speed(stats, windFactor, extraBonus)
 	local sail = stats.thrust * windFactor * (1 + stats.speedBonus + (extraBonus or 0))
 	local oarFactor = windFactor <= 0.01 and 0.4 or 1
-	local oar = math.min(stats.oars, stats.crew) * stats.oarPower * oarFactor
-	local t = sail + oar
+	local t = math.max(sail, S.RowPower(stats) * oarFactor) -- v0.25.153 (#26): the stronger drive wins, not both
 	if t <= 0 then
 		return 0
 	end

@@ -26,6 +26,7 @@ end
 
 local function finish(d)
 	d.add = nil
+	ShipHull.EnsureRudder(d) -- v0.25.153: every ship needs one
 	return d
 end
 
@@ -57,6 +58,7 @@ local function sloop()
 	d.add("OarBench", 0, 0, 27)
 	d.add("Barrel", 3, 0, 39, 0, { m = true })
 	d.add("RamHead", 0, -2.5, 47)
+	d.add("Jib", 0, 0, 42) -- v0.25.153: power part on the bow
 	return finish(d)
 end
 
@@ -88,6 +90,9 @@ local function galleon()
 	d.add("OarBench", 0, 0, 54)
 	d.add("Barrel", 3, 0, 52, 0, { m = true })
 	d.add("LionHead", 0, 0, 79)
+	d.add("Jib", 0, 0, 70, 0, { sy = 1.2 })
+	d.add("Keel", 0, -9.5, 22, 0, { sz = 1.6 }) -- ballast keel under the midships (v0.25.153)
+	d.hull.material = "Oak"
 	return finish(d)
 end
 

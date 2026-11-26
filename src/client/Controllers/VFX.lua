@@ -2048,7 +2048,9 @@ handlers.Cannonball = function(d)
 	tween(smoke, 0.8, { Size = Vector3.one * 8, Transparency = 1 })
 	Debris:AddItem(smoke, 0.85)
 	local dist = (d.to - d.from).Magnitude
-	VFX.Projectile(d.from, d.to, Color3.fromRGB(35, 35, 40), 1.6, d.t, math.clamp(dist * 0.12, 6, 40), Color3.fromRGB(150, 150, 150))
+	-- v0.25.153: mortar shells (lob) climb high and drop onto the target
+	local arc = d.lob and math.clamp(dist * 0.45, 30, 140) or math.clamp(dist * 0.12, 6, 40)
+	VFX.Projectile(d.from, d.to, Color3.fromRGB(35, 35, 40), d.lob and 2.2 or 1.6, d.t, arc, Color3.fromRGB(150, 150, 150))
 end
 handlers.Splash = function(d)
 	VFX.Splash(d.pos, 10)

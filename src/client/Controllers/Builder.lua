@@ -242,7 +242,7 @@ end
 
 local function paintSelection()
 	clear("selHl")
-	if not (selItem and view.items) then
+	if not (selItem and view.items and work) then
 		return
 	end
 	local hl = Instance.new("Folder")
@@ -250,6 +250,30 @@ local function paintSelection()
 		if m:GetAttribute("Item") == selItem then
 			New("Highlight", { FillColor = Color3.fromRGB(255, 214, 60), OutlineColor = Color3.new(1, 1, 1), FillTransparency = 0.82,
 				DepthMode = Enum.HighlightDepthMode.AlwaysOnTop, Adornee = m, Parent = hl })
+		end
+	end
+	-- a selected cannon shows where it can fire (#25): blue rays = clear, orange = it turns there but its own ship is in the way
+	local sel = work.items[selItem]
+	if sel and Parts[sel.id] and Parts[sel.id].cannon then
+		local ok, arcs = pcall(ShipHull.Arcs, work)
+		local cf = shipCf()
+		for i, it in ipairs(ok and ShipHull.Expand(work) or {}) do
+			local a = arcs[i]
+			if a and it.src == selItem then
+				local cs = ShipHull.CannonStats(it)
+				local len = cs.lob and 10 or 16
+				local y = it.y + ShipHull.ItemSize(it).Y * 0.45
+				for b = a.face - a.trav, a.face + a.trav + 0.01, 7.5 do
+					local open = ShipHull.InArc(a.fire, b)
+					local dir = Vector3.new(math.sin(math.rad(b)), 0, -math.cos(math.rad(b)))
+					local p0 = Vector3.new(it.x, y, -it.z) + dir * 1.2
+					New("Part", { Name = "ArcRay", Anchored = true, CanCollide = false, CanQuery = false, CanTouch = false, CastShadow = false,
+						Material = Enum.Material.Neon, Transparency = open and 0.35 or 0.55,
+						Color = open and Color3.fromRGB(70, 170, 255) or Color3.fromRGB(255, 140, 40),
+						Size = Vector3.new(0.18, 0.18, open and len or len * 0.5),
+						CFrame = cf * CFrame.lookAt(p0 + dir * (open and len or len * 0.5) / 2, p0 + dir * len), Parent = hl })
+				end
+			end
 		end
 	end
 	hl.Parent = view.items
@@ -553,9 +577,29 @@ function refreshStats()
 		draft = string.format("%.1f", ph.draft),
 		free = ph.sinks and "SUNK" or string.format("%.1f", ph.freeboard),
 		stab = ph.stars > 0 and string.rep("*", ph.stars) or "X",
+		sail = tostring(math.floor(st.thrust + 0.5)),
+		row = tostring(math.floor(ShipStats.RowPower(st) + 0.5)),
+		turn = (st.rudder or 0) > 0 and string.format("%.1fx", st.rudderK or 1) or "NONE",
+		heel = tostring(math.floor(math.deg(ph.heel or 0) + 0.5)),
 	}
 	for k, v in pairs(vals) do
 		ui.stats[k].Text = v
+	end
+	ui.stats.turn.TextColor3 = (st.rudder or 0) > 0 and T.Text or T.Red
+	-- #28: the stronger of SAIL / ROW drives the ship; light it up
+	local sailWins = st.thrust >= ShipStats.RowPower(st)
+	ui.stats.sail.TextColor3 = sailWins and T.Green or T.TextSoft
+	ui.stats.row.TextColor3 = sailWins and T.TextSoft or T.Green
+	-- #20: what the weight is made of
+	if ui.weights and ph.groups then
+		local parts = {}
+		for _, g in ipairs(ShipHull.Groups) do
+			local w = ph.groups[g] or 0
+			if w > 0 then
+				table.insert(parts, string.upper(g) .. " " .. math.floor(w / math.max(ph.weight, 1) * 100 + 0.5) .. "%")
+			end
+		end
+		ui.weights.Text = "WEIGHT  " .. table.concat(parts, "  ")
 	end
 	ui.stats.stab.TextColor3 = ph.stars >= 3 and T.Green or ph.stars >= 1 and T.Gold or T.Red
 	ui.stats.free.TextColor3 = (ph.sinks or ph.floods) and T.Red or T.Text
@@ -680,6 +724,21 @@ local function hullTab(body)
 		end)
 		b.TextScaled = true
 	end
+	-- #16 hull material: Pine light + cheap, Oak tougher, Iron banded = toughest + heaviest
+	local rm = buttonRow(body, nexto(), 34)
+	for _, id in ipairs(ShipHull.MaterialOrder) do
+		local on = (work.hull.material or "Pine") == id
+		local b = UI.Button(rm, ShipHull.Materials[id].name, on and T.Gold or T.Grey, UDim2.new(1 / 3, -4, 1, -4), function()
+			editHull(function(h)
+				h.material = id ~= "Pine" and id or nil
+			end)
+		end)
+		b.TextScaled = true
+		UI.Tooltip(b, function()
+			local m = ShipHull.Materials[id]
+			return string.format("%s hull: HP x%.1f, weight x%.2f, cost x%.1f%s", m.name, m.hp, m.dens, m.beli, m.iron and " + iron ingots" or "")
+		end)
+	end
 	stepper(body, nexto(), "WIDTH", fmt(nd.w * 2), function()
 		editHull(function()
 			nd.w = math.max(0.5, nd.w - 0.5)
@@ -782,8 +841,13 @@ local function partsTab(body)
 			local on = id == pick
 			local card = New("TextButton", { Text = "", AutoButtonColor = false, LayoutOrder = i, BackgroundColor3 = on and T.Gold:Lerp(T.PanelDeep, 0.55) or T.PanelDeep, Parent = list })
 			UI.Corner(card, 8)
-			UI.Stroke(card, on and T.Gold or T.Edge, on and 3 or 2)
+			-- #27: parts that drive the ship (sails, oars, speed parts) get a green rim + POWER tag
+			local power = def.thrust or def.oar or (def.speedBonus or 0) > 0
+			UI.Stroke(card, on and T.Gold or (power and T.Green or T.Edge), on and 3 or 2)
 			UI.Tactile(card)
+			if power then
+				UI.Text(card, "POWER", 9, T.Green, "Display", { Position = UDim2.fromOffset(4, 3), Size = UDim2.fromOffset(50, 11), TextWrapped = false, ZIndex = 3 })
+			end
 			local m = ShipModel.BuildPart({ id = id, x = 0, y = 0, z = 0, r = 0 }, CFrame.new())
 			local vp = UI.ModelViewOf(card, m, 66, 0.6)
 			vp.AnchorPoint = Vector2.new(0.5, 0)
@@ -917,6 +981,15 @@ local function itemCard()
 	end
 	if rule.axes == "u" then
 		scaleRow("SIZE", "sx")
+	elseif rule.axes == "xz" then
+		scaleRow("BORE", "sx")
+		scaleRow("BARREL", "sz")
+		local cs = ShipHull.CannonStats(it)
+		UI.Text(card, string.format("DMG %d  RANGE %d  RELOAD %.1fs", cs.damage, cs.range, cs.reload * GameConfig.Ship.ReloadTime), 10, T.Gold, "Display",
+			{ Size = UDim2.new(1, 0, 0, 14), LayoutOrder = nexto(), TextWrapped = false, TextScaled = true })
+	elseif rule.axes == "yz" then
+		scaleRow("HEIGHT", "sy")
+		scaleRow("LENGTH", "sz")
 	else
 		scaleRow(Parts[it.id].thrust and "SAIL W" or "WIDTH", "sx")
 		scaleRow(Parts[it.id].thrust and "MAST H" or "HEIGHT", "sy")
@@ -997,7 +1070,7 @@ local function buildPanel()
 	UI.Pad(panel, 10)
 	UI.List(panel, nil, 6)
 
-	local top = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 34), LayoutOrder = 1, Parent = panel })
+	local top = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 34), LayoutOrder = 0, Parent = panel })
 	UI.Icon(top, "ship", 30)
 	UI.Text(top, "SHIPYARD", 20, T.Gold, "Display", { Position = UDim2.fromOffset(36, 0), Size = UDim2.fromOffset(150, 30), TextWrapped = false })
 	ui.nameBox = New("TextBox", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 2), Size = UDim2.fromOffset(160, 28), ClearTextOnFocus = false,
@@ -1012,13 +1085,14 @@ local function buildPanel()
 		end
 	end)
 
-	-- stats 2 x 4
-	local stats = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 84), LayoutOrder = 2, Parent = panel })
+	-- stats 3 x 4
+	local stats = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 127), LayoutOrder = 1, Parent = panel })
 	New("UIGridLayout", { CellSize = UDim2.new(0.25, -5, 0, 39), CellPadding = UDim2.fromOffset(5, 5), SortOrder = Enum.SortOrder.LayoutOrder, Parent = stats })
 	ui.stats = {}
 	local defs = {
 		{ "hp", "HP", T.Red }, { "speed", "SPEED", T.Ocean }, { "guns", "GUNS", T.Orange or T.Gold }, { "crew", "BUNKS", T.Green },
 		{ "tons", "TONS", T.Gold }, { "draft", "DRAFT", T.Ocean }, { "free", "FREEBRD", T.Ocean }, { "stab", "STABLE", T.Green },
+		{ "sail", "SAIL", T.Green }, { "row", "ROW", T.Green }, { "turn", "TURN", T.Ocean }, { "heel", "HEEL", T.Gold },
 	}
 	for i, s in ipairs(defs) do
 		local box = New("Frame", { LayoutOrder = i, BackgroundColor3 = s[3]:Lerp(T.PanelDeep, 0.72), Parent = stats })
@@ -1026,6 +1100,7 @@ local function buildPanel()
 		UI.Text(box, s[2], 9, s[3]:Lerp(Color3.new(1, 1, 1), 0.4), "Display", { Position = UDim2.fromOffset(4, 3), Size = UDim2.new(1, -8, 0, 11), TextWrapped = false })
 		ui.stats[s[1]] = UI.Text(box, "0", 15, T.Text, "Number", { Position = UDim2.fromOffset(3, 16), Size = UDim2.new(1, -6, 0, 20), TextXAlignment = Enum.TextXAlignment.Center, TextScaled = true })
 	end
+	ui.weights = UI.Text(panel, "", 9, T.TextSoft, "Display", { Size = UDim2.new(1, 0, 0, 12), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false, TextScaled = true, LayoutOrder = 2 })
 	ui.ready = UI.Text(panel, "", 11, T.Green, "Display", { Size = UDim2.new(1, 0, 0, 26), TextXAlignment = Enum.TextXAlignment.Center, LayoutOrder = 3 })
 	ui.ready.TextWrapped = true
 
@@ -1043,7 +1118,7 @@ local function buildPanel()
 		end)
 	end
 
-	ui.body = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, -362), LayoutOrder = 5, ClipsDescendants = true, Parent = panel })
+	ui.body = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, -423), LayoutOrder = 5, ClipsDescendants = true, Parent = panel })
 	UI.List(ui.body, nil, 5)
 
 	ui.cost = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 20), LayoutOrder = 6, Parent = panel })

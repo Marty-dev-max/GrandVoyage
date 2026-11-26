@@ -12,6 +12,7 @@ local Shared = ReplicatedStorage.Shared
 local GameConfig = require(Shared.Config.GameConfig)
 local Islands = require(Shared.Config.Islands)
 local ShipParts = require(Shared.Config.ShipParts).Parts
+local ShipHull = require(Shared.Modules.ShipHull)
 local SeaZones = require(Shared.Modules.SeaZones)
 local Net = require(Shared.Modules.Net)
 local UI = require(script.Parent.Parent.UI.UIKit)
@@ -153,7 +154,7 @@ local function updateHud(ship)
 	hud.gunT.Text = (ship:GetAttribute("Manned") or 0) .. "/" .. (ship:GetAttribute("Cannons") or 0)
 	local left = (ship:GetAttribute("ReloadEnd") or 0) - workspace:GetServerTimeNow()
 	if left > 0 then
-		hud.reload:Set(1 - left / GameConfig.Ship.ReloadTime, string.format("RELOADING %.1fs", left))
+		hud.reload:Set(math.clamp(1 - left / GameConfig.Ship.ReloadTime, 0, 1), string.format("RELOADING %.1fs", left))
 	else
 		hud.reload:Set(1, "READY  •  F / click water")
 	end
@@ -247,7 +248,15 @@ local function cannonsOf(ship)
 		if def and def.cannon and child.PrimaryPart then
 			local barrel = child:FindFirstChild("Barrel", true)
 			local muzzle = barrel and barrel:FindFirstChild("Muzzle")
-			table.insert(list, { pos = muzzle and muzzle.WorldPosition or child.PrimaryPart.Position, face = child.PrimaryPart.CFrame.LookVector, range = def.cannon.range })
+			local arcs = child:GetAttribute("Arcs")
+			table.insert(list, {
+				pos = muzzle and muzzle.WorldPosition or child.PrimaryPart.Position,
+				face = child.PrimaryPart.CFrame.LookVector,
+				range = child:GetAttribute("Range") or def.cannon.range,
+				fire = arcs and ShipHull.ArcParse(arcs) or nil, -- v0.25.153: v2 guns bear only inside their arcs
+				faceB = child:GetAttribute("Face"),
+				lob = def.cannon.lob,
+			})
 		end
 	end
 	return list
@@ -256,10 +265,20 @@ local function drawAim(ship, target)
 	local used = 0
 	if ship and target then
 		local chosen = {}
+		local look = ship.PrimaryPart and ship.PrimaryPart.CFrame.LookVector or Vector3.new(0, 0, -1)
+		local fwd = Vector3.new(look.X, 0, look.Z)
+		fwd = fwd.Magnitude > 0.01 and fwd.Unit or Vector3.new(0, 0, -1)
+		local right = Vector3.new(-fwd.Z, 0, fwd.X)
 		for _, c in ipairs(cannonsOf(ship)) do
 			local to = Vector3.new(target.X - c.pos.X, 0, target.Z - c.pos.Z)
 			local face = Vector3.new(c.face.X, 0, c.face.Z)
-			if to.Magnitude > 1 and face.Magnitude > 0.01 then
+			if to.Magnitude > 1 and c.fire then
+				local b = math.deg(math.atan2(to:Dot(right), to:Dot(fwd)))
+				if ShipHull.InArc(c.fire, b) then
+					c.dot = 1 - math.abs(ShipHull.Wrap180(b - (c.faceB or b))) / 180
+					table.insert(chosen, c)
+				end
+			elseif to.Magnitude > 1 and face.Magnitude > 0.01 then
 				c.dot = face.Unit:Dot(to.Unit)
 				if c.dot > 0.25 then
 					table.insert(chosen, c)
@@ -301,7 +320,7 @@ local function drawAim(ship, target)
 					land = c.pos + flatTo.Unit * c.range
 				end
 				land = Vector3.new(land.X, GameConfig.SeaLevel + 0.4, land.Z)
-				local h = math.clamp((land - c.pos).Magnitude * 0.12, 6, 40)
+				local h = c.lob and math.clamp((land - c.pos).Magnitude * 0.45, 30, 140) or math.clamp((land - c.pos).Magnitude * 0.12, 6, 40)
 				local prev = c.pos
 				for k = 1, AIM_STEPS do
 					local t = k / AIM_STEPS

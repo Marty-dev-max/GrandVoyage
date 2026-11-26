@@ -99,13 +99,25 @@ local function buildShip(design, cf, opts)
 
 	local cannonParts = {}
 	local partList = ShipStats.Parts(design)
+	-- v0.25.153 (#24 #25): v2 cannons carry their scaled stats + firing arcs (ShipHull.Arcs); the arcs ride on the
+	-- cannon model as attribute "Arcs" so the client's aim preview picks the same guns
+	local arcs = design.v == 2 and ShipHull.Arcs(design) or nil
 	for _, child in ipairs(model:GetChildren()) do
 		if child:IsA("Model") then
 			local idx = child:GetAttribute("Index")
 			local pdef = idx and partList[idx] and ShipParts[partList[idx].id]
 			if pdef and pdef.cannon then
 				local barrel = child:FindFirstChild("Barrel", true)
-				table.insert(cannonParts, { model = child, muzzle = barrel and barrel:FindFirstChild("Muzzle"), damage = pdef.cannon.damage, range = pdef.cannon.range })
+				local c = { model = child, muzzle = barrel and barrel:FindFirstChild("Muzzle"), damage = pdef.cannon.damage, range = pdef.cannon.range, reload = 1, speed = 1, readyAt = 0 }
+				if arcs then
+					local cs = ShipHull.CannonStats(partList[idx])
+					c.damage, c.range, c.reload, c.speed, c.lob = cs.damage, cs.range, cs.reload, cs.speed, cs.lob
+					c.fire = arcs[idx] and arcs[idx].fire or {}
+					child:SetAttribute("Arcs", ShipHull.ArcString(c.fire))
+					child:SetAttribute("Face", arcs[idx] and arcs[idx].face or 0)
+					child:SetAttribute("Range", math.floor(c.range))
+				end
+				table.insert(cannonParts, c)
 			end
 		end
 	end
@@ -531,14 +543,15 @@ local function aimedShip(srcShip, target)
 	return best
 end
 
-local function fireBall(from, target, damage, range, srcShip, player)
+local function fireBall(from, target, damage, range, srcShip, player, gun)
+	local shotSpeed = cfg.CannonballSpeed * (gun and gun.speed or 1)
 	-- lead a moving target ship: aim where it will be when the ball lands (v0.24.0: shots used to land behind
 	-- sailing NPC ships, so they never got hit)
 	local lock = player and aimedShip(srcShip, target) or nil
 	if lock then
 		local off = target - lock.root.Position
 		for _ = 1, 2 do
-			local tt = flat(from, target) / cfg.CannonballSpeed + 0.25
+			local tt = flat(from, target) / shotSpeed + 0.25
 			local v = lock.root.AssemblyLinearVelocity
 			target = lock.root.Position + Vector3.new(v.X, 0, v.Z) * tt + Vector3.new(off.X, 0, off.Z) * 0.5
 		end
@@ -554,23 +567,47 @@ local function fireBall(from, target, damage, range, srcShip, player)
 		target = Vector3.new(target.X, 0, target.Z)
 		dist = range
 	end
-	local t = dist / cfg.CannonballSpeed + 0.25
-	Net.FX("Cannonball", { from = from, to = target, t = t }, from, 700)
+	local t = dist / shotSpeed + 0.25
+	Net.FX("Cannonball", { from = from, to = target, t = t, lob = gun and gun.lob or nil }, from, 700)
 	task.delay(t, impact, target, damage, srcShip, player, lock)
 end
 
+-- the target's bearing from a point in the ship's own frame (0 = bow, 90 = starboard), as ShipHull.Arcs counts it
+local function bearingOf(ship, pos, target)
+	local fwd = Vector3.new(-math.sin(ship.yaw), 0, -math.cos(ship.yaw))
+	local right = Vector3.new(-fwd.Z, 0, fwd.X)
+	local to = Vector3.new(target.X - pos.X, 0, target.Z - pos.Z)
+	return math.deg(math.atan2(to:Dot(right), to:Dot(fwd)))
+end
+
+-- returns fired, bearing (how many guns could bear on the target, ready or not)
 local function volley(ship, target, count, damageMult, player, spread, fixedDamage)
 	local chosen = {}
+	local bearing = 0
+	local now = os.clock()
 	for _, c in ipairs(ship.cannons) do
 		local main = c.model.PrimaryPart
 		if main and main.Parent then
 			local pos = c.muzzle and c.muzzle.WorldPosition or main.Position
-			local face = main.CFrame.LookVector
 			local to = Vector3.new(target.X - pos.X, 0, target.Z - pos.Z)
 			if to.Magnitude > 1 then
-				local dot = Vector3.new(face.X, 0, face.Z).Unit:Dot(to.Unit)
-				if dot > 0.25 then
-					table.insert(chosen, { c = c, pos = pos, dot = dot })
+				local ok, score
+				if c.fire then
+					-- v0.25.153 (#25): v2 guns fire only inside their (unblocked) arcs, each on its own reload
+					local b = bearingOf(ship, pos, target)
+					ok = ShipHull.InArc(c.fire, b)
+					local face = c.model:GetAttribute("Face")
+					score = ok and 1 - math.abs(ShipHull.Wrap180(b - (face or b))) / 180 or 0
+				else
+					local face = main.CFrame.LookVector
+					score = Vector3.new(face.X, 0, face.Z).Unit:Dot(to.Unit)
+					ok = score > 0.25
+				end
+				if ok then
+					bearing += 1
+					if not player or (c.readyAt or 0) <= now then
+						table.insert(chosen, { c = c, pos = pos, dot = score })
+					end
 				end
 			end
 		end
@@ -590,10 +627,13 @@ local function volley(ship, target, count, damageMult, player, spread, fixedDama
 		local item = chosen[i]
 		local err = spread and Vector3.new((math.random() - 0.5) * spread, 0, (math.random() - 0.5) * spread) or Vector3.zero
 		local lane = player and Vector3.new(item.pos.X - center.X, 0, item.pos.Z - center.Z) or Vector3.zero
-		task.delay((i - 1) * 0.09, fireBall, item.pos, target + lane + err, fixedDamage or item.c.damage * damageMult, item.c.range, ship, player)
+		task.delay((i - 1) * 0.09, fireBall, item.pos, target + lane + err, fixedDamage or item.c.damage * damageMult, item.c.range, ship, player, item.c)
+		if player then
+			item.c.readyAt = now + cfg.ReloadTime * (ship.reloadMult or 1) * (item.c.reload or 1)
+		end
 		fired += 1
 	end
-	return fired
+	return fired, bearing
 end
 
 -- ===== Player ships =====
@@ -831,7 +871,7 @@ local function addCrew(ship, def)
 				-- behind the wheel, facing the bow
 				local at = main.Position - root.CFrame.LookVector * 3
 				table.insert(spots, { pos = at, face = root.CFrame.LookVector, y = main.Position.Y - G / 2, role = "helm" })
-			elseif child.Name == "LightCannon" or child.Name == "HeavyCannon" then
+			elseif (ShipParts[child.Name] and ShipParts[child.Name].cannon) then
 				cannons += 1
 				if def.cannons <= 6 or cannons % 2 == 1 then
 					local look = main.CFrame.LookVector
@@ -916,7 +956,7 @@ function addRecruits(ship, list) -- (forward-declared above Ship.Launch)
 				for _, sx in ipairs({ -1, 1 }) do
 					table.insert(posts.deck, { pos = main.Position + root.CFrame.RightVector * sx * 3.5 + root.CFrame.LookVector * 2, face = root.CFrame.LookVector, y = deckY })
 				end
-			elseif child.Name == "LightCannon" or child.Name == "HeavyCannon" then
+			elseif (ShipParts[child.Name] and ShipParts[child.Name].cannon) then
 				local look = main.CFrame.LookVector
 				table.insert(posts.Gunner, { pos = main.Position - Vector3.new(look.X, 0, look.Z).Unit * 3.2, face = look, y = main.Position.Y - G / 2 })
 			elseif child.Name == "OarBench" then
@@ -1352,7 +1392,11 @@ local function stepShip(ship, dt, now)
 	local targetY = GameConfig.SeaLevel - G * 0.5 + 1 + (hBow + hStern + hR + hL) / 4
 	local vy = math.clamp((targetY - pos.Y) * 4, -25, 25)
 	ship.lv.VectorVelocity = vel + Vector3.new(0, vy, 0)
-	local roll = math.clamp(math.atan2(hR - hL, 8) * 0.7, -0.12, 0.12) + ship.steer * -(0.05 + (ship.heel or 0)) * math.clamp(ship.speed / 40, 0, 1) + (ship.list or 0)
+	-- v0.25.153 (#22): under sail the wind leans the ship over (heel from ShipHull.Physics, cut by keels), more with
+	-- more sail out and a stronger wind
+	local windHeel = -(ship.heel or 0) * ((ship.sailLevel or 0) / 3) * math.clamp(wind, 0, 1.5)
+	ship.heelNow = windHeel
+	local roll = math.clamp(math.atan2(hR - hL, 8) * 0.7, -0.12, 0.12) + ship.steer * -(0.05 + (ship.heel or 0) * 0.5) * math.clamp(ship.speed / 40, 0, 1) + (ship.list or 0) + windHeel
 	local pitch = math.clamp(math.atan2(hBow - hStern, 16) * 0.7, -0.1, 0.1) + (ship.trim or 0)
 	ship.ao.CFrame = CFrame.Angles(0, ship.yaw, 0) * CFrame.Angles(pitch, 0, roll)
 end
@@ -1436,19 +1480,23 @@ function Ship.Start()
 			return false
 		end
 		local now = os.clock()
-		if now - ship.lastVolley < cfg.ReloadTime * (ship.reloadMult or 1) then
-			return false, "Reloading"
-		end
 		if ship.stats.cannonsManned <= 0 then
 			return false, "No crew to man the cannons (recruit at a tavern)"
 		end
 		local d = R.PlayerService.Derived(player) or {}
-		local fired = volley(ship, target, ship.stats.cannonsManned, 1 + (d.cannonDamage or 0), player, 6)
+		-- v0.25.153: every gun reloads on its own (swivels fast, mortars slow); a shot fires the ready guns that bear
+		local fired, bearing = volley(ship, target, ship.stats.cannonsManned, 1 + (d.cannonDamage or 0), player, 6)
 		if fired == 0 then
-			return false, "Target is outside your firing arcs (turn broadside)"
+			return false, bearing > 0 and "Reloading" or "Target is outside your firing arcs (turn broadside)"
 		end
 		ship.lastVolley = now
-		ship.reloadEnd = workspace:GetServerTimeNow() + cfg.ReloadTime * (ship.reloadMult or 1)
+		local nextReady = math.huge
+		for _, c in ipairs(ship.cannons) do
+			if (c.readyAt or 0) > now then
+				nextReady = math.min(nextReady, c.readyAt)
+			end
+		end
+		ship.reloadEnd = workspace:GetServerTimeNow() + (nextReady < math.huge and nextReady - now or 0)
 		setAttrs(ship)
 		return true
 	end, 0.3)

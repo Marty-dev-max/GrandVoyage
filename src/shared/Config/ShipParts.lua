@@ -15,6 +15,9 @@ end
 
 part("Helm", { name = "Helm", category = "Core", weight = 20, hp = 150, size = Vector3.new(1, 1, 1),
 	required = true, max = 1, crew = 2, color = Color3.fromRGB(150, 95, 55), cost = { beli = 0 } })
+-- v0.25.153 (Plan-Ships-v2 #13): every ship needs a rudder at the stern; a bigger blade turns faster
+part("Rudder", { name = "Rudder", category = "Core", weight = 14, hp = 90, size = Vector3.new(0.25, 1, 0.75),
+	required = true, max = 1, rudder = true, color = Color3.fromRGB(120, 80, 45), material = "Wood", cost = { beli = 200, Wood = 2 } })
 -- Hull
 part("PlankBlock", { name = "Plank Block", category = "Hull", weight = 10, hp = 70,
 	color = Color3.fromRGB(196, 140, 88), material = "WoodPlanks", cost = { beli = 40, Wood = 1 } })
@@ -31,6 +34,9 @@ part("Stairs", { name = "Deck Stairs", category = "Hull", weight = 7, hp = 50, s
 	color = Color3.fromRGB(205, 155, 100), material = "WoodPlanks", cost = { beli = 40, Wood = 1 } })
 part("Railing", { name = "Railing", category = "Hull", weight = 3, hp = 25, railing = true,
 	color = Color3.fromRGB(150, 100, 62), material = "Wood", cost = { beli = 20, Wood = 1 } })
+-- v0.25.153 (Plan-Ships-v2 #22): a ballast keel under the hull: heavy and low (steadier), cuts the heel from the wind
+part("Keel", { name = "Keel", category = "Hull", weight = 40, hp = 120, size = Vector3.new(0.25, 0.5, 3), keel = true,
+	color = Color3.fromRGB(70, 50, 36), material = "Wood", cost = { beli = 400, Wood = 3, IronIngot = 1 } })
 part("TreasureBlock", { name = "Treasure Wood Block", category = "Hull", weight = 12, hp = 320,
 	color = Color3.fromRGB(230, 200, 140), material = "Wood", cost = { beli = 5000, TreasureWood = 1 } })
 -- Sails
@@ -42,13 +48,29 @@ part("JollySail", { name = "Jolly Roger Mast", category = "Sail", weight = 50, h
 	thrust = 78, color = Color3.fromRGB(40, 40, 45), faction = "Pirate", cost = { beli = 8000, SailCloth = 10, TreasureMap = 1 } })
 part("MarineSail", { name = "Marine Mast", category = "Sail", weight = 50, hp = 170, size = Vector3.new(1, 6, 1),
 	thrust = 78, color = Color3.fromRGB(245, 248, 255), faction = "Marine", cost = { beli = 8000, SailCloth = 10, MarineBadge = 20 } })
+-- v0.25.153 (Plan-Ships-v2 #27): a jib on the bow adds sail area cheaply (sails: the best one counts fully, every next
+-- one a bit less; ShipHull.Compute)
+part("Jib", { name = "Jib Sail", category = "Sail", weight = 12, hp = 50, size = Vector3.new(0.25, 3, 1.5), thrust = 22, jib = true,
+	color = Color3.fromRGB(250, 245, 230), cost = { beli = 600, Wood = 2, SailCloth = 3 } })
 part("OarBench", { name = "Oar Bench", category = "Sail", weight = 15, hp = 50, size = Vector3.new(1, 1, 1),
 	oar = 7, color = Color3.fromRGB(170, 120, 75), cost = { beli = 300, Wood = 3 } })
 -- Weapons
+-- v0.25.153 (Plan-Ships-v2 #24 #25): cannon = { damage, range, trav = half traverse arc (deg), reload x, speed x (shot),
+-- bore / len = barrel look, lob = fires over its own ship (mortar) }. Builder scales bore (sx) and barrel length (sz):
+-- a fatter bore hits harder and weighs more, a longer barrel reaches further and flies faster (ShipHull.CannonStats)
+part("Swivel", { name = "Swivel Gun", category = "Weapon", weight = 10, hp = 50, size = Vector3.new(0.5, 1, 0.5),
+	cannon = { damage = 28, range = 170, trav = 120, reload = 0.5, speed = 1.2, bore = 0.22, len = 0.7, swivel = true },
+	color = Color3.fromRGB(150, 120, 70), cost = { beli = 600, IronIngot = 1, Gunpowder = 1 } })
 part("LightCannon", { name = "Light Cannon", category = "Weapon", weight = 30, hp = 90,
-	cannon = { damage = 60, range = 230 }, color = Color3.fromRGB(60, 60, 65), cost = { beli = 1500, IronIngot = 2, Gunpowder = 2 } })
+	cannon = { damage = 60, range = 230, trav = 40, reload = 1, speed = 1, bore = 0.4, len = 1.05 }, color = Color3.fromRGB(60, 60, 65), cost = { beli = 1500, IronIngot = 2, Gunpowder = 2 } })
+part("LongGun", { name = "Long Gun", category = "Weapon", weight = 55, hp = 110,
+	cannon = { damage = 75, range = 340, trav = 32, reload = 1.15, speed = 1.35, bore = 0.36, len = 1.6 }, color = Color3.fromRGB(70, 74, 82), cost = { beli = 4500, IronIngot = 5, Gunpowder = 4 } })
+part("Carronade", { name = "Carronade", category = "Weapon", weight = 45, hp = 120,
+	cannon = { damage = 165, range = 150, trav = 40, reload = 1.1, speed = 0.8, bore = 0.6, len = 0.8 }, color = Color3.fromRGB(40, 40, 44), cost = { beli = 4000, IronIngot = 4, Gunpowder = 4 } })
 part("HeavyCannon", { name = "Heavy Cannon", category = "Weapon", weight = 65, hp = 140,
-	cannon = { damage = 120, range = 270 }, color = Color3.fromRGB(45, 45, 50), cost = { beli = 6000, IronIngot = 6, Gunpowder = 5 } })
+	cannon = { damage = 120, range = 270, trav = 35, reload = 1.3, speed = 1, bore = 0.5, len = 1.25 }, color = Color3.fromRGB(45, 45, 50), cost = { beli = 6000, IronIngot = 6, Gunpowder = 5 } })
+part("Mortar", { name = "Mortar", category = "Weapon", weight = 90, hp = 160,
+	cannon = { damage = 210, range = 380, trav = 180, reload = 2.2, speed = 0.7, bore = 0.75, len = 0.7, lob = true }, color = Color3.fromRGB(55, 52, 50), cost = { beli = 9000, IronIngot = 8, Gunpowder = 6 } })
 -- Cabins / decoration
 part("CrewCabin", { name = "Crew Cabin", category = "Utility", weight = 45, hp = 160, size = Vector3.new(2, 2, 2),
 	crew = 4, color = Color3.fromRGB(180, 120, 80), cost = { beli = 2000, Wood = 10 } })

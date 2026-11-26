@@ -205,18 +205,56 @@ function SM.BuildPart(p, cf, colorOverride)
 			oar.CanCollide = false
 		end
 	elseif def.cannon then
-		local heavy = p.id == "HeavyCannon"
-		main = mk(model, "Part", Vector3.new(G * 0.8, G * 0.35, G * 0.8), Color3.fromRGB(120, 80, 45), cf * CFrame.new(0, -G / 2 + G * 0.175, 0), Enum.Material.Wood)
-		local barrel = cyl(model, G * (heavy and 1.25 or 1.05), G * (heavy and 0.5 or 0.4), color, cf * CFrame.new(0, -G * 0.05, -G * 0.15) * CFrame.Angles(0, math.pi / 2, 0) * CFrame.Angles(0, 0, -0.08), Enum.Material.Metal)
+		-- v0.25.153: barrel look from the kind (bore / len) x the builder's bore (sx) and barrel (sz) scaling
+		local c = def.cannon
+		local bore = G * (c.bore or 0.4) * (p.sx or 1)
+		local len = G * (c.len or 1.05) * (p.sz or 1)
+		local floorY = -G / 2
+		local wood = Color3.fromRGB(120, 80, 45)
+		local barrelCf
+		if c.swivel then
+			main = mk(model, "Part", Vector3.new(0.5, G * 0.55, 0.5), wood, cf * CFrame.new(0, floorY + G * 0.275, 0), Enum.Material.Wood)
+			deco(mk(model, "Part", Vector3.new(0.9, 0.25, 0.9), Color3.fromRGB(70, 70, 76), cf * CFrame.new(0, floorY + G * 0.58, 0), Enum.Material.Metal))
+			barrelCf = cf * CFrame.new(0, floorY + G * 0.66, -len * 0.25)
+		elseif c.lob then
+			-- mortar: a squat block bed, the fat barrel tipped up 45 degrees
+			main = mk(model, "Part", Vector3.new(G * 0.9, G * 0.3, G * 0.9), wood, cf * CFrame.new(0, floorY + G * 0.15, 0), Enum.Material.WoodPlanks)
+			deco(mk(model, "Part", Vector3.new(G * 0.7, G * 0.18, G * 0.7), Color3.fromRGB(70, 70, 76), cf * CFrame.new(0, floorY + G * 0.39, 0), Enum.Material.Metal))
+			barrelCf = cf * CFrame.new(0, floorY + G * 0.3 + bore * 0.5 + len * 0.3, -len * 0.2) * CFrame.Angles(math.rad(45), 0, 0)
+		else
+			main = mk(model, "Part", Vector3.new(math.max(G * 0.8, bore + 1), G * 0.35, math.max(G * 0.8, len * 0.7)), wood, cf * CFrame.new(0, floorY + G * 0.175, 0), Enum.Material.Wood)
+			barrelCf = cf * CFrame.new(0, floorY + G * 0.35 + bore / 2, -len * 0.3) * CFrame.Angles(0.08, 0, 0)
+			for _, side in ipairs({ -1, 1 }) do
+				deco(cyl(model, 0.3, G * 0.4, Color3.fromRGB(70, 45, 25), cf * CFrame.new(side * (main.Size.X / 2 + 0.1), floorY + G * 0.2, 0), Enum.Material.Wood))
+			end
+		end
+		local barrel = mk(model, "Part", Vector3.new(bore, bore, len), color, barrelCf, Enum.Material.Metal)
 		barrel.Name = "Barrel"
 		barrel.CanCollide = false
+		deco(mk(model, "Part", Vector3.new(bore + 0.2, bore + 0.2, 0.3), dark(color, 0.3), barrelCf * CFrame.new(0, 0, -len / 2 + 0.15), Enum.Material.Metal))
+		deco(mk(model, "Part", Vector3.new(bore + 0.14, bore + 0.14, 0.4), dark(color, 0.2), barrelCf * CFrame.new(0, 0, len / 2 - 0.2), Enum.Material.Metal))
 		local muzzle = Instance.new("Attachment")
 		muzzle.Name = "Muzzle"
-		muzzle.Position = Vector3.new(barrel.Size.X / 2, 0, 0) -- local +X = muzzle (faces -Z)
+		muzzle.Position = Vector3.new(0, 0, -len / 2) -- local -Z = muzzle
 		muzzle.Parent = barrel
-		for _, side in ipairs({ -1, 1 }) do
-			local wheel = cyl(model, 0.3, G * 0.4, Color3.fromRGB(70, 45, 25), cf * CFrame.new(side * G * 0.42, -G / 2 + G * 0.2, 0), Enum.Material.Wood)
-			wheel.CanCollide = false
+	elseif def.rudder then
+		-- blade hanging off the stern below the waterline + the post up to the deck
+		main = mk(model, "Part", Vector3.new(0.6, sz.Y * 0.75, sz.Z * 0.8), color, cf * CFrame.new(0, -sz.Y * 0.125, sz.Z * 0.1), material)
+		deco(mk(model, "Part", Vector3.new(0.7, sz.Y, 0.6), dark(color, 0.25), cf * CFrame.new(0, 0, -sz.Z / 2 + 0.3), Enum.Material.Wood))
+		for _, y in ipairs({ -0.3, 0.1 }) do
+			deco(mk(model, "Part", Vector3.new(0.75, 0.25, sz.Z * 0.82), Color3.fromRGB(70, 70, 76), cf * CFrame.new(0, y * sz.Y, sz.Z * 0.1), Enum.Material.Metal))
+		end
+	elseif def.keel then
+		main = mk(model, "Part", sz, color, cf, material)
+		deco(mk(model, "Part", Vector3.new(sz.X + 0.06, 0.35, sz.Z + 0.06), Color3.fromRGB(70, 70, 76), cf * CFrame.new(0, -sz.Y / 2 + 0.17, 0), Enum.Material.Metal))
+	elseif def.jib then
+		-- triangular staysail in block steps: wide at the foot, narrowing to the top, along the part's Z (bow = -Z)
+		main = mk(model, "Part", Vector3.new(0.3, sz.Y, 0.3), Color3.fromRGB(130, 85, 50), cf * CFrame.new(0, 0, -sz.Z / 2 + 0.15), Enum.Material.Wood)
+		local steps = 5
+		for i = 0, steps - 1 do
+			local h = sz.Y / steps
+			local w = sz.Z * (1 - i / steps)
+			deco(mk(model, "Part", Vector3.new(0.2, h + 0.02, w), color, cf * CFrame.new(0, -sz.Y / 2 + (i + 0.5) * h, -sz.Z / 2 + w / 2), Enum.Material.Plaster))
 		end
 	elseif p.id == "CrewCabin" then
 		main = mk(model, "Part", Vector3.new(sz.X, sz.Y * 0.7, sz.Z), color, cf * CFrame.new(0, -sz.Y * 0.15, 0), Enum.Material.WoodPlanks)

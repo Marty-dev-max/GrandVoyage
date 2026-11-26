@@ -37,6 +37,25 @@ H.MinFreeboard = 0.6
 H.FormStability = 2.2 -- blocky hulls: the waterplane counts extra (pure physics made every dinghy capsize)
 H.StarGM = { 0.5, 1.5, 3, 5 } -- GM (studs) for 2..5 stars
 
+-- v0.25.153 (Plan-Ships-v2 #16): what the hull is made of. dens / hp / beli / wood scale the per-volume numbers,
+-- iron = IronIngot per stud^3 (iron-banded hulls), mat = Roblox material of the hull layers, shade = color tint
+H.Materials = {
+	Pine = { name = "PINE", dens = 1, hp = 1, beli = 1, wood = 1, mat = "WoodPlanks", shade = 0 },
+	Oak = { name = "OAK", dens = 1.35, hp = 1.8, beli = 2, wood = 1.5, mat = "Wood", shade = -0.12 },
+	Iron = { name = "IRON", dens = 1.9, hp = 2.8, beli = 2.5, wood = 1, iron = 1 / 90, mat = "Wood", shade = -0.05, bands = true },
+}
+H.MaterialOrder = { "Pine", "Oak", "Iron" }
+function H.MaterialOf(hull)
+	return H.Materials[hull and hull.material or "Pine"] or H.Materials.Pine
+end
+-- sails / oars: the best one counts fully, each next one a bit less (#26: piling on more stops paying off)
+H.SailFalloff = 0.85
+H.OarFalloff = 0.9
+-- cannons: the bore (sx) and barrel (sz) scale range 0.7..1.6
+H.CannonScale = { min = 0.7, max = 1.6 }
+-- groups for the weight breakdown (#20)
+H.Groups = { "Hull", "Guns", "Sails", "Cabins", "Other" }
+
 H.Sections = { "V", "U", "F" }
 H.SectionName = { V = "V KEEL", U = "ROUND", F = "FLAT" }
 H.Zones = { "hull", "bottom", "stripe", "deck", "rail", "sail" }
@@ -59,6 +78,10 @@ function H.ScaleRule(id)
 	end
 	if BLOCKS[id] then
 		return { axes = "xyz", min = 0.25, max = 6 }
+	elseif def.cannon then
+		return { axes = "xz", min = H.CannonScale.min, max = H.CannonScale.max }
+	elseif def.rudder or def.keel then
+		return { axes = "yz", min = 0.5, max = 2.5 }
 	elseif id == "Stairs" or id == "CrewCabin" then
 		return { axes = "xyz", min = 0.5, max = 2.5 }
 	elseif id == "Railing" then
@@ -211,10 +234,41 @@ local function weightScale(it)
 	local rule = H.ScaleRule(it.id)
 	if rule and rule.axes == "u" then
 		return it.sx or 1
+	elseif rule and rule.axes == "xz" then
+		return (it.sx or 1) ^ 2 * (it.sz or 1) -- cannons: bore area x barrel length
 	end
 	return (it.sx or 1) * (it.sy or 1) * (it.sz or 1)
 end
 H.WeightScale = weightScale
+
+-- a cannon's numbers after its bore (sx) / barrel (sz) scaling: bigger bore = harder hits, longer barrel = more
+-- reach + a faster shot (slightly less punch), as in the reference clip
+function H.CannonStats(it)
+	local c = ShipParts[it.id].cannon
+	local bore, len = it.sx or 1, it.sz or 1
+	return {
+		damage = c.damage * bore ^ 1.5 * (1.15 - 0.15 * len),
+		range = c.range * (0.6 + 0.4 * len),
+		speed = (c.speed or 1) * (0.7 + 0.3 * len),
+		reload = (c.reload or 1) * (0.8 + 0.2 * bore),
+		trav = c.trav or 40,
+		lob = c.lob == true,
+	}
+end
+
+local function groupOf(def)
+	if def.cannon then
+		return "Guns"
+	elseif def.thrust or def.oar then
+		return "Sails"
+	elseif def.crew and def.id ~= "Helm" then
+		return "Cabins"
+	elseif def.category == "Hull" then
+		return "Hull"
+	end
+	return "Other"
+end
+H.GroupOf = groupOf
 
 -- ===== physics-lite =====
 function H.Physics(design)
@@ -234,8 +288,9 @@ function H.Physics(design)
 			wallVol += 2 * 0.5 * wall * (r.z1 - r.z0)
 		end
 	end
-	local W = (hullVol + wallVol) * H.Density
-	local mx, my, mz = 0, hullMomY * H.Density + wallVol * H.Density * wall / 2, 0
+	local dens = H.Density * H.MaterialOf(design.hull).dens
+	local W = (hullVol + wallVol) * dens
+	local mx, my, mz = 0, hullMomY * dens + wallVol * dens * wall / 2, 0
 	-- hull z centroid
 	local hz = 0
 	for _, layer in ipairs(sl.layers) do
@@ -243,8 +298,9 @@ function H.Physics(design)
 			hz += 2 * r.hw * (r.z1 - r.z0) * (layer.y1 - layer.y0) * (r.z0 + r.z1) / 2
 		end
 	end
-	mz = hz * H.Density
-	local sailMoment, thrust = 0, 0
+	mz = hz * dens
+	local groups = { Hull = W, Guns = 0, Sails = 0, Cabins = 0, Other = 0 }
+	local sailMoment, thrust, keelArea = 0, 0, 0
 	for _, it in ipairs(H.Expand(design)) do
 		local def = ShipParts[it.id]
 		local w = def.weight * weightScale(it)
@@ -253,13 +309,18 @@ function H.Physics(design)
 		mx += w * it.x
 		my += w * (it.y + size.Y / 2)
 		mz += w * it.z
+		local g = groupOf(def)
+		groups[g] += w
 		if def.thrust then
 			local t = def.thrust * (it.sx or 1) * (it.sy or 1)
 			thrust += t
 			sailMoment += t * (it.y + size.Y * 0.6)
 		end
+		if def.keel then
+			keelArea += size.Y * size.Z
+		end
 	end
-	local r = { weight = W, hullVol = hullVol, hullWeight = (hullVol + wallVol) * H.Density, length = sl.zMax - sl.zMin, depth = sl.D, slices = sl }
+	local r = { weight = W, hullVol = hullVol, hullWeight = (hullVol + wallVol) * dens, length = sl.zMax - sl.zMin, depth = sl.D, slices = sl, groups = groups, keelArea = keelArea }
 	r.xg, r.yg, r.zg = mx / math.max(W, 1), my / math.max(W, 1), mz / math.max(W, 1)
 	-- waterline: fill layers from the keel until the displaced water weighs as much as the ship
 	local need = W / H.Water
@@ -320,7 +381,9 @@ function H.Physics(design)
 	r.list = clamp(r.list, -0.3, 0.3)
 	local gml = math.max(wlLen, 4) ^ 2 / (12 * math.max(r.draft, 1))
 	r.trim = clamp(-math.atan((r.zg - r.zb) / gml), -0.12, 0.12) -- bow heavy -> bow down
-	r.heel = clamp(sailMoment / math.max(W * gm, 1) * 0.05, 0, 0.2)
+	-- wind heel under sail (#22): tall sails on a tender hull lean over; keels resist it (their side area against the
+	-- waterline length)
+	r.heel = clamp(sailMoment / math.max(W * gm, 1) * 0.05 / (1 + keelArea / math.max(wlLen, 8) * 0.8), 0, 0.22)
 	r.thrust = thrust
 	r.wlLength, r.wlBeam = wlLen, wlBeam
 	r.fineness = wlBeam > 0 and wlLen / wlBeam or 3
@@ -339,7 +402,11 @@ function H.Cost(design)
 	for _, layer in ipairs(sl.layers) do
 		vol += layerVolume(layer)
 	end
-	local c = { beli = vol * H.BeliPerVol, Wood = vol * H.WoodPerVol }
+	local mat = H.MaterialOf(design.hull)
+	local c = { beli = vol * H.BeliPerVol * mat.beli, Wood = vol * H.WoodPerVol * mat.wood }
+	if mat.iron then
+		c.IronIngot = vol * mat.iron
+	end
 	for _, it in ipairs(H.Expand(design)) do
 		addCost(c, ShipParts[it.id].cost, math.max(1, weightScale(it)))
 	end
@@ -417,7 +484,7 @@ function H.Sanitize(raw, faction)
 		return nil, "Too short (min 8 studs)"
 	end
 	local h = raw.hull
-	local hull = { nodes = nodes, bow = num(h.bow, 0, 16, 1, 0), stern = num(h.stern, 0, 10, 1, 0), wall = num(h.wall, 0, H.MaxWall, 0.5, 1) }
+	local hull = { nodes = nodes, bow = num(h.bow, 0, 16, 1, 0), stern = num(h.stern, 0, 10, 1, 0), wall = num(h.wall, 0, H.MaxWall, 0.5, 1), material = H.Materials[h.material] and h.material or "Pine" }
 	local L = nodes[#nodes].z
 	local items = {}
 	local count, perId = 0, {}
@@ -445,6 +512,10 @@ function H.Sanitize(raw, faction)
 					sy, sz = num(it.sy, rule.min, rule.max, 0.05, 1), num(it.sz, rule.min, rule.max, 0.05, 1)
 				elseif rule.axes == "xy" then
 					sy, sz = num(it.sy, rule.min, rule.max, 0.05, 1), 1
+				elseif rule.axes == "xz" then
+					sy, sz = 1, num(it.sz, rule.min, rule.max, 0.05, 1)
+				elseif rule.axes == "yz" then
+					sx, sy, sz = 1, num(it.sy, rule.min, rule.max, 0.05, 1), num(it.sz, rule.min, rule.max, 0.05, 1)
 				end
 				table.insert(items, {
 					id = def.id,
@@ -468,24 +539,177 @@ function H.Sanitize(raw, faction)
 	return { v = 2, name = raw.name, hull = hull, items = items, paint = paint }
 end
 
+-- ===== firing arcs (#25) =====
+-- Bearings are degrees in ship space: 0 = toward the bow, 90 = starboard, -90 = port. A cannon turned r faces
+-- bearing -r. Its traverse arc is facing +- trav; inside it, every 5 degrees a shot line is traced at muzzle height
+-- for ARC_REACH studs: it is blocked by another part standing across it or by the bulwark (unless the gun sits at a
+-- gun port). Mortars lob over everything. Result per cannon (H.Expand index): { face, trav, fire = { { lo, hi }... } }
+local ARC_STEP, ARC_REACH = 5, 24
+local function wrap180(a)
+	return (a + 180) % 360 - 180
+end
+H.Wrap180 = wrap180
+
+local function topHalfWidth(sl)
+	local top = sl.layers[#sl.layers]
+	local runs = top and top.runs or {}
+	return function(z)
+		for _, r in ipairs(runs) do
+			if z >= r.z0 and z <= r.z1 then
+				return r.hw
+			end
+		end
+		return 0
+	end
+end
+
+function H.Arcs(design)
+	local list = H.Expand(design)
+	local sl = H.Slices(design.hull)
+	local hwAt = topHalfWidth(sl)
+	local wall = design.hull.wall or 0
+	local boxes = {}
+	for i, it in ipairs(list) do
+		local def = ShipParts[it.id]
+		local size = itemSize(it)
+		local hx, hz = size.X / 2, size.Z / 2
+		if def.thrust and not def.jib then
+			hx, hz = 0.5, 0.5 -- only the mast post stands in the way, the sail is up high
+		end
+		local a = math.rad(it.r or 0)
+		boxes[i] = { x = it.x, z = it.z, y0 = it.y, y1 = it.y + size.Y, hx = hx, hz = hz, c = math.cos(a), s = math.sin(a) }
+	end
+	local out = {}
+	for i, it in ipairs(list) do
+		local def = ShipParts[it.id]
+		if def.cannon then
+			local cs = H.CannonStats(it)
+			local face = wrap180(-(it.r or 0))
+			local size = itemSize(it)
+			local yM = it.y + size.Y * 0.45
+			local hw0 = hwAt(it.z)
+			local port = math.abs(it.y) < 1 and math.abs(it.x) > 1 and math.abs(it.x) > hw0 - 4
+			local fire, cur = {}, nil
+			local trav = math.min(cs.trav, 180)
+			local n = math.floor(trav * 2 / ARC_STEP + 0.5)
+			for k = 0, n do
+				local b = face - trav + k * (trav * 2 / math.max(n, 1))
+				local clear = true
+				if not cs.lob then
+					local dx, dz = math.sin(math.rad(b)), math.cos(math.rad(b))
+					local inside = math.abs(it.x) <= hw0
+					for d = 1, ARC_REACH do
+						local px, pz = it.x + dx * d, it.z + dz * d
+						-- the bulwark (or the deck edge itself when the gun stands below the deck line)
+						local hw = hwAt(pz)
+						local nowInside = math.abs(px) <= hw
+						if inside and not nowInside then
+							local atPort = port and math.abs(pz - it.z) <= 1.6
+							if yM < wall and not atPort then
+								clear = false
+								break
+							end
+							if yM < 0 then
+								clear = false -- below the deck: the hull side itself
+								break
+							end
+						end
+						inside = nowInside
+						for j, bx in ipairs(boxes) do
+							if j ~= i and bx.y0 < yM + 0.3 and bx.y1 > yM - 0.2 then
+								local ox, oz = px - bx.x, -(pz - bx.z)
+								local lx = ox * bx.c - oz * bx.s
+								local lz = ox * bx.s + oz * bx.c
+								if math.abs(lx) <= bx.hx and math.abs(lz) <= bx.hz then
+									clear = false
+									break
+								end
+							end
+						end
+						if not clear then
+							break
+						end
+					end
+				end
+				if clear then
+					if cur then
+						cur[2] = b
+					else
+						cur = { b, b }
+						table.insert(fire, cur)
+					end
+				else
+					cur = nil
+				end
+			end
+			out[i] = { face = face, trav = trav, fire = fire }
+		end
+	end
+	return out
+end
+
+-- is a bearing (degrees) inside one of the fire spans (spans may run past +-180)?
+function H.InArc(fire, bearing)
+	for _, sp in ipairs(fire or {}) do
+		local d = (bearing - sp[1]) % 360
+		if d <= (sp[2] - sp[1]) + 1e-6 then
+			return true
+		end
+	end
+	return false
+end
+function H.ArcString(fire)
+	local t = {}
+	for _, sp in ipairs(fire or {}) do
+		table.insert(t, string.format("%d:%d", math.floor(sp[1] + 0.5), math.floor(sp[2] + 0.5)))
+	end
+	return table.concat(t, ";")
+end
+function H.ArcParse(s)
+	local out = {}
+	for a, b in string.gmatch(s or "", "(%-?%d+):(%-?%d+)") do
+		table.insert(out, { tonumber(a), tonumber(b) })
+	end
+	return out
+end
+
+-- v0.25.153: ships saved before rudders existed get one at the stern (free; DataService + the builder call this)
+function H.EnsureRudder(design)
+	if type(design) ~= "table" or design.v ~= 2 then
+		return false
+	end
+	for _, it in ipairs(design.items or {}) do
+		if it.id == "Rudder" then
+			return false
+		end
+	end
+	local nd = design.hull.nodes[1]
+	table.insert(design.items, { id = "Rudder", x = 0, y = -(nd and nd.d or 3), z = -(design.hull.stern or 0) * 0.3 - 0.5, r = 0, sx = 1, sy = 1, sz = 1 })
+	return true
+end
+
 -- ===== stats for ShipStats.Compute =====
 function H.Compute(design)
 	local ph = H.Physics(design)
-	local r = { weight = ph.weight, hp = math.floor(ph.hullVol * H.HpPerVol), thrust = 0, oars = 0, oarPower = 0, cannons = {}, crewCap = 0, speedBonus = 0, helm = 0, partCount = 0, value = 0 }
+	local mat = H.MaterialOf(design.hull)
+	local r = { weight = ph.weight, hp = math.floor(ph.hullVol * H.HpPerVol * mat.hp), thrust = 0, oars = 0, oarPower = 0, cannons = {}, crewCap = 0, speedBonus = 0, helm = 0, rudder = 0, partCount = 0, value = 0 }
+	local sails, oars = {}, {}
+	local rudderK = 1
+	local arcs = H.Arcs(design)
 	for idx, it in ipairs(H.Expand(design)) do
 		local def = ShipParts[it.id]
 		local k = weightScale(it)
 		r.partCount += 1
 		r.hp += math.floor(def.hp * math.max(1, k))
 		if def.thrust then
-			r.thrust += def.thrust * (it.sx or 1) * (it.sy or 1)
+			table.insert(sails, def.thrust * (it.sx or 1) * (it.sy or 1))
 		end
 		if def.oar then
-			r.oars += 1
-			r.oarPower = def.oar
+			table.insert(oars, def.oar)
 		end
 		if def.cannon then
-			table.insert(r.cannons, { part = it, index = idx, damage = def.cannon.damage, range = def.cannon.range })
+			local cs = H.CannonStats(it)
+			table.insert(r.cannons, { part = it, index = idx, damage = cs.damage, range = cs.range, speed = cs.speed, reload = cs.reload, lob = cs.lob, arcs = arcs[idx] })
 		end
 		if def.crew then
 			r.crewCap += math.max(1, math.floor(def.crew * k + 0.5))
@@ -494,13 +718,37 @@ function H.Compute(design)
 		if it.id == "Helm" then
 			r.helm += 1
 		end
+		if def.rudder then
+			r.rudder += 1
+			rudderK = clamp(0.55 + 0.45 * (it.sy or 1) * (it.sz or 1), 0.6, 1.5)
+		end
 	end
+	-- #26: the best sail / bench counts fully, each next one less; ShipStats.Speed then takes the stronger of the two
+	table.sort(sails, function(a, b)
+		return a > b
+	end)
+	for i, t in ipairs(sails) do
+		r.thrust += t * H.SailFalloff ^ (i - 1)
+	end
+	table.sort(oars, function(a, b)
+		return a > b
+	end)
+	r.oarList = oars
+	r.oars = #oars
+	r.oarPower = oars[1] or 0
 	r.value = (H.Cost(design).beli or 0)
 	-- long, slim hulls run faster; tubby ones slower (Shipshaper: hull shape matters)
 	r.speedBonus += clamp((ph.fineness - 3.2) * 0.06, -0.15, 0.15)
-	r.lengthTurn = clamp(40 / math.max(ph.length, 10), 0.6, 1.3)
+	r.rudderK = rudderK
+	r.lengthTurn = clamp(40 / math.max(ph.length, 10), 0.6, 1.3) * (r.rudder > 0 and rudderK or 0.25)
 	r.phys = ph
-	if ph.sinks then
+	if r.helm < 1 then
+		r.problem = "Needs a helm (Core parts)"
+	elseif r.rudder < 1 then
+		r.problem = "Needs a rudder at the stern (Core parts)"
+	elseif #sails == 0 and #oars == 0 then
+		r.problem = "Needs a sail or an oar bench to move"
+	elseif ph.sinks then
 		r.problem = "Too heavy: it would sink. Make the hull bigger or deeper"
 	elseif ph.floods then
 		r.problem = "Too heavy: water floods the deck. Deepen or widen the hull"
@@ -565,21 +813,34 @@ function H.BuildHull(design, originCf, colorFn, parent)
 	local sl = H.Slices(hull)
 	local nL = #sl.layers
 	local bottomTop = -sl.D * 0.42
+	local mat = H.MaterialOf(hull)
+	local hullMat = Enum.Material[mat.mat] or Enum.Material.Wood
+	local iron = Color3.fromRGB(64, 66, 72)
 	for j, layer in ipairs(sl.layers) do
 		local top = j == nL
 		local h = layer.y1 - layer.y0
 		local base = top and paint.stripe or (layer.y1 <= bottomTop + 0.01 and paint.bottom or paint.hull)
-		base = shade(base, (j % 2 == 0) and -0.07 or 0)
+		base = shade(base, ((j % 2 == 0) and -0.07 or 0) + (top and 0 or mat.shade))
 		for _, r in ipairs(layer.runs) do
 			local len = r.z1 - r.z0
 			local zc = (r.z0 + r.z1) / 2
 			if top then
 				-- top layer = stripe band + the deck on it (WoodPlanks shows boards through MaterialService)
 				local bh = math.max(h - 0.3, 0.2)
-				mk(shell, Vector3.new(2 * r.hw, bh, len), base, originCf * CFrame.new(0, layer.y0 + bh / 2, -zc))
+				mk(shell, Vector3.new(2 * r.hw, bh, len), base, originCf * CFrame.new(0, layer.y0 + bh / 2, -zc), hullMat)
 				mk(shell, Vector3.new(2 * r.hw, h - bh, len), paint.deck, originCf * CFrame.new(0, layer.y1 - (h - bh) / 2, -zc), Enum.Material.WoodPlanks, "Deck")
 			else
-				mk(shell, Vector3.new(2 * r.hw, h, len), base, originCf * CFrame.new(0, (layer.y0 + layer.y1) / 2, -zc))
+				mk(shell, Vector3.new(2 * r.hw, h, len), base, originCf * CFrame.new(0, (layer.y0 + layer.y1) / 2, -zc), hullMat)
+			end
+			-- iron-banded hulls (#16): dark iron straps every 4 studs, a hair proud of the planks
+			if mat.bands and not top then
+				local z = math.ceil(r.z0 / 4) * 4
+				while z <= r.z1 - 0.5 do
+					local band = mk(shell, Vector3.new(2 * r.hw + 0.12, h + 0.02, 0.5), iron, originCf * CFrame.new(0, (layer.y0 + layer.y1) / 2, -z), Enum.Material.Metal, "Band")
+					band.CanCollide = false
+					band.CanQuery = false
+					z += 4
+				end
 			end
 		end
 	end
@@ -713,7 +974,7 @@ function H.New(name)
 		v = 2,
 		name = name or "Ship",
 		hull = { nodes = { { z = 0, w = 4.5, d = 3.5, s = "F" }, { z = 12, w = 5.5, d = 4, s = "U" }, { z = 24, w = 1.5, d = 3, s = "V" } }, bow = 3, stern = 1, wall = 1.5 },
-		items = { { id = "Helm", x = 0, y = 0, z = 4, r = 0, sx = 1, sy = 1, sz = 1 } },
+		items = { { id = "Helm", x = 0, y = 0, z = 4, r = 0, sx = 1, sy = 1, sz = 1 }, { id = "Rudder", x = 0, y = -3.5, z = -0.8, r = 0, sx = 1, sy = 1, sz = 1 } },
 		paint = table.clone(H.DefaultPaint),
 	}
 end
@@ -789,7 +1050,9 @@ function H.FromV1(d1)
 			})
 		end
 	end
-	return { v = 2, name = d1.name, hull = { nodes = nodes, bow = 2, stern = 0, wall = 0 }, items = items, paint = table.clone(H.DefaultPaint) }
+	local d2 = { v = 2, name = d1.name, hull = { nodes = nodes, bow = 2, stern = 0, wall = 0 }, items = items, paint = table.clone(H.DefaultPaint) }
+	H.EnsureRudder(d2)
+	return d2
 end
 
 return H

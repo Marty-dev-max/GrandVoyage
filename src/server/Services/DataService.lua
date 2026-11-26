@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local GameConfig = require(Shared.Config.GameConfig)
 local ShipStats = require(Shared.Modules.ShipStats)
+local ShipHull = require(Shared.Modules.ShipHull)
 local Islands = require(Shared.Config.Islands)
 local Looks = require(Shared.Config.Looks)
 
@@ -204,6 +205,10 @@ function DataService.Load(player, slot)
 			table.insert(data.inventory, { uid = uid, id = "Knuckles_Plain", qty = 1, refine = 0, cards = {} })
 		end
 		data.equipment.weapon = uid
+	end
+	-- v0.25.153: rudders became required; free-form ships saved before get one at the stern
+	for _, sh in ipairs(data.ships or {}) do
+		pcall(ShipHull.EnsureRudder, sh)
 	end
 	-- v0.24.0: the old 5 x 11 starter "dinghy" was the size of a sloop; swap it for the new small one
 	for i, sh in ipairs(data.ships or {}) do

@@ -32,6 +32,7 @@ local gui, scaleObj, screens = nil, nil, {}
 local hidden = {} -- ScreenGui -> Enabled it wants once the menu closes
 local hideConns = {}
 local slots = {} -- [i] = summary | false
+local slotsLoaded = false -- v0.25.156: until MenuSlots answers, the stage stays empty (it showed the default look)
 local bankSpins = 0 -- bought spins on the account (any slot can use them)
 local slotLocked = {} -- [i] = true while a paid slot is still locked
 local current = 1 -- selected slot
@@ -439,6 +440,13 @@ local function show(name)
 	camMode = (name == "edit" and "edit") or (name == "slots" and "slots") or "title"
 	if name == "title" then
 		editing = nil
+	end
+	if not slotsLoaded and not editing then
+		if preview then
+			preview:Destroy()
+			preview, previewKey = nil, nil
+		end
+		return
 	end
 	local look, her, var = selectedLook()
 	showPreview(look, her, var)
@@ -1407,6 +1415,7 @@ function Menu.LoadSlots()
 			return
 		end
 		slots = res.data.slots or {}
+		slotsLoaded = true
 		slotLocked = res.data.locked or {}
 		bankSpins = res.data.bank or 0
 		local best, bestT = 1, -1

@@ -373,19 +373,25 @@ local function cannonsOf(ship)
 	return list
 end
 -- v0.25.155 (#31): with a crow's nest the aim shows the range: distance to the pointer / the gun's reach
-local rangeGui
+-- v0.25.156: a screen label over the landing mark (the first try, a BillboardGui on the mark, never drew in Play)
+local rangeGui, rangeLabel
 local tagged = false
 local function rangeTag(mark, target, c)
 	if not rangeGui then
-		rangeGui = New("BillboardGui", { Name = "RangeTag", Size = UDim2.fromOffset(150, 34), StudsOffsetWorldSpace = Vector3.new(0, 7, 0), AlwaysOnTop = true, LightInfluence = 0 })
-		UI.Text(rangeGui, "", 18, T.Gold, "Display", { Name = "T", Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false, TextStrokeTransparency = 0.2 })
+		rangeGui = New("ScreenGui", { Name = "GVRangeTag", IgnoreGuiInset = true, ResetOnSpawn = false, DisplayOrder = 5 })
+		rangeLabel = UI.Text(rangeGui, "", 18, T.Gold, "Display", { AnchorPoint = Vector2.new(0.5, 1), Size = UDim2.fromOffset(170, 28), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false })
+		rangeLabel.TextStrokeTransparency = 0.1
+		rangeLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
+	end
+	local sp, onScreen = workspace.CurrentCamera:WorldToViewportPoint(mark.Position + Vector3.new(0, 4, 0))
+	if not onScreen then
+		return
 	end
 	local dist = Vector3.new(target.X - c.pos.X, 0, target.Z - c.pos.Z).Magnitude
-	local t = rangeGui:FindFirstChild("T")
-	t.Text = math.floor(dist) .. " / " .. math.floor(c.range)
-	t.TextColor3 = dist <= c.range and Color3.fromRGB(255, 225, 120) or Color3.fromRGB(255, 110, 90)
-	rangeGui.Adornee = mark
-	rangeGui.Parent = aimFolder -- (a BillboardGui under PlayerGui did not draw here)
+	rangeLabel.Text = math.floor(dist) .. " / " .. math.floor(c.range)
+	rangeLabel.TextColor3 = dist <= c.range and Color3.fromRGB(255, 225, 120) or Color3.fromRGB(255, 110, 90)
+	rangeLabel.Position = UDim2.fromOffset(sp.X, sp.Y)
+	rangeGui.Parent = player:FindFirstChildOfClass("PlayerGui")
 	tagged = true
 end
 local function drawAim(ship, target)

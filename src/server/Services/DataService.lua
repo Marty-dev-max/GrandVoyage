@@ -533,27 +533,69 @@ local function summary(data)
 end
 
 -- every slot of a player: { [1] = summary | false, ... } (reads each slot key; no session lock)
-function DataService.ListSlots(player)
-	local out = {}
+-- v0.25.156: the slot keys are read at the same time (one after another took ~3 DataStore round trips before the
+-- title menu could show your character), and PrefetchSlots starts them as the player joins
+local function readSlots(player)
+	local out, failed, left = {}, false, Looks.Slots
 	for slot = 1, Looks.Slots do
-		local data
-		local cached = menuCache[player] and menuCache[player][slot]
-		if useMemory then
-			data = memSlots[player.UserId] and memSlots[player.UserId][slot]
-		elseif cached then
-			data = cached.data
-		else
-			local ok, res = pcall(function()
-				return store:GetAsync(keyFor(player.UserId, slot))
-			end)
-			if not ok then
-				return nil, "Could not read your characters, try again"
+		task.spawn(function()
+			local data
+			local cached = menuCache[player] and menuCache[player][slot]
+			if useMemory then
+				data = memSlots[player.UserId] and memSlots[player.UserId][slot]
+			elseif cached then
+				data = cached.data
+			else
+				local ok, res = pcall(function()
+					return store:GetAsync(keyFor(player.UserId, slot))
+				end)
+				failed = failed or not ok
+				data = ok and res and res.data or nil
 			end
-			data = res and res.data
-		end
-		out[slot] = summary(data) or false
+			out[slot] = summary(data) or false
+			left -= 1
+		end)
+	end
+	while left > 0 do
+		task.wait()
+	end
+	if failed then
+		return nil, "Could not read your characters, try again"
 	end
 	return out
+end
+local slotPeek = {} -- [player] = { done, list, err } from PrefetchSlots, used once by the first ListSlots
+function DataService.PrefetchSlots(player)
+	local p = { done = false }
+	slotPeek[player] = p
+	task.spawn(DataService.BankSpins, player.UserId)
+	for i = 1, Looks.Slots do
+		task.spawn(DataService.SlotUnlocked, player.UserId, i)
+	end
+	task.spawn(function()
+		p.list, p.err = readSlots(player)
+		p.done = true
+	end)
+end
+function DataService.ListSlots(player)
+	local p = slotPeek[player]
+	if p then
+		slotPeek[player] = nil
+		local t0 = os.clock()
+		while not p.done and os.clock() - t0 < 15 do
+			task.wait()
+		end
+		if p.done and p.list then
+			for slot = 1, Looks.Slots do
+				local cached = menuCache[player] and menuCache[player][slot]
+				if cached then
+					p.list[slot] = summary(cached.data) or false -- an edit made meanwhile wins
+				end
+			end
+			return p.list
+		end
+	end
+	return readSlots(player)
 end
 
 -- change a slot that is NOT being played (look, Heritage spin, or create it). fn(data) edits the table in place.
@@ -665,6 +707,7 @@ function DataService.Start()
 		end
 	end)
 	Players.PlayerRemoving:Connect(function(pl)
+		slotPeek[pl] = nil
 		DataService.FlushMenu(pl, true)
 		bankKnown[pl.UserId], bankTake[pl.UserId], bankWrite[pl.UserId] = nil, nil, nil
 		acctBoosts[pl.UserId] = nil

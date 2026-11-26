@@ -543,6 +543,7 @@ end
 
 local function onPlayerAdded(player)
 	if GameConfig.TitleMenu then
+		R.DataService.PrefetchSlots(player) -- ready by the time the client's menu asks (MenuSlots)
 		return -- waits on the title menu (MenuPlay)
 	end
 	enterGame(player, 1)

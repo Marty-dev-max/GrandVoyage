@@ -704,8 +704,8 @@ function H.Arcs(design)
 		local def = ShipParts[it.id]
 		local size = itemSize(it)
 		local hx, hz = size.X / 2, size.Z / 2
-		if def.thrust and not def.jib then
-			hx, hz = 0.5, 0.5 -- only the mast post stands in the way, the sail is up high
+		if (def.thrust and not def.jib) or def.spyglass then
+			hx, hz = 0.5, 0.5 -- only the mast / crow's nest post stands in the way, the rest is up high
 		elseif def.conform == "rail" or def.conform == "awning" or def.flagLine then
 			hx, hz = 0, 0 -- open rails / canvas overhead / flag strings: the guns shoot through
 		end
@@ -781,6 +781,19 @@ function H.Arcs(design)
 	return out
 end
 
+-- v0.25.155 (#34): the side (1 starboard, -1 port) of the gun port a deck-edge cannon fires through, nil = none
+-- (same rule as the bulwark gaps in BuildHull)
+function H.PortSide(design, it)
+	local def = ShipParts[it.id]
+	if not (def and def.cannon) or math.abs(it.y) >= 1 or math.abs(it.x) <= 1 then
+		return nil
+	end
+	if math.abs(it.x) > topHalfWidth(H.Slices(design.hull))(it.z) - 4 then
+		return it.x > 0 and 1 or -1
+	end
+	return nil
+end
+
 -- is a bearing (degrees) inside one of the fire spans (spans may run past +-180)?
 function H.InArc(fire, bearing)
 	for _, sp in ipairs(fire or {}) do
@@ -830,7 +843,7 @@ end
 function H.Compute(design)
 	local ph = H.Physics(design)
 	local mat = H.MaterialOf(design.hull)
-	local r = { weight = ph.weight, hp = math.floor(ph.hullVol * H.HpPerVol * mat.hp), thrust = 0, oars = 0, oarPower = 0, cannons = {}, crewCap = 0, speedBonus = 0, helm = 0, rudder = 0, partCount = 0, value = 0 }
+	local r = { weight = ph.weight, hp = math.floor(ph.hullVol * H.HpPerVol * mat.hp), thrust = 0, oars = 0, oarPower = 0, cannons = {}, crewCap = 0, speedBonus = 0, helm = 0, rudder = 0, partCount = 0, value = 0, specials = 0, kegs = 0, pumps = 0, spyglass = false }
 	local sails, oars = {}, {}
 	local rudderK = 1
 	local arcs = H.Arcs(design)
@@ -845,10 +858,15 @@ function H.Compute(design)
 		if def.oar then
 			table.insert(oars, def.oar)
 		end
-		if def.cannon then
+		if def.cannon and def.cannon.special then
+			r.specials += 1 -- v0.25.155: harpoon / fire pot, fired on their own key, not in the broadside
+		elseif def.cannon then
 			local cs = H.CannonStats(it)
 			table.insert(r.cannons, { part = it, index = idx, damage = cs.damage, range = cs.range, speed = cs.speed, reload = cs.reload, lob = cs.lob, arcs = arcs[idx] })
 		end
+		r.kegs += def.kegs or 0
+		r.pumps += def.pump and 1 or 0
+		r.spyglass = r.spyglass or def.spyglass == true
 		if def.crew then
 			r.crewCap += math.max(1, math.floor(def.crew * k + 0.5))
 		end
@@ -1085,6 +1103,26 @@ function H.BuildHull(design, originCf, colorFn, parent)
 					local a, b = math.min(r.hw, nxt.hw) - 0.5, math.max(r.hw, nxt.hw)
 					mk(shell, Vector3.new(b - a, wall, 0.5), paint.hull, originCf * CFrame.new(side * (a + b) / 2, wall / 2, -r.z1), Enum.Material.Wood, "Wall")
 					mk(shell, Vector3.new(b - a + 0.1, 0.3, 0.8), paint.rail, originCf * CFrame.new(side * (a + b) / 2, wall + 0.15, -r.z1), Enum.Material.Wood, "Rail")
+				end
+			end
+		end
+		-- v0.25.155 (#34): a lid on every gun port, shut (flush with the bulwark) and open (swung up and out, red
+		-- inside); clients show one of the two (Controllers/Sailing: open after a shot, shut on the low side in a heel)
+		local hwAt = topHalfWidth(sl)
+		for _, side in ipairs({ -1, 1 }) do
+			for _, pt in ipairs(ports[side]) do
+				local z = (pt[1] + pt[2]) / 2
+				local hw = hwAt(z)
+				if hw > 0 and pt[3] > hw - 4 then
+					local len = pt[2] - pt[1]
+					local shut = mk(shell, Vector3.new(0.4, wall, len), shade(paint.hull, -0.12), originCf * CFrame.new(side * (hw - 0.2), wall / 2, -z), Enum.Material.WoodPlanks, "PortShut")
+					local open = mk(shell, Vector3.new(0.4, wall, len), Color3.fromRGB(176, 52, 44), originCf * CFrame.new(side * hw, wall, -z) * CFrame.Angles(0, 0, side * math.rad(75)) * CFrame.new(-side * 0.2, -wall / 2, 0), Enum.Material.WoodPlanks, "PortOpen")
+					for _, lid in ipairs({ shut, open }) do
+						lid.CanCollide = false
+						lid.CanQuery = false
+						lid:SetAttribute("PortSide", side)
+					end
+					open.Transparency = 1
 				end
 			end
 		end

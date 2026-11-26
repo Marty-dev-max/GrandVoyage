@@ -51,6 +51,7 @@ local dirty = { hull = false, items = false }
 local last = { hull = 0, items = 0 }
 local drag = nil
 local adoptSave = false
+local testWork -- v0.25.155 (#21): the unsaved design out on a TEST SAIL, restored when you come back
 local cam = { yaw = 0, pitch = 0.55, dist = 80, target = Vector3.zero, turning = false }
 local CAT_ICON = { Core = "ship", Hull = "wood", Sail = "cloth", Weapon = "gunpowder", Utility = "anchor", Decor = "flag" }
 local selMirror = false -- the clicked model was the mirror copy (#11: delete only that side)
@@ -1340,7 +1341,7 @@ local function buildPanel()
 	end)
 	UI.Button(b1, "UNDO", T.Grey, UDim2.new(0.4, -3, 1, -6), undo)
 	local b2 = buttonRow(panel, 9, 46)
-	UI.Button(b2, "⛵ LAUNCH", T.Ocean, UDim2.new(0.6, -3, 1, -6), function()
+	UI.Button(b2, "⛵ LAUNCH", T.Ocean, UDim2.new(0.38, -3, 1, -6), function()
 		local function go()
 			local res = Net.Request("LaunchShip", { slot = State.build.slot })
 			if not res.ok then
@@ -1355,7 +1356,20 @@ local function buildPanel()
 			go()
 		end
 	end)
-	UI.Button(b2, "EXIT", T.Grey, UDim2.new(0.4, -3, 1, -6), function()
+	-- v0.25.155 (Plan-Ships-v2 #21): sail the design as it is now (unsaved, free, no damage) near the yard, with your
+	-- own wind and time of day; BACK TO SHIPYARD on the ship card brings you back with the edits
+	UI.Button(b2, "TEST", T.Purple, UDim2.new(0.34, -3, 1, -6), function()
+		local copy = ShipHull.Clone(work)
+		testWork = copy
+		local res = Net.Request("TestSail", { design = copy })
+		if not res.ok then
+			testWork = nil
+			status(res.msg or "Cannot test", T.Red)
+		else
+			UI.Banner("Test Sail", "W/S sails  •  A/D steer  •  BACK TO SHIPYARD when done", T.Purple)
+		end
+	end)
+	UI.Button(b2, "EXIT", T.Grey, UDim2.new(0.28, -3, 1, -6), function()
 		if isDirty() then
 			UI.Confirm("Leave without saving?\nYour changes are lost.", function()
 				Net.Request("BuildExit")
@@ -1912,6 +1926,10 @@ function Builder.OnState(data)
 				undoStack = {}
 				selItem, pick, selNode = nil, nil, 2
 			end
+		end
+		if testWork and not was then
+			work = testWork -- back from a test sail: the edits you tried are still yours to save
+			testWork = nil
 		end
 		adoptSave = false
 		if not gui then

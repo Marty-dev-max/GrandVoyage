@@ -2050,7 +2050,38 @@ handlers.Cannonball = function(d)
 	local dist = (d.to - d.from).Magnitude
 	-- v0.25.153: mortar shells (lob) climb high and drop onto the target
 	local arc = d.lob and math.clamp(dist * 0.45, 30, 140) or math.clamp(dist * 0.12, 6, 40)
-	VFX.Projectile(d.from, d.to, Color3.fromRGB(35, 35, 40), d.lob and 2.2 or 1.6, d.t, arc, Color3.fromRGB(150, 150, 150))
+	if d.kind == "harpoon" then
+		-- v0.25.155: a flat-flying iron harpoon trailing rope; a fire pot = an orange pot trailing flame
+		VFX.Projectile(d.from, d.to, Color3.fromRGB(170, 175, 185), 0.9, d.t, math.clamp(dist * 0.04, 2, 10), Color3.fromRGB(200, 170, 120))
+	elseif d.kind == "firepot" then
+		VFX.Projectile(d.from, d.to, Color3.fromRGB(255, 130, 40), 1.8, d.t, arc, Color3.fromRGB(255, 90, 30))
+	else
+		VFX.Projectile(d.from, d.to, Color3.fromRGB(35, 35, 40), d.lob and 2.2 or 1.6, d.t, arc, Color3.fromRGB(150, 150, 150))
+	end
+end
+-- v0.25.155 (#29): the harpoon line between the two ships while it holds
+handlers.HarpoonLine = function(d)
+	if typeof(d.a) ~= "Instance" or typeof(d.b) ~= "Instance" or not d.a.Parent or not d.b.Parent then
+		return
+	end
+	local a0 = Instance.new("Attachment")
+	a0.Position = Vector3.new(0, 3, 0)
+	a0.Parent = d.a
+	local a1 = Instance.new("Attachment")
+	a1.Position = Vector3.new(0, 3, 0)
+	a1.Parent = d.b
+	local beam = Instance.new("Beam")
+	beam.Attachment0, beam.Attachment1 = a0, a1
+	beam.Width0, beam.Width1 = 0.35, 0.35
+	beam.FaceCamera = true
+	beam.CurveSize0, beam.CurveSize1 = -6, 6
+	beam.Color = ColorSequence.new(Color3.fromRGB(190, 150, 100))
+	beam.LightInfluence = 1
+	beam.Segments = 16
+	beam.Parent = a0
+	local life = math.clamp(tonumber(d.t) or 6, 1, 10)
+	Debris:AddItem(a0, life)
+	Debris:AddItem(a1, life)
 end
 handlers.Splash = function(d)
 	VFX.Splash(d.pos, 10)

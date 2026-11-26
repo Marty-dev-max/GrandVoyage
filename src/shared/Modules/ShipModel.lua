@@ -238,6 +238,17 @@ function SM.BuildPart(p, cf, colorOverride)
 		muzzle.Name = "Muzzle"
 		muzzle.Position = Vector3.new(0, 0, -len / 2) -- local -Z = muzzle
 		muzzle.Parent = barrel
+		if c.special == "harpoon" then
+			-- v0.25.155: a barbed iron head out of the muzzle + a rope coil by the bed
+			local steel = Color3.fromRGB(170, 175, 185)
+			deco(mk(model, "Part", Vector3.new(bore * 0.6, bore * 0.6, 0.9), steel, barrelCf * CFrame.new(0, 0, -len / 2 - 0.45), Enum.Material.Metal))
+			deco(mk(model, "Part", Vector3.new(bore * 2.2, 0.18, 0.35), steel, barrelCf * CFrame.new(0, 0, -len / 2 - 0.55), Enum.Material.Metal))
+			deco(mk(model, "Part", Vector3.new(0.9, 0.35, 0.9), Color3.fromRGB(205, 175, 120), cf * CFrame.new(main.Size.X / 2 + 0.3, floorY + 0.18, 0.4), Enum.Material.Fabric))
+		elseif c.special == "firepot" then
+			-- a clay pot in the bucket with a little flame on top
+			deco(mk(model, "Part", Vector3.new(bore * 1.1, bore * 0.9, bore * 1.1), Color3.fromRGB(190, 110, 60), barrelCf * CFrame.new(0, 0, -len / 2 - bore * 0.2), Enum.Material.Slate))
+			deco(mk(model, "Part", Vector3.new(bore * 0.5, bore * 0.5, bore * 0.5), Color3.fromRGB(255, 150, 40), barrelCf * CFrame.new(0, bore * 0.2, -len / 2 - bore * 0.7), Enum.Material.Neon))
+		end
 	elseif def.rudder then
 		-- blade hanging off the stern below the waterline + the post up to the deck
 		main = mk(model, "Part", Vector3.new(0.6, sz.Y * 0.75, sz.Z * 0.8), color, cf * CFrame.new(0, -sz.Y * 0.125, sz.Z * 0.1), material)
@@ -445,10 +456,58 @@ function SM.BuildPart(p, cf, colorOverride)
 			end
 		end
 		local light = Instance.new("PointLight")
+		light.Name = "ShipLamp" -- v0.25.155 (#33): switched by the ship's Lights attribute (Controllers/Sailing)
 		light.Range = 22
 		light.Brightness = 1.6
 		light.Color = Color3.fromRGB(255, 200, 120)
 		light.Parent = main
+		main:SetAttribute("Lamp", true)
+	elseif def.light == "spot" then
+		-- v0.25.155 (#33): searchlight = iron drum on a post, glass front (local -Z), a SpotLight beam ahead
+		local iron = color
+		local floorY = -sz.Y / 2
+		deco(mk(model, "Part", Vector3.new(0.35, sz.Y * 0.5, 0.35), iron, cf * CFrame.new(0, floorY + sz.Y * 0.25, 0), Enum.Material.Metal))
+		local drum = deco(mk(model, "Part", Vector3.new(sz.X * 0.8, sz.Y * 0.5, sz.Z * 0.8), iron, cf * CFrame.new(0, floorY + sz.Y * 0.7, 0.1), Enum.Material.Metal))
+		main = mk(model, "Part", Vector3.new(sz.X * 0.62, sz.Y * 0.38, 0.15), Color3.fromRGB(255, 240, 200), cf * CFrame.new(0, floorY + sz.Y * 0.7, 0.1 - drum.Size.Z / 2 - 0.05), Enum.Material.Neon)
+		local spot = Instance.new("SpotLight")
+		spot.Name = "ShipLamp"
+		spot.Face = Enum.NormalId.Front
+		spot.Angle = 38
+		spot.Range = 60
+		spot.Brightness = 5
+		spot.Color = Color3.fromRGB(255, 240, 210)
+		spot.Parent = main
+		main:SetAttribute("Lamp", true)
+	elseif def.kegs then
+		-- v0.25.155 (#30): a low rack with three powder kegs on their sides (black bands, a red skull mark)
+		local floorY = -sz.Y / 2
+		main = mk(model, "Part", Vector3.new(sz.X * 0.9, 0.4, sz.Z * 0.9), dark(color, 0.1), cf * CFrame.new(0, floorY + 0.2, 0), Enum.Material.WoodPlanks)
+		for i = -1, 1 do
+			local kcf = cf * CFrame.new(i * sz.X * 0.28, floorY + 0.4 + sz.X * 0.13, 0)
+			deco(mk(model, "Part", Vector3.new(sz.X * 0.26, sz.X * 0.26, sz.Z * 0.7), color, kcf, Enum.Material.Wood))
+			for _, zz in ipairs({ -0.25, 0.25 }) do
+				deco(mk(model, "Part", Vector3.new(sz.X * 0.28, sz.X * 0.28, 0.15), Color3.fromRGB(40, 40, 44), kcf * CFrame.new(0, 0, zz * sz.Z), Enum.Material.Metal))
+			end
+			deco(mk(model, "Part", Vector3.new(0.3, 0.3, 0.05), Color3.fromRGB(200, 50, 45), kcf * CFrame.new(0, 0, -sz.Z * 0.35 - 0.03), Enum.Material.SmoothPlastic))
+		end
+	elseif def.spyglass then
+		-- v0.25.155 (#31): crow's nest = a post up to a round lookout basket, a spyglass on the rim
+		local floorY = -sz.Y / 2
+		main = mk(model, "Part", Vector3.new(0.6, sz.Y * 0.85, 0.6), color, cf * CFrame.new(0, floorY + sz.Y * 0.425, 0), material)
+		local basketY = floorY + sz.Y * 0.85
+		deco(mk(model, "Part", Vector3.new(sz.X * 0.9, 0.3, sz.Z * 0.9), dark(color, 0.1), cf * CFrame.new(0, basketY, 0), Enum.Material.WoodPlanks))
+		for i = 0, 7 do
+			local a = i * math.pi / 4
+			deco(mk(model, "Part", Vector3.new(sz.X * 0.4, sz.Y * 0.12, 0.25), dark(color, 0.2), cf * CFrame.new(math.sin(a) * sz.X * 0.42, basketY + sz.Y * 0.06 + 0.15, math.cos(a) * sz.Z * 0.42) * CFrame.Angles(0, a, 0), Enum.Material.Wood))
+		end
+		deco(mk(model, "Part", Vector3.new(0.22, 0.22, 1.4), GOLD_TRIM, cf * CFrame.new(0.6, basketY + sz.Y * 0.12 + 0.4, -sz.Z * 0.42) * CFrame.Angles(0.25, 0, 0), Enum.Material.Metal))
+	elseif def.pump then
+		-- v0.25.155 (#32): bilge pump = a square barrel with a rocking handle and a spout over the side
+		local floorY = -sz.Y / 2
+		main = mk(model, "Part", Vector3.new(sz.X * 0.7, sz.Y * 0.8, sz.Z * 0.7), color, cf * CFrame.new(0, floorY + sz.Y * 0.4, 0), Enum.Material.Wood)
+		deco(mk(model, "Part", Vector3.new(sz.X * 0.75, 0.15, sz.Z * 0.75), Color3.fromRGB(70, 70, 76), cf * CFrame.new(0, floorY + sz.Y * 0.65, 0), Enum.Material.Metal))
+		deco(mk(model, "Part", Vector3.new(0.2, 0.2, sz.Z * 1.1), Color3.fromRGB(70, 70, 76), cf * CFrame.new(0, floorY + sz.Y * 0.95, 0) * CFrame.Angles(0.3, 0, 0), Enum.Material.Metal))
+		deco(mk(model, "Part", Vector3.new(0.35, 0.35, 0.8), dark(color, 0.2), cf * CFrame.new(sz.X * 0.45, floorY + sz.Y * 0.55, 0) * CFrame.Angles(0, math.pi / 2, 0), Enum.Material.Wood))
 	else
 		main = mk(model, "Part", sz, color, cf, material)
 	end

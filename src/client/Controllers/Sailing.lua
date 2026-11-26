@@ -70,7 +70,7 @@ local zoneInfo = {
 -- v0.25.113 (owner: the panel hid behind the character card, too much small text): a compact card ABOVE the character
 -- card: name + HP, four big readouts (speed / wind / sails / guns), the zone chip, the reload bar, four buttons
 local function buildHud()
-	local f = New("Frame", { Name = "ShipHUD", AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 16, 1, -192), Size = UDim2.fromOffset(340, 220), BackgroundColor3 = Color3.new(1, 1, 1), Visible = false, Parent = UI.Root })
+	local f = New("Frame", { Name = "ShipHUD", AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 16, 1, -192), Size = UDim2.fromOffset(340, 262), BackgroundColor3 = Color3.new(1, 1, 1), Visible = false, Parent = UI.Root })
 	UI.Corner(f, 14)
 	New("UIGradient", { Color = ColorSequence.new(T.PanelTop, T.PanelDeep), Rotation = 90, Parent = f })
 	UI.Stroke(f, T.Edge, 3)
@@ -114,7 +114,79 @@ local function buildHud()
 		local res = Net.Request("DockShip")
 		UI.Toast(res.msg or (res.ok and "Docked" or "Cannot dock"), res.ok and "good" or "bad") -- v0.25.117 (owner): no bell
 	end)
-	hud = { frame = f, name = name, hp = hp, zone = zone, zoneText = zoneText, speedT = speedT, windT = windT, sailT = sailT, gunT = gunT, reload = reload }
+	-- v0.25.155 (Plan-Ships-v2 phase 3): special weapons (R), powder kegs (X), the lamps switch
+	local row2 = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 36), LayoutOrder = 7, Parent = f })
+	UI.List(row2, Enum.FillDirection.Horizontal, 4)
+	local function btn2(text, color, w, order, fn)
+		local b, holder = UI.Button(row2, text, color, UDim2.fromOffset(w, 34), fn)
+		holder.LayoutOrder = order
+		return b, holder
+	end
+	local specialB, specialH = btn2("R: HARPOON", T.Purple, 110, 1, function()
+		Sailing.FireAtNearest("FireSpecial")
+	end)
+	local kegB, kegH = btn2("X: KEG", T.Orange, 100, 2, function()
+		Sailing.DropKeg()
+	end)
+	local lightB = btn2("LAMPS AUTO", T.Gold, 106, 3, function()
+		local ship = myShip()
+		if ship then
+			local nextMode = ({ auto = "on", on = "off", off = "auto" })[ship:GetAttribute("Lights") or "auto"]
+			task.spawn(Net.Request, "ShipLights", { mode = nextMode })
+		end
+	end)
+	hud = { frame = f, name = name, hp = hp, zone = zone, zoneText = zoneText, speedT = speedT, windT = windT, sailT = sailT, gunT = gunT, reload = reload,
+		specialB = specialB, specialH = specialH, kegB = kegB, kegH = kegH, lightB = lightB }
+end
+
+-- v0.25.155 (#21): the TEST SAIL panel above the ship card: wind and time of day to try, then back to the builder
+local testHud
+local function buildTestHud()
+	local f = New("Frame", { Name = "TestSailHUD", AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 16, 1, -462), Size = UDim2.fromOffset(340, 132), BackgroundColor3 = Color3.new(1, 1, 1), Visible = false, Parent = UI.Root })
+	UI.Corner(f, 12)
+	New("UIGradient", { Color = ColorSequence.new(T.PanelTop, T.PanelDeep), Rotation = 90, Parent = f })
+	UI.Stroke(f, T.Edge, 3)
+	UI.Pad(f, 8)
+	UI.List(f, nil, 5)
+	UI.Text(f, "TEST SAIL  -  nothing is paid, no damage", 12, T.Gold, "Display", { Size = UDim2.new(1, 0, 0, 14), TextWrapped = false, TextXAlignment = Enum.TextXAlignment.Center, LayoutOrder = 1 })
+	local wind = 1
+	local windRow = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 30), LayoutOrder = 2, Parent = f })
+	UI.List(windRow, Enum.FillDirection.Horizontal, 4).VerticalAlignment = Enum.VerticalAlignment.Center
+	local windT
+	local function setWind(w)
+		wind = math.clamp(w, 0, 1.5)
+		windT.Text = "WIND " .. math.floor(wind * 100 + 0.5) .. "%"
+		task.spawn(Net.Request, "ShipTestWind", { wind = wind })
+	end
+	local _, h1 = UI.Button(windRow, "-", T.OceanDark, UDim2.fromOffset(44, 28), function()
+		setWind(wind - 0.25)
+	end)
+	h1.LayoutOrder = 1
+	windT = UI.Text(windRow, "WIND 100%", 14, T.Text, "Display", { Size = UDim2.fromOffset(150, 28), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false, LayoutOrder = 2 })
+	local _, h2 = UI.Button(windRow, "+", T.Ocean, UDim2.fromOffset(44, 28), function()
+		setWind(wind + 0.25)
+	end)
+	h2.LayoutOrder = 3
+	local timeRow = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 30), LayoutOrder = 3, Parent = f })
+	UI.List(timeRow, Enum.FillDirection.Horizontal, 4)
+	for i, c in ipairs({ { "DAY", 13 }, { "DUSK", 18.3 }, { "NIGHT", 23 }, { "LIVE", false } }) do
+		local _, h = UI.Button(timeRow, c[1], T.Gold, UDim2.fromOffset(77, 28), function()
+			Atmos.SetClock(c[2] or nil)
+		end)
+		h.LayoutOrder = i
+	end
+	local _, hb = UI.Button(f, "BACK TO SHIPYARD", T.Green, UDim2.new(1, 0, 0, 32), function()
+		Atmos.SetClock(nil)
+		local res = Net.Request("TestSailEnd")
+		if not res.ok and res.msg then
+			UI.Toast(res.msg, "bad")
+		end
+	end)
+	hb.LayoutOrder = 4
+	testHud = { frame = f, reset = function()
+		wind = 1
+		windT.Text = "WIND 100%"
+	end }
 end
 
 local function sailText()
@@ -133,6 +205,13 @@ local function updateHud(ship)
 	end
 	local show = ship ~= nil and aboard(ship)
 	hud.frame.Visible = show
+	local testing = ship ~= nil and ship:GetAttribute("Test") == true
+	if testHud then
+		if testing and not testHud.frame.Visible then
+			testHud.reset()
+		end
+		testHud.frame.Visible = testing
+	end
 	if show and not wasVisible then
 		UI.Pop(hud.frame, 0.7)
 	end
@@ -141,8 +220,22 @@ local function updateHud(ship)
 		return
 	end
 	local hp, max = ship:GetAttribute("HP") or 0, ship:GetAttribute("MaxHP") or 1
-	hud.name.Text = ship:GetAttribute("ShipName") or "Ship"
-	hud.hp:Set(hp / max, UI.Format(hp) .. " / " .. UI.Format(max))
+	hud.name.Text = (ship:GetAttribute("Test") and "TEST: " or "") .. (ship:GetAttribute("ShipName") or "Ship")
+	local flood = ship:GetAttribute("Flood") or 0
+	hud.hp:Set(hp / max, UI.Format(hp) .. " / " .. UI.Format(max) .. (flood >= 1 and "  LEAKING" or ""))
+	-- v0.25.155: special weapons / kegs / lamps
+	local specials = ship:GetAttribute("Specials") or 0
+	hud.specialH.Visible = specials > 0
+	if specials > 0 then
+		local left = (ship:GetAttribute("SpecialEnd") or 0) - workspace:GetServerTimeNow()
+		hud.specialB.Text = left > 0 and string.format("R: %.1fs", left) or "R: HARPOON"
+	end
+	local kegs = ship:GetAttribute("Kegs")
+	hud.kegH.Visible = kegs ~= nil
+	if kegs then
+		hud.kegB.Text = "X: KEG " .. kegs
+	end
+	hud.lightB.Text = "LAMPS " .. string.upper(ship:GetAttribute("Lights") or "auto")
 	hud.hp:SetColor(hp / max < 0.3 and T.Red or T.Green)
 	local z = zoneInfo[ship:GetAttribute("Zone") or "Lane"] or zoneInfo.Lane
 	hud.zoneText.Text = z.text
@@ -183,7 +276,8 @@ local function fire(target)
 	end)
 end
 
-function Sailing.FireAtNearest()
+-- what = "FireCannons" (F) or "FireSpecial" (R: harpoon guns / fire pots, v0.25.155)
+function Sailing.FireAtNearest(what)
 	local ship = myShip()
 	if not ship or not ship.PrimaryPart then
 		return
@@ -191,6 +285,14 @@ function Sailing.FireAtNearest()
 	if not seated(ship) then
 		UI.Toast("Take the helm to fire the cannons", "info")
 		return
+	end
+	local fire = function(target)
+		task.spawn(function()
+			local res = Net.Request(what or "FireCannons", { target = target })
+			if not res.ok and res.msg and not res.throttled then
+				UI.Toast(res.msg, "bad")
+			end
+		end)
 	end
 	local best, bestD = nil, 280
 	local pos = ship.PrimaryPart.Position
@@ -220,6 +322,15 @@ function Sailing.FireAtNearest()
 	end
 end
 
+function Sailing.DropKeg()
+	task.spawn(function()
+		local res = Net.Request("DropKeg")
+		if not res.ok and res.msg and not res.throttled then
+			UI.Toast(res.msg, "bad")
+		end
+	end)
+end
+
 -- ===== cannon aim preview (v0.25.53, owner reference: broadside lines out of the ship's side, a bow gun's line
 -- straight ahead, both dropping like the real ball) =====
 -- The same cannons the server would fire (Ship volley: facing within ~75 deg of the target, best aligned first,
@@ -245,7 +356,7 @@ local function cannonsOf(ship)
 	local list = {}
 	for _, child in ipairs(ship:GetChildren()) do
 		local def = ShipParts[child.Name]
-		if def and def.cannon and child.PrimaryPart then
+		if def and def.cannon and not def.cannon.special and child.PrimaryPart then
 			local barrel = child:FindFirstChild("Barrel", true)
 			local muzzle = barrel and barrel:FindFirstChild("Muzzle")
 			local arcs = child:GetAttribute("Arcs")
@@ -261,8 +372,25 @@ local function cannonsOf(ship)
 	end
 	return list
 end
+-- v0.25.155 (#31): with a crow's nest the aim shows the range: distance to the pointer / the gun's reach
+local rangeGui
+local tagged = false
+local function rangeTag(mark, target, c)
+	if not rangeGui then
+		rangeGui = New("BillboardGui", { Name = "RangeTag", Size = UDim2.fromOffset(150, 34), StudsOffsetWorldSpace = Vector3.new(0, 7, 0), AlwaysOnTop = true, LightInfluence = 0 })
+		UI.Text(rangeGui, "", 18, T.Gold, "Display", { Name = "T", Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false, TextStrokeTransparency = 0.2 })
+	end
+	local dist = Vector3.new(target.X - c.pos.X, 0, target.Z - c.pos.Z).Magnitude
+	local t = rangeGui:FindFirstChild("T")
+	t.Text = math.floor(dist) .. " / " .. math.floor(c.range)
+	t.TextColor3 = dist <= c.range and Color3.fromRGB(255, 225, 120) or Color3.fromRGB(255, 110, 90)
+	rangeGui.Adornee = mark
+	rangeGui.Parent = player:FindFirstChildOfClass("PlayerGui")
+	tagged = true
+end
 local function drawAim(ship, target)
 	local used = 0
+	tagged = false
 	if ship and target then
 		local chosen = {}
 		local look = ship.PrimaryPart and ship.PrimaryPart.CFrame.LookVector or Vector3.new(0, 0, -1)
@@ -338,11 +466,17 @@ local function drawAim(ship, target)
 				mark.Color = color
 				mark.Size = Vector3.new(6, 0.2, 6)
 				mark.CFrame = CFrame.new(land)
+				if c == lanes[1] and ship:GetAttribute("Spyglass") then
+					rangeTag(mark, target, c)
+				end
 			end
 		end
 	end
 	for i = used + 1, #aimPool do
 		aimPool[i].Parent = nil
+	end
+	if rangeGui and not tagged then
+		rangeGui.Parent = nil
 	end
 end
 
@@ -387,8 +521,59 @@ end
 local pendingZone, pendingSince = nil, 0
 local creak -- hull creak loop (Sound) while aboard your ship
 
+-- v0.25.155 (#33 #34): every ship's lamps (Lights attribute: auto = lit at night) and gun-port lids (PortsOpen after a
+-- shot, PortShut = the side that heels toward the water), drawn locally for all ships
+local shipParts = setmetatable({}, { __mode = "k" }) -- ship model -> { lamps, lids }
+local function partsOf(ship)
+	local e = shipParts[ship]
+	if not e then
+		e = { lamps = {}, lids = {} }
+		for _, d in ipairs(ship:GetDescendants()) do
+			if d:IsA("Light") and d.Name == "ShipLamp" then
+				table.insert(e.lamps, d)
+			elseif d:IsA("BasePart") and (d.Name == "PortShut" or d.Name == "PortOpen") then
+				table.insert(e.lids, d)
+			end
+		end
+		shipParts[ship] = e
+	end
+	return e
+end
+local function updateShipLooks()
+	local ships = workspace:FindFirstChild("Ships")
+	if not ships then
+		return
+	end
+	local night = Atmos.IsNight()
+	for _, ship in ipairs(ships:GetChildren()) do
+		local e = partsOf(ship)
+		local mode = ship:GetAttribute("Lights") or "auto"
+		local lit = mode == "on" or (mode == "auto" and night)
+		for _, l in ipairs(e.lamps) do
+			l.Enabled = lit
+			local glass = l.Parent
+			if glass and glass:IsA("BasePart") then
+				glass.Material = lit and Enum.Material.Neon or Enum.Material.Glass
+			end
+		end
+		local open = ship:GetAttribute("PortsOpen") == true
+		local shut = ship:GetAttribute("PortShut") or 0
+		for _, lid in ipairs(e.lids) do
+			local isOpen = open and lid:GetAttribute("PortSide") ~= shut
+			lid.Transparency = ((lid.Name == "PortOpen") == isOpen) and 0 or 1
+		end
+	end
+end
+
 function Sailing.Start()
 	buildHud()
+	buildTestHud()
+	task.spawn(function()
+		while true do
+			task.wait(0.25)
+			pcall(updateShipLooks)
+		end
+	end)
 	aimMarker = Instance.new("Part")
 	aimMarker.Name = "AimMarker"
 	aimMarker.Anchored = true
@@ -421,6 +606,20 @@ function Sailing.Start()
 			end
 		elseif input.KeyCode == Enum.KeyCode.F then
 			Sailing.FireAtNearest()
+		elseif input.KeyCode == Enum.KeyCode.R then
+			local p = not UI.IsMobile and waterPoint(UserInputService:GetMouseLocation())
+			if p and (p - ship.PrimaryPart.Position).Magnitude < 300 then
+				task.spawn(function()
+					local res = Net.Request("FireSpecial", { target = p })
+					if not res.ok and res.msg and not res.throttled then
+						UI.Toast(res.msg, "bad")
+					end
+				end)
+			else
+				Sailing.FireAtNearest("FireSpecial")
+			end
+		elseif input.KeyCode == Enum.KeyCode.X then
+			Sailing.DropKeg()
 		elseif input.KeyCode == Enum.KeyCode.E then
 			local res = Net.Request("DockShip")
 			if res.msg then

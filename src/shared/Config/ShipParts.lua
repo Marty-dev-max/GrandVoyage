@@ -84,6 +84,17 @@ part("HeavyCannon", { name = "Heavy Cannon", category = "Weapon", weight = 65, h
 	cannon = { damage = 120, range = 270, trav = 35, reload = 1.3, speed = 1, bore = 0.5, len = 1.25 }, color = Color3.fromRGB(45, 45, 50), cost = { beli = 6000, IronIngot = 6, Gunpowder = 5 } })
 part("Mortar", { name = "Mortar", category = "Weapon", weight = 90, hp = 160,
 	cannon = { damage = 210, range = 380, trav = 180, reload = 2.2, speed = 0.7, bore = 0.75, len = 0.7, lob = true }, color = Color3.fromRGB(55, 52, 50), cost = { beli = 9000, IronIngot = 8, Gunpowder = 6 } })
+-- v0.25.155 (Plan-Ships-v2 #29 #30): special weapons, fired from the helm with R (not in the cannon broadside):
+-- a harpoon gun (the hit ship is slowed while the line holds) and a fire-pot thrower (lobbed, sets the deck burning)
+part("Harpoon", { name = "Harpoon Gun", category = "Weapon", weight = 25, hp = 80, size = Vector3.new(0.5, 1, 0.75),
+	cannon = { damage = 40, range = 210, trav = 50, reload = 1.6, speed = 1.3, bore = 0.25, len = 1.4, special = "harpoon" },
+	color = Color3.fromRGB(110, 90, 70), cost = { beli = 2500, Wood = 2, IronIngot = 2 } })
+part("FirePot", { name = "Fire-Pot Thrower", category = "Weapon", weight = 35, hp = 90,
+	cannon = { damage = 30, range = 200, trav = 180, reload = 2.4, speed = 0.75, bore = 0.55, len = 0.6, lob = true, special = "firepot" },
+	color = Color3.fromRGB(150, 80, 40), cost = { beli = 3000, Wood = 3, IronIngot = 1, Gunpowder = 2 } })
+-- powder kegs dropped astern with X (a floating mine that blows up under a hostile hull); each rack holds 3, refills
+part("KegRack", { name = "Powder Keg Rack", category = "Weapon", weight = 30, hp = 60, kegs = 3,
+	color = Color3.fromRGB(120, 80, 48), cost = { beli = 2000, Wood = 2, Gunpowder = 3 } })
 -- Cabins / decoration
 part("CrewCabin", { name = "Crew Cabin", category = "Utility", weight = 45, hp = 160, size = Vector3.new(2, 2, 2),
 	crew = 4, color = Color3.fromRGB(180, 120, 80), cost = { beli = 2000, Wood = 10 } })
@@ -95,6 +106,14 @@ part("Barrel", { name = "Barrel", category = "Utility", weight = 6, hp = 20,
 	color = Color3.fromRGB(160, 108, 64), cost = { beli = 60, Wood = 1 } })
 part("Lantern", { name = "Lantern", category = "Utility", weight = 3, hp = 10, slab = true,
 	color = Color3.fromRGB(255, 220, 120), light = true, cost = { beli = 100 } })
+-- v0.25.155 (#31 #32 #33): crow's nest (range readout in the cannon aim), bilge pumps (less flooding damage),
+-- searchlight (a beam ahead at night; LIGHTS on the ship HUD switches every lamp auto / on / off)
+part("CrowsNest", { name = "Crow's Nest", category = "Utility", weight = 15, hp = 60, size = Vector3.new(1, 3, 1), spyglass = true, max = 1,
+	color = Color3.fromRGB(150, 100, 62), material = "Wood", cost = { beli = 1200, Wood = 4 } })
+part("BilgePump", { name = "Bilge Pump", category = "Utility", weight = 12, hp = 40, size = Vector3.new(0.5, 0.75, 0.5), pump = true,
+	color = Color3.fromRGB(120, 82, 50), cost = { beli = 800, Wood = 1, IronIngot = 1 } })
+part("Searchlight", { name = "Searchlight", category = "Utility", weight = 6, hp = 15, size = Vector3.new(0.5, 0.5, 0.5), light = "spot",
+	color = Color3.fromRGB(60, 60, 66), cost = { beli = 600, IronIngot = 1 } })
 part("Awning", { name = "Awning", category = "Utility", weight = 8, hp = 20, size = Vector3.new(2, 1.1, 2), conform = "awning",
 	color = Color3.fromRGB(246, 241, 226), cost = { beli = 250, Wood = 2, SailCloth = 2 } })
 -- v0.25.154 (#12 #35): decor. wall = true parts stick to walls and hull sides (they face out of the face you click)

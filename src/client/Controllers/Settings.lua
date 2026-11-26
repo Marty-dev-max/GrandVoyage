@@ -26,6 +26,7 @@ Settings.Values = {
 	rangeRings = true,
 	navGuide = true,
 	activeSet = 3, -- v0.25.71 (new players start on Basic: Heavy Attack is ready from Lv1): the skill set the hotbar shows (keys 1-6, Shared/Modules/SkillSets)
+	shipEasy = false, -- v0.25.155 (Plan-Ships-v2 #23): Easy ship physics = the hull stays level (ShipService reads it)
 	keys = "", -- rebound hotkeys (Controllers/Hotkeys), "Action=Key;..."
 }
 

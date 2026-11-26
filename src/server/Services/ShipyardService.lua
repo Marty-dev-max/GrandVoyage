@@ -66,33 +66,84 @@ function Yard.ExitBuild(player)
 	end
 end
 
+local testing = {} -- v0.25.155 (#21): player -> { slot, standCf } while a test sail is out
+
+local function enter(player, slot)
+	local p = R.DataService.Get(player)
+	if R.ShipService.GetShipOf(player) then
+		return false, "Dock your ship before editing"
+	end
+	local plot = R.WorldBuilder.FreePlotNear(player, plotOwner)
+	if not plot then
+		return false, "Go to a shipyard with a free slip"
+	end
+	Yard.ExitBuild(player)
+	if not p.ships[slot] then
+		-- v0.25.154 (owner review of the first build): an empty slot starts as a free Dinghy that can sail at once
+		-- (it used to be a bare hull with a helm and no sail)
+		p.ships[slot] = ShipPresets.Starter("Ship " .. slot)
+	elseif ShipPresets.IsOld(p.ships[slot]) then
+		-- an old grid ship (DataService rebuilds them on load; this catches one that slipped through)
+		p.ships[slot] = ShipPresets.Rebuild(p.ships[slot])
+	end
+	p.activeShip = slot
+	sessions[player] = { plot = plot, slot = slot }
+	plotOwner[plot] = player
+	R.PlayerService.TeleportTo(player, plot.standCf)
+	render(player)
+	R.PlayerService.MarkDirty(player)
+	return true
+end
+
 local function setup()
 	Net.Handle("BuildEnter", function(player, data)
 		local p = R.DataService.Get(player)
-		local slot = math.clamp(math.floor(tonumber(data.slot) or p.activeShip or 1), 1, MAX_SLOTS)
-		if R.ShipService.GetShipOf(player) then
-			return false, "Dock your ship before editing"
+		return enter(player, math.clamp(math.floor(tonumber(type(data) == "table" and data.slot) or p.activeShip or 1), 1, MAX_SLOTS))
+	end, 1)
+
+	-- v0.25.155 (Plan-Ships-v2 #21): TEST SAIL the design you are editing, unsaved and unpaid, from the yard's dock.
+	-- It cannot be hurt, fights nobody and stays near the yard (ShipService.Launch testDesign); the wind is yours to
+	-- set (ShipTestWind). TestSailEnd puts you back in the builder with your edits.
+	Net.Handle("TestSail", function(player, data)
+		local s = sessions[player]
+		if not s then
+			return false, "Not in build mode"
 		end
-		local plot = R.WorldBuilder.FreePlotNear(player, plotOwner)
-		if not plot then
-			return false, "Go to a shipyard with a free slip"
+		local p = R.DataService.Get(player)
+		local clean, msg = ShipHull.Sanitize(type(data) == "table" and data.design, p.faction)
+		if not clean then
+			return false, msg
 		end
+		clean.name = design(player, s.slot).name
+		local st = statsFor(player, clean)
+		if not st.valid then
+			return false, st.problem or "This ship cannot sail yet"
+		end
+		local dock = R.WorldBuilder.NearestDock(s.plot.part.Position)
+		if not dock then
+			return false, "No dock near this yard"
+		end
+		local slot, standCf = s.slot, s.plot.standCf
 		Yard.ExitBuild(player)
-		if not p.ships[slot] then
-			-- v0.25.154 (owner review of the first build): an empty slot starts as a free Dinghy that can sail at once
-			-- (it used to be a bare hull with a helm and no sail)
-			p.ships[slot] = ShipPresets.Starter("Ship " .. slot)
-		elseif ShipPresets.IsOld(p.ships[slot]) then
-			-- an old grid ship (DataService rebuilds them on load; this catches one that slipped through)
-			p.ships[slot] = ShipPresets.Rebuild(p.ships[slot])
+		local ok, why = R.ShipService.Launch(player, slot, dock.launchCf, clean)
+		if not ok then
+			enter(player, slot)
+			return false, why
 		end
-		p.activeShip = slot
-		sessions[player] = { plot = plot, slot = slot }
-		plotOwner[plot] = player
-		R.PlayerService.TeleportTo(player, plot.standCf)
-		render(player)
-		R.PlayerService.MarkDirty(player)
+		testing[player] = { slot = slot, standCf = standCf }
 		return true
+	end, 2)
+
+	Net.Handle("TestSailEnd", function(player)
+		local t = testing[player]
+		testing[player] = nil
+		R.ShipService.EndTest(player)
+		if not t then
+			return false, "No test sail out"
+		end
+		R.PlayerService.TeleportTo(player, t.standCf)
+		task.wait(0.3)
+		return enter(player, t.slot)
 	end, 1)
 
 	Net.Handle("BuildExit", function(player)
@@ -233,7 +284,10 @@ end
 function Yard.Start()
 	setup()
 	setupPresets()
-	Players.PlayerRemoving:Connect(Yard.ExitBuild)
+	Players.PlayerRemoving:Connect(function(player)
+		testing[player] = nil
+		Yard.ExitBuild(player)
+	end)
 end
 
 return Yard

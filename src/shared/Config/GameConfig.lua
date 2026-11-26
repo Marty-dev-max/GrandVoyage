@@ -4,10 +4,12 @@ return {
 	LogoLines = { "LARPTALES", "VOXEL SEAS" },
 	LogoImage = 133908417032160, -- v0.25.87: pixel logo board floating behind the menu character (tools/gen_logo.py); nil = text logo
 	-- bump on every change: shown bottom-right in game and printed in Output, so you can tell which code is running
-	Version = "0.25.154",
+	Version = "0.25.155",
 	SagaName = "Azure East Saga",
 	-- title menu UPDATE LOG lines (newest first, keep 3-4 short ones)
 	UpdateNotes = {
+		"Test Sail your ship; harpoons, fire pots, powder kegs",
+		"Gun ports, bilge pumps, crow's nest, ship lamps",
 		"Shipyard: castles, balconies, flags, windows, themes",
 		"Old ships rebuilt; right-click menu in the shipyard",
 		"Ships need a rudder; Pine, Oak or Iron hulls; keels",

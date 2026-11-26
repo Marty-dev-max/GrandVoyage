@@ -1449,9 +1449,9 @@ function Combat.Start()
 	for i = 1, GameConfig.SkillBarSize do
 		Hotkeys.On("Skill" .. i, function()
 			local key = Hotkeys.Key("Skill" .. i)
-			-- E still talks / opens what you stand by (a prompt card is up), and at your ship's helm E docks and F fires
-			-- the cannons (Sailing): those keys pass on there instead of casting
-			if State.build.active or (key == "E" and Interact.AnyShown()) or ((key == "E" or key == "F") and atHelm()) then
+			-- E still talks / opens what you stand by (a prompt card is up), and at your ship's helm E docks, F fires
+			-- the cannons, R the harpoon / fire pots and X drops a powder keg (Sailing): those keys pass on there
+			if State.build.active or (key == "E" and Interact.AnyShown()) or ((key == "E" or key == "F" or key == "R" or key == "X") and atHelm()) then
 				return false
 			end
 			local id = State.profile and Combat.BarId(i)

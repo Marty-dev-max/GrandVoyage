@@ -97,7 +97,7 @@ local function buildShip(design, cf, opts)
 	root.Parent = model
 	model.PrimaryPart = root
 
-	local cannonParts = {}
+	local cannonParts, specialParts = {}, {}
 	local partList = ShipStats.Parts(design)
 	-- v0.25.153 (#24 #25): v2 cannons carry their scaled stats + firing arcs (ShipHull.Arcs); the arcs ride on the
 	-- cannon model as attribute "Arcs" so the client's aim preview picks the same guns
@@ -116,8 +116,10 @@ local function buildShip(design, cf, opts)
 					child:SetAttribute("Arcs", ShipHull.ArcString(c.fire))
 					child:SetAttribute("Face", arcs[idx] and arcs[idx].face or 0)
 					child:SetAttribute("Range", math.floor(c.range))
+					c.port = not c.lob and ShipHull.PortSide(design, partList[idx]) or nil -- v0.25.155 (#34)
 				end
-				table.insert(cannonParts, c)
+				c.special = pdef.cannon.special
+				table.insert(c.special and specialParts or cannonParts, c)
 			end
 		end
 	end
@@ -174,6 +176,7 @@ local function buildShip(design, cf, opts)
 		damageBy = {},
 		seaKings = {},
 		cannons = cannonParts,
+		specials = specialParts,
 		seat = model:FindFirstChild("HelmSeat", true),
 		list = phys and phys.list or 0, -- static lean from an off-centre load (v2 hulls)
 		trim = phys and phys.trim or 0,
@@ -198,6 +201,29 @@ local function setAttrs(ship)
 	m:SetAttribute("Cannons", #ship.cannons)
 	m:SetAttribute("Manned", ship.stats and ship.stats.cannonsManned or 0)
 	m:SetAttribute("Crew", ship.stats and ship.stats.crew or 0)
+	-- v0.25.155 (Plan-Ships-v2 phase 3): water in the hull, gun-port lids, kegs, the special weapons' reload
+	m:SetAttribute("Flood", math.floor(ship.flood or 0))
+	m:SetAttribute("PortsOpen", os.clock() < (ship.portsUntil or 0))
+	m:SetAttribute("PortShut", ship.portShut or 0)
+	if ship.kegMax then
+		m:SetAttribute("Kegs", ship.kegs or 0)
+	end
+	if ship.specials and #ship.specials > 0 then
+		m:SetAttribute("SpecialEnd", ship.specialEnd or 0)
+	end
+end
+
+-- v0.25.155 (#34): which side's gun ports are shut because that side dips toward the water (1 starboard, -1 port)
+local PORT_HEEL = 0.15
+-- v0.25.155 (#32): every hit lets in water worth FLOOD_PER_DMG of its damage; each second FLOOD_LEAK of that water
+-- turns into hull damage, each bilge pump cuts that damage (PUMP_CUT each, at most PUMP_MIN left) and drains faster
+local FLOOD_PER_DMG, FLOOD_LEAK, PUMP_CUT, PUMP_MIN = 0.25, 0.12, 0.6, 0.2
+local function portShutSide(ship)
+	if ship.easy then
+		return 0
+	end
+	local roll = ship.rollNow or 0
+	return roll < -PORT_HEEL and 1 or (roll > PORT_HEEL and -1 or 0)
 end
 
 function Ship.GetShipOf(player)
@@ -258,8 +284,8 @@ end
 
 -- ===== Damage / sinking =====
 local function hostile(a, b)
-	if a == b then
-		return false
+	if a == b or a.test or b.test then
+		return false -- v0.25.155 (#21): a test sail fights nobody and nobody fights it
 	end
 	if a.owner and b.owner then
 		return R.PvPService.ShipsHostile(a.owner, b.owner)
@@ -424,11 +450,15 @@ function Ship.Smash(ship, pos, count)
 	Net.FX("ShipDebris", { pos = pos }, pos, 500)
 end
 
-function Ship.DamageShip(ship, dmg, srcShip, player)
-	if ship.sinking then
+-- noFlood = this damage is the water / fire already in the hull (it adds no more water)
+function Ship.DamageShip(ship, dmg, srcShip, player, noFlood)
+	if ship.sinking or ship.test then
 		return
 	end
 	ship.hp -= dmg
+	if not noFlood then
+		ship.flood = (ship.flood or 0) + dmg * FLOOD_PER_DMG -- v0.25.155 (#32): holed planks let water in
+	end
 	local key = player or (srcShip and srcShip.owner)
 	if key then
 		ship.damageBy[key] = (ship.damageBy[key] or 0) + dmg
@@ -507,7 +537,22 @@ local function overShip(sh, pos, extra)
 	return math.abs(l.X) <= sh.width / 2 + extra and math.abs(l.Z) <= sh.length / 2 + extra
 end
 
-local function impact(pos, damage, srcShip, player, lock)
+-- v0.25.155 (#29): what a special weapon does to a ship it hits
+local HARPOON_SLOW, HARPOON_SECONDS, FIRE_SECONDS = 0.45, 6, 8
+local TEST_RADIUS = 380 -- v0.25.155 (#21): how far a test sail may go from its launch spot
+local function specialHit(gun, s, damage, srcShip, player)
+	if gun.special == "harpoon" then
+		s.slowUntil = os.clock() + HARPOON_SECONDS -- the line holds: that ship drags at HARPOON_SLOW of its speed
+		if srcShip.root and s.root then
+			Net.FX("HarpoonLine", { a = srcShip.root, b = s.root, t = HARPOON_SECONDS }, s.root.Position, 600)
+		end
+	elseif gun.special == "firepot" then
+		s.burn = { untilT = os.clock() + FIRE_SECONDS, dps = damage * 0.5, src = srcShip, player = player }
+		Net.FX("Burning", { model = s.model, seconds = FIRE_SECONDS }, s.root.Position, 600)
+	end
+end
+
+local function impact(pos, damage, srcShip, player, lock, gun)
 	local hitSomething = false
 	for _, s in pairs(ships) do
 		if s ~= srcShip and not s.sinking and hostile(srcShip, s) then
@@ -516,13 +561,16 @@ local function impact(pos, damage, srcShip, player, lock)
 			local extra = cfg.SplashRadius * (s == lock and 0.9 or 0.5)
 			if overShip(s, pos, extra) then
 				Ship.DamageShip(s, damage, srcShip, player)
+				if gun and gun.special and not s.sinking then
+					specialHit(gun, s, damage, srcShip, player)
+				end
 				hitSomething = true
 			end
 		end
 	end
 	if player then
 		for _, mob in ipairs(R.MonsterService.InRadius(pos, cfg.SplashRadius + 4)) do
-			R.MonsterService.Damage(mob, damage * 1.5, player, false, "cannon")
+			R.MonsterService.Damage(mob, damage * 1.5, player, false, gun and gun.special == "firepot" and "fire" or "cannon")
 			hitSomething = true
 		end
 	end
@@ -568,8 +616,8 @@ local function fireBall(from, target, damage, range, srcShip, player, gun)
 		dist = range
 	end
 	local t = dist / shotSpeed + 0.25
-	Net.FX("Cannonball", { from = from, to = target, t = t, lob = gun and gun.lob or nil }, from, 700)
-	task.delay(t, impact, target, damage, srcShip, player, lock)
+	Net.FX("Cannonball", { from = from, to = target, t = t, lob = gun and gun.lob or nil, kind = gun and gun.special or nil }, from, 700)
+	task.delay(t, impact, target, damage, srcShip, player, lock, gun)
 end
 
 -- the target's bearing from a point in the ship's own frame (0 = bow, 90 = starboard), as ShipHull.Arcs counts it
@@ -580,12 +628,14 @@ local function bearingOf(ship, pos, target)
 	return math.deg(math.atan2(to:Dot(right), to:Dot(fwd)))
 end
 
--- returns fired, bearing (how many guns could bear on the target, ready or not)
-local function volley(ship, target, count, damageMult, player, spread, fixedDamage)
+-- returns fired, bearing (how many guns could bear on the target, ready or not), shut (guns behind a shut port)
+-- `guns` = which list (ship.cannons by default; the special weapons use ship.specials)
+local function volley(ship, target, count, damageMult, player, spread, fixedDamage, guns)
 	local chosen = {}
-	local bearing = 0
+	local bearing, shut = 0, 0
 	local now = os.clock()
-	for _, c in ipairs(ship.cannons) do
+	local shutSide = player and portShutSide(ship) or 0
+	for _, c in ipairs(guns or ship.cannons) do
 		local main = c.model.PrimaryPart
 		if main and main.Parent then
 			local pos = c.muzzle and c.muzzle.WorldPosition or main.Position
@@ -602,6 +652,10 @@ local function volley(ship, target, count, damageMult, player, spread, fixedDama
 					local face = main.CFrame.LookVector
 					score = Vector3.new(face.X, 0, face.Z).Unit:Dot(to.Unit)
 					ok = score > 0.25
+				end
+				if ok and c.port and c.port == shutSide then
+					ok = false -- v0.25.155 (#34): that side heels toward the water, its ports are shut
+					shut += 1
 				end
 				if ok then
 					bearing += 1
@@ -633,15 +687,18 @@ local function volley(ship, target, count, damageMult, player, spread, fixedDama
 		end
 		fired += 1
 	end
-	return fired, bearing
+	return fired, bearing, shut
 end
 
 -- ===== Player ships =====
 local addRecruits -- v0.25.142, defined with addCrew below
+local dropKeg -- v0.25.155, defined with the kegs below
 -- `at` (CFrame, optional): where the ship appears (SummonShip in open water); else the nearest dock's launch spot
-function Ship.Launch(player, slot, at)
+-- `testDesign` (v0.25.155, #21): a TEST SAIL of the builder's unsaved design: nothing is paid, it cannot be hurt,
+-- fights nobody and stays near the yard (ShipyardService TestSail)
+function Ship.Launch(player, slot, at, testDesign)
 	local p = R.DataService.Get(player)
-	local design = p.ships[slot]
+	local design = testDesign or p.ships[slot]
 	if not design then
 		return false, "No ship design in that slot"
 	end
@@ -655,7 +712,7 @@ function Ship.Launch(player, slot, at)
 	if not at and (not dock or dock.distance > 160) then
 		return false, "Go to a dock or shipyard"
 	end
-	if p.shipSunk then
+	if p.shipSunk and not testDesign then
 		local cost = math.floor(stats.value * cfg.SinkRepairPct) + 200
 		if not R.PlayerService.AddBeli(player, -cost) then
 			return false, "Your ship is sunk. Repair costs 🪙" .. cost
@@ -667,6 +724,18 @@ function Ship.Launch(player, slot, at)
 	ship.owner = player
 	ship.stats = stats
 	ship.reloadMult = 1 - rb.reload
+	ship.easy = type(p.settings) == "table" and type(p.settings.client) == "table" and p.settings.client.shipEasy == true -- #23
+	ship.pumps = stats.pumps or 0
+	if (stats.kegs or 0) > 0 then
+		ship.kegMax, ship.kegs = stats.kegs, stats.kegs
+	end
+	if testDesign then
+		ship.test = true
+		ship.testFrom = ship.root.Position
+		ship.model:SetAttribute("Test", true)
+	end
+	ship.model:SetAttribute("Spyglass", stats.spyglass == true)
+	ship.model:SetAttribute("Specials", #ship.specials)
 	pcall(addRecruits, ship, p.recruits)
 	ship.maxHp = stats.hp
 	ship.hp = stats.hp
@@ -685,7 +754,7 @@ function Ship.Launch(player, slot, at)
 	t.TextScaled = true
 	t.TextStrokeTransparency = 0.4
 	t.TextColor3 = p.faction == "Marine" and Color3.fromRGB(140, 200, 255) or (p.faction == "Pirate" and Color3.fromRGB(255, 120, 120) or Color3.new(1, 1, 1))
-	t.Text = design.name .. " • " .. player.DisplayName
+	t.Text = (testDesign and "TEST • " or "") .. design.name .. " • " .. player.DisplayName
 	t.Parent = nameplate
 	setAttrs(ship)
 	task.delay(0.4, function()
@@ -748,6 +817,134 @@ function Ship.Patch(s, amount)
 		s.hp = math.min(s.maxHp, s.hp + amount)
 		setAttrs(s)
 	end
+end
+
+-- ===== v0.25.155 (Plan-Ships-v2 phase 3) =====
+-- your own ship, with you at its helm
+local function helmShip(player)
+	local ship = Ship.GetShipOf(player)
+	local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	if ship and hum and hum.SeatPart and hum.SeatPart == ship.seat then
+		return ship
+	end
+	return nil
+end
+
+-- powder kegs (#30): float where they were dropped, arm after KEG_ARM s, blow up under a hostile hull
+local KEG_DAMAGE, KEG_RADIUS, KEG_LIFE, KEG_ARM, KEG_MAX_OUT, KEG_REFILL = 180, 16, 90, 2, 6, 20
+local kegs = {}
+local kegFolder
+function dropKeg(ship, pos) -- (forward-declared above Ship.Start's handlers)
+	local mine = {}
+	for i, k in ipairs(kegs) do
+		if k.src == ship then
+			table.insert(mine, i)
+		end
+	end
+	if #mine >= KEG_MAX_OUT then
+		local k = table.remove(kegs, mine[1])
+		k.part:Destroy()
+	end
+	if not kegFolder then
+		kegFolder = Instance.new("Folder")
+		kegFolder.Name = "PowderKegs"
+		kegFolder.Parent = workspace
+	end
+	local function piece(name, size, color, material, cf, parent)
+		local pt = Instance.new("Part")
+		pt.Name = name
+		pt.Size, pt.Color, pt.Material, pt.CFrame = size, color, material, cf
+		pt.Anchored, pt.CanCollide, pt.CanQuery, pt.CanTouch = true, false, false, false
+		pt.Parent = parent
+		return pt
+	end
+	local cf = CFrame.new(pos) * CFrame.Angles(0, math.random() * 6.28, 0)
+	local body = piece("PowderKeg", Vector3.new(2.6, 2.8, 2.6), Color3.fromRGB(120, 80, 48), Enum.Material.Wood, cf, nil)
+	for _, y in ipairs({ -0.8, 0.8 }) do
+		piece("Band", Vector3.new(2.75, 0.3, 2.75), Color3.fromRGB(40, 40, 44), Enum.Material.Metal, cf * CFrame.new(0, y, 0), body)
+	end
+	piece("Fuse", Vector3.new(0.4, 0.6, 0.4), Color3.fromRGB(255, 120, 40), Enum.Material.Neon, cf * CFrame.new(0, 1.7, 0), body)
+	body.Parent = kegFolder
+	local now = os.clock()
+	table.insert(kegs, { part = body, src = ship, player = ship.owner, armAt = now + KEG_ARM, dieAt = now + KEG_LIFE })
+	Net.FX("Splash", { pos = pos }, pos, 400)
+end
+
+local function kegStep(now)
+	for i = #kegs, 1, -1 do
+		local k = kegs[i]
+		if not k.part.Parent or now > k.dieAt then
+			k.part:Destroy()
+			table.remove(kegs, i)
+		elseif now > k.armAt then
+			local pos = k.part.Position
+			local boom = false
+			for _, s in pairs(ships) do
+				if not s.sinking and s.root and hostile(k.src, s) and overShip(s, pos, 3) then
+					boom = true
+					break
+				end
+			end
+			if boom then
+				for _, s in pairs(ships) do
+					if not s.sinking and s.root and hostile(k.src, s) and overShip(s, pos, KEG_RADIUS * 0.6) then
+						Ship.DamageShip(s, KEG_DAMAGE, k.src, k.player)
+						Ship.Smash(s, pos, 3)
+					end
+				end
+				if k.player and k.player.Parent then
+					for _, mob in ipairs(R.MonsterService.InRadius(pos, KEG_RADIUS)) do
+						R.MonsterService.Damage(mob, KEG_DAMAGE * 1.5, k.player, false, "cannon")
+					end
+				end
+				Net.FX("Explosion", { pos = pos, radius = KEG_RADIUS }, pos, 700)
+				k.part:Destroy()
+				table.remove(kegs, i)
+			end
+		end
+	end
+end
+
+-- once a second: water in the hull hurts it (bilge pumps cut that, #32), fire pots burn (#29), the keg rack refills
+local function slowTick(ship, now)
+	local f = ship.flood or 0
+	if f < 0.5 then
+		ship.flood = 0
+	else
+		local pumps = ship.pumps or 0
+		local leak = f * FLOOD_LEAK
+		ship.flood = math.max(0, f - leak * (1 + pumps * 0.5))
+		local dmg = leak * math.max(PUMP_MIN, PUMP_CUT ^ pumps)
+		if dmg >= 1 then
+			Ship.DamageShip(ship, math.floor(dmg), nil, nil, true)
+		end
+	end
+	local b = ship.burn
+	if b then
+		if now < b.untilT and not ship.sinking then
+			Ship.DamageShip(ship, math.floor(b.dps), b.src, b.player, true)
+		else
+			ship.burn = nil
+		end
+	end
+	if ship.kegMax and ship.kegs < ship.kegMax and now - (ship.kegRefill or now) >= KEG_REFILL then
+		ship.kegs += 1
+		ship.kegRefill = ship.kegs < ship.kegMax and now or nil
+	end
+	if ship.owner then
+		local p = R.DataService.Get(ship.owner)
+		ship.easy = p and type(p.settings) == "table" and type(p.settings.client) == "table" and p.settings.client.shipEasy == true
+	end
+end
+
+-- #21: end a test sail (ShipyardService puts you back in the builder)
+function Ship.EndTest(player)
+	local ship = Ship.GetShipOf(player)
+	if ship and ship.test then
+		despawn(ship)
+		return true
+	end
+	return false
 end
 
 function Ship.RepairOwned(player, pct)
@@ -1324,6 +1521,7 @@ end
 local function stepShip(ship, dt, now)
 	local pos = ship.root.Position
 	local zone, wind = SeaZones.Get(pos)
+	wind = ship.testWind or wind -- v0.25.155 (#21): the test sail's wind slider
 	ship.zone, ship.wind = zone, wind
 	local buff = 0
 	for id, b in pairs(ship.buffs) do
@@ -1345,6 +1543,9 @@ local function stepShip(ship, dt, now)
 			ship.steer = 0
 		end
 	end
+	if (ship.slowUntil or 0) > now then
+		maxSpeed *= HARPOON_SLOW -- v0.25.155 (#29): a harpoon line drags on the hull
+	end
 	ship.maxSpeed = maxSpeed
 	local targetSpeed = ship.throttle >= 0 and ship.throttle * maxSpeed or ship.throttle * math.min(maxSpeed, 10)
 	local accel = targetSpeed > ship.speed and 9 or 14
@@ -1364,6 +1565,15 @@ local function stepShip(ship, dt, now)
 	end
 	if math.abs(pos.Z) > W.HalfZ and math.sign(vel.Z) == math.sign(pos.Z) then
 		vel = Vector3.new(vel.X, 0, 0)
+	end
+	-- v0.25.155 (#21): a test sail stays within TEST_RADIUS of where it was launched
+	if ship.test and ship.testFrom then
+		local off = Vector3.new(pos.X - ship.testFrom.X, 0, pos.Z - ship.testFrom.Z)
+		if off.Magnitude > TEST_RADIUS and vel:Dot(off) > 0 then
+			vel -= off.Unit * vel:Dot(off.Unit)
+			ship.speed = math.min(ship.speed, 6)
+			toast(ship.owner, "Test area edge: turn back (or press BACK TO SHIPYARD)", "info", "testedge")
+		end
 	end
 	-- Red Line / Reverse Mountain
 	local rl = Islands.RedLine
@@ -1394,10 +1604,14 @@ local function stepShip(ship, dt, now)
 	ship.lv.VectorVelocity = vel + Vector3.new(0, vy, 0)
 	-- v0.25.153 (#22): under sail the wind leans the ship over (heel from ShipHull.Physics, cut by keels), more with
 	-- more sail out and a stronger wind
-	local windHeel = -(ship.heel or 0) * ((ship.sailLevel or 0) / 3) * math.clamp(wind, 0, 1.5)
+	-- v0.25.155 (#23): EASY ship physics (player setting) keeps the hull level: no wind heel, list or trim
+	local heel = ship.easy and 0 or (ship.heel or 0)
+	local windHeel = -heel * ((ship.sailLevel or 0) / 3) * math.clamp(wind, 0, 1.5)
 	ship.heelNow = windHeel
-	local roll = math.clamp(math.atan2(hR - hL, 8) * 0.7, -0.12, 0.12) + ship.steer * -(0.05 + (ship.heel or 0) * 0.5) * math.clamp(ship.speed / 40, 0, 1) + (ship.list or 0) + windHeel
-	local pitch = math.clamp(math.atan2(hBow - hStern, 16) * 0.7, -0.1, 0.1) + (ship.trim or 0)
+	local lean = ship.steer * -(0.05 + heel * 0.5) * math.clamp(ship.speed / 40, 0, 1) + (ship.easy and 0 or (ship.list or 0)) + windHeel
+	ship.rollNow = lean -- the steady lean (no wave rocking): gun ports shut on its low side (#34)
+	local roll = math.clamp(math.atan2(hR - hL, 8) * 0.7, -0.12, 0.12) + lean
+	local pitch = math.clamp(math.atan2(hBow - hStern, 16) * 0.7, -0.1, 0.1) + (ship.easy and 0 or (ship.trim or 0))
 	ship.ao.CFrame = CFrame.Angles(0, ship.yaw, 0) * CFrame.Angles(pitch, 0, roll)
 end
 
@@ -1485,8 +1699,12 @@ function Ship.Start()
 		end
 		local d = R.PlayerService.Derived(player) or {}
 		-- v0.25.153: every gun reloads on its own (swivels fast, mortars slow); a shot fires the ready guns that bear
-		local fired, bearing = volley(ship, target, ship.stats.cannonsManned, 1 + (d.cannonDamage or 0), player, 6)
+		local fired, bearing, shut = volley(ship, target, ship.stats.cannonsManned, 1 + (d.cannonDamage or 0), player, 6)
+		ship.portsUntil = now + 8 -- v0.25.155 (#34): the lids swing open for the broadside
 		if fired == 0 then
+			if bearing == 0 and shut > 0 then
+				return false, "Gun ports shut: the ship heels too far (fewer sails)"
+			end
 			return false, bearing > 0 and "Reloading" or "Target is outside your firing arcs (turn broadside)"
 		end
 		ship.lastVolley = now
@@ -1500,6 +1718,76 @@ function Ship.Start()
 		setAttrs(ship)
 		return true
 	end, 0.3)
+
+	-- v0.25.155 (#29): R at the helm fires the special weapons (harpoon guns, fire pots) that bear on the target
+	Net.Handle("FireSpecial", function(player, data)
+		local ship = helmShip(player)
+		if not ship then
+			return false, "Take the helm of your ship"
+		end
+		if #ship.specials == 0 then
+			return false, "No harpoon gun or fire pot on this ship (Weapon parts)"
+		end
+		local target = type(data) == "table" and typeof(data.target) == "Vector3" and data.target
+		if not target or target.X ~= target.X or target.Z ~= target.Z then
+			return false
+		end
+		local d = R.PlayerService.Derived(player) or {}
+		local now = os.clock()
+		local fired, bearing = volley(ship, target, #ship.specials, 1 + (d.cannonDamage or 0), player, 4, nil, ship.specials)
+		if fired == 0 then
+			return false, bearing > 0 and "Reloading" or "Target is outside their firing arcs"
+		end
+		local nextReady = math.huge
+		for _, c in ipairs(ship.specials) do
+			nextReady = math.min(nextReady, c.readyAt or 0)
+		end
+		ship.specialEnd = workspace:GetServerTimeNow() + math.max(0, nextReady - now)
+		setAttrs(ship)
+		return true
+	end, 0.3)
+
+	-- v0.25.155 (#30): X at the helm drops a powder keg astern
+	Net.Handle("DropKeg", function(player)
+		local ship = helmShip(player)
+		if not ship then
+			return false, "Take the helm of your ship"
+		end
+		if not ship.kegMax then
+			return false, "No Powder Keg Rack on this ship (Weapon parts)"
+		end
+		if (ship.kegs or 0) < 1 then
+			return false, "No kegs left: the rack refills slowly"
+		end
+		ship.kegs -= 1
+		ship.kegRefill = ship.kegRefill or os.clock()
+		local at = ship.root.CFrame * CFrame.new(0, 0, ship.length / 2 + 4)
+		dropKeg(ship, Vector3.new(at.X, GameConfig.SeaLevel + 0.6, at.Z))
+		setAttrs(ship)
+		return true
+	end, 0.6)
+
+	-- v0.25.155 (#33): lamps on your ship: "auto" (lit at night), "on", "off" for everyone who sees it
+	Net.Handle("ShipLights", function(player, data)
+		local ship = Ship.GetShipOf(player)
+		local mode = type(data) == "table" and data.mode
+		if not ship or (mode ~= "auto" and mode ~= "on" and mode ~= "off") then
+			return false
+		end
+		ship.model:SetAttribute("Lights", mode)
+		return true
+	end, 0.3)
+
+	-- v0.25.155 (#21): the test sail's wind (0 = dead calm .. 1.5 = a gale)
+	Net.Handle("ShipTestWind", function(player, data)
+		local ship = Ship.GetShipOf(player)
+		local w = type(data) == "table" and tonumber(data.wind)
+		if not ship or not ship.test or not w or w ~= w then
+			return false
+		end
+		ship.testWind = math.clamp(w, 0, 1.5)
+		return true
+	end, 0.2)
 
 	Net.Get("ShipInput").OnServerEvent:Connect(function(player, throttle, steer)
 		local ship = Ship.GetShipOf(player)
@@ -1556,10 +1844,20 @@ function Ship.Start()
 					setAttrs(ship)
 				end
 			end
+			local okK, errK = pcall(kegStep, now)
+			if not okK then
+				warn("[ShipService] kegs:", errK)
+			end
 			if acc >= 1 then
 				acc = 0
 				for _, ship in pairs(ships) do
 					if not ship.sinking then
+						local okT, errT = pcall(slowTick, ship, now)
+						if not okT then
+							warn("[ShipService] tick:", errT)
+						end
+					end
+					if not ship.sinking and not ship.test then
 						if ship.owner then
 							calmBeltTick(ship)
 							-- Discover islands while sailing past

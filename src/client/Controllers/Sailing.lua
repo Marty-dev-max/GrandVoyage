@@ -148,7 +148,7 @@ local function buildTestHud()
 	UI.Stroke(f, T.Edge, 3)
 	UI.Pad(f, 8)
 	UI.List(f, nil, 5)
-	UI.Text(f, "TEST SAIL  -  nothing is paid, no damage", 12, T.Gold, "Display", { Size = UDim2.new(1, 0, 0, 14), TextWrapped = false, TextXAlignment = Enum.TextXAlignment.Center, LayoutOrder = 1 })
+	UI.Text(f, "TEST SAIL: FREE, NO DAMAGE", 12, T.Gold, "Display", { Size = UDim2.new(1, 0, 0, 14), TextWrapped = false, TextXAlignment = Enum.TextXAlignment.Center, LayoutOrder = 1 })
 	local wind = 1
 	local windRow = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 30), LayoutOrder = 2, Parent = f })
 	UI.List(windRow, Enum.FillDirection.Horizontal, 4).VerticalAlignment = Enum.VerticalAlignment.Center
@@ -385,7 +385,7 @@ local function rangeTag(mark, target, c)
 	t.Text = math.floor(dist) .. " / " .. math.floor(c.range)
 	t.TextColor3 = dist <= c.range and Color3.fromRGB(255, 225, 120) or Color3.fromRGB(255, 110, 90)
 	rangeGui.Adornee = mark
-	rangeGui.Parent = player:FindFirstChildOfClass("PlayerGui")
+	rangeGui.Parent = aimFolder -- (a BillboardGui under PlayerGui did not draw here)
 	tagged = true
 end
 local function drawAim(ship, target)

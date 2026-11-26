@@ -599,7 +599,8 @@ function refreshStats()
 				table.insert(parts, string.upper(g) .. " " .. math.floor(w / math.max(ph.weight, 1) * 100 + 0.5) .. "%")
 			end
 		end
-		ui.weights.Text = "WEIGHT  " .. table.concat(parts, "  ")
+		ui.weights.Text = table.concat(parts, "  ")
+		ui.weights.TextWrapped = false
 	end
 	ui.stats.stab.TextColor3 = ph.stars >= 3 and T.Green or ph.stars >= 1 and T.Gold or T.Red
 	ui.stats.free.TextColor3 = (ph.sinks or ph.floods) and T.Red or T.Text
@@ -662,7 +663,11 @@ local function fmt(v)
 	return (math.abs(v - math.floor(v)) < 0.01) and tostring(math.floor(v)) or string.format("%.1f", v)
 end
 
-local function hullTab(body)
+local function hullTab(outer)
+	-- scrolls: the hull controls are taller than the panel on small screens
+	local body = UI.Scroll(outer)
+	UI.List(body, nil, 5)
+	New("UIPadding", { PaddingRight = UDim.new(0, 10), Parent = body })
 	local n = nodes()
 	selNode = math.clamp(selNode, 1, #n)
 	local nd = n[selNode]
@@ -985,8 +990,9 @@ local function itemCard()
 		scaleRow("BORE", "sx")
 		scaleRow("BARREL", "sz")
 		local cs = ShipHull.CannonStats(it)
-		UI.Text(card, string.format("DMG %d  RANGE %d  RELOAD %.1fs", cs.damage, cs.range, cs.reload * GameConfig.Ship.ReloadTime), 10, T.Gold, "Display",
+		local csT = UI.Text(card, string.format("DMG %d  RANGE %d  RELOAD %.1fs", math.floor(cs.damage), math.floor(cs.range), cs.reload * GameConfig.Ship.ReloadTime), 10, T.Gold, "Display",
 			{ Size = UDim2.new(1, 0, 0, 14), LayoutOrder = nexto(), TextWrapped = false, TextScaled = true })
+		csT.TextWrapped = false
 	elseif rule.axes == "yz" then
 		scaleRow("HEIGHT", "sy")
 		scaleRow("LENGTH", "sz")

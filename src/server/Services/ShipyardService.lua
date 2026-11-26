@@ -92,6 +92,9 @@ local function setup()
 				end
 			end
 			local d2 = ShipHull.FromV1(old)
+			for k, v in pairs(ShipParts.Rudder.cost) do
+				paid[k] = (paid[k] or 0) + v -- FromV1 adds a rudder for free
+			end
 			d2.paid = paid
 			p.ships[slot] = d2
 		end

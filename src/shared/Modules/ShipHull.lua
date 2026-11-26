@@ -685,6 +685,9 @@ function H.EnsureRudder(design)
 	end
 	local nd = design.hull.nodes[1]
 	table.insert(design.items, { id = "Rudder", x = 0, y = -(nd and nd.d or 3), z = -(design.hull.stern or 0) * 0.3 - 0.5, r = 0, sx = 1, sy = 1, sz = 1 })
+	if type(design.paid) == "table" then
+		addCost(design.paid, ShipParts.Rudder.cost, 1) -- free: SAVE must not bill it
+	end
 	return true
 end
 

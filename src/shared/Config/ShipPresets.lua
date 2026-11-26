@@ -126,7 +126,24 @@ function P.IsOld(design, loose)
 	if design.v ~= 2 then
 		return true
 	end
-	return loose == true and type(design.hull) == "table" and (design.hull.wall or 0) <= 0
+	if loose ~= true or type(design.hull) ~= "table" then
+		return false
+	end
+	if (design.hull.wall or 0) <= 0 then
+		return true
+	end
+	-- the bare hull an empty slot used to start with ("Ship 2": helm + rudder, nothing to move it)
+	if type(design.name) == "string" and design.name:match("^Ship %d+$") then
+		local Parts = require(Shared.Config.ShipParts).Parts
+		for _, it in ipairs(design.items or {}) do
+			local def = Parts[it.id]
+			if def and (def.thrust or def.oar) then
+				return false
+			end
+		end
+		return true
+	end
+	return false
 end
 
 function P.Rebuild(old)

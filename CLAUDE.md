@@ -1106,6 +1106,19 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     cannons; ShipService sits the keel at SeaLevel - draft + list/trim/heel. Presets are v2 builders. Builder.lua =
     client-side preview with tabs HULL (drag node handles) / PARTS (place, drag, turn, scale, mirror, clone) / PAINT,
     live stats, SAVE / UNDO / LAUNCH / EXIT. Studio MCP clicks use GUI AbsolutePosition (screenshot y - 58).
+    v0.25.153 (owner pick: Plan-Ships-v2 items 1-37, 3 phases; phase 1 = rules): Rudder part (Core, required, max 1;
+    `ShipHull.EnsureRudder` adds a free one to old saves in DataService load / FromV1 / presets and adds its cost to
+    design.paid so SAVE does not bill it), turn = lengthTurn x rudderK (0.25 without). Hull `material` Pine/Oak/Iron
+    (`ShipHull.Materials`: dens/hp/beli/wood, iron = IronIngot per volume, bands). Keel part (keelArea cuts `ph.heel`,
+    stepShip rolls by heel x sails x wind). Cannons: Swivel/Light/Heavy/LongGun/Carronade/Mortar with bore (sx) +
+    barrel (sz) scaling (`ShipHull.CannonStats`), Mortar lobs. `ShipHull.Arcs(design)` = per gun fire spans (bulwark
+    unless the gun stands at a port = |x| > top half width - 4, other item boxes at muzzle height, masts count as a
+    post): server volley picks guns by bearing InArc, each gun has its own readyAt (Reloading / outside arcs messages);
+    cannon models carry Arcs/Face/Range attrs for Sailing drawAim. Sails/oars: best counts fully, next x0.85 / x0.9,
+    Speed uses max(sail, row). Builder: PINE/OAK/IRON row, SAIL/ROW/TURN/HEEL stats, weight % line, POWER cards,
+    BORE/BARREL + HEIGHT/LENGTH steppers, blue/orange arc rays on the selected cannon, HULL tab scrolls. Catmull hull
+    widths overshoot the node width (Galleon 12 -> 12.5): guns meant for ports sit within 4 of the real edge.
+    Rojo: if Studio shows the old Version, start `tools/bin/rojo.exe serve default.project.json` in the main checkout.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

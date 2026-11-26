@@ -57,7 +57,7 @@ picked ones become the remake scope (column "Pick").
 
 Built in three versions (each pushed on its own):
 
-- **Phase 1 = rules** (v0.25.153): rudder required + turn rate from its size (13), hull material Pine / Oak / Iron-banded
+- **Phase 1 = rules** (v0.25.153, DONE 27 Nov): rudder required + turn rate from its size (13), hull material Pine / Oak / Iron-banded
   (16), weight breakdown by category (20), keel parts + wind heel at sea (22), cannon kinds Swivel / Long Gun /
   Carronade / Mortar with bore + barrel scaling (24), firing arcs computed from the design (blocked by own parts) and
   used by the server (25), propulsion = the stronger of sails or oars with diminishing returns (26), power parts

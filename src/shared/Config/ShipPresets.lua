@@ -140,8 +140,8 @@ end
 function P.Rebuild(old)
 	local fitted = old.v == 2 and old or ShipHull.FromV1(old)
 	local n = fitted.hull.nodes
-	local L = n[#n].z
-	local id = L <= 24 and "Dinghy" or L <= 40 and "Sloop" or "Galleon"
+	local rows = n[#n].z / 4 + 1 -- old grid rows (4-stud cells), same size classes as before: Dinghy <= 7, Sloop <= 16
+	local id = rows <= 7 and "Dinghy" or rows <= 16 and "Sloop" or "Galleon"
 	local d = ShipHull.Clone(P.ById[id].design)
 	d.name = type(old.name) == "string" and old.name or d.name
 	local was = old.paid

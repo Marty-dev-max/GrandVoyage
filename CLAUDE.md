@@ -1119,6 +1119,23 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     BORE/BARREL + HEIGHT/LENGTH steppers, blue/orange arc rays on the selected cannon, HULL tab scrolls. Catmull hull
     widths overshoot the node width (Galleon 12 -> 12.5): guns meant for ports sit within 4 of the real edge.
     Rojo: if Studio shows the old Version, start `tools/bin/rojo.exe serve default.project.json` in the main checkout.
+    v0.25.154 (owner pick, Plan-Ships-v2 phase 2 = editor): ShipHull bow/stern styles (`hull.bowStyle` clipper / round
+    / spoon, `hull.sternStyle` transom / round / galleon: taper power + square/flare in Slices), hull detail flags
+    seams / rivets / trim / noName (NameBoard SurfaceGui on the stern). ShipParts `conform` = house (Castle Deck) / rail
+    (EdgeRail) / awning: always x 0, width from the hull rows minus `ConformInset` (`ShipHull.ConformRows`, Expand sets
+    sx), built by buildConform when BuildItem gets `design` (5th arg: pass it). New parts Balcony, Bowsprit (max 1),
+    Flag, FlagLine, Window / EntryPort / Ladder (`wall = true`: Builder surfaceSpot(pos, skip, id) takes vertical faces,
+    r from the normal, model -Z faces out), Hatch, RopeCoil, Crate; category Decor. Builder: green "+" handles add a
+    point, holding a white one HOLD_DELETE still removes it, Shift + wheel over bow/stern cycles the style (plain wheel
+    always zooms), item handles in selHl (i_sx / i_sy / i_sz / i_su / i_turn), right click < 6 px / 0.4 s = openMenu
+    (item actions, or SUGGEST by zone; deck spot wins over walls), selMirror = which copy was clicked (DEL SIDE / BOTH,
+    CLONE makes the missing twin). ShipyardService `ShipTheme` { op list/save/delete } = p.shipThemes (8). Money: design
+    `gift` = the free part of `paid` (`ShipHull.Delta(cost, paid, gift)` -> pay, refund, gift left; `RealPaid`):
+    starter + empty slots = `ShipPresets.Starter(name)` (paid = gift = cost; paid = {} used to bill the whole boat on
+    the first SAVE), BuyShipPreset refunds RealPaid. DataService rebuilds old ships once per save (`shipsRebuilt` = 2):
+    `ShipPresets.IsOld(d, loose)` (v1, no bulwark = FromV1 fit, bare "Ship N" hull without sail/oar) ->
+    `ShipPresets.Rebuild` (preset by old row class, name kept, old real paid on top of a gifted hull). #36 dropped
+    (owner: WASD only). Studio MCP: never send Escape (opens the Roblox menu, MenuIsOpen swallows every input after).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

@@ -9,6 +9,7 @@ return {
 	-- title menu UPDATE LOG lines (newest first, keep 3-4 short ones)
 	UpdateNotes = {
 		"Shipyard: castles, balconies, flags, windows, themes",
+		"Old ships rebuilt; right-click menu in the shipyard",
 		"Ships need a rudder; Pine, Oak or Iron hulls; keels",
 		"Cannon kinds you can size, real firing arcs",
 		"Free-form ships: shape the hull, place parts anywhere",

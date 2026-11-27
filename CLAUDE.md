@@ -1245,6 +1245,11 @@ The owner tests in Studio and sends screenshots; previews of new art are rendere
    plays in Studio only), `Controllers/HurtEdge` (thin red edge per hit), VFX handlers.Guard. Checked in Play vs
    Mountain Bandits: block 37 -> 11, parry = DAZED, dash = DODGE, 70-stud fall -49% HP, 130 studs = knocked down.
    MCP keyDown does not keep a key held (IsKeyDown false): test held keys by invoking the Request remote from the client.
+   R1 HUD (0.1.2-remake, owner: "easier to read, not cluttered"): PC menu = ONE row of 8 icon tiles under the currency
+   pills (HUD.Layout rowMenu: CellSize 62, scale 0.8, tiles' TileLabel hidden, name + key in a tooltip); right side of
+   the screen left empty (toasts / style meter at the edge). Hidden until useful: party strip (only in a party), faction
+   pill (only Pirate / Marine), locked skill sets + empty skill slots, hunt card (only while a hunt runs). HUD tooltips
+   drop when a window opens. Phone (compact) layout unchanged apart from those hides; not checked on a phone yet.
 1. Wait for the owner's verdict on v0.10.3 (hills/flowers/grass); fix what they point at.
 2. Voxel art pass: monsters DONE v0.11.0 (voxel_monsters.py; AssetService sizes = shape base x style.scale,
    MonsterService.RefreshModels swaps placeholder island mobs). Pets + fruits DONE v0.11.1 (voxel_pets.py).

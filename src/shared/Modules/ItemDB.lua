@@ -74,7 +74,7 @@ function ItemDB.ForEntry(entry)
 		c.atk = def.atk and math.floor(def.atk * k)
 		c.matk = def.matk and math.floor(def.matk * k)
 		c.slots = math.min((def.slots or 0) + asc, A.MaxSlots)
-		for _, s in ipairs({ "str", "agi", "vit", "int", "dex", "luk" }) do
+		for _, s in ipairs({ "VIT", "END", "WIL", "WPN", "MAR", "FRU" }) do -- remake attributes (Formulas.StatNames)
 			if def[s] then
 				c[s] = def[s] + asc
 			end

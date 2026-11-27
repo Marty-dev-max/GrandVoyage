@@ -60,8 +60,8 @@ end
 -- Every sword is a block model built from `blade` (Shared/Modules/BladeModel): shape + guard style + colors.
 -- Ladder (owner): gray = the wooden starter (Sword_Plain) | green "Forty Fathoms" (many, General Store + mob drops) |
 -- blue "Twenty Tides" (boss drops) | purple = a Tide blade awakened (this update: Whitevow only) | gold "Seven Crowns"
--- (next update) | "Eclipsed" black blades (sea 3). Variants differ by stats only for now: Katana leans DEX/LUK,
--- Cutlass leans STR/VIT.
+-- (next update) | "Eclipsed" black blades (sea 3). Variants differ by stats only for now: Katana leans WPN/END,
+-- Cutlass leans WPN/VIT.
 local SWORD_LINE_BLADES = {
 	Plain = { form = "Wooden", blade = "B08456", guard = "7A5232", wrap = "D8C9A0", pommel = "7A5232" },
 	Keen = { form = "Katana", hilt = "round", blade = "C9D3E0", edge = "F4F8FF", guard = "3B3F4A", wrap = "F2F2F2", wrap2 = "9AA6B8", pommel = "D9A441", scabbard = "E8E8EE" },
@@ -98,10 +98,10 @@ local function blade(id, name, tierId, spec)
 		price = t.price,
 		refinable = true,
 		blade = spec,
-		dex = katana and t.lean or nil,
-		luk = katana and math.ceil(t.lean / 2) or nil,
-		str = not katana and t.lean or nil,
-		vit = not katana and math.ceil(t.lean / 2) or nil,
+		-- remake attributes: every blade leans Weaponry; a katana adds Endurance, a cutlass Vitality
+		WPN = t.lean,
+		END = katana and math.ceil(t.lean / 2) or nil,
+		VIT = not katana and math.ceil(t.lean / 2) or nil,
 	})
 	Blades[tierId] = Blades[tierId] or {}
 	table.insert(Blades[tierId], id)
@@ -130,18 +130,18 @@ blade("Blade_Whitevow", "Whitevow", "Awakened", { form = "Katana", shape = "long
 -- v0.25.105: green (Uncommon) weapons for every other class, so each one can start the Ascend ladder (stats differ only;
 -- they use their type's model + the Keen icon). { id, name, type, main stat, second stat }
 local GREENS = {
-	{ "Knuckles_Barnacle", "Barnacle Fists", "Knuckles", "str", "agi" },
-	{ "Knuckles_Rope", "Rope-Wrap Fists", "Knuckles", "agi", "str" },
-	{ "Shoes_Gale", "Gale Leg", "Shoes", "agi", "str" },
-	{ "Shoes_Anchor", "Anchor Leg", "Shoes", "str", "vit" },
-	{ "Slingshot_Reed", "Reedline Musket", "Slingshot", "dex", "agi" },
-	{ "Slingshot_Gull", "Gullsight Musket", "Slingshot", "dex", "luk" },
-	{ "StormBaton_Kelp", "Kelpwood Baton", "StormBaton", "int", "dex" },
-	{ "StormBaton_Compass", "Compass Baton", "StormBaton", "int", "agi" },
-	{ "MedKit_Mint", "Seamint Pouch", "MedKit", "int", "vit" },
-	{ "MedKit_Salt", "Saltpetre Pouch", "MedKit", "int", "dex" },
-	{ "Hammer_Rivet", "Rivet Hammer", "Hammer", "str", "vit" },
-	{ "Hammer_Keel", "Keelpin Maul", "Hammer", "vit", "str" },
+	{ "Knuckles_Barnacle", "Barnacle Fists", "Knuckles", "MAR", "END" },
+	{ "Knuckles_Rope", "Rope-Wrap Fists", "Knuckles", "END", "MAR" },
+	{ "Shoes_Gale", "Gale Leg", "Shoes", "END", "MAR" },
+	{ "Shoes_Anchor", "Anchor Leg", "Shoes", "MAR", "VIT" },
+	{ "Slingshot_Reed", "Reedline Musket", "Slingshot", "WPN", "END" },
+	{ "Slingshot_Gull", "Gullsight Musket", "Slingshot", "WPN", "WIL" },
+	{ "StormBaton_Kelp", "Kelpwood Baton", "StormBaton", "WPN", "WIL" },
+	{ "StormBaton_Compass", "Compass Baton", "StormBaton", "WPN", "END" },
+	{ "MedKit_Mint", "Seamint Pouch", "MedKit", "WPN", "VIT" },
+	{ "MedKit_Salt", "Saltpetre Pouch", "MedKit", "WPN", "WIL" },
+	{ "Hammer_Rivet", "Rivet Hammer", "Hammer", "WPN", "VIT" },
+	{ "Hammer_Keel", "Keelpin Maul", "Hammer", "VIT", "WPN" },
 }
 local GreenIds = {}
 for _, g in ipairs(GREENS) do
@@ -173,40 +173,40 @@ add("CaptainCoat", { name = "Captain's Coat", kind = "Armor", slot = "armor", de
 add("SharkscaleMail", { name = "Sharkscale Mail", kind = "Armor", slot = "armor", def = 36, mdef = 8, reqLevel = 55, slots = 1, price = 90000, refinable = true, rarity = "Legendary" })
 
 add("Bandana", { name = "Bandana", kind = "Headgear", slot = "headgear", def = 2, reqLevel = 1, slots = 0, price = 200, refinable = true, rarity = "Common" })
-add("SunHat", { name = "Sun Hat", kind = "Headgear", slot = "headgear", def = 4, luk = 3, reqLevel = 10, slots = 1, price = 3000, refinable = true, rarity = "Uncommon" })
-add("MarineCap", { name = "Marine Cap", kind = "Headgear", slot = "headgear", def = 6, vit = 2, reqLevel = 20, slots = 1, price = 6000, refinable = true, rarity = "Rare" })
-add("ClownNose", { name = "Clown Nose", kind = "Headgear", slot = "headgear", def = 3, dex = 4, reqLevel = 25, slots = 1, price = 9000, refinable = true, rarity = "Epic" })
+add("SunHat", { name = "Sun Hat", kind = "Headgear", slot = "headgear", def = 4, WIL = 3, reqLevel = 10, slots = 1, price = 3000, refinable = true, rarity = "Uncommon" })
+add("MarineCap", { name = "Marine Cap", kind = "Headgear", slot = "headgear", def = 6, VIT = 2, reqLevel = 20, slots = 1, price = 6000, refinable = true, rarity = "Rare" })
+add("ClownNose", { name = "Clown Nose", kind = "Headgear", slot = "headgear", def = 3, WPN = 4, reqLevel = 25, slots = 1, price = 9000, refinable = true, rarity = "Epic" })
 
-add("CompassCharm", { name = "Compass Charm", kind = "Accessory", slot = "accessory", agi = 2, dex = 2, reqLevel = 1, slots = 1, price = 1500, rarity = "Uncommon" })
-add("TangerinePin", { name = "Tangerine Pin", kind = "Accessory", slot = "accessory", luk = 4, maxSp = 40, reqLevel = 30, slots = 1, price = 15000, rarity = "Epic" })
-add("SharkToothNecklace", { name = "Shark Tooth Necklace", kind = "Accessory", slot = "accessory", str = 5, reqLevel = 50, slots = 1, price = 40000, rarity = "Legendary" })
+add("CompassCharm", { name = "Compass Charm", kind = "Accessory", slot = "accessory", END = 2, WPN = 2, reqLevel = 1, slots = 1, price = 1500, rarity = "Uncommon" })
+add("TangerinePin", { name = "Tangerine Pin", kind = "Accessory", slot = "accessory", WIL = 4, maxSp = 40, reqLevel = 30, slots = 1, price = 15000, rarity = "Epic" })
+add("SharkToothNecklace", { name = "Shark Tooth Necklace", kind = "Accessory", slot = "accessory", WPN = 5, reqLevel = 50, slots = 1, price = 40000, rarity = "Legendary" })
 -- Seastone gear (v0.24.14, owner's design): MARINES only. In PvP their hits may seal a Cursed Fruit user's powers
 -- (FruitService.TrySeastone: best equipped `seastone = { chance, seconds }`). Fruit users cannot wear Seastone.
-add("SeastoneBracer", { name = "Seastone Bracer", desc = "Marines only. PvP hits have a 20% chance to seal a fruit user's powers for 3 s. Fruit users cannot wear Seastone.", kind = "Accessory", slot = "accessory", vit = 2, reqLevel = 20, slots = 1, price = 12000, rarity = "Rare", faction = "Marine", seastone = { 0.2, 3 }, icon = "⛓️" })
-add("SeastoneShackle", { name = "Seastone Shackle Charm", desc = "Marines only. PvP hits have a 35% chance to seal a fruit user's powers for 4 s. Fruit users cannot wear Seastone.", kind = "Accessory", slot = "accessory", vit = 4, dex = 3, reqLevel = 45, slots = 1, price = 60000, rarity = "Epic", faction = "Marine", seastone = { 0.35, 4 }, icon = "⛓️" })
+add("SeastoneBracer", { name = "Seastone Bracer", desc = "Marines only. PvP hits have a 20% chance to seal a fruit user's powers for 3 s. Fruit users cannot wear Seastone.", kind = "Accessory", slot = "accessory", VIT = 2, reqLevel = 20, slots = 1, price = 12000, rarity = "Rare", faction = "Marine", seastone = { 0.2, 3 }, icon = "⛓️" })
+add("SeastoneShackle", { name = "Seastone Shackle Charm", desc = "Marines only. PvP hits have a 35% chance to seal a fruit user's powers for 4 s. Fruit users cannot wear Seastone.", kind = "Accessory", slot = "accessory", VIT = 4, WPN = 3, reqLevel = 45, slots = 1, price = 60000, rarity = "Epic", faction = "Marine", seastone = { 0.35, 4 }, icon = "⛓️" })
 
 -- v0.25.32 (owner): the humanoid monsters' signature pieces (models in Config/Accessories, the same blocks the monster
 -- wears): dropped by that monster, some sold in the General Store; worn on the character like every gear piece
-add("ClownWig", { name = "Clown Wig", kind = "Headgear", slot = "headgear", def = 3, dex = 3, reqLevel = 20, slots = 1, price = 7000, refinable = true, rarity = "Rare" })
-add("ConfettiWig", { name = "Confetti Wig", kind = "Headgear", slot = "headgear", def = 6, dex = 5, luk = 3, reqLevel = 30, slots = 1, price = 24000, refinable = true, rarity = "Epic" })
-add("CatEars", { name = "Night Cat Ears", kind = "Headgear", slot = "headgear", def = 3, agi = 5, reqLevel = 30, slots = 1, price = 14000, refinable = true, rarity = "Rare" })
-add("HypnoGoggles", { name = "Hypno Goggles", kind = "Headgear", slot = "headgear", def = 3, int = 5, reqLevel = 32, slots = 1, price = 15000, refinable = true, rarity = "Rare" })
-add("IronHelmet", { name = "Armada Helmet", kind = "Headgear", slot = "headgear", def = 10, vit = 3, reqLevel = 40, slots = 1, price = 22000, refinable = true, rarity = "Rare" })
-add("GlowVisor", { name = "Silent Visor", kind = "Headgear", slot = "headgear", def = 5, dex = 6, agi = 4, reqLevel = 40, slots = 1, price = 45000, refinable = true, rarity = "Epic" })
-add("RingmasterHat", { name = "Ringmaster's Top Hat", kind = "Headgear", slot = "headgear", def = 6, luk = 6, reqLevel = 28, slots = 1, price = 30000, refinable = true, rarity = "Epic" })
-add("AdmiralCrown", { name = "Armada Crown", kind = "Headgear", slot = "headgear", def = 12, str = 5, vit = 4, reqLevel = 50, slots = 1, price = 120000, refinable = true, rarity = "Legendary" })
-add("CapeNavy", { name = "Navy Captain's Cape", kind = "Accessory", slot = "accessory", vit = 4, reqLevel = 20, slots = 1, price = 20000, rarity = "Epic" })
-add("CapeGold", { name = "Ringmaster's Cape", kind = "Accessory", slot = "accessory", luk = 4, dex = 2, reqLevel = 28, slots = 1, price = 28000, rarity = "Epic" })
-add("CapePurple", { name = "Confetti Cape", kind = "Accessory", slot = "accessory", luk = 5, reqLevel = 30, slots = 1, price = 30000, rarity = "Epic" })
-add("CapeShadow", { name = "Shadow Cape", kind = "Accessory", slot = "accessory", agi = 6, reqLevel = 40, slots = 1, price = 50000, rarity = "Epic" })
-add("CapeCrimson", { name = "Admiral's Crimson Cape", kind = "Accessory", slot = "accessory", str = 6, vit = 3, reqLevel = 50, slots = 1, price = 110000, rarity = "Legendary" })
-add("CapeSlate", { name = "Mist Cape", kind = "Accessory", slot = "accessory", int = 5, vit = 5, reqLevel = 58, slots = 1, price = 150000, rarity = "Legendary" })
-add("ChiefFurMantle", { name = "Chief's Fur Mantle", desc = "Worn by Bandit Chief Ragmaw.", kind = "Accessory", slot = "accessory", str = 3, vit = 2, reqLevel = 10, slots = 1, price = 4000, rarity = "Rare" })
-add("PamperedShades", { name = "Pampered Shades", desc = "Ensign Velour never takes them off.", kind = "Headgear", slot = "headgear", def = 2, dex = 3, luk = 3, reqLevel = 15, slots = 1, price = 8000, refinable = true, rarity = "Rare" })
-add("TamerWhip", { name = "Tamer's Coiled Whip", desc = "Beast Tamer Bristle's whip, coiled at the hip.", kind = "Accessory", slot = "accessory", agi = 4, dex = 2, reqLevel = 25, slots = 1, price = 20000, rarity = "Rare" })
-add("BeardDark", { name = "Bandit Beard", kind = "Accessory", slot = "accessory", str = 2, reqLevel = 8, slots = 0, price = 1200, rarity = "Uncommon" })
-add("BeardBrown", { name = "Sea Dog Beard", kind = "Accessory", slot = "accessory", vit = 3, reqLevel = 20, slots = 1, price = 6000, rarity = "Uncommon" })
-add("BeardGrey", { name = "Commodore's Beard", kind = "Accessory", slot = "accessory", vit = 4, int = 3, reqLevel = 65, slots = 1, price = 90000, rarity = "Epic" })
+add("ClownWig", { name = "Clown Wig", kind = "Headgear", slot = "headgear", def = 3, WPN = 3, reqLevel = 20, slots = 1, price = 7000, refinable = true, rarity = "Rare" })
+add("ConfettiWig", { name = "Confetti Wig", kind = "Headgear", slot = "headgear", def = 6, WPN = 5, WIL = 3, reqLevel = 30, slots = 1, price = 24000, refinable = true, rarity = "Epic" })
+add("CatEars", { name = "Night Cat Ears", kind = "Headgear", slot = "headgear", def = 3, END = 5, reqLevel = 30, slots = 1, price = 14000, refinable = true, rarity = "Rare" })
+add("HypnoGoggles", { name = "Hypno Goggles", kind = "Headgear", slot = "headgear", def = 3, WIL = 5, reqLevel = 32, slots = 1, price = 15000, refinable = true, rarity = "Rare" })
+add("IronHelmet", { name = "Armada Helmet", kind = "Headgear", slot = "headgear", def = 10, VIT = 3, reqLevel = 40, slots = 1, price = 22000, refinable = true, rarity = "Rare" })
+add("GlowVisor", { name = "Silent Visor", kind = "Headgear", slot = "headgear", def = 5, WPN = 6, END = 4, reqLevel = 40, slots = 1, price = 45000, refinable = true, rarity = "Epic" })
+add("RingmasterHat", { name = "Ringmaster's Top Hat", kind = "Headgear", slot = "headgear", def = 6, WIL = 6, reqLevel = 28, slots = 1, price = 30000, refinable = true, rarity = "Epic" })
+add("AdmiralCrown", { name = "Armada Crown", kind = "Headgear", slot = "headgear", def = 12, WPN = 5, VIT = 4, reqLevel = 50, slots = 1, price = 120000, refinable = true, rarity = "Legendary" })
+add("CapeNavy", { name = "Navy Captain's Cape", kind = "Accessory", slot = "accessory", VIT = 4, reqLevel = 20, slots = 1, price = 20000, rarity = "Epic" })
+add("CapeGold", { name = "Ringmaster's Cape", kind = "Accessory", slot = "accessory", WIL = 4, WPN = 2, reqLevel = 28, slots = 1, price = 28000, rarity = "Epic" })
+add("CapePurple", { name = "Confetti Cape", kind = "Accessory", slot = "accessory", WIL = 5, reqLevel = 30, slots = 1, price = 30000, rarity = "Epic" })
+add("CapeShadow", { name = "Shadow Cape", kind = "Accessory", slot = "accessory", END = 6, reqLevel = 40, slots = 1, price = 50000, rarity = "Epic" })
+add("CapeCrimson", { name = "Admiral's Crimson Cape", kind = "Accessory", slot = "accessory", WPN = 6, VIT = 3, reqLevel = 50, slots = 1, price = 110000, rarity = "Legendary" })
+add("CapeSlate", { name = "Mist Cape", kind = "Accessory", slot = "accessory", WIL = 5, VIT = 5, reqLevel = 58, slots = 1, price = 150000, rarity = "Legendary" })
+add("ChiefFurMantle", { name = "Chief's Fur Mantle", desc = "Worn by Bandit Chief Ragmaw.", kind = "Accessory", slot = "accessory", WPN = 3, VIT = 2, reqLevel = 10, slots = 1, price = 4000, rarity = "Rare" })
+add("PamperedShades", { name = "Pampered Shades", desc = "Ensign Velour never takes them off.", kind = "Headgear", slot = "headgear", def = 2, WPN = 3, WIL = 3, reqLevel = 15, slots = 1, price = 8000, refinable = true, rarity = "Rare" })
+add("TamerWhip", { name = "Tamer's Coiled Whip", desc = "Beast Tamer Bristle's whip, coiled at the hip.", kind = "Accessory", slot = "accessory", END = 4, WPN = 2, reqLevel = 25, slots = 1, price = 20000, rarity = "Rare" })
+add("BeardDark", { name = "Bandit Beard", kind = "Accessory", slot = "accessory", WPN = 2, reqLevel = 8, slots = 0, price = 1200, rarity = "Uncommon" })
+add("BeardBrown", { name = "Sea Dog Beard", kind = "Accessory", slot = "accessory", VIT = 3, reqLevel = 20, slots = 1, price = 6000, rarity = "Uncommon" })
+add("BeardGrey", { name = "Commodore's Beard", kind = "Accessory", slot = "accessory", VIT = 4, WIL = 3, reqLevel = 65, slots = 1, price = 90000, rarity = "Epic" })
 
 -- ===== Consumables =====
 add("MeatOnBone", { name = "Meat on the Bone", desc = "Restores 20% HP.", kind = "Consumable", heal = 0.2, price = 80, stack = true, cd = 1.5, rarity = "Common" })

@@ -318,8 +318,8 @@ local function rollDrops(player, def, mult, pos)
 			end
 		end
 	end
-	-- Cards (LUK slightly increases the chance)
-	local luk = d and d.LUK or 1
+	-- Cards (remake: no luck attribute, the plain chance)
+	local luk = 0
 	if def.card and ItemDB.Get(def.card) and math.random() < def.cardChance * (1 + luk * 0.003) then
 		if R.InventoryService.AddItem(player, def.card, 1) then
 			table.insert(got, { id = def.card, qty = 1, card = true })

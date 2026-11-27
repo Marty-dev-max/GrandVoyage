@@ -163,7 +163,7 @@ function QS.Check(player)
 		-- already trained enough (by hand earlier, or by Auto upgrade): done; saves that got stuck here before v0.22.3
 		local raised = 0
 		for _, v in pairs(p.stats) do
-			raised += math.max(0, v - 1)
+			raised += math.max(0, v) -- remake attributes start at 0
 		end
 		if raised >= (s.goal.count or 1) then
 			complete(player)

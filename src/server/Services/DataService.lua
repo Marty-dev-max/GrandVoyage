@@ -47,9 +47,9 @@ local function template()
 		baseExp = 0,
 		jobLevel = 1,
 		jobExp = 0,
-		statPoints = 5,
+		statPoints = GameConfig.Stats.Start,
 		skillPoints = 1,
-		stats = { STR = 1, AGI = 1, VIT = 1, INT = 1, DEX = 1, LUK = 1 },
+		stats = { VIT = 0, END = 0, WIL = 0, WPN = 0, MAR = 0, FRU = 0 }, -- remake attributes (Formulas.StatNames) (statsV is set by the load migration)
 		skills = { Bash = 1, FirstAid = 1 },
 		skillBar = { "Bash", "FirstAid" },
 		autoSkills = { Bash = true },
@@ -185,6 +185,13 @@ function DataService.Load(player, slot)
 				end
 			end
 		end
+	end
+	-- remake R1: the six new attributes replace STR..LUK; old saves get every point of their level back to spend
+	if data.statsV ~= 2 then
+		local S = GameConfig.Stats
+		data.statsV = 2
+		data.stats = { VIT = 0, END = 0, WIL = 0, WPN = 0, MAR = 0, FRU = 0 }
+		data.statPoints = math.min(S.MaxTotal, S.Start + ((data.baseLevel or 1) - 1) * S.PerLevel)
 	end
 	-- v0.25.148 (owner): crew starts at 0: the old unnamed deckhands are gone, only recruited sailors count
 	if not data.crewV2 then

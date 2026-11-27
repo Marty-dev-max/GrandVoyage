@@ -29,7 +29,7 @@ local Classes = {
 		spMod = 0.9,
 		weapons = { "Knuckles" },
 		color = Color3.fromRGB(235, 85, 70), -- v0.25.37: the color of its type (Config/MonsterTypes)
-		mtype = "STR", role = "Street Fighter", build = { STR = 5, AGI = 3, VIT = 3, DEX = 1 },
+		mtype = "STR", role = "Street Fighter", build = { MAR = 5, VIT = 3, END = 3 },
 		icon = "👊",
 		skills = {
 			{ id = "JabRush", name = "Jab Rush", anim = "Brawler_Flurry", kind = "Melee", sp = 8, cd = 2.5, range = 9, mult = 1.9, maxLevel = 10, fx = "Burst", desc = "A flurry of quick jabs." },
@@ -46,7 +46,7 @@ local Classes = {
 		spMod = 0.8,
 		weapons = { "Sword" },
 		color = Color3.fromRGB(90, 200, 120), -- v0.25.37: the color of its type (Config/MonsterTypes)
-		mtype = "AGI", role = "Blade Dancer", build = { STR = 5, VIT = 3, AGI = 2, DEX = 1 },
+		mtype = "AGI", role = "Blade Dancer", build = { WPN = 5, VIT = 3, END = 2 },
 		ringColor = Color3.fromRGB(60, 215, 235), -- Job EXP ring half (green is taken by Base EXP)
 		icon = "⚔️",
 		skills = {
@@ -64,7 +64,7 @@ local Classes = {
 		spMod = 1.0,
 		weapons = { "Slingshot" },
 		color = Color3.fromRGB(70, 185, 240), -- v0.25.38: DEX (sky blue; Sea Cook is the deeper blue)
-		mtype = "DEX", role = "Deadeye", build = { DEX = 5, AGI = 3, LUK = 2 },
+		mtype = "DEX", role = "Deadeye", build = { WPN = 5, END = 3, WIL = 1 },
 		icon = "🎯",
 		passive = { cannonDamage = 0.15 },
 		skills = {
@@ -82,7 +82,7 @@ local Classes = {
 		spMod = 1.0,
 		weapons = { "Shoes" },
 		color = Color3.fromRGB(80, 120, 230), -- v0.25.37: the color of its type (Config/MonsterTypes)
-		mtype = "DEX", role = "Kick Chef", build = { AGI = 4, STR = 4, VIT = 2, LUK = 1 },
+		mtype = "DEX", role = "Kick Chef", build = { MAR = 5, END = 3, VIT = 2 },
 		icon = "🍳",
 		skills = {
 			{ id = "HookKick", name = "Hook Kick", kind = "Melee", sp = 10, cd = 3, range = 9, mult = 2.1, maxLevel = 10, fx = "Kick", desc = "A snapping kick to the neck." },
@@ -102,7 +102,7 @@ local Classes = {
 		spMod = 1.15,
 		weapons = { "StormBaton" },
 		color = Color3.fromRGB(150, 90, 240), -- v0.25.37: the color of its type (Config/MonsterTypes)
-		mtype = "INT", role = "Trickster", build = { INT = 5, DEX = 3, VIT = 2 }, -- v0.25.52: INT again (owner: matches its type)
+		mtype = "INT", role = "Trickster", build = { WPN = 5, WIL = 3, VIT = 2 }, -- v0.25.52: INT again (owner: matches its type)
 		icon = "🧭",
 		passive = { shipSpeed = 0.1 },
 		skills = {
@@ -120,7 +120,7 @@ local Classes = {
 		spMod = 1.3,
 		weapons = { "MedKit" },
 		color = Color3.fromRGB(214, 96, 214), -- v0.25.37: the color of its type (Config/MonsterTypes)
-		mtype = "INT", role = "Field Medic", build = { INT = 5, VIT = 3, DEX = 2 },
+		mtype = "INT", role = "Field Medic", build = { WPN = 4, WIL = 4, VIT = 2 },
 		icon = "💉",
 		skills = {
 			{ id = "Heal", name = "Field Medicine", kind = "PartyHeal", sp = 18, cd = 5, radius = 35, power = 160, maxLevel = 10, fx = "Heal", desc = "Heal nearby crew." },
@@ -137,7 +137,7 @@ local Classes = {
 		spMod = 0.9,
 		weapons = { "Hammer" },
 		color = Color3.fromRGB(214, 112, 58), -- v0.25.37: the color of its type (Config/MonsterTypes)
-		mtype = "STR", role = "Hammer Smith", build = { STR = 4, VIT = 4, DEX = 2 },
+		mtype = "STR", role = "Hammer Smith", build = { WPN = 4, VIT = 4, END = 2 },
 		ringColor = Color3.fromRGB(225, 160, 95),
 		icon = "🔨",
 		passive = { refineBonus = 0.05, stallSlots = true, cannonDamage = 0.05 },

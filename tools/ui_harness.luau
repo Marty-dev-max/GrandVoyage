@@ -290,7 +290,7 @@ local Formulas = req(Shared.Modules.Formulas)
 local State = mod("State")
 local profile = {
 	class = "Swordsman", baseLevel = 34, baseExp = 0, jobLevel = 22, jobExp = 0, statPoints = 6, skillPoints = 3,
-	stats = { STR = 45, AGI = 30, VIT = 28, INT = 5, DEX = 22, LUK = 12 },
+	stats = { VIT = 28, END = 22, WIL = 6, WPN = 34, MAR = 0, FRU = 0 },
 	skills = { Bash = 3, FirstAid = 1, OniSlash = 5, TornadoCut = 3, FlyingSlash = 2, IronBody = 1 },
 	skillBar = { "OniSlash", "TornadoCut", "FlyingSlash", "IronBody", "FirstAid" },
 	autoSkills = { OniSlash = true, TornadoCut = true, F_FireFist = true },

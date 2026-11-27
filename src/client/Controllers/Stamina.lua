@@ -12,8 +12,16 @@ local CFG = GameConfig.Stamina
 local player = Players.LocalPlayer
 local value, lastUse, shortAt = CFG.Max, -99, -99
 
+-- Endurance raises the bar and its regen (PlayerService.Recompute sets the player attributes from Formulas)
+local function maxNow()
+	return player:GetAttribute("MaxStamina") or CFG.Max
+end
+local function regenNow()
+	return player:GetAttribute("StaminaRegen") or CFG.Regen
+end
+
 function Stamina.Max()
-	return CFG.Max
+	return maxNow()
 end
 
 function Stamina.Value()
@@ -57,18 +65,19 @@ function Stamina.Start()
 	local shown, postShown = 0, 0
 	local stamRed, postRed = false, false
 	player.CharacterAdded:Connect(function()
-		value = CFG.Max
+		value = maxNow()
 	end)
 	RunService.RenderStepped:Connect(function(dt)
 		local now = os.clock()
 		if now - lastUse > CFG.RegenDelay then
-			value = math.min(CFG.Max, value + CFG.Regen * dt)
+			local mx = maxNow()
+			value = math.min(mx, value + regenNow() * dt)
 		end
 		local char = player.Character
 		local posture = char and char:GetAttribute("Posture") or 0
 		local maxP = GameConfig.Guard.PostureMax
 		-- steps of 2% (UI.Bar tweens every change; a per-frame drain would start a tween every frame)
-		stam:Set(math.floor(value / CFG.Max * 50 + 0.5) / 50)
+		stam:Set(math.floor(value / maxNow() * 50 + 0.5) / 50)
 		post:Set(math.floor(math.clamp(posture / maxP, 0, 1) * 50 + 0.5) / 50)
 		-- red while short of stamina, else green; orange posture turns red near a guard break
 		local short = now - shortAt < 0.4
@@ -81,7 +90,7 @@ function Stamina.Start()
 			postRed = danger
 			post:SetColor(danger and Color3.fromRGB(255, 70, 70) or Color3.fromRGB(255, 150, 60))
 		end
-		local want = (value < CFG.Max - 0.5 or short or posture > 0) and 0 or 1
+		local want = (value < maxNow() - 0.5 or short or posture > 0) and 0 or 1
 		local k = 1 - math.exp(-dt * (want == 0 and 14 or 4))
 		shown += (want - shown) * k
 		postShown += ((posture > 0 and 0 or 1) - postShown) * k

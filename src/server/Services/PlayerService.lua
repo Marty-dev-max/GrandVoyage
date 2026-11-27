@@ -58,15 +58,18 @@ function PS.AutoStats(player)
 	if not p or not (p.settings and p.settings.autoStats) then
 		return
 	end
-	local build = (Classes[p.class] and Classes[p.class].build) or { STR = 1, AGI = 1, VIT = 1, DEX = 1 } -- Config/Classes build
+	local build = (Classes[p.class] and Classes[p.class].build) or { VIT = 3, END = 2, MAR = 4 } -- Config/Classes build
 	local spent = 0
 	for _ = 1, 400 do
+		if Formulas.Spent(p.stats) >= Formulas.MaxTotal then
+			break
+		end
 		-- the stat furthest behind its share of the build
 		local best, bestRatio
 		for stat, w in pairs(build) do
 			local v = p.stats[stat]
 			if w > 0 and v and v < Formulas.MaxStat then
-				local ratio = v / w
+				local ratio = (v + 1) / w
 				if not bestRatio or ratio < bestRatio then
 					best, bestRatio = stat, ratio
 				end
@@ -198,6 +201,8 @@ function PS.Recompute(player)
 	player:SetAttribute("Power", Formulas.Power(d, profile.baseLevel))
 	local sp = player:GetAttribute("SP") or d.maxSp
 	player:SetAttribute("MaxSP", d.maxSp)
+	player:SetAttribute("MaxStamina", d.maxStamina) -- Endurance (Controllers/Stamina)
+	player:SetAttribute("StaminaRegen", d.staminaRegen)
 	player:SetAttribute("SP", math.min(sp, d.maxSp))
 	PS.MarkDirty(player)
 	return d
@@ -353,7 +358,7 @@ function PS.GiveExp(player, base, job, pos)
 		while p.baseLevel < GameConfig.MaxBaseLevel and p.baseExp >= Formulas.BaseExpToNext(p.baseLevel) do
 			p.baseExp -= Formulas.BaseExpToNext(p.baseLevel)
 			p.baseLevel += 1
-			p.statPoints += Formulas.StatPointsForLevel(p.baseLevel)
+			p.statPoints = math.max(0, Formulas.PointsAt(p.baseLevel) - Formulas.Spent(p.stats)) -- never past MaxTotal
 			leveled = true
 		end
 		if p.baseLevel >= GameConfig.MaxBaseLevel then
@@ -740,7 +745,7 @@ local function setupHandlers()
 		for _ = 1, amount do
 			local cur = p.stats[stat]
 			local cost = Formulas.StatCost(cur)
-			if cur >= Formulas.MaxStat or p.statPoints < cost then
+			if cur >= Formulas.MaxStat or p.statPoints < cost or Formulas.Spent(p.stats) >= Formulas.MaxTotal then
 				break
 			end
 			p.statPoints -= cost
@@ -750,7 +755,7 @@ local function setupHandlers()
 		return true
 	end, 0.05)
 
-	-- the Stats window's "Apply": several stats at once, { add = { STR = 3, AGI = 2 } }; all-or-nothing on the cost
+	-- the Stats window's "Apply": several stats at once, { add = { VIT = 3, MAR = 2 } }; all-or-nothing on the cost
 	Net.Handle("AllocateStats", function(player, data)
 		local p = PS.Profile(player)
 		if type(data.add) ~= "table" then
@@ -770,6 +775,13 @@ local function setupHandlers()
 				total += Formulas.StatCost(cur + k)
 			end
 			plan[stat] = n
+		end
+		local planned = 0
+		for _, n in pairs(plan) do
+			planned += n
+		end
+		if Formulas.Spent(p.stats) + planned > Formulas.MaxTotal then
+			return false, "Over the " .. Formulas.MaxTotal .. " point cap"
 		end
 		if total == 0 then
 			return false, "Nothing to apply"

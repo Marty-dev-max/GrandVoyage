@@ -138,8 +138,11 @@ end
 function UI.Colored(text, c)
 	return string.format('<font color="#%02X%02X%02X">%s</font>', math.floor(c.R * 255 + 0.5), math.floor(c.G * 255 + 0.5), math.floor(c.B * 255 + 0.5), text)
 end
+-- remake attributes (Formulas.StatNames); the old STR..LUK colors stay for monster-type badges
 UI.StatColor = {
-	STR = Color3.fromRGB(255, 110, 80), AGI = Color3.fromRGB(110, 230, 120), VIT = Color3.fromRGB(255, 170, 70),
+	VIT = Color3.fromRGB(110, 230, 120), END = Color3.fromRGB(255, 200, 80), WIL = Color3.fromRGB(170, 140, 255),
+	WPN = Color3.fromRGB(255, 120, 90), MAR = Color3.fromRGB(255, 160, 60), FRU = Color3.fromRGB(255, 110, 200),
+	STR = Color3.fromRGB(255, 110, 80), AGI = Color3.fromRGB(110, 230, 120),
 	INT = Color3.fromRGB(150, 130, 255), DEX = Color3.fromRGB(90, 210, 255), LUK = Color3.fromRGB(255, 220, 80),
 }
 

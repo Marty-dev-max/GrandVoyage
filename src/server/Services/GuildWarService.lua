@@ -8,6 +8,7 @@ local Shared = ReplicatedStorage.Shared
 local GameConfig = require(Shared.Config.GameConfig)
 local Islands = require(Shared.Config.Islands)
 local Net = require(Shared.Modules.Net)
+local Formulas = require(Shared.Modules.Formulas)
 
 local GW = {}
 local R
@@ -153,15 +154,15 @@ function GW.Start()
 			local p = R.DataService.Get(player)
 			p.baseLevel = math.clamp(tonumber(data.value) or 70, 1, GameConfig.MaxBaseLevel)
 			p.jobLevel = math.max(p.jobLevel, 10)
-			p.statPoints += 100
+			p.statPoints = math.max(0, Formulas.PointsAt(p.baseLevel) - Formulas.Spent(p.stats)) -- every point of the new level
 			p.skillPoints += 20
 			R.PlayerService.Recompute(player)
 		elseif data.cmd == "resetlevel" then
 			-- back to a fresh Lv 1 character (class, items, quests kept) to test early combat
 			local p = R.DataService.Get(player)
 			p.baseLevel, p.baseExp, p.jobLevel, p.jobExp = 1, 0, 1, 0
-			p.statPoints, p.skillPoints = 5, 1
-			p.stats = { STR = 1, AGI = 1, VIT = 1, INT = 1, DEX = 1, LUK = 1 }
+			p.statPoints, p.skillPoints = Formulas.PointsAt(1), 1
+			p.stats = { VIT = 0, END = 0, WIL = 0, WPN = 0, MAR = 0, FRU = 0 }
 			for id in pairs(p.skills) do
 				p.skills[id] = 1
 			end

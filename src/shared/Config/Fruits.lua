@@ -8,7 +8,7 @@ local F = {}
 F.List = {
 	{
 		id = "Bounce", name = "Bounce Bounce no Mi", type = "Paramecia", rarity = "Secret", weight = 2,
-		stats = { "STR", "VIT" }, -- v0.25.69: main / second stat bonus, grows with Fruit Mastery (F.StatBonus)
+		stats = { "VIT", "MAR" }, -- v0.25.69: main / second stat bonus, grows with Fruit Mastery (F.StatBonus)
 		color = Color3.fromRGB(175, 70, 215), swirl = Color3.fromRGB(255, 120, 190), icon = "🍇", -- v0.25.33: purple, pink inside
 		desc = "Your body turns to rubber: stretch, bounce, and shrug off blunt hits.",
 		-- v0.25.65 (owner, docs/Plan-Fruits-v2.md): Rubber Hide reflects gunshots (CombatService fruitBody), Slingshot
@@ -24,7 +24,7 @@ F.List = {
 	},
 	{
 		id = "Blaze", name = "Blaze Blaze no Mi", type = "Logia", rarity = "Mythic", weight = 6,
-		stats = { "INT", "DEX" }, -- v0.25.69: main / second stat bonus, grows with Fruit Mastery (F.StatBonus)
+		stats = { "FRU", "MAR" }, -- v0.25.69: main / second stat bonus, grows with Fruit Mastery (F.StatBonus)
 		color = Color3.fromRGB(255, 110, 40), swirl = Color3.fromRGB(255, 220, 80), icon = "🔥",
 		desc = "Become fire itself. Attacks often pass right through you.",
 		passive = { flee = 25, atkPct = 0.05 }, passiveText = "Flame Body (Logia): monsters without Toki pass right through you • Blaze Flight: hold Space • +25 FLEE, +5% ATK",
@@ -38,7 +38,7 @@ F.List = {
 	},
 	{
 		id = "Haze", name = "Haze Haze no Mi", type = "Logia", rarity = "Legendary", weight = 12,
-		stats = { "INT", "AGI" }, -- v0.25.69: main / second stat bonus, grows with Fruit Mastery (F.StatBonus)
+		stats = { "FRU", "END" }, -- v0.25.69: main / second stat bonus, grows with Fruit Mastery (F.StatBonus)
 		color = Color3.fromRGB(200, 205, 215), swirl = Color3.fromRGB(120, 125, 140), icon = "💨",
 		desc = "Become smoke. Choke, blind and slip away.",
 		passive = { flee = 25 }, passiveText = "Smoke Body (Logia): monsters without Toki pass right through you • Smoke Flight: hold Space in the air • +25 FLEE",
@@ -52,7 +52,7 @@ F.List = {
 	{
 		-- v0.25.65 (owner): renamed; id stays "Ward" (saves)
 		id = "Ward", name = "Shield Shield no Mi", type = "Paramecia", rarity = "Epic", weight = 20,
-		stats = { "VIT", "INT" }, -- v0.25.69: main / second stat bonus, grows with Fruit Mastery (F.StatBonus)
+		stats = { "VIT", "WIL" }, -- v0.25.69: main / second stat bonus, grows with Fruit Mastery (F.StatBonus)
 		color = Color3.fromRGB(120, 220, 255), swirl = Color3.fromRGB(230, 250, 255), icon = "🛡️",
 		desc = "Create unbreakable barriers to shield your crew.",
 		passive = { defPct = 0.12 }, passiveText = "Barrier Steps: jump and keep holding Space to build stairs of barrier under your feet • +12% DEF",
@@ -67,7 +67,7 @@ F.List = {
 	},
 	{
 		id = "Split", name = "Split Split no Mi", type = "Paramecia", rarity = "Epic", weight = 25,
-		stats = { "AGI", "DEX" }, -- v0.25.69: main / second stat bonus, grows with Fruit Mastery (F.StatBonus)
+		stats = { "MAR", "END" }, -- v0.25.69: main / second stat bonus, grows with Fruit Mastery (F.StatBonus)
 		color = Color3.fromRGB(110, 200, 120), swirl = Color3.fromRGB(240, 240, 120), icon = "✂️",
 		desc = "Split your body into pieces. Blades pass between them.",
 		passive = { flee = 12, maxHpPct = 0.05 }, passiveText = "Split Body: blades, claws and axes pass between your pieces • +12 FLEE, +5% Max HP",
@@ -80,7 +80,7 @@ F.List = {
 	},
 	{
 		id = "Slick", name = "Slick Slick no Mi", type = "Paramecia", rarity = "Rare", weight = 35,
-		stats = { "AGI", "LUK" }, -- v0.25.69: main / second stat bonus, grows with Fruit Mastery (F.StatBonus)
+		stats = { "END", "WIL" }, -- v0.25.69: main / second stat bonus, grows with Fruit Mastery (F.StatBonus)
 		color = Color3.fromRGB(255, 225, 120), swirl = Color3.fromRGB(255, 255, 220), icon = "✨",
 		desc = "Your skin turns slippery: attacks slide right off.",
 		passive = { flee = 15 }, passiveText = "Slick Skate: jump and keep Space held to skate on a streak of oil (faster on Oil Slick) • +15 FLEE",

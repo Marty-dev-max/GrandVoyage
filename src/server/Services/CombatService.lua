@@ -394,7 +394,8 @@ local function hitTarget(attacker, target, mult, magic, opts)
 	end
 	opts = opts or {}
 	local crit = (d.crit or 0) + (opts.critBonus or 0)
-	local atk = magic and d.matk or d.atk
+	local atk = (magic == "fruit" and d.fruitAtk) or (magic and d.matk) or d.atk
+	local spell = magic == true -- magic weapons: never miss, half DEF, no crits (fruit hits play like blows)
 	if target.kind == "ship" then
 		-- hulls shrug off most of a blow (they have ship HP); crits still count
 		local dmg = atk * mult * SHIP_HIT * (math.random() * 100 < crit and 1.5 or 1)
@@ -404,7 +405,7 @@ local function hitTarget(attacker, target, mult, magic, opts)
 	if target.kind == "mob" then
 		local mob = target.mob
 		local flee = mob.def.level * 1.3 + 10
-		if not magic and math.random() > Formulas.HitChance(d.hit, flee) then
+		if not spell and math.random() > Formulas.HitChance(d.hit, flee) then
 			Net.FX("Miss", { pos = mob.root.Position + Vector3.new(0, 3, 0) }, mob.root.Position, 200)
 			-- a swing that misses still starts the fight (owner, v0.22.3)
 			R.MonsterService.Provoke(mob, attacker)
@@ -418,8 +419,8 @@ local function hitTarget(attacker, target, mult, magic, opts)
 			bonus += d.dmgVsSeafolk
 		end
 		bonus *= MonsterTypes.Mult(classType(attacker), mob.def.mtype)
-		local mdef = opts.ignoreDef and 0 or (magic and mob.def.def * 0.5 or mob.def.def)
-		local dmg, isCrit = Formulas.Damage(atk, mdef, mult * bonus, magic and 0 or crit)
+		local mdef = opts.ignoreDef and 0 or (spell and mob.def.def * 0.5 or mob.def.def)
+		local dmg, isCrit = Formulas.Damage(atk, mdef, mult * bonus, spell and 0 or crit)
 		if opts.split and not mob.def.isBoss then
 			local ar = R.PlayerService.Root(attacker)
 			mob.splitKill = opts.split
@@ -461,13 +462,13 @@ local function hitTarget(attacker, target, mult, magic, opts)
 			return
 		end
 		R.FruitService.TrySeastone(attacker, target.player)
-		if not magic and math.random() > Formulas.HitChance(d.hit, td.flee) then
+		if not spell and math.random() > Formulas.HitChance(d.hit, td.flee) then
 			Net.FX("Miss", { pos = target.pos + Vector3.new(0, 3, 0) }, target.pos, 200)
 			return
 		end
 		-- PvP damage is reduced by 40% so fights last longer
-		local pdef = opts.ignoreDef and 0 or (magic and td.mdef or td.def)
-		local dmg, isCrit = Formulas.Damage(atk, pdef, mult * 0.6, magic and 0 or crit)
+		local pdef = opts.ignoreDef and 0 or (spell and td.mdef or td.def)
+		local dmg, isCrit = Formulas.Damage(atk, pdef, mult * 0.6, spell and 0 or crit)
 		-- remake R1: the target's dodge / block / parry (a parry stuns the attacker)
 		local aroot = R.PlayerService.Root(attacker)
 		local guarded, gk = R.GuardService.Check(target.player, aroot and aroot.Position, dmg)
@@ -780,7 +781,7 @@ local function setup()
 				local from, to = root.Position, st.to + Vector3.new(0, cfg.PumpLift, 0)
 				local path = to - from
 				local d = R.PlayerService.Derived(player)
-				local magic = d and d.matk > d.atk
+				local magic = "fruit" -- Slingshot Launch is a Bounce move: Fruit Mastery
 				local seen = {}
 				for step = 0, path.Magnitude + 6, 4 do
 					local at = from + path.Unit * math.min(step, path.Magnitude)
@@ -855,7 +856,7 @@ local function setup()
 		end
 		player:SetAttribute("SP", sp - skill.sp)
 		local d = R.PlayerService.Derived(player)
-		local ch = { skill = skill, t0 = os.clock(), shape = skill.shape, radius = skill.radius or 14, mult = (skill.mult or 1) * (1 + 0.1 * (lv - 1)), magic = d and d.matk > d.atk }
+		local ch = { skill = skill, t0 = os.clock(), shape = skill.shape, radius = skill.radius or 14, mult = (skill.mult or 1) * (1 + 0.1 * (lv - 1)), magic = "fruit" }
 		channels[player] = ch
 		local c = player.Character
 		if c then
@@ -955,7 +956,7 @@ local function setup()
 		skillCd[player][skill.id] = os.clock() + skill.cd
 		local d = R.PlayerService.Derived(player)
 		stairs[player] = { t0 = os.clock(), n = 0, max = skill.maxSteps or 32, hold = skill.maxHold or 5, per = skill.spPerStep or 0,
-			mult = (skill.mult or 1) * (1 + 0.1 * (lv - 1)), magic = d and d.matk > d.atk, hit = {} }
+			mult = (skill.mult or 1) * (1 + 0.1 * (lv - 1)), magic = "fruit", hit = {} }
 		R.FruitService.OnCast(player)
 		return true
 	end, 0.2)
@@ -1068,7 +1069,7 @@ local function setup()
 		end
 		local magic = skill.magic == true
 		if skill.fruit then
-			magic = d.matk > d.atk -- fruits use whichever attack stat is better
+			magic = "fruit" -- fruit skills hit with fruitAtk (Fruit Mastery, remake)
 		end
 		local kind = skill.kind
 		local fxData = { fx = skill.fx, from = root.Position, char = player.Character, skill = skill.id }
@@ -1125,7 +1126,7 @@ local function setup()
 			aim3 = aimDir * math.sqrt(1 - y * y) + Vector3.new(0, y, 0)
 		end
 		-- v0.25.50 (owner: skills did not hurt NPC hulls, only M1): every damage skill also hits hostile ships in its area
-		local shipDmg = math.floor((magic and d.matk or d.atk) * mult * (skill.hits or 1) * 0.8)
+		local shipDmg = math.floor(((magic == "fruit" and d.fruitAtk) or (magic and d.matk) or d.atk) * mult * (skill.hits or 1) * 0.8)
 		local function shipLine(from, to)
 			task.delay(strike, R.ShipService.SkillHit, player, from, to, 8, shipDmg)
 		end
@@ -1443,7 +1444,7 @@ function Combat.Start()
 				local hum = R.PlayerService.Humanoid(pl)
 				if d and hum and hum.Health > 0 and not R.KnockdownService.IsDowned(pl) then
 					local sp = pl:GetAttribute("SP") or 0
-					pl:SetAttribute("SP", math.min(d.maxSp, sp + 1 + d.maxSp * 0.015 + d.INT * 0.1))
+					pl:SetAttribute("SP", math.min(d.maxSp, sp + 1 + d.maxSp * 0.015 + d.WIL * 0.1))
 					if now - (lastHurt[pl] or 0) > 6 then
 						hum.Health = math.min(hum.MaxHealth, hum.Health + hum.MaxHealth * 0.015 + d.VIT * 0.3)
 					end

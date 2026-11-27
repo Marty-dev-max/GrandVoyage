@@ -8,8 +8,20 @@ local PetsCfg = require(Shared.Config.Pets)
 local ItemDB = require(Shared.Modules.ItemDB)
 
 local F = {}
-F.StatNames = { "STR", "AGI", "VIT", "INT", "DEX", "LUK" }
-F.MaxStat = 99
+-- Remake R1 (docs/Plan-Remake.md sec 3): six attributes, 1 point each, one attribute caps at MaxStat and all of them
+-- together at MaxTotal (you cannot be good at everything). Gear / cards / fruit / Toki bonuses use the same keys.
+local SC = GameConfig.Stats
+F.StatNames = { "VIT", "END", "WIL", "WPN", "MAR", "FRU" }
+F.StatInfo = {
+	VIT = { name = "Vitality", group = "Core", desc = "Max HP, HP regen, defense" },
+	END = { name = "Endurance", group = "Core", desc = "Stamina for dash, sprint, block, climb; dodge" },
+	WIL = { name = "Willpower", group = "Core", desc = "SP, magic defense, getting up when downed" },
+	WPN = { name = "Weaponry", group = "Mastery", desc = "Damage, accuracy and crits with weapons" },
+	MAR = { name = "Martial Arts", group = "Mastery", desc = "Fist and kick damage, attack speed" },
+	FRU = { name = "Fruit Mastery", group = "Mastery", desc = "Cursed Fruit skill power" },
+}
+F.MaxStat = SC.MaxStat
+F.MaxTotal = SC.MaxTotal
 
 function F.BaseExpToNext(level)
 	return math.floor(30 * level ^ 2.1 + 60 * level)
@@ -19,13 +31,40 @@ function F.JobExpToNext(level)
 	return math.floor(22 * level ^ 2.05 + 40 * level)
 end
 
-function F.StatCost(current)
-	return math.floor((current - 1) / 10) + 2
+function F.StatCost(_current)
+	return 1
 end
 
-function F.StatPointsForLevel(level)
-	return math.floor(level / 5) + 3
+function F.StatPointsForLevel(_level)
+	return SC.PerLevel
 end
+
+-- every point a character of this level has had (spent + unspent), never above MaxTotal
+function F.PointsAt(level)
+	return math.min(SC.MaxTotal, SC.Start + (level - 1) * SC.PerLevel)
+end
+
+function F.Spent(stats)
+	local n = 0
+	for _, k in ipairs(F.StatNames) do
+		n += (stats and stats[k]) or 0
+	end
+	return n
+end
+
+-- "WPN +3  END +2": the attribute bonuses an item (or card bonus table) carries, in StatNames order
+function F.StatLine(t, sep)
+	local parts = {}
+	for _, k in ipairs(F.StatNames) do
+		if t and t[k] and t[k] ~= 0 then
+			table.insert(parts, k .. " +" .. t[k])
+		end
+	end
+	return table.concat(parts, sep or "  ")
+end
+
+-- weapons that count as Martial Arts (bare hands, fist wraps, leg style)
+F.Martial = { Fists = true, Knuckles = true, Shoes = true }
 
 local function addBonus(target, bonus)
 	if not bonus then
@@ -49,7 +88,7 @@ end
 
 -- Sum bonuses from equipment + cards
 function F.EquipBonus(profile)
-	local b = { weaponAtk = 0, weaponMatk = 0, equipDef = 0, equipMdef = 0 }
+	local b = { weaponAtk = 0, weaponMatk = 0, equipDef = 0, equipMdef = 0, weaponType = "Fists" }
 	for _, uid in pairs(profile.equipment) do
 		local entry = F.FindItem(profile, uid)
 		local def = entry and ItemDB.ForEntry(entry)
@@ -60,11 +99,12 @@ function F.EquipBonus(profile)
 				local mult = (grade and grade.mult or 1) * (1 + refine * GameConfig.Refine.AtkPerRefine)
 				b.weaponAtk += (def.atk or 0) * mult
 				b.weaponMatk += (def.matk or 0) * mult
+				b.weaponType = def.weaponType or "Fists"
 			else
 				b.equipDef += (def.def or 0) + refine * GameConfig.Refine.DefPerRefine
 				b.equipMdef += def.mdef or 0
 			end
-			for _, k in ipairs({ "str", "agi", "vit", "int", "dex", "luk", "maxHp", "maxSp" }) do
+			for _, k in ipairs({ "VIT", "END", "WIL", "WPN", "MAR", "FRU", "maxHp", "maxSp" }) do
 				if def[k] then
 					b[k] = (b[k] or 0) + def[k]
 				end
@@ -96,7 +136,7 @@ function F.TokiStats(profile)
 			out[k] = (out[k] or 0) + (adv and B.Conqueror.advancedAll or B.Conqueror.all)
 		end
 		if adv then
-			out.LUK += B.Conqueror.advancedLuk
+			out.WIL += B.Conqueror.advancedLuk
 		end
 	end
 	for _, id in ipairs({ "Armament", "Observation" }) do
@@ -106,7 +146,7 @@ function F.TokiStats(profile)
 				out[k] = (out[k] or 0) + (adv and B[id].advancedMain or B[id].main)
 			end
 			if adv then
-				out.LUK = (out.LUK or 0) + B[id].advancedLuk
+				out.WIL = (out.WIL or 0) + B[id].advancedLuk
 			end
 		end
 	end
@@ -137,14 +177,14 @@ function F.StatSources(profile)
 		local def = entry and ItemDB.ForEntry(entry)
 		if def then
 			for _, k in ipairs(F.StatNames) do
-				gear[k] = (gear[k] or 0) + (def[string.lower(k)] or 0)
+				gear[k] = (gear[k] or 0) + (def[k] or 0)
 			end
 			for _, cardId in ipairs(entry.cards or {}) do
 				local c = ItemDB.Cards[cardId]
 				local cb = {}
 				addBonus(cb, c and c.bonus)
 				for _, k in ipairs(F.StatNames) do
-					cards[k] = (cards[k] or 0) + (cb[string.lower(k)] or 0)
+					cards[k] = (cards[k] or 0) + (cb[k] or 0)
 				end
 			end
 		end
@@ -181,13 +221,13 @@ function F.Compute(profile, buffs)
 	end
 	-- Toki (v0.25.70): Conqueror = every attribute; Armament / Observation = their two
 	for stat, v in pairs(F.TokiStats(profile)) do
-		local k = string.lower(stat)
+		local k = stat
 		b[k] = (b[k] or 0) + v
 	end
 	-- Cursed Fruit attribute bonus (v0.25.69, grows with Fruit Mastery)
 	if profile.fruit then
 		for stat, v in pairs(FruitsCfg.StatsFor(profile.fruit.id, profile.fruit.mastery)) do
-			local k = string.lower(stat)
+			local k = stat
 			b[k] = (b[k] or 0) + v
 		end
 	end
@@ -226,27 +266,39 @@ function F.Compute(profile, buffs)
 			herMatk = 0.25
 		end
 	end
-	local STR = s.STR + (b.str or 0)
-	local AGI = s.AGI + (b.agi or 0)
-	local VIT = s.VIT + (b.vit or 0)
-	local INT = s.INT + (b.int or 0)
-	local DEX = s.DEX + (b.dex or 0)
-	local LUK = s.LUK + (b.luk or 0)
+	local function stat(k)
+		return ((s and s[k]) or 0) + (b[k] or 0)
+	end
+	local VIT, END, WIL, WPN, MAR, FRU = stat("VIT"), stat("END"), stat("WIL"), stat("WPN"), stat("MAR"), stat("FRU")
+	-- the equipped weapon picks the Mastery stat that drives ATK: Martial Arts for fists / wraps / legs, else Weaponry
+	local martial = F.Martial[b.weaponType] == true
+	local main, off = WPN, MAR
+	if martial then
+		main, off = MAR, WPN
+	end
 
 	local d = {}
-	d.STR, d.AGI, d.VIT, d.INT, d.DEX, d.LUK = STR, AGI, VIT, INT, DEX, LUK
-	d.maxHp = math.floor(((100 + lvl * 20 + VIT * 14 + lvl * VIT * 0.6) * cls.hpMod + (b.maxHp or 0)) * (1 + (b.hpPct or 0)))
-	d.maxSp = math.floor(((30 + lvl * 4 + INT * 6) * cls.spMod + (b.maxSp or 0)) * (her == "Tidekin" and 1.08 or 1))
-	d.atk = math.floor((STR * 2.2 + DEX * 0.4 + LUK * 0.3 + lvl + b.weaponAtk + (b.atk or 0)) * (1 + (b.atkPct or 0) + (buffs.atk or 0)))
-	d.matk = math.floor((INT * 3 + lvl + b.weaponMatk + (b.matk or 0)) * (1 + (buffs.atk or 0) + herMatk))
-	d.def = math.floor((VIT * 0.8 + b.equipDef + (b.def or 0)) * (1 + (b.defPct or 0) + (buffs.def or 0)))
-	d.mdef = math.floor(INT * 0.5 + b.equipMdef + (b.mdef or 0))
-	d.hit = math.floor(lvl + DEX * 1.6 + (b.hit or 0))
-	d.flee = math.floor((lvl + AGI * 1.6 + (b.flee or 0) + (buffs.flee or 0)) * ((her == "Skyborn" and 1.05) or (her == "Cinderwing" and profile.heritageMode == "calm" and 1.1) or 1))
-	d.crit = 1 + LUK * 0.35 + (b.crit or 0) + (buffs.crit or 0)
+	d.VIT, d.END, d.WIL, d.WPN, d.MAR, d.FRU = VIT, END, WIL, WPN, MAR, FRU
+	d.martial = martial
+	d.maxHp = math.floor(((100 + lvl * 20 + VIT * 16 + lvl * VIT * 0.6) * cls.hpMod + (b.maxHp or 0)) * (1 + (b.hpPct or 0)))
+	d.maxSp = math.floor(((30 + lvl * 4 + WIL * 6) * cls.spMod + (b.maxSp or 0)) * (her == "Tidekin" and 1.08 or 1))
+	local atkK = 1 + (b.atkPct or 0) + (buffs.atk or 0)
+	d.atk = math.floor((main * 2.2 + off * 0.4 + lvl + b.weaponAtk + (b.atk or 0)) * atkK)
+	-- MATK = magic weapons (baton, powder pouch): Weaponry too
+	d.matk = math.floor((WPN * 2.4 + lvl + b.weaponMatk + (b.matk or 0)) * (1 + (buffs.atk or 0) + herMatk))
+	-- Cursed Fruit skills: Fruit Mastery, plus a little of the weapon in hand
+	d.fruitAtk = math.floor((FRU * 3 + lvl + math.max(b.weaponAtk, b.weaponMatk) * 0.4 + math.max(b.atk or 0, b.matk or 0)) * (atkK + herMatk))
+	d.def = math.floor((VIT * 0.6 + END * 0.4 + b.equipDef + (b.def or 0)) * (1 + (b.defPct or 0) + (buffs.def or 0)))
+	d.mdef = math.floor(WIL * 0.6 + b.equipMdef + (b.mdef or 0))
+	d.hit = math.floor(lvl + main * 1.4 + off * 0.4 + FRU * 0.6 + (b.hit or 0))
+	d.flee = math.floor((lvl + END * 1.4 + (b.flee or 0) + (buffs.flee or 0)) * ((her == "Skyborn" and 1.05) or (her == "Cinderwing" and profile.heritageMode == "calm" and 1.1) or 1))
+	d.crit = 1 + WPN * 0.25 + MAR * 0.15 + (b.crit or 0) + (buffs.crit or 0)
 	local aspd = (b.aspd or 0) + (buffs.aspd or 0)
-	d.attackInterval = math.max(0.35, 1.5 * (1 - AGI * 0.006 - DEX * 0.0015) / (1 + aspd))
-	d.moveSpeed = math.min(24, 17 + AGI * 0.05) * herSpeed
+	d.attackInterval = math.max(0.35, 1.5 * (1 - MAR * 0.005 - WPN * 0.0015) / (1 + aspd))
+	d.moveSpeed = math.min(24, 17 + END * 0.04) * herSpeed
+	-- Endurance: the Stamina bar (Controllers/Stamina reads the player attributes MaxStamina / StaminaRegen)
+	d.maxStamina = math.floor(GameConfig.Stamina.Max + END * SC.StaminaPerEnd)
+	d.staminaRegen = GameConfig.Stamina.Regen * (1 + END * SC.RegenPerEnd)
 	d.cannonDamage = (b.cannonDamage or 0) + (cls.passive and cls.passive.cannonDamage or 0)
 	d.shipSpeed = (b.shipSpeed or 0) + (cls.passive and cls.passive.shipSpeed or 0)
 	d.shipHp = b.shipHp or 0

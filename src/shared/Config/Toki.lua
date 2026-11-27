@@ -1,8 +1,8 @@
 -- Toki (v0.25.70, owner; spec docs/Plan-Toki.md): fighting spirit, a power of the body (works with or without a fruit).
 -- Our own system: in game it is ALWAYS "Toki", never the other word. Three kinds, each with a base and an advanced form:
---   Armament    base: STR + VIT, hits Logia bodies            advanced (sea 3): Inner Break (hits pass inside = crit, ignore DEF) + LUK
---   Observation base: AGI + DEX (FLEE / HIT)                  advanced (sea 3): Foresight (see blows coming, counter, dodge charges) + LUK
---   Conqueror   base: all stats +3, the aura cows the weak    advanced (sea 3): controlled aura (picks who it hits) + coating + LUK
+--   Armament    base: VIT + WIL, hits Logia bodies            advanced (sea 3): Inner Break (hits pass inside = crit, ignore DEF) + WIL (remake: was LUK)
+--   Observation base: END + WPN (FLEE / HIT)                  advanced (sea 3): Foresight (see blows coming, counter, dodge charges) + WIL (remake: was LUK)
+--   Conqueror   base: all stats +3, the aura cows the weak    advanced (sea 3): controlled aura (picks who it hits) + coating + WIL (remake: was LUK)
 -- First sea: only Conqueror exists (0.1% roll when a character is made, or granted by the developer). Armament /
 -- Observation are earned in the second sea (numbers below are ready for it).
 -- Profile: p.toki = { rolled = true, Conqueror = { color = "#rrggbb", advanced = false }, ... }
@@ -10,8 +10,8 @@ local T = {}
 
 T.Kinds = {
 	{ id = "Conqueror", name = "Conqueror Toki", icon = "👑", stats = "ALL", desc = "The will of a born ruler. Only the chosen have it: the weak cannot even stand before you." },
-	{ id = "Armament", name = "Armament Toki", icon = "🛡️", stats = { "STR", "VIT" }, desc = "Spirit hardened into armor. Your blows reach even bodies of fire and smoke." },
-	{ id = "Observation", name = "Observation Toki", icon = "👁️", stats = { "AGI", "DEX" }, desc = "You feel every blow before it lands." },
+	{ id = "Armament", name = "Armament Toki", icon = "🛡️", stats = { "VIT", "WIL" }, desc = "Spirit hardened into armor. Your blows reach even bodies of fire and smoke." },
+	{ id = "Observation", name = "Observation Toki", icon = "👁️", stats = { "END", "WPN" }, desc = "You feel every blow before it lands." },
 }
 T.ById = {}
 for _, k in ipairs(T.Kinds) do

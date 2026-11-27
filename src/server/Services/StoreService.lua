@@ -65,10 +65,8 @@ local function resetStats(player, p)
 	local Formulas = require(ReplicatedStorage.Shared.Modules.Formulas)
 	local refund = 0
 	for _, stat in ipairs(Formulas.StatNames) do
-		for v = 1, (p.stats[stat] or 1) - 1 do
-			refund += Formulas.StatCost(v)
-		end
-		p.stats[stat] = 1
+		refund += p.stats[stat] or 0 -- remake: 1 point per +1, attributes start at 0
+		p.stats[stat] = 0
 	end
 	p.statPoints += refund
 	R.PlayerService.Recompute(player)

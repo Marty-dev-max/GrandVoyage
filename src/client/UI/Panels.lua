@@ -109,9 +109,9 @@ local function describe(entry, def)
 	if def.def then
 		table.insert(lines, "DEF " .. def.def)
 	end
-	for _, k in ipairs({ "str", "agi", "vit", "int", "dex", "luk" }) do
+	for _, k in ipairs(Formulas.StatNames) do
 		if def[k] then
-			table.insert(lines, string.upper(k) .. " +" .. def[k])
+			table.insert(lines, Formulas.StatInfo[k].name .. " +" .. def[k])
 		end
 	end
 	if def.reqLevel then
@@ -816,7 +816,7 @@ function Panels.Stats()
 	-- scrolls when the window is short (small screens) instead of spilling out of the frame
 	local right = UI.Scroll(win.body, UDim2.new(0.62, 0, 1, 0))
 	right.Position = UDim2.new(0.38, 0, 0, 0)
-	local desc = { STR = "Physical attack", AGI = "Attack speed / dodge", VIT = "HP / defense", INT = "Magic / SP", DEX = "Accuracy / ranged", LUK = "Crits / drops / will power" }
+	local SINFO = Formulas.StatInfo -- remake attributes: name + what it does
 	local pend = {}
 	local drawn = false
 
@@ -865,6 +865,9 @@ function Panels.Stats()
 			refreshChar((wDef and wDef.weaponType) or "Fists")
 		end
 		local left = p.statPoints - planCost(p)
+		-- remake: all six attributes together stop at Formulas.MaxTotal
+		local used = Formulas.Spent(p.stats) + planCost(p)
+		local capLeft = Formulas.MaxTotal - used
 
 		-- v0.25.67 (owner: cramped header, LUK row hidden under the buttons, unclear colors): a points pill + a
 		-- Reset Stats button (opens the Store product) on top, column colors BASE white / BONUS green / NEXT COST yellow
@@ -888,8 +891,12 @@ function Panels.Stats()
 		UI.Tooltip(resetBtn, function()
 			return "Reset Stats: get back every stat point you spent and plan your build again (also in the Store for Gems).", T.Red
 		end)
+		local usedL = UI.Text(tbl, "USED " .. used .. " / " .. Formulas.MaxTotal, 15, capLeft > 0 and T.TextSoft or T.Red, "Display", { Position = UDim2.fromOffset(262, 0), Size = UDim2.new(1, -462, 0, 48), TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Center })
+		UI.Tooltip(usedL, function()
+			return "All six attributes together stop at " .. Formulas.MaxTotal .. " points (one attribute at " .. Formulas.MaxStat .. "): pick what your character is good at.", T.Gold
+		end)
 		-- column titles, in the same color as their numbers
-		local cols = { { "ATTRIBUTE", 0, 0.32, T.TextSoft }, { "BASE", 0.32, 0.12, T.Text }, { "BONUS", 0.44, 0.12, T.Green }, { "NEXT COST", 0.56, 0.16, T.Gold } }
+		local cols = { { "ATTRIBUTE", 0, 0.32, T.TextSoft }, { "BASE", 0.32, 0.12, T.Text }, { "BONUS", 0.44, 0.12, T.Green }, { "TOTAL", 0.56, 0.16, T.Gold } }
 		for _, c in ipairs(cols) do
 			UI.Text(tbl, c[1], 14, c[4], "Display", { Position = UDim2.new(c[2], c[2] == 0 and 12 or 0, 0, 62), Size = UDim2.new(c[3], 0, 0, 22), TextXAlignment = c[2] == 0 and Enum.TextXAlignment.Left or Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Center })
 		end
@@ -900,8 +907,12 @@ function Panels.Stats()
 			local base, n = p.stats[s], pend[s] or 0
 			local bonus = (d[s] or base) - base
 			local MID = Enum.TextYAlignment.Center
-			UI.Text(row, s, 22, UI.StatColor[s] or T.Text, "Display", { Position = UDim2.fromOffset(12, 4), Size = UDim2.new(0.32, -12, 0, 24), TextYAlignment = MID })
-			UI.Text(row, desc[s], 12, T.TextSoft, "Semi", { Position = UDim2.fromOffset(12, 29), Size = UDim2.new(0.32, -12, 0, 15), TextYAlignment = MID })
+			local info = SINFO[s] or { name = s, desc = "" }
+			local nameL = UI.Text(row, info.name, 17, UI.StatColor[s] or T.Text, "Display", { Position = UDim2.fromOffset(12, 4), Size = UDim2.new(0.32, -12, 0, 24), TextYAlignment = MID })
+			UI.Text(row, info.desc, 12, T.TextSoft, "Semi", { Position = UDim2.fromOffset(12, 29), Size = UDim2.new(0.32, -12, 0, 15), TextYAlignment = MID })
+			UI.Tooltip(nameL, function()
+				return info.name .. " (" .. s .. ", " .. info.group .. "): " .. info.desc, UI.StatColor[s] or T.Text
+			end)
 			UI.Text(row, tostring(base) .. (n > 0 and ('<font color="#7CFF9B"> +' .. n .. "</font>") or ""), 22, T.Text, "Number", { Position = UDim2.fromScale(0.32, 0), Size = UDim2.new(0.12, 0, 1, 0), TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = MID })
 			local bl = UI.Text(row, bonus ~= 0 and ((bonus > 0 and "+" or "") .. bonus) or "0", 22, bonus < 0 and T.Red or T.Green, "Number", { Position = UDim2.fromScale(0.44, 0), Size = UDim2.new(0.12, 0, 1, 0), TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = MID })
 			if bonus == 0 then
@@ -924,9 +935,11 @@ function Panels.Stats()
 			end)
 			local nextCost = Formulas.StatCost(base + n)
 			local maxed = base + n >= Formulas.MaxStat
-			local nl = UI.Text(row, maxed and "MAX" or tostring(nextCost), 22, maxed and T.TextSoft or T.Gold, "Number", { Position = UDim2.fromScale(0.56, 0), Size = UDim2.new(0.16, 0, 1, 0), TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = MID })
-			if not maxed and nextCost > left then
-				nl.TextTransparency = 0.5 -- not enough points left: dimmed
+			local canAdd = not maxed and nextCost <= left and capLeft > 0
+			-- TOTAL = what the formulas use (your points + plan + bonuses)
+			local nl = UI.Text(row, tostring(base + n + bonus), 22, maxed and T.TextSoft or T.Gold, "Number", { Position = UDim2.fromScale(0.56, 0), Size = UDim2.new(0.16, 0, 1, 0), TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = MID })
+			if base + n + bonus == 0 then
+				nl.TextTransparency = 0.5
 			end
 			local function stepBtn(text, color, xOff, fn)
 				local _, h = UI.Button(row, text, color, UDim2.fromOffset(44, 38), fn)
@@ -939,12 +952,14 @@ function Panels.Stats()
 					render()
 				end
 			end)
-			stepBtn("+", (not maxed and nextCost <= left) and T.Green or T.Grey, -6, function()
-				if not maxed and nextCost <= left then
+			stepBtn("+", canAdd and T.Green or T.Grey, -6, function()
+				if canAdd then
 					pend[s] = n + 1
 					render()
 				else
-					UI.Toast(maxed and (s .. " is at the maximum") or "Not enough points", "bad")
+					UI.Toast(maxed and (info.name .. " is at the maximum")
+						or (capLeft <= 0 and ("All attributes are at the " .. Formulas.MaxTotal .. " point cap"))
+						or "Not enough points", "bad")
 				end
 			end)
 		end
@@ -976,20 +991,23 @@ function Panels.Stats()
 		-- combat numbers
 		-- combat numbers: the card grows with however many rows the grid needs at this width
 		-- v0.25.43: fixed 3 x 4 grid; the AutomaticSize card lost its frame after a re-render (Reset plan)
-		local cs = UI.Card(right, UDim2.new(1, -12, 0, 4 * 30 + 24), T.PanelDeep)
+		local cs = UI.Card(right, UDim2.new(1, -12, 0, 5 * 30 + 24), T.PanelDeep)
 		cs.Position = UDim2.fromOffset(0, tblH + 12)
 		UI.Pad(cs, 12)
 		local grid = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Parent = cs })
-		New("UIGridLayout", { CellSize = UDim2.new(1 / 3, -12, 0, 26), CellPadding = UDim2.fromOffset(18, 4), Parent = grid })
-		for _, l in ipairs({
-			-- v0.25.8 (owner: too plain): each derived stat in its own color (same family as the attribute it comes from)
-			{ "HP", d.maxHp, T.Green }, { "SP", d.maxSp, T.Blue }, { "ATK", d.atk, UI.StatColor.STR }, { "MATK", d.matk, UI.StatColor.INT },
-			{ "DEF", d.def, UI.StatColor.VIT }, { "MDEF", d.mdef, Color3.fromRGB(190, 160, 255) },
-			{ "HIT", d.hit, UI.StatColor.DEX }, { "FLEE", d.flee, UI.StatColor.AGI }, { "CRIT", string.format("%.1f%%", d.crit), UI.StatColor.LUK },
-			{ "Attack every", string.format("%.2fs", d.attackInterval), Color3.fromRGB(255, 150, 120) }, { "Cannon dmg", "+" .. math.floor(d.cannonDamage * 100) .. "%", Color3.fromRGB(255, 120, 90) },
+		New("UIGridLayout", { CellSize = UDim2.new(1 / 3, -12, 0, 26), CellPadding = UDim2.fromOffset(18, 4), SortOrder = Enum.SortOrder.LayoutOrder, Parent = grid })
+		local SC = UI.StatColor
+		for i, l in ipairs({
+			-- v0.25.8 (owner: too plain): each derived stat in the color of the attribute it comes from (remake set)
+			{ "HP", d.maxHp, SC.VIT }, { "SP", d.maxSp, SC.WIL }, { "Stamina", d.maxStamina or 100, SC.END },
+			{ d.martial and "ATK (fists)" or "ATK (weapon)", d.atk, d.martial and SC.MAR or SC.WPN }, { "MATK", d.matk, SC.WPN }, { "Fruit ATK", d.fruitAtk or 0, SC.FRU },
+			{ "DEF", d.def, SC.VIT }, { "MDEF", d.mdef, SC.WIL }, { "FLEE", d.flee, SC.END },
+			{ "HIT", d.hit, SC.WPN }, { "CRIT", string.format("%.1f%%", d.crit), SC.WPN }, { "Attack every", string.format("%.2fs", d.attackInterval), SC.MAR },
+			{ "Cannon dmg", "+" .. math.floor(d.cannonDamage * 100) .. "%", Color3.fromRGB(255, 120, 90) },
 			{ "Ship speed", "+" .. math.floor(d.shipSpeed * 100) .. "%", Color3.fromRGB(110, 210, 255) },
 		}) do
-			local r = New("Frame", { BackgroundTransparency = 1, Parent = grid })
+			l.order = i
+			local r = New("Frame", { BackgroundTransparency = 1, LayoutOrder = l.order, Parent = grid })
 			UI.Text(r, l[1], 15, l[3], "Semi", { Size = UDim2.new(0.6, 0, 1, 0) })
 			UI.Text(r, tostring(l[2]), 16, T.Text, "Number", { Size = UDim2.new(1, -4, 1, 0), TextXAlignment = Enum.TextXAlignment.Right })
 		end
@@ -2090,7 +2108,7 @@ function Panels.BladeOffer()
 	end
 	local nm = UI.Text(win.body, def.name, 22, T.Text, "Display", { Size = UDim2.new(1, 0, 0, 28), TextXAlignment = Enum.TextXAlignment.Center, LayoutOrder = 2 })
 	UI.RarityText(nm, def.rarity)
-	local lean = def.dex and ("DEX +" .. def.dex .. "  LUK +" .. def.luk) or ("STR +" .. (def.str or 0) .. "  VIT +" .. (def.vit or 0))
+	local lean = Formulas.StatLine(def)
 	UI.Text(win.body, string.format("%s  •  ATK %d  •  %s\nCard slots %d  •  Needs Lv.%d", def.typeLabel or "Sword", def.atk, lean, def.slots or 0, def.reqLevel or 1), 15, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 40), TextXAlignment = Enum.TextXAlignment.Center, LayoutOrder = 3 })
 	UI.Text(win.body, COIN .. " " .. UI.Format(def.price), 20, T.Gold, "Number", { Size = UDim2.new(1, 0, 0, 26), TextXAlignment = Enum.TextXAlignment.Center, LayoutOrder = 4 })
 	local row = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, -40, 0, 50), LayoutOrder = 5, Parent = win.body })
@@ -4747,7 +4765,7 @@ function Panels.Index()
 					if got then
 						UI.RarityText(nm, def.rarity)
 						line(c, 118, "ATK " .. def.atk .. "  " .. (def.typeLabel or "Sword"), 12, T.TextSoft)
-						line(c, 136, def.dex and ("DEX +" .. def.dex .. " LUK +" .. (def.luk or 0)) or ("STR +" .. (def.str or 0) .. " VIT +" .. (def.vit or 0)), 12, T.TextSoft)
+						line(c, 136, Formulas.StatLine(def, " "), 12, T.TextSoft)
 					end
 					line(c, 166, got and "FOUND" or "NOT FOUND", 13, got and T.Green or T.TextSoft, "Display")
 				end

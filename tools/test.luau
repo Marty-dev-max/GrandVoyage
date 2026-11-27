@@ -58,7 +58,7 @@ for cid, c in pairs(Classes.Classes) do
 end
 
 -- 2) stat formulas
-local profile = { class = "Swordsman", baseLevel = 30, stats = { STR = 40, AGI = 30, VIT = 30, INT = 5, DEX = 25, LUK = 10 },
+local profile = { class = "Swordsman", baseLevel = 30, stats = { VIT = 30, END = 20, WIL = 5, WPN = 35, MAR = 0, FRU = 0 },
 	inventory = { { uid = "w", id = "Sword_Keen", qty = 1, refine = 7, cards = { "WildBoarCard" } }, { uid = "a", id = "MarineCoat", qty = 1, refine = 4, cards = {} } },
 	equipment = { weapon = "w", armor = "a" } }
 local d = F.Compute(profile, {})

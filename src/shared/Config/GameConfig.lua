@@ -4,16 +4,16 @@ return {
 	LogoLines = { "LARPTALES", "VOXEL SEAS" },
 	LogoImage = 133908417032160, -- v0.25.87: pixel logo board floating behind the menu character (tools/gen_logo.py); nil = text logo
 	-- bump on every change: shown bottom-right in game and printed in Output, so you can tell which code is running
-	Version = "0.1.5-remake",
+	Version = "0.1.6-remake",
 	SagaName = "Azure East Saga",
 	-- title menu UPDATE LOG lines (newest first, at most 6: more ran off the top of the screen, v0.25.156)
 	UpdateNotes = {
+		"New stats: Vitality, Endurance, Willpower, Weaponry, Martial Arts, Fruit Mastery (300 cap)",
 		"Parkour: climb, wall run, ledge hang, vault, slide, roll",
 		"HP / SP / EXP are slim tubes; hotbar hides when calm",
 		"No Auto Battle: you fight yourself",
 		"Cleaner screen: menu is one row of icons, fewer buttons",
 		"Hold F to block, tap F just before a hit to parry",
-		"Stamina for dash and sprint; dash dodges hits",
 	},
 	DataStoreName = "GV_Player_r1",
 	GuildStoreName = "GV_Guild_r1",
@@ -49,9 +49,9 @@ return {
 	-- v0.25.14 (owner): lethal monster hits knock you down; monsters execute, allies interrupt or revive
 	-- v0.25.25 (owner): downed = ragdoll; HP creeps back and you get up at StandAt (RecoverSeconds from 1 HP)
 	-- v0.25.33 (owner): ExecuteWindup 4 s; WILL POWER = the downed player presses E once per knockdown: chance WillBase
-	-- + WillPerLuk x LUK (capped at WillMax) to get up at once with WillHp of max HP
+	-- + WillPerWil x Willpower (capped at WillMax; remake: was LUK) to get up at once with WillHp of max HP
 	Knockdown = { Enabled = true, RecoverSeconds = 14, StandAt = 0.1, ExecuteWindup = 4, ReviveHold = 3, ReviveHp = 0.3,
-		WillBase = 0.1, WillPerLuk = 0.005, WillMax = 0.6, WillHp = 0.5 },
+		WillBase = 0.1, WillPerWil = 0.005, WillMax = 0.6, WillHp = 0.5 },
 	CalmBelt = {
 		SeaKingSpawnInterval = 4, -- seconds
 		MaxSeaKingsPerShip = 5,
@@ -168,6 +168,9 @@ return {
 	-- ===== Remake R1 core feel (docs/Plan-Movement-Combat-v3.md sec 3-4; Controllers/Stamina + Guard, Services/GuardService) =====
 	-- Stamina (client-side, movement only): dash, sprint, climbing / wall running later. Empty = no dash, sprint stops.
 	Stamina = { Max = 100, Regen = 30, RegenDelay = 0.8, Dash = 22, SprintPerSec = 8 },
+	-- Remake R1 attributes (Formulas.StatNames): Start points at Lv1 + PerLevel each level, 1 point per +1, one attribute
+	-- caps at MaxStat, all six together at MaxTotal. Endurance adds StaminaPerEnd max Stamina and RegenPerEnd x regen.
+	Stats = { Start = 6, PerLevel = 3, MaxStat = 100, MaxTotal = 300, StaminaPerEnd = 1, RegenPerEnd = 0.006 },
 	-- Block (hold F): blows from the front deal BlockMult and fill Posture; full Posture = guard break (stunned).
 	-- Parry: a blow landing within ParryWindow (+ ParryGrace for ping) of pressing F does nothing and stuns the
 	-- attacker; pressing again within ParryCooldown gives no parry window (no spamming).

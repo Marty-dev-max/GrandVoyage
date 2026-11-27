@@ -74,9 +74,9 @@ Q.Main = {
 	},
 	{
 		id = "T06", island = "Daybreak", title = "Train Your Body",
-		dialog = { "You've earned stat points. STR hits harder, AGI attacks faster, VIT keeps you alive, DEX lands hits, LUK finds treasure.", "Open Stats with C (or the STATS tile) and spend a few." },
+		dialog = { "You've earned stat points. Vitality keeps you alive, Endurance fuels your dashes and climbs, Willpower steadies the mind. Weaponry, Martial Arts and Fruit Mastery decide how you fight.", "You can't master everything: 300 points is the most any body can hold. Open Stats with Y and spend a few." },
 		goal = { kind = "Stat", count = 3 }, text = "Spend stat points",
-		hint = "Press C, then +1 next to a stat.",
+		hint = "Press Y, then + next to a stat, then Apply.",
 		at = { npc = "Guide" }, reward = { beli = 100, exp = 40, job = 30 },
 	},
 	{

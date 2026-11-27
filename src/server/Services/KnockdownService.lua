@@ -89,11 +89,11 @@ local function standUp(player, hpRatio)
 	Net.Push(player, "Downed", { downed = false })
 end
 
--- WILL POWER (v0.25.33, owner): the downed player's own try at getting up, LUK raises it
+-- WILL POWER (v0.25.33, owner): the downed player's own try at getting up, Willpower raises it (remake; was LUK)
 function KD.WillChance(player)
 	local d = R.PlayerService.Derived(player)
-	local luk = d and d.LUK or 0
-	return math.min(CFG.WillMax, CFG.WillBase + luk * CFG.WillPerLuk)
+	local wil = d and d.WIL or 0
+	return math.min(CFG.WillMax, CFG.WillBase + wil * CFG.WillPerWil)
 end
 
 -- called by CombatService.DamagePlayer when a monster hit would bring HP to 0

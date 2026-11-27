@@ -1876,8 +1876,10 @@ local function stepShip(ship, dt, now)
 			local u = toC.Unit
 			wFlow = Vector3.new(-u.Z, 0, u.X)
 			if not (ht and now < ht.untilT) then
-				local flow = (wFlow + u * 0.35).Unit
-				local rate = Weather.Whirl.FlowTurn * ship.whirlK * (ship.steer ~= 0 and 0.5 or 1)
+				-- a little inward outside the Orbit ring, a little outward inside it (so a ship under sail rides the ring)
+				local bias = 0.35 * math.clamp((toC.Magnitude - Weather.Whirl.Orbit) / Weather.Whirl.Orbit, -1, 1)
+				local flow = (wFlow + u * bias).Unit
+				local rate = Weather.Whirl.FlowTurn * ship.whirlK * (ship.steer ~= 0 and Weather.Whirl.SteerHold or 1)
 				ship.yaw += math.clamp(wrapAngle(math.atan2(-flow.X, -flow.Z) - ship.yaw), -rate * dt, rate * dt)
 			end
 		end

@@ -1057,15 +1057,18 @@ local function weatherTick(now)
 	for i, spot in ipairs(Weather.Spots) do
 		local w = whirls[i]
 		if not w then
-			w = { open = math.random() < 0.5, untilT = now + math.random(20, 200) }
+			w = { open = math.random() < 0.5, untilT = now + math.random(20, 200), openAt = now - Weather.Whirl.Form }
 			whirls[i] = w
 		end
 		if now >= w.untilT then
 			w.open = not w.open
 			w.untilT = now + rnd(w.open and Weather.Whirl.On or Weather.Whirl.Off)
+			w.openAt = now
 		end
 		if w.open then
-			table.insert(list, { kind = "W", id = 1000 + i, x = spot.x, z = spot.z, r = Weather.Whirl.Radius })
+			-- 0.1.22: it forms over Form seconds and flattens out over the last Form seconds (k 0..1)
+			local k = math.clamp(math.min(now - w.openAt, w.untilT - now) / Weather.Whirl.Form, 0, 1)
+			table.insert(list, { kind = "W", id = 1000 + i, x = spot.x, z = spot.z, r = Weather.Whirl.Radius, k = k })
 		end
 	end
 	for i = #extra, 1, -1 do
@@ -1079,7 +1082,8 @@ local function weatherTick(now)
 				e.k = stormFade(e, now)
 				table.insert(list, { kind = "S", id = e.id, x = e.x, z = e.z, r = e.r, vx = e.vx, vz = e.vz, k = e.k })
 			else
-				table.insert(list, { kind = "W", id = e.id, x = e.x, z = e.z, r = e.r })
+				local k = math.clamp(math.min(now - (e.born or now - Weather.Whirl.Form), e.untilT - now) / Weather.Whirl.Form, 0, 1)
+				table.insert(list, { kind = "W", id = e.id, x = e.x, z = e.z, r = e.r, k = k })
 			end
 		end
 	end
@@ -1105,7 +1109,7 @@ function Ship.AdminWeather(player, what)
 		local bow = ship and Vector3.new(-math.sin(ship.yaw), 0, -math.cos(ship.yaw)) or Vector3.new(0, 0, -1)
 		local c = p + bow * 40
 		weatherId += 1
-		table.insert(extra, { kind = "W", id = weatherId, x = c.X, z = c.Z, r = Weather.Whirl.Radius, untilT = now + 240 })
+		table.insert(extra, { kind = "W", id = weatherId, x = c.X, z = c.Z, r = Weather.Whirl.Radius, born = now, untilT = now + 240 })
 	else
 		-- a storm that starts at full strength right over you and drifts slowly
 		weatherId += 1
@@ -1153,7 +1157,7 @@ local function weatherShip(ship)
 	end
 	if wh then
 		if wd < Weather.Whirl.Core then
-			dmg += ship.maxHp * Weather.Whirl.CoreDmg
+			dmg += ship.maxHp * Weather.Whirl.CoreDmg * (wh.k or 1)
 			toast(ship.owner, "🌀 The whirlpool is grinding the hull!", "bad", "whirl")
 		elseif wd < wh.r * Weather.Whirl.EscapeFrom then
 			toast(ship.owner, "🌀 Whirlpool! Full sail away from the middle", "bad", "whirl")
@@ -1861,8 +1865,39 @@ local function stepShip(ship, dt, now)
 		ship.hardTurn = nil
 		ship.yaw -= ship.steer * turnRate * dt * math.clamp(0.35 + math.abs(ship.speed) / 40, 0.35, 1)
 	end
+	-- 0.1.22 (owner: the bow should swing with the water going round, and the spin should fling you out): in a
+	-- whirlpool the current turns the bow along the flow (round the eye, a little inward), half as hard while you
+	-- steer; sailing WITH the spin gathers `sling` speed, which stays for a moment after you steer out
+	local wFlow = nil
+	local wh0 = ship.whirl
+	if not ship.npc and wh0 and (ship.whirlK or 0) > 0 and now >= (ship.whirlFree or 0) then
+		local toC = Vector3.new(wh0.x - pos.X, 0, wh0.z - pos.Z)
+		if toC.Magnitude > 1 then
+			local u = toC.Unit
+			wFlow = Vector3.new(-u.Z, 0, u.X)
+			if not (ht and now < ht.untilT) then
+				local flow = (wFlow + u * 0.35).Unit
+				local rate = Weather.Whirl.FlowTurn * ship.whirlK * (ship.steer ~= 0 and 0.5 or 1)
+				ship.yaw += math.clamp(wrapAngle(math.atan2(-flow.X, -flow.Z) - ship.yaw), -rate * dt, rate * dt)
+			end
+		end
+	end
 	local fwd = Vector3.new(-math.sin(ship.yaw), 0, -math.cos(ship.yaw))
 	local vel = fwd * ship.speed
+	if not ship.npc then
+		local along = wFlow and fwd:Dot(wFlow) or 0
+		local sling = ship.sling or 0
+		if wFlow and along > 0.5 and ship.speed > 4 then
+			sling = math.min(Weather.Whirl.Sling * math.min(1, ship.whirlK * 1.5), sling + Weather.Whirl.SlingGain * along * dt)
+			if sling > Weather.Whirl.Sling * 0.6 and ship.owner then
+				toast(ship.owner, "🌀 Riding the spin! Steer out now to slingshot away", "good", "sling")
+			end
+		else
+			sling = math.max(0, sling - Weather.Whirl.SlingDecay * dt)
+		end
+		ship.sling = sling
+		vel += fwd * sling
+	end
 	if not ship.npc and ship.curDir and (ship.curK or 0) > 0 then
 		vel += ship.curDir * Currents.Drift * ship.curK -- Mastery v2 M5: a current carries the hull along
 	end
@@ -1922,8 +1957,19 @@ local function stepShip(ship, dt, now)
 	local damp = Waves.Damp(pos.X, pos.Z)
 	local fwd = Vector3.new(-math.sin(ship.yaw), 0, -math.cos(ship.yaw))
 	local right = Vector3.new(-fwd.Z, 0, fwd.X)
+	-- 0.1.22: a whirlpool sinks the surface into a funnel (Weather.Funnel, drawn the same way by Controllers/VoxelSea):
+	-- every ship rides down into it and leans in (NPC ships too, they only skip the pull)
+	local inFunnel = false
 	local function hAt(v)
-		return Waves.Height(pos.X + v.X, pos.Z + v.Z, wt, damp)
+		local x, z = pos.X + v.X, pos.Z + v.Z
+		local dip, mul = 0, 1
+		if not ship.test then
+			dip, mul = Weather.DipAt(x, z, weatherList)
+		end
+		if dip > 0 then
+			inFunnel = true
+		end
+		return Waves.Height(x, z, wt, damp) * mul - dip
 	end
 	local hBow, hStern, hR, hL = hAt(fwd * 8), hAt(fwd * -8), hAt(right * 4), hAt(right * -4)
 	local targetY = GameConfig.SeaLevel - G * 0.5 + 1 + (hBow + hStern + hR + hL) / 4
@@ -1937,8 +1983,9 @@ local function stepShip(ship, dt, now)
 	ship.heelNow = windHeel
 	local lean = ship.steer * -(0.05 + heel * 0.5) * math.clamp(ship.speed / 40, 0, 1) + (ship.easy and 0 or (ship.list or 0)) + windHeel
 	ship.rollNow = lean -- the steady lean (no wave rocking): gun ports shut on its low side (#34)
-	local roll = math.clamp(math.atan2(hR - hL, 8) * 0.7, -0.12, 0.12) + lean
-	local pitch = math.clamp(math.atan2(hBow - hStern, 16) * 0.7, -0.1, 0.1) + (ship.easy and 0 or (ship.trim or 0))
+	local extra = inFunnel and 0.2 or 0 -- (funnel walls lean the hull further than waves do)
+	local roll = math.clamp(math.atan2(hR - hL, 8) * 0.7, -0.12 - extra, 0.12 + extra) + lean
+	local pitch = math.clamp(math.atan2(hBow - hStern, 16) * 0.7, -0.1 - extra, 0.1 + extra) + (ship.easy and 0 or (ship.trim or 0))
 	ship.ao.CFrame = CFrame.Angles(0, ship.yaw, 0) * CFrame.Angles(pitch, 0, roll)
 end
 

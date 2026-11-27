@@ -4,16 +4,16 @@ return {
 	LogoLines = { "LARPTALES", "VOXEL SEAS" },
 	LogoImage = 133908417032160, -- v0.25.87: pixel logo board floating behind the menu character (tools/gen_logo.py); nil = text logo
 	-- bump on every change: shown bottom-right in game and printed in Output, so you can tell which code is running
-	Version = "0.1.21-remake",
+	Version = "0.1.22-remake",
 	SagaName = "Azure East Saga",
 	-- title menu UPDATE LOG lines (newest first, at most 6: more ran off the top of the screen, v0.25.156)
 	UpdateNotes = {
+		"WHIRLPOOLS are real vortexes now: ride the spin round, then steer out to slingshot away",
 		"STORMS + WHIRLPOOLS at sea: they batter the hull. Navigators see them coming (Lv 30) and Hard Turn out (Lv 50)",
 		"SAILING: the wind now has a direction (arrow on the ship card). Sea currents between islands: ride them!",
 		"SHIPWRIGHT + DOCTOR: time your ship repairs (green = x1.5, no leaks), Emergency Repair, Miracle Mist, faster revives",
 		"GUNNER: F in the green while reloading = instant reload. Chain / Bomb Shot (Z), Full Broadside (C)",
 		"COOKING: press E at any campfire. Good timing = tasty 2-3 star food with buffs",
-		"Talent cards (T): pick 1 of 3 every level. Field Mastery for ship jobs",
 	},
 	DataStoreName = "GV_Player_r1",
 	GuildStoreName = "GV_Guild_r1",

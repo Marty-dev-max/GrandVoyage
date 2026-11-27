@@ -1,8 +1,9 @@
 -- Weather (client, Mastery v2 M6): draws the storms and whirlpools the server lists in the workspace attribute
 -- "Weather" (Shared/Modules/Weather): voxel storm clouds + grey rain curtains (seen from afar by everyone), rain round
 -- the camera, dark storm light (Atmos.SetStorm), lightning (random inside a storm + the server's "Lightning" FX on
--- ships), whirlpools as spinning foam rings round a dark core on the wave surface (everyone sees them within
--- SEE_WHIRL; Navigators Lv 30 (Storm Sense) see them from far, plus warnings on the ship card + the map).
+-- ships), whirlpools (0.1.22: Controllers/VoxelSea sinks the block sea into the funnel; here = white foam streaks
+-- sliding inward along the spiral arms + spray from the eye; everyone sees them within SEE_WHIRL, Navigators Lv 30
+-- (Storm Sense) from far, plus warnings on the ship card + the map).
 -- Weather.List() = the storms moved on since the last update (for Sailing + the map).
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -18,12 +19,13 @@ local Net = require(Shared.Modules.Net)
 local Atmos = require(script.Parent.Atmos)
 local Audio = require(script.Parent.Audio)
 local State = require(script.Parent.Parent.State)
+local VoxelSea = require(script.Parent.VoxelSea)
 
 local Weather = {}
 local player = Players.LocalPlayer
 
 local SEE_STORM = 2600 -- clouds drawn within this of the camera
-local SEE_WHIRL = 160 -- whirlpools seen by eye within this (Storm Sense: SEE_WHIRL_SENSE)
+local SEE_WHIRL = 320 -- whirlpools seen by eye within this (Storm Sense: SEE_WHIRL_SENSE)
 local SEE_WHIRL_SENSE = 900
 local CLOUD_Y = { 95, 140 }
 
@@ -127,26 +129,43 @@ local function dropCloud(id)
 end
 
 -- ===== whirlpools: rings of foam blocks turning round a dark core =====
-local whirlSets = {} -- [id] = { parts, ring info }
-local RINGS = { { k = 0.95, n = 30, spin = 0.25, color = Color3.fromRGB(210, 240, 250), size = 3 }, { k = 0.62, n = 22, spin = 0.5, color = Color3.fromRGB(150, 205, 230), size = 3 },
-	{ k = 0.36, n = 14, spin = 0.95, color = Color3.fromRGB(70, 130, 175), size = 3.4 } }
+local whirlSets = {} -- [id] = { parts, kind, arm, idx }
+local STREAKS = 11 -- foam streaks per spiral arm
 local function buildWhirl(e)
-	local set = { parts = {}, ring = {}, idx = {}, n = {} }
-	for ri, ring in ipairs(RINGS) do
-		for i = 1, ring.n do
-			local p = block(Vector3.new(ring.size + 1.5, 0.6, ring.size), ring.color, 0.1)
+	local set = { parts = {}, kind = {}, arm = {}, idx = {} }
+	for j = 0, W.Whirl.Arms - 1 do
+		for i = 1, STREAKS do
+			local p = block(Vector3.new(1.3 + (i % 3) * 0.4, 0.6, 6 + (i % 4)), Color3.fromRGB(232, 248, 252), 1)
 			table.insert(set.parts, p)
-			table.insert(set.ring, ri)
+			table.insert(set.kind, "streak")
+			table.insert(set.arm, j)
 			table.insert(set.idx, i)
 		end
 	end
-	-- the dark core (a few flat tiles)
+	-- the dark eye as flat tiles: only when the block sea does not draw the funnel (Low graphics / far)
 	for i = 1, 9 do
-		local p = block(Vector3.new(9, 0.5, 9), Color3.fromRGB(10, 34, 66), 0.05)
+		local p = block(Vector3.new(9, 0.5, 9), Color3.fromRGB(10, 34, 66), 1)
 		table.insert(set.parts, p)
-		table.insert(set.ring, 0)
+		table.insert(set.kind, "core")
+		table.insert(set.arm, 0)
 		table.insert(set.idx, i)
 	end
+	-- spray rising out of the eye
+	local mist = block(Vector3.new(10, 1, 10), Color3.new(1, 1, 1), 1)
+	local em = Instance.new("ParticleEmitter")
+	em.Texture = Textures.px_square
+	em.Color = ColorSequence.new(Color3.fromRGB(225, 242, 248))
+	em.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1.2), NumberSequenceKeypoint.new(1, 3.2) })
+	em.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.35), NumberSequenceKeypoint.new(1, 1) })
+	em.Speed = NumberRange.new(5, 11)
+	em.SpreadAngle = Vector2.new(35, 35)
+	em.Lifetime = NumberRange.new(1.6, 2.6)
+	em.RotSpeed = NumberRange.new(-90, 90)
+	em.Acceleration = Vector3.new(0, -2, 0)
+	em.EmissionDirection = Enum.NormalId.Top
+	em.Rate = 0
+	em.Parent = mist
+	set.mist, set.em = mist, em
 	return set
 end
 
@@ -155,6 +174,9 @@ local function dropWhirl(id)
 	if set then
 		for _, p in ipairs(set.parts) do
 			p:Destroy()
+		end
+		if set.mist then
+			set.mist:Destroy()
 		end
 		whirlSets[id] = nil
 	end
@@ -289,23 +311,45 @@ local function step(dt)
 					whirlSets[e.id] = set
 				end
 				local wt = Waves.Now()
-				for i, p in ipairs(set.parts) do
-					local ri = set.ring[i]
-					local x, z, yaw
-					if ri == 0 then
-						local gx, gz = (set.idx[i] - 1) % 3 - 1, math.floor((set.idx[i] - 1) / 3) - 1
-						x, z, yaw = e.x + gx * 9, e.z + gz * 9, 0
-					else
-						local ring = RINGS[ri]
-						local a = (set.idx[i] / ring.n) * math.pi * 2 + t * ring.spin
-						local rr = e.r * ring.k
-						x, z = e.x + math.cos(a) * rr, e.z + math.sin(a) * rr
-						yaw = -a -- blocks lie along the ring
+				local k = e.k or 1
+				-- on the funnel the block sea draws, or flat on the waves when it does not (Low graphics / out of reach)
+				local de = VoxelSea.On and VoxelSea.Drawn(e.id) or nil
+				local drawn = de ~= nil
+				local function surf(x, z)
+					local h = Waves.Height(x, z, wt, Waves.Damp(x, z))
+					if de then
+						local dip, mul = W.Funnel(de, x, z)
+						return GameConfig.SeaLevel + h * mul - dip
 					end
-					local y = GameConfig.SeaLevel + Waves.Height(x, z, wt, Waves.Damp(x, z)) + 0.6
-					table.insert(parts, p)
-					table.insert(cfs, CFrame.new(x, y, z) * CFrame.Angles(0, yaw, 0))
+					return GameConfig.SeaLevel + h
 				end
+				local dmin = W.Whirl.Core * 0.5
+				for i, p in ipairs(set.parts) do
+					local tr
+					if set.kind[i] == "streak" then
+						-- slides from the rim to the eye along its arm (s: 1 rim .. 0 eye), fading in and out
+						local s = (set.idx[i] / STREAKS + set.arm[i] * 0.13 - wt * W.Whirl.Flow) % 1
+						local d = dmin + (e.r * 0.95 - dmin) * s
+						local x, z = W.ArmPoint(e, set.arm[i], d, wt)
+						local x2, z2 = W.ArmPoint(e, set.arm[i], math.max(1, d - 4), wt)
+						local a, b = Vector3.new(x, surf(x, z) + 0.45, z), Vector3.new(x2, surf(x2, z2) + 0.45, z2)
+						table.insert(parts, p)
+						table.insert(cfs, CFrame.lookAt(a, b))
+						tr = 1 - 0.9 * k * math.clamp(s * 5, 0, 1) * math.clamp((1 - s) * 6, 0, 1)
+					else
+						local gx, gz = (set.idx[i] - 1) % 3 - 1, math.floor((set.idx[i] - 1) / 3) - 1
+						local x, z = e.x + gx * 9, e.z + gz * 9
+						table.insert(parts, p)
+						table.insert(cfs, CFrame.new(x, surf(x, z) + 0.35, z))
+						tr = drawn and 1 or 1 - 0.95 * k
+					end
+					if math.abs(p.Transparency - tr) > 0.03 then
+						p.Transparency = tr
+					end
+				end
+				table.insert(parts, set.mist)
+				table.insert(cfs, CFrame.new(e.x, surf(e.x, e.z) + 0.5, e.z))
+				set.em.Rate = 28 * k
 			end
 		end
 	end

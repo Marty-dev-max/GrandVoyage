@@ -39,6 +39,18 @@ W.Whirl = {
 	On = { 180, 300 }, -- seconds open
 	Off = { 120, 240 }, -- seconds closed
 	EscapeFrom = 0.5, -- you "escape" when you were inside Radius x this and got back out of Radius
+	-- 0.1.22 (owner refs: a real vortex = the sea itself sinks into a spinning funnel, white foam spiral arms):
+	Form = 12, -- seconds to open / close: the funnel deepens / flattens and the pull follows (whirlpool k 0..1)
+	Depth = 16, -- funnel depth in the middle (studs) at full strength; ships ride down into it (ShipService)
+	Pit = 6, -- the dark eye drops this much more inside Core x 0.6
+	Arms = 4, -- foam spiral arms
+	Twist = 1.7, -- arm winding: radians per e-fold of radius
+	Spin = -0.45, -- radians/s the spiral turns (the same way the swirl pushes ships: anticlockwise seen from above)
+	Flow = 0.12, -- foam streaks slide inward along the arms (share of the radius per second)
+	FlowTurn = 0.7, -- rad/s the current swings a ship's bow toward the flow at full pull (half while you steer)
+	Sling = 16, -- studs/s of extra speed gathered sailing WITH the spin: kept for a moment after you break out
+	SlingGain = 6, -- studs/s per second it builds while riding the spin
+	SlingDecay = 4, -- studs/s per second it fades once you stop riding it (or leave the whirlpool)
 }
 
 -- the sea weather lives in: east of the first island, short of the Red Line, inside the windy lane
@@ -85,7 +97,7 @@ function W.StormK(s, x, z)
 end
 
 -- the strongest storm and the nearest open whirlpool at (x, z)
--- returns stormK, storm, whirlK (0..1 pull share), whirl, distance to the whirlpool's middle
+-- returns stormK, storm, whirlK (0..1 pull share, x the whirlpool's own strength k), whirl, distance to its middle
 function W.At(x, z, list)
 	local bestK, best = 0, nil
 	local wk, wbest, wd = 0, nil, math.huge
@@ -95,18 +107,64 @@ function W.At(x, z, list)
 			if k > bestK then
 				bestK, best = k, e
 			end
-		else
+		elseif (e.k or 1) > 0 then
 			local d = flat(x, z, e.x, e.z)
 			if d < e.r and d < wd then
 				wd, wbest = d, e
-				wk = 1 - math.max(0, d - W.Whirl.Core) / (e.r - W.Whirl.Core)
+				wk = (1 - math.max(0, d - W.Whirl.Core) / (e.r - W.Whirl.Core)) * (e.k or 1)
 			end
 		end
 	end
 	return bestK, best, wk, wbest, wd
 end
 
--- wire format: "S,id,x,z,r,vx,vz,k;W,id,x,z,r;..." (whole studs, k in hundredths). `id` stays the same while that
+-- 0.1.22: the funnel a whirlpool sinks the sea into. Returns how far the surface is pulled down at (x, z) (studs),
+-- the wave multiplier there (the water swirls smooth toward the eye) and the distance to the middle.
+function W.Funnel(e, x, z)
+	local d = flat(x, z, e.x, e.z)
+	if d >= e.r then
+		return 0, 1, d
+	end
+	local t = d / e.r
+	local k = e.k or 1
+	local dip = W.Whirl.Depth * k * (1 - t) ^ 2.2
+	local core = W.Whirl.Core * 0.6
+	if d < core then
+		dip += W.Whirl.Pit * k * (1 - d / core)
+	end
+	return dip, 1 - k * (1 - math.min(1, t * 1.4)), d
+end
+
+-- the deepest funnel under (x, z) of every whirlpool in the list: dip, wave multiplier
+function W.DipAt(x, z, list)
+	local dip, mul = 0, 1
+	for _, e in ipairs(list or {}) do
+		if e.kind == "W" and math.abs(x - e.x) < e.r and math.abs(z - e.z) < e.r then
+			local dp, m = W.Funnel(e, x, z)
+			if dp > dip then
+				dip, mul = dp, m
+			end
+		end
+	end
+	return dip, mul
+end
+
+-- foam spiral: 1 on an arm, -1 between arms (t = server time). An arm through angle a0 at the rim winds inward as
+-- a(d) = a0 + Spin x t - Twist x ln(r / d), so the pattern turns with the flow and the arms reach into the eye.
+function W.Stripe(e, x, z, t)
+	local dx, dz = x - e.x, z - e.z
+	local d = math.max(1, math.sqrt(dx * dx + dz * dz))
+	local a = math.atan2(dz, dx)
+	return math.cos(W.Whirl.Arms * (a - W.Whirl.Spin * t + W.Whirl.Twist * math.log(e.r / d)))
+end
+
+-- a point on arm `j` at distance d from the middle (for the foam streak blocks)
+function W.ArmPoint(e, j, d, t)
+	local a = j * 2 * math.pi / W.Whirl.Arms + W.Whirl.Spin * t - W.Whirl.Twist * math.log(e.r / math.max(1, d))
+	return e.x + math.cos(a) * d, e.z + math.sin(a) * d
+end
+
+-- wire format: "S,id,x,z,r,vx,vz,k;W,id,x,z,r,k;..." (whole studs, k in hundredths). `id` stays the same while that
 -- storm / whirlpool lives, so clients keep its clouds / swirl across updates.
 function W.Encode(list)
 	local parts = {}
@@ -115,7 +173,7 @@ function W.Encode(list)
 		if e.kind == "S" then
 			table.insert(parts, string.format("S,%d,%d,%d,%d,%.1f,%.1f,%d", f(e.id or 0), f(e.x), f(e.z), f(e.r), e.vx or 0, e.vz or 0, f((e.k or 1) * 100 + 0.5)))
 		else
-			table.insert(parts, string.format("W,%d,%d,%d,%d", f(e.id or 0), f(e.x), f(e.z), f(e.r)))
+			table.insert(parts, string.format("W,%d,%d,%d,%d,%d", f(e.id or 0), f(e.x), f(e.z), f(e.r), f((e.k or 1) * 100 + 0.5)))
 		end
 	end
 	return table.concat(parts, ";")
@@ -134,7 +192,7 @@ function W.Decode(s)
 		if f[1] == "S" and #f >= 8 then
 			table.insert(out, { kind = "S", id = n(2, 0), x = n(3, 0), z = n(4, 0), r = n(5, 1), vx = n(6, 0), vz = n(7, 0), k = n(8, 100) / 100 })
 		elseif f[1] == "W" and #f >= 5 then
-			table.insert(out, { kind = "W", id = n(2, 0), x = n(3, 0), z = n(4, 0), r = n(5, 1) })
+			table.insert(out, { kind = "W", id = n(2, 0), x = n(3, 0), z = n(4, 0), r = n(5, 1), k = n(6, 100) / 100 })
 		end
 	end
 	return out

@@ -14,6 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Waves = require(ReplicatedStorage.Shared.Modules.Waves)
 local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
 local Settings = require(script.Parent.Settings)
+local WeatherM = require(ReplicatedStorage.Shared.Modules.Weather)
 
 local VoxelSea = {}
 
@@ -57,6 +58,26 @@ for f = 0, FADES do
 end
 local SHALLOW = Color3.fromRGB(90, 220, 215)
 
+-- 0.1.22 whirlpools (owner refs: a real vortex): the columns sink into Weather.Funnel, darken toward the eye and
+-- carry white foam along the rotating spiral arms (Weather.Stripe). Colors = DARK[depth level] mixed with foam.
+local DARK = { Color3.fromRGB(26, 116, 146), Color3.fromRGB(20, 92, 122), Color3.fromRGB(15, 70, 98), Color3.fromRGB(10, 48, 72),
+	Color3.fromRGB(6, 28, 46), Color3.fromRGB(3, 12, 22) }
+local FOAM = Color3.fromRGB(226, 246, 250)
+local FOAMS = { 0, 0.35, 0.65, 0.9 }
+local vortexPal = {}
+for di, c in ipairs(DARK) do
+	vortexPal[di] = {}
+	for fi, a in ipairs(FOAMS) do
+		vortexPal[di][fi] = c:Lerp(FOAM, a * (1 - (di - 1) * 0.12))
+	end
+end
+local FULL_DIP = WeatherM.Whirl.Depth + WeatherM.Whirl.Pit
+local whirls = {} -- open whirlpools near the camera this frame ({ x, z, r, k } with k eased locally)
+local wk = {} -- [id] = eased k
+local wTarget = {} -- [id] = { e, k } from the server list
+local flatParts = {} -- the lowered flat sea tiles (2048 wide); a whirlpool cuts a hole in them (cutHole)
+local holes = {} -- [id] = { plug = Part, x, z, h } : the funnel sinks below the flat sea, so it needs a hole there
+
 local params = RaycastParams.new()
 params.FilterType = Enum.RaycastFilterType.Include
 local folder
@@ -65,6 +86,9 @@ local function recolorFlatSea(ocean)
 	for _, p in ipairs(ocean:GetDescendants()) do
 		if p:IsA("BasePart") and p.Position.Y <= 0.3 and p.Size.Y <= 2.5 and p.Position.Y > -5 then
 			p.CFrame = p.CFrame - Vector3.new(0, DROP, 0)
+			if p.Name == "Water" or p.Name == "CalmWater" then
+				table.insert(flatParts, p)
+			end
 			if p.Name == "Water" then
 				p.Color = FLAT
 				p.Material = Enum.Material.SmoothPlastic
@@ -135,6 +159,16 @@ local function stepTier(t, fx, fz, now, hole)
 			if c.land or (hole and math.abs(x - hole.x) < hole.r and math.abs(z - hole.z) < hole.r) then
 				cfs[k] = CFrame.new(x, -200, z)
 			else
+				-- whirlpool funnel under this cell?
+				local dip, wmul, we, wd = 0, 1, nil, 0
+				for _, e in ipairs(whirls) do
+					if math.abs(x - e.x) < e.r and math.abs(z - e.z) < e.r then
+						local dp, m, d = WeatherM.Funnel(e, x, z)
+						if dp > dip then
+							dip, wmul, we, wd = dp, m, e, d
+						end
+					end
+				end
 				local w, f = 1, 0
 				if t.fadeRim then
 					-- rim fade: full waves inside, flat at the lowered sea + FLAT color at the edge
@@ -144,10 +178,32 @@ local function stepTier(t, fx, fz, now, hole)
 				end
 				local raw = Waves.Raw(x, z, now)
 				local h = raw * Waves.Amp * c.damp
-				local top = SEA + h * w - DROP * (1 - w)
+				local foam = 0
+				if we then
+					h *= wmul
+					-- foam on the spiral arms (none in the dark eye), a churning broken ring at the rim
+					local tt = wd / we.r
+					local s = WeatherM.Stripe(we, x, z, now)
+					local band = math.clamp((tt - 0.12) / 0.15, 0, 1) * math.clamp((1.02 - tt) / 0.12, 0, 1)
+					foam = math.max(0, (s - 0.3) / 0.7) * band
+					if tt > 0.82 then
+						foam = math.max(foam, (math.sin(x * 0.37 + z * 0.29 + now * 3) * 0.5 + 0.5) * (tt - 0.82) * 4 * we.k)
+					end
+					foam *= we.k
+					h += foam * 0.6 -- foam ridges stand a little proud
+				end
+				local top = SEA + (h - dip) * w - DROP * (1 - w)
 				top = math.floor(top / t.step + 0.5) * t.step
 				cfs[k] = CFrame.new(x, top - t.depth / 2, z)
-				if not c.shallow then
+				if we and not c.shallow and (dip > 0.3 or foam > 0.2) then
+					local di = math.clamp(math.floor(dip / FULL_DIP * #DARK) + 1, 1, #DARK)
+					local fi = math.clamp(math.floor(foam * #FOAMS + 0.5), 0, #FOAMS - 1) + 1
+					local key = 3000 + di * 10 + fi
+					if key ~= c.band then
+						c.band = key
+						c.part.Color = vortexPal[di][fi]
+					end
+				elseif not c.shallow then
 					local b = math.clamp(math.floor((raw * c.damp * 0.5 + 0.5) * BANDS), 0, BANDS - 1)
 					local key = f * 100 + b
 					if key ~= c.band then
@@ -159,6 +215,114 @@ local function stepTier(t, fx, fz, now, hole)
 		end
 	end
 	workspace:BulkMoveTo(t.parts, cfs, Enum.BulkMoveMode.FireCFrameChanged)
+end
+
+-- the open whirlpools from the server list (workspace attribute "Weather"); k eases per frame so a forming
+-- whirlpool deepens smoothly between the 1 s updates
+local function readWeather()
+	local seen = {}
+	for _, e in ipairs(WeatherM.Decode(workspace:GetAttribute("Weather"))) do
+		if e.kind == "W" then
+			wTarget[e.id] = e
+			seen[e.id] = true
+		end
+	end
+	for id, e in pairs(wTarget) do
+		if not seen[id] then
+			e.k = 0 -- closed: flatten out, then forget it
+		end
+	end
+end
+
+-- cut a square hole (the whirlpool's reach + a margin) out of the flat sea tiles: each tile it touches is replaced
+-- by up to 4 local pieces round the hole, and a plug the size of the hole stays at the flat level whenever the funnel
+-- is not drawn (closed, or out of the block sea's reach). Done once per whirlpool id, kept after it closes.
+local function cutHole(e)
+	local h = e.r + 8
+	local x0, x1, z0, z1 = e.x - h, e.x + h, e.z - h, e.z + h
+	local plug
+	for i = #flatParts, 1, -1 do
+		local p = flatParts[i]
+		local px, pz, sx, sz = p.Position.X, p.Position.Z, p.Size.X, p.Size.Z
+		local ax0, ax1, az0, az1 = px - sx / 2, px + sx / 2, pz - sz / 2, pz + sz / 2
+		if ax0 < x1 and ax1 > x0 and az0 < z1 and az1 > z0 then
+			table.remove(flatParts, i)
+			local y = p.Position.Y
+			local function piece(a0, a1, b0, b1)
+				if a1 - a0 > 0.5 and b1 - b0 > 0.5 then
+					local c = p:Clone()
+					c:ClearAllChildren()
+					c.Size = Vector3.new(a1 - a0, p.Size.Y, b1 - b0)
+					c.CFrame = CFrame.new((a0 + a1) / 2, y, (b0 + b1) / 2)
+					c.Parent = p.Parent
+					table.insert(flatParts, c)
+				end
+			end
+			local hx0, hx1 = math.max(ax0, x0), math.min(ax1, x1)
+			piece(ax0, hx0, az0, az1)
+			piece(hx1, ax1, az0, az1)
+			piece(hx0, hx1, az0, math.max(az0, z0))
+			piece(hx0, hx1, math.min(az1, z1), az1)
+			if not plug then
+				plug = p:Clone()
+				plug:ClearAllChildren()
+				plug.Name = "WhirlPlug"
+				plug.Size = Vector3.new(2 * h, p.Size.Y, 2 * h)
+				plug.CFrame = CFrame.new(e.x, y, e.z)
+				plug.Parent = p.Parent
+			end
+			p.CFrame = p.CFrame - Vector3.new(0, 500, 0) -- (kept, out of sight: other code may still hold it)
+		end
+	end
+	holes[e.id] = { plug = plug, y = plug and plug.Position.Y or 0, x = e.x, z = e.z, h = h, down = false }
+end
+
+-- cover = the coarse tier's square (centre + half size): a funnel is drawn only when the whole hole lies in it
+local function stepWhirls(dt, camPos, coverX, coverZ, coverHalf)
+	table.clear(whirls)
+	for id, e in pairs(wTarget) do
+		local k = wk[id] or 0
+		k += math.clamp((e.k or 0) - k, -dt * 0.5, dt * 0.5)
+		wk[id] = k
+		if k <= 0.001 and (e.k or 0) <= 0 then
+			wTarget[id], wk[id] = nil, nil
+		elseif k > 0.001 then
+			if not holes[id] then
+				cutHole(e)
+			end
+			local hl = holes[id]
+			if math.abs(e.x - coverX) + hl.h < coverHalf and math.abs(e.z - coverZ) + hl.h < coverHalf then
+				table.insert(whirls, { id = id, x = e.x, z = e.z, r = e.r, k = k })
+			end
+		end
+	end
+	-- plugs: down (out of sight) while their funnel is drawn, up at the flat level otherwise
+	for id, hl in pairs(holes) do
+		local drawn = false
+		for _, e in ipairs(whirls) do
+			if e.id == id then
+				drawn = true
+				break
+			end
+		end
+		if hl.plug and drawn ~= hl.down then
+			hl.down = drawn
+			hl.plug.CFrame = CFrame.new(hl.x, drawn and hl.y - 500 or hl.y, hl.z)
+		end
+	end
+end
+
+VoxelSea.On = false
+
+-- this whirlpool's funnel as the block sea draws it right now ({ x, z, r, k } with the locally eased k), or nil
+-- (Controllers/Weather lays its foam on the same surface)
+function VoxelSea.Drawn(id)
+	for _, e in ipairs(whirls) do
+		if e.id == id then
+			return e
+		end
+	end
+	return nil
 end
 
 function VoxelSea.Start()
@@ -174,6 +338,9 @@ function VoxelSea.Start()
 			return -- Low: keep the flat textured sea
 		end
 		recolorFlatSea(ocean)
+		VoxelSea.On = true
+		readWeather()
+		workspace:GetAttributeChangedSignal("Weather"):Connect(readWeather)
 		folder = Instance.new("Folder")
 		folder.Name = "VoxelSea"
 		folder.Parent = workspace
@@ -188,7 +355,7 @@ function VoxelSea.Start()
 		local fine = newTier(sz[1], 4, 0.5, 8, false, true)
 		local coarse = newTier(sz[2], 12, 1, 10, true, false)
 		local frame = 0
-		RunService.RenderStepped:Connect(function()
+		RunService.RenderStepped:Connect(function(dt)
 			local cam = workspace.CurrentCamera
 			if not cam then
 				return
@@ -200,11 +367,12 @@ function VoxelSea.Start()
 			local flat = Vector3.new(look.X, 0, look.Z)
 			flat = flat.Magnitude > 0.01 and flat.Unit or Vector3.zero
 			local f1 = pos + flat * (fine.n * fine.cell * 0.25)
+			local f2 = pos + flat * (coarse.n * coarse.cell * 0.15)
+			stepWhirls(dt, pos, f2.X, f2.Z, coarse.n * coarse.cell / 2 - coarse.cell)
 			stepTier(fine, f1.X, f1.Z, now)
 			if frame % 2 == 0 then
 				-- the coarse ring leaves a hole a little smaller than the fine square (no gaps at the seam)
 				local hole = { x = (math.floor(f1.X / 4) + 0.5) * 4, z = (math.floor(f1.Z / 4) + 0.5) * 4, r = fine.n * 4 / 2 - 8 }
-				local f2 = pos + flat * (coarse.n * coarse.cell * 0.15)
 				stepTier(coarse, f2.X, f2.Z, now, hole)
 			end
 		end)

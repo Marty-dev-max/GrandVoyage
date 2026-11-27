@@ -1883,7 +1883,7 @@ local function stepShip(ship, dt, now)
 				-- ship under sail stays on the ring and gathers sling; steering lets go (SteerHold) = off on the tangent
 				local need = (math.abs(ship.speed) + (ship.sling or 0) + Weather.Whirl.Swirl * (1 + Weather.Whirl.SwirlIn))
 					/ math.max(toC.Magnitude, Weather.Whirl.Orbit * 0.5)
-				local rate = math.max(Weather.Whirl.FlowTurn, need * 1.15) * ship.whirlK
+				local rate = math.min(Weather.Whirl.MaxTurn, math.max(Weather.Whirl.FlowTurn, need * 1.15)) * math.min(1, ship.whirlK * 2)
 					* (ship.steer ~= 0 and Weather.Whirl.SteerHold or 1)
 				ship.yaw += math.clamp(wrapAngle(math.atan2(-flow.X, -flow.Z) - ship.yaw), -rate * dt, rate * dt)
 			end
@@ -1895,7 +1895,7 @@ local function stepShip(ship, dt, now)
 		local along = wFlow and fwd:Dot(wFlow) or 0
 		local sling = ship.sling or 0
 		if wFlow and along > 0.5 and ship.speed > 4 then
-			sling = math.min(Weather.Whirl.Sling * math.min(1, ship.whirlK * 1.5), sling + Weather.Whirl.SlingGain * along * dt)
+			sling = math.min(Weather.Whirl.Sling * math.min(1, ship.whirlK * 3), sling + Weather.Whirl.SlingGain * along * dt)
 			if sling > Weather.Whirl.Sling * 0.6 and ship.owner then
 				toast(ship.owner, "🌀 Riding the spin! Steer out now to slingshot away", "good", "sling")
 			end

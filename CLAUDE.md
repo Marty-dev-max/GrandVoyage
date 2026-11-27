@@ -1366,7 +1366,8 @@ The owner tests in Studio and sends screenshots; previews of new art are rendere
    of the vitals tubes); Combat passes Z / C at the helm. Admin cmds `field` "Gunner:50" and `crew` N (Studio tests;
    re-summon the ship after crew). F / C need a target: a ship within 280 or the aim mark, which MCP's moveTo does not
    show (use a click on the water, or Net.Request with a target, in tests). Test fights sink NPC ships = real rewards
-   on the owner's save: keep tests short.
+   on the owner's save: keep tests short. 0.1.15: shotFor never mutates; fireMain sets ship.shot = "Round" only
+   after a volley fired (a failed volley used to drop the note and leave the HUD on Chain). One real click = -1 powder.
 1. Wait for the owner's verdict on v0.10.3 (hills/flowers/grass); fix what they point at.
 2. Voxel art pass: monsters DONE v0.11.0 (voxel_monsters.py; AssetService sizes = shape base x style.scale,
    MonsterService.RefreshModels swaps placeholder island mobs). Pets + fruits DONE v0.11.1 (voxel_pets.py).

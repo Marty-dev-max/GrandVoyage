@@ -61,7 +61,7 @@ O.List = {
 		perk = "Chests and dungeons give +30% EXP and Doubloons",
 		limit = "Deals 10% less damage until Lv.20",
 		island = "Daybreak",
-		npc = "JobMaster", -- the old master on the plaza knows the island's ruins
+		npc = "Shop", -- 0.1.10: no Job Master any more; the General Store keeper sells maps of the ruins
 		mult = { chestExp = 1.3, chestBeli = 1.3, damage = 0.9, damageUntil = 20 },
 	},
 }

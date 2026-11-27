@@ -1,7 +1,7 @@
 -- Main story quests ("Azure East Saga"). One linear chain: the Daybreak tutorial, then a short chapter per island.
 --
 -- goal.kind:
---   Talk     target = NPC role on the step's island ("Guide", "JobMaster", "Shipwright", "Tavern", "Blacksmith", ...)
+--   Talk     target = NPC role on the step's island ("Guide", "Shipwright", "Tavern", "Blacksmith", ...)
 --   Kill     target = monster id (nil = any monster), count
 --   Skill    use any skill, count
 --   Auto     switch Auto Battle on (unused in the remake)
@@ -18,6 +18,7 @@
 --   JobLevel reach Job Lv.count                                  [checked from player state]
 --   Level    reach Base Lv.count                                 [checked from player state]
 --   Class    pick a class at the Job Master                      [checked from player state]
+--   Talent   own count Talent cards (remake: replaces the Job Master visit) [checked from player state]
 --
 -- at (where the quest marker points): { npc = role } | { spawn = monsterId } | { island = id } | { sea = true }
 -- reward: { beli, exp, job, items = { { id, qty } } }
@@ -88,24 +89,25 @@ Q.Main = {
 	},
 	{
 		id = "T08", island = "Daybreak", title = "Ready for a Calling",
-		dialog = { "Keep at those tigers until you reach Job Lv.5. Then the Job Master in the plaza will take you seriously.", "Your fists are a Brawler's best friend. Learn new skills with K whenever you have skill points." },
-		goal = { kind = "JobLevel", count = 5 }, text = "Reach Job Lv.5",
-		hint = "Fight Jungle Tigers in the den. Your Job EXP is the right half of the level ring.",
+		dialog = { "Keep at those tigers until your weapon arts reach Lv.5. Whatever you hold, fists or blade, learns with you.", "Learn new skills with K whenever you have skill points." },
+		goal = { kind = "JobLevel", count = 5 }, text = "Reach Arts Lv.5",
+		hint = "Fight Jungle Tigers in the den. Every weapon keeps its own Arts level.",
 		at = { spawn = "JungleTiger" }, reward = { beli = 300, exp = 150, items = { { "TangerineJuice", 5 } } },
 	},
 	{
 		id = "T09", island = "Daybreak", title = "Find Your Calling",
-		dialog = { "Job Lv.5! Go see the Job Master by the fountain. Swordsman, Sharpshooter, Sea Cook, Navigator, Doctor or Shipwright... or stay a Brawler. Every crew needs all of them.", "Don't worry about choosing wrong: each class keeps its own progress, and you can switch back later." },
-		goal = { kind = "Talk", target = "JobMaster" }, text = "Visit the Job Master",
-		hint = "The Job Master stands in the village plaza. Pick a new class, or keep punching as a Brawler.",
-		at = { npc = "JobMaster" }, reward = { beli = 500, exp = 200, job = 100 },
+		-- remake 0.1.10 (owner): no Job Master; this step teaches the Talent cards instead (same slot, no save shift)
+		dialog = { "Every time you level up, the sea offers you a Talent card. Press T and pick one of three.", "Repairing, cooking, steering, healing and gunnery all grow too: check the Mastery tab." },
+		goal = { kind = "Talent", count = 1 }, text = "Pick a Talent card",
+		hint = "Press T (or the Talents button in the menu) and pick 1 of the 3 cards.",
+		reward = { beli = 500, exp = 200, job = 100 },
 	},
 	{
 		-- v3 (owner, v0.25.4): class first at Job Lv.5, THEN the boars (they were the Job Lv.10 grind before)
 		id = "T09B", island = "Daybreak", title = "Boar Hunt",
-		dialog = { "Wild Boars trample the farm meadow south of the village. Try your new class on them!" },
+		dialog = { "Wild Boars trample the farm meadow south of the village. Try your weapon arts on them!" },
 		goal = { kind = "Kill", target = "WildBoar", count = 6 }, text = "Defeat Wild Boars",
-		hint = "The boar meadow is south of the village. Use your new class skills (K opens the skill tree).",
+		hint = "The boar meadow is south of the village. Use your weapon arts (K opens the skill tree).",
 		at = { spawn = "WildBoar" }, reward = { beli = 350, exp = 220, job = 140, items = { { "MeatOnBone", 5 } } },
 	},
 	{

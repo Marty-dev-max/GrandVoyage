@@ -394,7 +394,7 @@ local function npcs(ctx, api)
 	put("Guide", Quests.Guide[ctx.island.id] or "Guide", Color3.fromRGB(255, 200, 90), "captain", -14, 244, { SubTitle = "📜 Quests" }, v(0, 226))
 	-- the last island keeps the Bounty Board + Job Master (as Daybreak): on the square sides, facing the bell tower (off the main street: the Power board stands beside the Bounty Board)
 	put("BossBoard", "Bounty Board", Color3.fromRGB(255, 220, 120), nil, -36, 30, { SubTitle = "Bosses & Bounties" }, v(0, 0))
-	put("JobMaster", "Job Master", Color3.fromRGB(142, 28, 42), "master", 36, 30, { SubTitle = "Choose a Class" }, v(0, 0))
+	ctx.reserve(36, 30, 8) -- remake 0.1.10 (owner): no Job Master; its spot stays reserved (same layout)
 end
 
 function EP.Build(island, api)

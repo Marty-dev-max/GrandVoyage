@@ -975,8 +975,10 @@ local function npcs(ctx, api)
 	end
 	-- jungle camp: the tutorial guide by the fire
 	put("Guide", Quests.Guide.Daybreak or "Guide", Color3.fromRGB(255, 200, 90), "captain", CAMP + Vector2.new(-2, -14), { SubTitle = "📜 Quests" }, SPAWN)
-	-- plaza: Job Master and the Bounty Board at the trail entrance, shops around the fountain
-	put("JobMaster", "Job Master", Color3.fromRGB(142, 28, 42), "master", onPlaza(2.75), { SubTitle = "Choose a Class" }, P0)
+	-- plaza: the Bounty Board at the trail entrance, shops around the fountain. Remake 0.1.10 (owner): no Job Master
+	-- (no classes); its spot stays reserved so the rest of the island lays out the same.
+	local jm = onPlaza(2.75)
+	ctx.reserve(jm.X, jm.Y, 8)
 	local bb = onPlaza(-2.7, 50)
 	put("BossBoard", "Bounty Board", Color3.fromRGB(255, 220, 120), nil, bb, { SubTitle = "Bosses & Bounties" }, P0) -- v0.25.119 (owner): by the small house at the west street
 	-- v0.25.120 (owner): the TOP 50 POWER board stands on the NPC's left, in front of the house (off the trail), and is

@@ -24,7 +24,7 @@ local ACTION_EVENTS = {
 	RecruitCrew = "Hire",
 	LaunchShip = "Launch",
 }
-local STATE_KINDS = { Reach = true, JobLevel = true, Level = true, Class = true }
+local STATE_KINDS = { Reach = true, JobLevel = true, Level = true, Class = true, Talent = true }
 
 local function questOf(p)
 	if type(p.quest) ~= "table" then
@@ -178,11 +178,12 @@ function QS.Check(player)
 		or (g.kind == "JobLevel" and (p.jobLevel >= g.count or (p.classSwitches or 0) > 0))
 		or (g.kind == "Level" and p.baseLevel >= g.count)
 		or (g.kind == "Class" and (p.classSwitches or 0) > 0)
+		or (g.kind == "Talent" and #(p.talents or {}) >= (g.count or 1))
 	if done then
 		complete(player)
 	else
 		local q = questOf(p)
-		local cur = (g.kind == "JobLevel" and p.jobLevel) or (g.kind == "Level" and p.baseLevel) or 0
+		local cur = (g.kind == "JobLevel" and p.jobLevel) or (g.kind == "Level" and p.baseLevel) or (g.kind == "Talent" and #(p.talents or {})) or 0
 		if q.progress ~= cur then
 			q.progress = cur
 			push(player, false)

@@ -35,7 +35,7 @@ local function gunnerLv()
 end
 -- remake M4: Emergency Repair (Shipwright Lv 30) also has a button on the ship card (its skill key is taken at the helm)
 local EMERGENCY = ClassesCfg.SkillById.EmergencyRepair
-local repairReadyAt = 0
+-- its cooldown lives in State.cooldowns (shared with the hotbar slot, Combat)
 local player = Players.LocalPlayer
 local T = UI.Theme
 local New = UI.New
@@ -171,7 +171,7 @@ local function buildHud()
 	local repairB = UI.Button(row4, "EMERGENCY REPAIR", T.Green, UDim2.fromOffset(320, 34), function()
 		local res = Net.Request("CastSkill", { skillId = EMERGENCY.id })
 		if res.ok then
-			repairReadyAt = os.clock() + ((res.data and res.data.cd) or EMERGENCY.cd)
+			State.cooldowns[EMERGENCY.id] = os.clock() + ((res.data and res.data.cd) or EMERGENCY.cd)
 		elseif res.msg and not res.throttled then
 			UI.Toast(res.msg, "bad")
 		end
@@ -321,7 +321,7 @@ local function updateHud(ship)
 	local repairOn = EMERGENCY ~= nil and masteryLv("Shipwright") >= EMERGENCY.lv
 	hud.row4.Visible = repairOn
 	if repairOn then
-		local wait = repairReadyAt - os.clock()
+		local wait = (State.cooldowns[EMERGENCY.id] or 0) - os.clock()
 		hud.repairB.Text = wait > 0 and string.format("EMERGENCY REPAIR %ds", math.ceil(wait)) or "EMERGENCY REPAIR"
 	end
 	if broadOn then

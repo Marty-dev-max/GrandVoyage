@@ -1380,8 +1380,9 @@ The owner tests in Studio and sends screenshots; previews of new art are rendere
    Mult {1, 1.2, 1.5} + FloodCut {0.3, 0.5, 1} (ShipService.RepairNearby / RepairOwned 3rd arg `plug` = true or a share; 1 = flood 0 +
    "LEAKS PLUGGED!"); UseItem without a token = quality 1. `Ship.IsAboard(player, ship)`. Adrenaline Revive
    (MasteryCfg.Revive, Doctor 30): Interact halves the RevivePrompt HoldDuration LOCALLY (attr BaseHold keeps the
-   server value), KnockdownService gives the revived player buff "Adrenaline" { def = 0.5 } 8 s. Not checked in Play
-   yet (the owner's Play session was running); the revive needs two players.
+   server value), KnockdownService gives the revived player buff "Adrenaline" { def = 0.5 } 8 s. Checked in Play:
+   green / yellow / miss repairs, the ship-card button, BASIC V / Z, Mist heal (Admin `shiphurt` N holes your own ship
+   for repair tests); Emergency Repair cooldown = State.cooldowns (button + hotbar share it). Revive untested (2 players).
 1. Wait for the owner's verdict on v0.10.3 (hills/flowers/grass); fix what they point at.
 2. Voxel art pass: monsters DONE v0.11.0 (voxel_monsters.py; AssetService sizes = shape base x style.scale,
    MonsterService.RefreshModels swaps placeholder island mobs). Pets + fruits DONE v0.11.1 (voxel_pets.py).

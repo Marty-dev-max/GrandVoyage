@@ -51,6 +51,9 @@ W.Whirl = {
 	Sling = 16, -- studs/s of extra speed gathered sailing WITH the spin: kept for a moment after you break out
 	SlingGain = 6, -- studs/s per second it builds while riding the spin
 	SlingDecay = 4, -- studs/s per second it fades once you stop riding it (or leave the whirlpool)
+	-- 0.1.23: ships circle the eye instead of sinking into its dead middle
+	Orbit = 20, -- ring (studs from the middle) the pull settles a ship on: no pull there, pushed back out inside it
+	SwirlIn = 0.6, -- the swirl is this much stronger at the eye than at 2 x Orbit
 }
 
 -- the sea weather lives in: east of the first island, short of the Red Line, inside the windy lane

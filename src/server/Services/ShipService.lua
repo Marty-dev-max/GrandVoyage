@@ -1914,9 +1914,18 @@ local function stepShip(ship, dt, now)
 		local wh = ship.whirl
 		if wh and (ship.whirlK or 0) > 0 and now >= (ship.whirlFree or 0) then
 			local toC = Vector3.new(wh.x - pos.X, 0, wh.z - pos.Z)
-			if toC.Magnitude > 1 then
+			local d = toC.Magnitude
+			if d > 1 then
+				-- 0.1.23 (test: the pull dragged ships into the dead middle and they sat there): the pull fades out at
+				-- the Orbit ring and pushes back out inside it, the swirl grows toward the eye -> ships circle the funnel
 				local u = toC.Unit
-				vel += u * Weather.Whirl.Pull * ship.whirlK + Vector3.new(-u.Z, 0, u.X) * Weather.Whirl.Swirl * ship.whirlK
+				local orbit = Weather.Whirl.Orbit
+				local pullK = math.clamp((d - orbit) / orbit, -0.8, 1)
+				local swirlK = 1 + Weather.Whirl.SwirlIn * math.clamp(1 - d / (orbit * 2), 0, 1)
+				vel += u * Weather.Whirl.Pull * ship.whirlK * pullK
+					+ Vector3.new(-u.Z, 0, u.X) * Weather.Whirl.Swirl * ship.whirlK * swirlK
+			else
+				vel += fwd * Weather.Whirl.Pull * ship.whirlK -- out of the dead middle
 			end
 		end
 	end

@@ -14,7 +14,6 @@ return {
 		"Test Sail your ship; harpoons, fire pots, powder kegs",
 		"Gun ports, bilge pumps, crow's nest, ship lamps",
 		"Shipyard: castles, balconies, flags, windows, themes",
-		"Old ships rebuilt; right-click menu in the shipyard",
 	},
 	DataStoreName = "GV_Player_v1",
 	GuildStoreName = "GV_Guild_v1",

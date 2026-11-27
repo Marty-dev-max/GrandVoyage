@@ -1724,7 +1724,10 @@ function Ship.Start()
 		return nextReady < math.huge and nextReady - now or 0
 	end
 
-	-- the shot this volley really uses: Chain / Bomb need the Gunner level and one Gunpowder (taken after it fires)
+	-- the shot this volley really uses: Chain / Bomb need the Gunner level and one Gunpowder (taken after it fires).
+	-- Changes nothing itself: returns def (nil = round shot), a note and `fallback` = the loaded special shot can't
+	-- be used, so fireMain switches the ship back to Round only once a volley really fired (else the HUD would still
+	-- say Chain while the next volley quietly fired Round).
 	local function shotFor(player, ship)
 		local id = ship.shot or "Round"
 		local def = Gunner.Shots[id]
@@ -1733,12 +1736,10 @@ function Ship.Start()
 			return nil
 		end
 		if MasteryCfg.Level(p, "Gunner") < def.lv then
-			ship.shot = "Round"
-			return nil, "Round Shot loaded (Chain / Bomb need Gunner Mastery Lv." .. def.lv .. ")"
+			return nil, "Round Shot loaded (Chain / Bomb need Gunner Mastery Lv." .. def.lv .. ")", true
 		end
 		if R.InventoryService.Count(player, "Gunpowder") < (def.powder or 0) then
-			ship.shot = "Round" -- back to round shot until Z picks the special one again
-			return nil, "Out of Gunpowder: Round Shot loaded"
+			return nil, "Out of Gunpowder: Round Shot loaded", true
 		end
 		return def
 	end
@@ -1773,7 +1774,7 @@ function Ship.Start()
 			end
 		end
 		local d = R.PlayerService.Derived(player) or {}
-		local shot, note = shotFor(player, ship)
+		local shot, note, fallback = shotFor(player, ship)
 		local mult = (1 + (d.cannonDamage or 0)) * (shot and shot.dmg or 1) * (broadside and Gunner.Broadside.mult or 1)
 		-- v0.25.153: every gun reloads on its own (swivels fast, mortars slow); a shot fires the ready guns that bear.
 		-- Full Broadside: every gun that bears fires, reloading or not
@@ -1788,6 +1789,9 @@ function Ship.Start()
 		end
 		if shot and shot.powder then
 			R.InventoryService.RemoveItem(player, "Gunpowder", shot.powder)
+		end
+		if fallback then
+			ship.shot = "Round" -- back to round shot until Z picks the special one again
 		end
 		if broadside then
 			player:SetAttribute("BroadsideReady", serverNow + Gunner.Broadside.cooldown)

@@ -22,6 +22,9 @@ local Atmos = require(script.Parent.Atmos)
 local State = require(script.Parent.Parent.State)
 local MasteryCfg = require(Shared.Config.Mastery)
 local ClassesCfg = require(Shared.Config.Classes) -- remake M4: the Emergency Repair skill
+local WindM = require(Shared.Modules.Wind) -- Mastery v2 M5: wind direction (same math as the server)
+local Currents = require(Shared.Modules.Currents) -- Mastery v2 M5: sea currents
+local Waves = require(Shared.Modules.Waves)
 
 local Sailing = {}
 local Gunner = MasteryCfg.Gunner
@@ -101,9 +104,15 @@ local function buildHud()
 		UI.Corner(c, 6)
 		UI.Stroke(c, T.Edge, 2)
 		UI.Text(c, label, 10, T.TextSoft, "Display", { Position = UDim2.fromOffset(0, 3), Size = UDim2.new(1, 0, 0, 12), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false })
-		return UI.Text(c, "-", 17, T.Text, "Display", { Position = UDim2.fromOffset(0, 17), Size = UDim2.new(1, 0, 0, 22), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false })
+		return UI.Text(c, "-", 17, T.Text, "Display", { Position = UDim2.fromOffset(0, 17), Size = UDim2.new(1, 0, 0, 22), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false }), c
 	end
 	local speedT, windT, sailT, gunT = cell("SPEED", 1), cell("WIND", 2), cell("SAILS", 3), cell("GUNS", 4)
+	-- Mastery v2 M5: a little arrow in the WIND cell = where the wind blows, seen from the helm (up = the bow)
+	local windArrow = New("Frame", { Name = "WindArrow", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(1, -9, 0, 9), Size = UDim2.fromOffset(14, 14), BackgroundTransparency = 1, Parent = windT.Parent })
+	New("Frame", { BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 4), Size = UDim2.fromOffset(2, 10), BackgroundColor3 = T.Gold, Parent = windArrow })
+	New("Frame", { BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 0), Size = UDim2.fromOffset(2, 2), BackgroundColor3 = T.Gold, Parent = windArrow })
+	New("Frame", { BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 2), Size = UDim2.fromOffset(6, 2), BackgroundColor3 = T.Gold, Parent = windArrow })
+	New("Frame", { BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 4), Size = UDim2.fromOffset(10, 2), BackgroundColor3 = T.Gold, Parent = windArrow })
 	local zone = New("Frame", { Size = UDim2.new(1, 0, 0, 24), BackgroundColor3 = T.Ocean, LayoutOrder = 4, Parent = f })
 	UI.Corner(zone, 6)
 	UI.Stroke(zone, T.Edge, 2)
@@ -176,7 +185,7 @@ local function buildHud()
 			UI.Toast(res.msg, "bad")
 		end
 	end)
-	hud = { frame = f, row4 = row4, repairB = repairB, name = name, hp = hp, zone = zone, zoneText = zoneText, speedT = speedT, windT = windT, sailT = sailT, gunT = gunT, reload = reload,
+	hud = { frame = f, windArrow = windArrow, row4 = row4, repairB = repairB, name = name, hp = hp, zone = zone, zoneText = zoneText, speedT = speedT, windT = windT, sailT = sailT, gunT = gunT, reload = reload,
 		specialB = specialB, specialH = specialH, kegB = kegB, kegH = kegH, lightB = lightB, zones = zones,
 		row3 = row3, shotB = shotB, shotH = shotH, broadB = broadB, broadH = broadH }
 end
@@ -241,6 +250,57 @@ local function sailText()
 end
 
 local wasVisible = false
+-- Mastery v2 M5: Navigators Lv 10+ (Wind Reader) see a current as white streaks sliding along the water around their
+-- ship (local blocks on the voxel sea surface). Lower levels only feel it.
+local streakAcc = 0
+local streakFolder
+local function currentStreaks(ship, dt)
+	if not ship or masteryLv("Navigator") < 10 then
+		return
+	end
+	streakAcc += dt
+	if streakAcc < 0.09 then
+		return
+	end
+	streakAcc = 0
+	local center = ship:GetPivot().Position
+	local dir, k = Currents.At(center.X, center.Z)
+	if not dir or k < 0.15 then
+		return
+	end
+	if not streakFolder or not streakFolder.Parent then
+		streakFolder = Instance.new("Folder")
+		streakFolder.Name = "GVCurrentStreaks"
+		streakFolder.Parent = workspace
+	end
+	local a = math.random() * math.pi * 2
+	local r = 14 + math.random() * 40
+	local x, z = center.X + math.cos(a) * r, center.Z + math.sin(a) * r
+	local _, kHere = Currents.At(x, z)
+	if kHere < 0.1 then
+		return -- outside the lane: no streak there
+	end
+	local y = GameConfig.SeaLevel + Waves.Height(x, z, Waves.Now(), Waves.Damp(x, z)) + 0.5
+	local p = Instance.new("Part")
+	p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.CastShadow = true, false, false, false, false
+	p.Material = Enum.Material.SmoothPlastic
+	p.Color = Color3.fromRGB(235, 250, 255)
+	p.Size = Vector3.new(0.5, 0.25, 3 + math.random() * 3)
+	p.Transparency = 1
+	p.CFrame = CFrame.lookAt(Vector3.new(x, y, z), Vector3.new(x, y, z) + dir)
+	p.Parent = streakFolder
+	local life = 1.6
+	local goal = p.CFrame + dir * (Currents.Drift * 2.5 + 6) * life
+	game:GetService("TweenService"):Create(p, TweenInfo.new(life, Enum.EasingStyle.Linear), { CFrame = goal }):Play()
+	game:GetService("TweenService"):Create(p, TweenInfo.new(life * 0.3), { Transparency = 0.35 }):Play()
+	task.delay(life * 0.6, function()
+		if p.Parent then
+			game:GetService("TweenService"):Create(p, TweenInfo.new(life * 0.4), { Transparency = 1 }):Play()
+		end
+	end)
+	game:GetService("Debris"):AddItem(p, life + 0.1)
+end
+
 local function updateHud(ship)
 	if not hud then
 		return
@@ -282,9 +342,28 @@ local function updateHud(ship)
 	local z = zoneInfo[ship:GetAttribute("Zone") or "Lane"] or zoneInfo.Lane
 	hud.zoneText.Text = z.text
 	hud.zone.BackgroundColor3 = z.color
-	local wind = math.floor((ship:GetAttribute("Wind") or 1) * 100)
+	-- Mastery v2 M5: wind % = zone strength x how well the sails draw at this angle; the arrow turns with the bow
+	local sailK = ship:GetAttribute("SailK") or 1
+	local wind = math.floor((ship:GetAttribute("Wind") or 1) * sailK * 100 + 0.5)
 	hud.speedT.Text = tostring(ship:GetAttribute("Speed") or 0)
 	hud.windT.Text = wind .. "%"
+	hud.windT.TextColor3 = sailK >= 1.02 and T.Green or (sailK < 0.8 and T.Red or T.Text)
+	local pv = ship:GetPivot()
+	local bow = Vector3.new(pv.LookVector.X, 0, pv.LookVector.Z)
+	if bow.Magnitude > 0.01 then
+		bow = bow.Unit
+		local w = WindM.Dir(pv.Position.X, pv.Position.Z, workspace:GetServerTimeNow())
+		local right = Vector3.new(-bow.Z, 0, bow.X)
+		hud.windArrow.Rotation = math.deg(math.atan2(w:Dot(right), w:Dot(bow)))
+	end
+	-- sea currents: Navigator Lv 10 (Wind Reader) reads them on the zone chip
+	local ck = ship:GetAttribute("CurrentK") or 0
+	if ck > 0.15 and masteryLv("Navigator") >= 10 then
+		local along = ship:GetAttribute("Current") or 0
+		local pct = math.floor(math.abs(along) * Currents.Boost * 100 + 0.5)
+		hud.zoneText.Text = along >= 0 and ("🌊 RIDING A CURRENT  •  +" .. pct .. "% speed") or ("🌊 AGAINST A CURRENT  •  -" .. pct .. "% speed")
+		hud.zone.BackgroundColor3 = along >= 0 and T.Green or T.OceanDark
+	end
 	hud.sailT.Text = sailLevel < 0 and "BACK" or (sailLevel == 0 and "OFF" or sailText())
 	hud.gunT.Text = (ship:GetAttribute("Manned") or 0) .. "/" .. (ship:GetAttribute("Cannons") or 0)
 	local now = workspace:GetServerTimeNow()
@@ -805,6 +884,7 @@ function Sailing.Start()
 		aimMarker.Transparency = 1 -- (v0.25.53: replaced by the trajectory preview)
 		drawAim(helm and ship or nil, aimAt)
 		updateHud(ship)
+		currentStreaks(onBoard and ship or nil, dt)
 		-- v0.25.54 (owner: the sail-up beep sounded like an alert; wants wood creaking when sailing / turning): a hull
 		-- creak loop on your ship, louder the faster it goes and the harder it turns, silent when still
 		if onBoard then

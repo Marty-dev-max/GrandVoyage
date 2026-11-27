@@ -13,6 +13,8 @@ local ShipStats = require(Shared.Modules.ShipStats)
 local ShipModel = require(Shared.Modules.ShipModel)
 local ShipHull = require(Shared.Modules.ShipHull)
 local SeaZones = require(Shared.Modules.SeaZones)
+local Wind = require(Shared.Modules.Wind) -- Mastery v2 M5: wind direction
+local Currents = require(Shared.Modules.Currents) -- Mastery v2 M5: sea currents
 local Net = require(Shared.Modules.Net)
 local Recruits = require(Shared.Config.Recruits)
 local MasteryCfg = require(Shared.Config.Mastery)
@@ -215,6 +217,10 @@ local function setAttrs(ship)
 	-- Mastery v2 M3: the shot loaded in the main guns and the active-reload zone ("" = no try left)
 	if not ship.npc then
 		m:SetAttribute("Shot", ship.shot or "Round")
+		-- Mastery v2 M5: sail factor from the wind angle, and the current under the hull (along the bow, -1..1)
+		m:SetAttribute("SailK", math.floor((ship.sailK or 1) * 100 + 0.5) / 100)
+		m:SetAttribute("Current", math.floor((ship.curAlong or 0) * 100 + 0.5) / 100)
+		m:SetAttribute("CurrentK", math.floor((ship.curK or 0) * 100 + 0.5) / 100)
 		local a = ship.activeReload
 		m:SetAttribute("ReloadStart", a and a.start or 0)
 		m:SetAttribute("ReloadDur", a and a.dur or 0)
@@ -1575,10 +1581,22 @@ local function stepShip(ship, dt, now)
 		end
 	end
 	local maxSpeed
+	local bow = Vector3.new(-math.sin(ship.yaw), 0, -math.cos(ship.yaw))
 	if ship.npc then
 		maxSpeed = ship.npc.speed * math.max(wind, 0.2)
 	else
-		maxSpeed = ShipStats.Speed(ship.stats, wind, buff)
+		-- Mastery v2 M5: the sails draw by the angle to the wind (Shared/Modules/Wind); Wind Reader (Navigator Lv 10)
+		-- adds more when running with it. The helmsman's perk counts (the owner steers).
+		local cos = Wind.Cos(bow, pos.X, pos.Z, workspace:GetServerTimeNow())
+		local d = ship.owner and R.PlayerService.Derived(ship.owner)
+		ship.windCos = cos
+		ship.sailK = Wind.SailK(cos, d and d.windReader or 0)
+		maxSpeed = ShipStats.Speed(ship.stats, wind * ship.sailK, buff)
+		-- sea currents (Shared/Modules/Currents): faster down a lane, slower against it
+		local cdir, ck = Currents.At(pos.X, pos.Z)
+		ship.curDir, ship.curK = cdir, ck
+		ship.curAlong = cdir and ck * cdir:Dot(bow) or 0
+		maxSpeed *= 1 + Currents.Boost * ship.curAlong
 		-- The captain must be seated at the helm
 		local hum = R.PlayerService.Humanoid(ship.owner)
 		if not ship.seat or not hum or ship.seat.Occupant ~= hum then
@@ -1604,6 +1622,9 @@ local function stepShip(ship, dt, now)
 	ship.yaw -= ship.steer * turnRate * dt * math.clamp(0.35 + math.abs(ship.speed) / 40, 0.35, 1)
 	local fwd = Vector3.new(-math.sin(ship.yaw), 0, -math.cos(ship.yaw))
 	local vel = fwd * ship.speed
+	if not ship.npc and ship.curDir and (ship.curK or 0) > 0 then
+		vel += ship.curDir * Currents.Drift * ship.curK -- Mastery v2 M5: a current carries the hull along
+	end
 	-- World bounds
 	local W = GameConfig.World
 	if (pos.X < W.MinX and vel.X < 0) or (pos.X > W.MaxX and vel.X > 0) then

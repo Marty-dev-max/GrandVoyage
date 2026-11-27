@@ -342,6 +342,7 @@ function F.Compute(profile, buffs)
 	d.cannonDamage = (b.cannonDamage or 0) + (cls.passive and cls.passive.cannonDamage or 0)
 	d.shipSpeed = (b.shipSpeed or 0) + (cls.passive and cls.passive.shipSpeed or 0)
 	d.shipHp = b.shipHp or 0
+	d.windReader = b.windReader or 0 -- Mastery v2 M5: Navigator Wind Reader (ShipService + Shared/Modules/Wind)
 	d.expPct = b.expPct or 0
 	d.beliPct = b.beliPct or 0
 	d.dmgVsBoss = b.dmgVsBoss or 0

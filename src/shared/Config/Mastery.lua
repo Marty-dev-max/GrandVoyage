@@ -24,9 +24,9 @@ M.Fields = {
 	},
 	Navigator = {
 		name = "Navigator", icon = "compass", color = Color3.fromRGB(150, 110, 230),
-		how = "Sail a ship from the helm (moving, not anchored)",
+		how = "Sail a ship from the helm (moving). Riding a sea current with the flow trains faster",
 		perks = {
-			{ lv = 10, name = "Wind Reader", text = "Your ships sail +10% faster", bonus = { shipSpeed = 0.1 } },
+			{ lv = 10, name = "Wind Reader", text = "Up to +15% speed running with the wind, and you see sea currents round your ship", bonus = { windReader = 0.15 } },
 			{ lv = 30, name = "Storm Sense", text = "See storms, whirlpools and sea currents on the map", soon = true },
 			{ lv = 50, name = "Master Helmsman", text = "Weather hurts your ship 50% less, sharp turns", soon = true },
 		},
@@ -108,6 +108,7 @@ M.Gain = {
 	RepairPerHp = 0.12, -- Shipwright: 100 hull HP repaired = 12 XP
 	HelmPerSec = 1, -- Navigator: per second sailing at the helm (MinSpeed studs/s or faster)
 	HelmMinSpeed = 6,
+	CurrentPerSec = 1, -- Navigator: extra per second at the helm while riding a current with the flow (M5)
 	FoodUse = 2, -- Cook: eating one food / drink item (Mastery v2: cooking is the main way)
 	Feast = 14, -- Cook: a party food buff (Hearty Meal)
 	HealPerHp = 0.1, -- Doctor: per HP healed on others

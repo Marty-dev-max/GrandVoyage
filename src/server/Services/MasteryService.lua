@@ -144,7 +144,8 @@ function MS.Start()
 				local seat = hum and hum.SeatPart
 				local ship = seat and seat.Name == "HelmSeat" and R.ShipService.GetShipOf(player)
 				if ship and ship.seat == seat and not ship.test and math.abs(ship.speed or 0) >= G.HelmMinSpeed then
-					MS.Add(player, "Navigator", G.HelmPerSec)
+					-- Mastery v2 M5: riding a sea current with the flow trains faster
+					MS.Add(player, "Navigator", G.HelmPerSec + ((ship.curAlong or 0) > 0.4 and G.CurrentPerSec or 0))
 				end
 			end
 		end

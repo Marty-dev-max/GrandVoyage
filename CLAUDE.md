@@ -1421,6 +1421,17 @@ The owner tests in Studio and sends screenshots; previews of new art are rendere
    Admin `storm` "storm|whirl|clear" (spawns where the SERVER sees you: anchoring your root from the client stops
    replication, so it lands at the old spot). 0.1.20: DmgPerSec 0.003, Strike 0.08 / 0.025 (0.004 + 0.12 x 3% took
    16% of a galleon in 28 s). Chip order: WHIRLPOOL > STORM > Storm Sense warning. Numbers get retuned per sea in R5.
+   0.1.22-0.1.23 (owner refs: a whirlpool must read as a real vortex; the bow follows the flow, the spin flings you out):
+   whirlpools carry k (0..1, Form 12 s open/close, wire "W,id,x,z,r,k100"). `Weather.Funnel/DipAt` = the sea sinks
+   (Depth 16 + Pit 6, waves smooth toward the eye), `Weather.Stripe/ArmPoint` = 4 log-spiral foam arms turning at Spin.
+   VoxelSea draws the funnel only when the whole hole lies inside its coarse tier: it cuts a hole in the flat Ocean
+   tiles (clones around it) + a WhirlPlug part at flat level while not drawn; `VoxelSea.Drawn(id)` -> Controllers/Weather
+   streaks ride the funnel surface. Ships (ShipService stepShip, player ships; heave = waves x mul - dip for every ship):
+   pull fades at the Orbit ring (20) and pushes out inside it, swirl x (1 + SwirlIn) at the eye, the current turns the
+   bow toward the flow at min(MaxTurn 1.3, max(FlowTurn, 1.15 x speed/d)) x min(1, 2 whirlK) (x SteerHold 0.12 while
+   steering = off on the tangent), own speed x (1 - Grip 0.55 x whirlK), `sling` is STORED while riding the flow
+   (along > 0.5) and added only once the bow leaves it. Pulling a ship into the dead middle sank the test ship twice
+   (core grind): keep tests short and away from the eye.
 1. Wait for the owner's verdict on v0.10.3 (hills/flowers/grass); fix what they point at.
 2. Voxel art pass: monsters DONE v0.11.0 (voxel_monsters.py; AssetService sizes = shape base x style.scale,
    MonsterService.RefreshModels swaps placeholder island mobs). Pets + fruits DONE v0.11.1 (voxel_pets.py).

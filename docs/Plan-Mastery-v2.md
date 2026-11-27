@@ -114,7 +114,7 @@
 
 | ลำดับ | งาน | ขนาด | ต้องมีอะไรก่อน |
 |---|---|---|---|
-| M1 | Timing Bar กลาง + โครง perk ใหม่ (Lv 10/30/50 ตามตาราง) + สกิล Mastery ในชุด BASIC | กลาง | - |
+| M1 | Timing Bar กลาง + โครง perk ใหม่ (Lv 10/30/50 ตามตาราง) (สกิล Mastery ในชุด BASIC ย้ายไปทำพร้อม M3/M4: ตอนนี้ perk Lv50 ขึ้นว่า SOON) | กลาง | - |
 | M2 | **Cook**: วัตถุดิบ 4 อย่าง, สูตร S/M/L, ทำอาหารที่กองไฟ, ★1-3, บัฟตามจาน | ใหญ่ | M1 |
 | M3 | **Gunner**: รีโหลดเพอร์เฟกต์, Chain/Bomb Shot, Full Broadside | กลาง | M1 |
 | M4 | **Shipwright + Doctor**: ซ่อมมีจังหวะ, Emergency Repair, Adrenaline Revive, Miracle Mist, Antidote | กลาง | M1 |

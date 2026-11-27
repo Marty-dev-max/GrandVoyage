@@ -1345,6 +1345,12 @@ The owner tests in Studio and sends screenshots; previews of new art are rendere
    (not within 20 studs of a shop-zone NPC: forge), tag CookFire, push OpenPanel Cook -> `UI/Cook.lua`; CookStart /
    CookFinish. Profile push carries `mastery`. Icons reuse meat / sharkfin / juice / flame (own pixel icons later).
    Checked in Play: 16 fires, green = 3 stars, yellow = 2, a forged late time = 1 star, buff "Food" applied.
+   0.1.13-remake: Timing.Lag 0.9 (only a sanity check: the client knows the zones; wide so high ping is not judged
+   late). Cook window: module-wide `busy` (E on the fire mid-cook does not rebuild it), State listener disconnects on
+   win.frame.Destroying. Beasts drop MeatOnBone again at half the old chance next to RawMeat. Real mouse click and
+   Space on the bar checked in Play (Space sunk, no jump). Most CookFires are MobZones camp fires (mobs within 5-30
+   studs); the quiet one is the Daybreak spawn campfire next to Rowan (E there talks to Rowan unless you stand on
+   the far side). Mastery BASIC-set skills (plan M1) moved to M3/M4.
 1. Wait for the owner's verdict on v0.10.3 (hills/flowers/grass); fix what they point at.
 2. Voxel art pass: monsters DONE v0.11.0 (voxel_monsters.py; AssetService sizes = shape base x style.scale,
    MonsterService.RefreshModels swaps placeholder island mobs). Pets + fruits DONE v0.11.1 (voxel_pets.py).

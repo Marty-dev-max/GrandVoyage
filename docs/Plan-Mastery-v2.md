@@ -1,6 +1,6 @@
 # Plan: Field Mastery v2 (ของเล่นของแต่ละอาชีพ)
 
-> สถานะ: **M1 + M2 (Cook) ทำแล้ว v0.1.12-remake · M3 (Gunner) ทำแล้ว v0.1.14-remake · M4 (Shipwright + Doctor) ทำแล้ว v0.1.16-remake · M5 (ทิศลม + กระแสน้ำ + Wind Reader) ทำแล้ว v0.1.17-remake** · ต่อไป M6 Navigator ส่วนที่ 2 (28 พ.ย. 2026) · ฐาน = ตารางที่เจ้าของเกมส่งมา + ไอเดียเพิ่ม (ดาวความอร่อย, รีโหลดเพอร์เฟกต์, กระแสน้ำ)
+> สถานะ: **M1 + M2 (Cook) ทำแล้ว v0.1.12-remake · M3 (Gunner) ทำแล้ว v0.1.14-remake · M4 (Shipwright + Doctor) ทำแล้ว v0.1.16-remake · M5 (ทิศลม + กระแสน้ำ + Wind Reader) ทำแล้ว v0.1.17-remake · M6 (พายุ + น้ำวน + Storm Sense + Hard Turn) ทำแล้ว v0.1.19-0.1.20-remake** · Mastery v2 ครบทุกเฟส (28 พ.ย. 2026) · ฐาน = ตารางที่เจ้าของเกมส่งมา + ไอเดียเพิ่ม (ดาวความอร่อย, รีโหลดเพอร์เฟกต์, กระแสน้ำ)
 > ของตอนนี้ (v0.1.11-remake): 5 สาย Lv 1-50, XP จากการทำงานพื้นฐาน, Lv 10/30/50 = โบนัสติดตัว (Config/Mastery.lua)
 
 ## 0. หลักการ
@@ -128,7 +128,7 @@
 | M3 | **Gunner**: รีโหลดเพอร์เฟกต์, Chain/Bomb Shot, Full Broadside | กลาง | M1 |
 | M4 | **Shipwright + Doctor**: ซ่อมมีจังหวะ, Emergency Repair, Adrenaline Revive, Miracle Mist, Antidote (ทำแล้ว v0.1.16-remake ยกเว้น Antidote: รอสถานะผิดปกติของ R5) | กลาง | M1 |
 | M5 | **Navigator ส่วนที่ 1**: ทิศลม + กระแสน้ำ + Wind Reader (ทำแล้ว v0.1.17-remake: Shared/Modules/Wind + Currents, เรือ NPC ยังไม่โดน) | กลาง | - |
-| M6 | **Navigator ส่วนที่ 2**: พายุ + น้ำวน + Storm Sense + Master Helmsman | ใหญ่ | M5 (ระบบอากาศใหม่) |
+| M6 | **Navigator ส่วนที่ 2**: พายุ + น้ำวน + Storm Sense + Master Helmsman (ทำแล้ว v0.1.19-remake: Shared/Modules/Weather + Controllers/Weather, Hard Turn; เรือ NPC ไม่โดนพายุ) | ใหญ่ | M5 (ระบบอากาศใหม่) |
 | ภายหลัง | Galley Stove บนเรือ, สถานะผิดปกติบนผู้เล่น (พร้อม R5), ใบเรือ/พวงมาลัยเสีย | | |
 
 ## 9. คำถามถึงเจ้าของเกม

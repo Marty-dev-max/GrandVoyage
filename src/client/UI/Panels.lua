@@ -2643,7 +2643,7 @@ function Panels.FastTravel()
 					-- height (3 px markers)
 					New("UIAspectRatioConstraint", { AspectRatio = 1, DominantAxis = Enum.DominantAxis.Width, AspectType = Enum.AspectType.ScaleWithParentSize, Parent = m })
 					m:SetAttribute("PxKeep", true)
-					UI.Corner(m, 999)
+					New("UICorner", { CornerRadius = UDim.new(0.5, 0), Parent = m }) -- (UI.Corner is always square: voxel UI)
 					UI.Stroke(m, e.kind == "S" and Color3.fromRGB(200, 200, 230) or Color3.fromRGB(120, 220, 255), 2).LineJoinMode = Enum.LineJoinMode.Round
 					UI.Text(m, e.kind == "S" and "⛈" or "🌀", 22, T.Text, "Bold", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(32, 32), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 51 })
 					m.Parent = markLayer -- parented LAST: PixelUI squares a UICorner it sees before PxKeep is set

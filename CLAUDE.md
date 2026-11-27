@@ -1401,6 +1401,26 @@ The owner tests in Studio and sends screenshots; previews of new art are rendere
    pushed into one pitched 64 deg bow-up, the helm went under water and the Split-fruit tester drowned. A slow Studio
    once took 22 s to rebuild the map and the server hit "Script timeout" in the Start loop (services after it missing,
    requests "unknown action"): Stop + Play again.
+   0.1.19-remake = Plan-Mastery-v2 M6 (Navigator part 2). `Shared/Modules/Weather` (W.Storm / W.Whirl numbers,
+   W.MinX/MaxX/HalfZ = the sea weather lives in, W.Spots = whirlpool spots at island-pair midpoints, W.At(x, z, list)
+   -> stormK, storm, whirlK, whirl, dist; W.Encode/Decode "S,id,x,z,r,vx,vz,k100;W,id,x,z,r"). The SERVER owns it:
+   ShipService weatherTick (slow 1 s loop: 3 drifting storms that fade in/out and bounce at the bounds, whirlpools
+   open/close at the spots, admin extras) publishes workspace attribute "Weather"; player ships only (NPC + test
+   ships ignore it): stepShip = storm wind x WindK (gusty), sideways shove round the eye, whirl pull + swirl (not
+   while ship.whirlFree); weatherShip (slowTick) = hull damage x storm k + lightning (FX "Lightning" + Smash) + whirl
+   core grind, all x (1 - d.weatherCut), DamageShip adds flood; XP StormPerSec / StormSurvive (>= 20 s inside) /
+   WhirlEscape. Ship attrs Storm / Whirl. Navigator 30 Storm Sense = Sailing chip warning within WEATHER_WARN 700
+   ("STORM 516m W") + Map layer (Panels: currents as dashes, storm/whirl markers on their own StormMarks layer at
+   ZIndex 50, UIAspectRatioConstraint ScaleWithParentSize: FitWithinMaxSize squeezed them to 3 px in the short sea
+   band; marker parented LAST + own round UICorner: UI.Corner is always square). Navigator 50 Master Helmsman =
+   weatherCut 0.5 + skill HardTurn (kind "ShipTurn" -> ShipService.HardTurn: 90 deg toward the steer side or away
+   from the weather, speed kept, whirlFree 4 s; also a ship-card button). Client `Controllers/Weather` (List()
+   interpolates storms by velocity; stacked dark block cloud layers + rain shafts, foam-block whirl rings, bolts,
+   rain emitter round the camera = px_square streaks, Squash +3: NEGATIVE squash makes flat dashes and the default
+   sparkle texture was invisible) + `Atmos.SetStorm(k)` / `Atmos.Flash(k)` (light, atmosphere, ColorCorrection).
+   Admin `storm` "storm|whirl|clear" (spawns where the SERVER sees you: anchoring your root from the client stops
+   replication, so it lands at the old spot). 0.1.20: DmgPerSec 0.003, Strike 0.08 / 0.025 (0.004 + 0.12 x 3% took
+   16% of a galleon in 28 s). Chip order: WHIRLPOOL > STORM > Storm Sense warning. Numbers get retuned per sea in R5.
 1. Wait for the owner's verdict on v0.10.3 (hills/flowers/grass); fix what they point at.
 2. Voxel art pass: monsters DONE v0.11.0 (voxel_monsters.py; AssetService sizes = shape base x style.scale,
    MonsterService.RefreshModels swaps placeholder island mobs). Pets + fruits DONE v0.11.1 (voxel_pets.py).

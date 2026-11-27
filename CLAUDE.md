@@ -1306,6 +1306,21 @@ The owner tests in Studio and sends screenshots; previews of new art are rendere
    All Origins start on Daybreak for now (Origin islands in R5). Checked in Play: old save -> Outlaw + Katana -> spawned
    at the Tavern Keeper, Pirate, bounty 5000, Sword_Plain held, Islander +2 VIT +2 WIL. Musket card shows the old
    slingshot icon (new musket icon later).
+   R3 talents + mastery + weapon arts (0.1.9-remake): `Config/Talents` (36 cards Common/Rare/Epic, `need` = stats
+   totals / any / mastery / level, `bonus` keys read in Formulas.Compute: staminaPct, speedPct, blockCut, postureCut,
+   parryAdd, fallCut, dodgeAdd, dmgSlash/Blunt/Pierce/Element -> d.dmgType, lastStand, shipHitMult, burnKick ...) +
+   `Services/TalentService` (p.talents / talentPicks / talentOffer; one pick per base level, offer = 3 weighted cards
+   you meet and don't own, Net "TalentState" / "TalentPick" {id}, push "Talents", attrs TalentPicks / TalentOffer;
+   DataService `talentsV` migration gives old saves level - 1 picks). `Config/Mastery` = 5 FIELD jobs (Shipwright /
+   Navigator / Cook / Doctor / Gunner, Lv 1..50, passive perks at 10 / 30 / 50, `M.Gain` XP per action) +
+   `Services/MasteryService.Add(player, field, xp)`: repairs (ShipService.RepairNearby), helm time on your own moving
+   ship (1 s loop, ship.speed), food (InventoryService UseItem, Feast via PartyBuff foodHeal), heals on others
+   (CombatService.HealPlayer, self x0.25), revives (KnockdownService), cannon hits (ShipService impact). No classes:
+   `GameConfig.WeaponArts` -> PS.FollowWeapon on equip/unequip/enterGame picks the old tier-1 class of the weapon
+   (WEAPON_CLASS, Fists = Brawler) and swaps its saved Job level / skills / bar ("Arts Lv."), ChangeJob refused, Job
+   Master opens Talents. Client `UI/Talents.lua` (Pick window = 3 big cards, Talents window tabs Talents / Mastery),
+   menu tile "Talents" key T with a picks badge, hotbar set 1 = "ARTS", Auto Battle key F10. Station Assignment and
+   Mastery actives (plan Lv30/50) come later; class hpMod/spMod still follow the weapon's class. Checked in Play.
 1. Wait for the owner's verdict on v0.10.3 (hills/flowers/grass); fix what they point at.
 2. Voxel art pass: monsters DONE v0.11.0 (voxel_monsters.py; AssetService sizes = shape base x style.scale,
    MonsterService.RefreshModels swaps placeholder island mobs). Pets + fruits DONE v0.11.1 (voxel_pets.py).

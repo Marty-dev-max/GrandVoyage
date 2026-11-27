@@ -1331,6 +1331,20 @@ The owner tests in Studio and sends screenshots; previews of new art are rendere
    Ship repair items refuse on a full-HP ship (were used up for nothing). Icons reuse medkit / wood.
    Next: docs/Plan-Mastery-v2.md (owner table: per-job XP sources, Lv 10 passive / 30 unlock / 50 skill, shared
    Timing Bar, Cook stars ★1-3, Gunner perfect reload + shot types, Navigator wind direction + currents + weather).
+   0.1.12-remake = Plan-Mastery-v2 M1 + M2. Config/Mastery: perks per the owner table (`soon = true` = later phase, Mastery
+   tab says SOON; new bonus keys plankSave / itemCdCut -> Formulas d.plankSave / d.itemCdCut, used in InventoryService
+   UseItem), `M.Timing` + GreenWidth(level) + Needle(t). MasteryService.TimingStart(player, field, data) /
+   TimingFinish(player, token, clientT) -> quality 1..3 (client t must lie in [serverT - Lag, serverT + 0.05]);
+   client `UI/TimingBar.Run(run, opts)` (CAS sinks Space/E/Enter above Hotkeys). Cooking: `Config/Recipes` (10 recipes,
+   S Lv1 / M Lv10 / L Lv30 / Feast Lv50, kind -> star buff), Items: ingredients RawMeat / FreshFish / Tangerine / Spice
+   (General Store; beasts drop RawMeat, NPC ships FreshFish + Spice), GrilledFish / FishStew / PepperSkewer /
+   LeviathanFeast (party buff), `<id>_2` / `<id>_3` star copies (Tasty / Delicious: heal x1.2 / x1.4 + buff), every
+   cooked item has `sellCap` = 0.9 x ingredient cost (ShopSell uses it). Item `buff = { id, stats, dur, party }` ->
+   CombatService.AddBuff (stats hpRegen / spRegen in the regen loop, stamRegen in Formulas, atk, def). Star dishes share
+   the plain one's cooldown (cookedFrom). `Services/CookService`: a "Cook" prompt on every Fire under World / Handmade
+   (not within 20 studs of a shop-zone NPC: forge), tag CookFire, push OpenPanel Cook -> `UI/Cook.lua`; CookStart /
+   CookFinish. Profile push carries `mastery`. Icons reuse meat / sharkfin / juice / flame (own pixel icons later).
+   Checked in Play: 16 fires, green = 3 stars, yellow = 2, a forged late time = 1 star, buff "Food" applied.
 1. Wait for the owner's verdict on v0.10.3 (hills/flowers/grass); fix what they point at.
 2. Voxel art pass: monsters DONE v0.11.0 (voxel_monsters.py; AssetService sizes = shape base x style.scale,
    MonsterService.RefreshModels swaps placeholder island mobs). Pets + fruits DONE v0.11.1 (voxel_pets.py).

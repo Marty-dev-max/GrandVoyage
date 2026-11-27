@@ -97,6 +97,8 @@ local function shareUpdate(mob)
 	mob.model:SetAttribute("DmgShare", table.concat(parts, ";"))
 end
 
+-- top share of a monster plate kept for the damage-type chips (remake)
+local CHIP_ROW = 0.27
 local function makeBar(mob)
 	if mob.def.isBoss then
 		pcall(bossAttrs, mob)
@@ -105,16 +107,17 @@ local function makeBar(mob)
 	local elite = mob.def.mini ~= nil -- v0.25.148 mini boss: gold ELITE plate, no boss intro / music
 	local bb = ModelFactory.Billboard(root, mob.def.name, (elite and "ELITE  " or "") .. "Lv." .. mob.def.level .. "  " .. string.rep("★", mob.def.stars or 1),
 		mob.def.isBoss and Color3.fromRGB(255, 90, 90) or elite and Color3.fromRGB(255, 205, 70) or Color3.new(1, 1, 1), 3 + (mob.def.style.scale or 1) * 2.5)
-	-- remake damage types (Config/DamageTypes): weak chip (green, "+") at the left end of the level line, resist chip
-	-- (red, "-") at the right end, each showing its type's icon
+	-- remake damage types (Config/DamageTypes): a pair of chips centered above the name, weak (green, "+") left and
+	-- resist (red, "-") right, each showing its type's icon. Sized from the plate height (the client rescales plates).
 	local res, weak = DamageTypes.Pair(mob.def.id)
-	local function chip(name, dtype, xScale, anchorX, rim, sign)
+	local function chip(name, dtype, side, rim, sign)
 		local info = DamageTypes.Info[dtype]
 		local f = Instance.new("Frame")
 		f.Name = name
-		f.AnchorPoint = Vector2.new(anchorX, 0)
-		f.Position = UDim2.new(xScale, anchorX == 0 and 4 or -4, 0.55, 0)
-		f.Size = UDim2.fromOffset(24, 24)
+		f.AnchorPoint = Vector2.new(side < 0 and 1 or 0, 1)
+		f.Position = UDim2.new(0.5, side * 3, CHIP_ROW, -1)
+		f.SizeConstraint = Enum.SizeConstraint.RelativeYY
+		f.Size = UDim2.fromScale(CHIP_ROW - 0.04, CHIP_ROW - 0.04)
 		f.BackgroundColor3 = Color3.fromRGB(24, 22, 34)
 		f.BackgroundTransparency = 0.15
 		f.BorderSizePixel = 0
@@ -135,8 +138,8 @@ local function makeBar(mob)
 		local s = Instance.new("TextLabel")
 		s.BackgroundTransparency = 1
 		s.AnchorPoint = Vector2.new(1, 1)
-		s.Position = UDim2.new(1, 5, 1, 4)
-		s.Size = UDim2.fromOffset(13, 13)
+		s.Position = UDim2.new(1, 4, 1, 4)
+		s.Size = UDim2.fromScale(0.55, 0.55)
 		s.Font = Enum.Font.Arcade
 		s.TextScaled = true
 		s.Text = sign
@@ -145,12 +148,24 @@ local function makeBar(mob)
 		s.Parent = f
 	end
 	if weak then
-		chip("WeakChip", weak, 0, 0, Color3.fromRGB(110, 235, 120), "+")
+		chip("WeakChip", weak, -1, Color3.fromRGB(110, 235, 120), "+")
 	end
 	if res then
-		chip("ResistChip", res, 1, 1, Color3.fromRGB(235, 80, 80), "-")
+		chip("ResistChip", res, 1, Color3.fromRGB(235, 80, 80), "-")
 	end
-	bb.Size = UDim2.fromOffset(mob.def.isBoss and 260 or elite and 210 or 170, 62)
+	if weak or res then
+		-- the plate grows a row on top for the chips (a BillboardGui clips everything outside its box)
+		local title, sub = bb:FindFirstChild("Title"), bb:FindFirstChild("Subtitle")
+		if title then
+			title.Position = UDim2.fromScale(0, CHIP_ROW)
+			title.Size = UDim2.fromScale(1, 0.55 * (1 - CHIP_ROW))
+		end
+		if sub then
+			sub.Position = UDim2.fromScale(0, CHIP_ROW + 0.55 * (1 - CHIP_ROW))
+			sub.Size = UDim2.fromScale(1, 0.4 * (1 - CHIP_ROW))
+		end
+	end
+	bb.Size = UDim2.fromOffset(mob.def.isBoss and 260 or elite and 210 or 170, (weak or res) and math.floor(62 / (1 - CHIP_ROW)) or 62)
 	bb.MaxDistance = mob.def.isBoss and 260 or elite and 160 or 110
 	local back = Instance.new("Frame")
 	back.Name = "HPBack"

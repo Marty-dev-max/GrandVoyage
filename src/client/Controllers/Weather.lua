@@ -13,6 +13,7 @@ local Shared = ReplicatedStorage.Shared
 local GameConfig = require(Shared.Config.GameConfig)
 local W = require(Shared.Modules.Weather)
 local Waves = require(Shared.Modules.Waves)
+local Textures = require(Shared.Config.Textures)
 local Net = require(Shared.Modules.Net)
 local Atmos = require(script.Parent.Atmos)
 local Audio = require(script.Parent.Audio)
@@ -94,7 +95,7 @@ local function buildCloud(s)
 			local w = L.w[1] + hash(s.id + k, 5) * (L.w[2] - L.w[1])
 			local h = L.h[1] + hash(k, 2 + li) * (L.h[2] - L.h[1])
 			local shade = L.shade + math.floor(hash(k, s.id + 11) * 16)
-			local p = block(Vector3.new(w, h, w * (0.75 + hash(k, 4) * 0.5)), Color3.fromRGB(shade, shade + 3, shade + 12), 0)
+			local p = block(Vector3.new(w, h, w * (0.75 + hash(k, 4) * 0.5)), Color3.fromRGB(shade + 2, shade + 3, shade + 7), 0)
 			p.CastShadow = li == 1 -- the base layer darkens the sea under it
 			table.insert(set.parts, p)
 			table.insert(set.offs, Vector3.new(math.cos(a) * rr, L.y + (hash(k, 7) - 0.5) * 8, math.sin(a) * rr))
@@ -207,17 +208,18 @@ end
 local rainPart, rainEmitter
 local function rain(k, camPos)
 	if not rainPart or not rainPart.Parent then
-		rainPart = block(Vector3.new(160, 1, 160), Color3.new(1, 1, 1), 1)
+		rainPart = block(Vector3.new(110, 1, 110), Color3.new(1, 1, 1), 1)
 		rainPart.Name = "Rain"
 		rainEmitter = Instance.new("ParticleEmitter")
 		rainEmitter.EmissionDirection = Enum.NormalId.Bottom
 		rainEmitter.Speed = NumberRange.new(110, 130)
 		rainEmitter.Lifetime = NumberRange.new(0.9, 1.1)
-		rainEmitter.Size = NumberSequence.new(0.32)
-		rainEmitter.Squash = NumberSequence.new(2.5) -- long thin drops
+		rainEmitter.Texture = Textures.px_square -- (the default sparkle sprite was nearly invisible as rain)
+		rainEmitter.Size = NumberSequence.new(0.22)
+		rainEmitter.Squash = NumberSequence.new(3) -- positive = tall thin streaks (negative made flat dashes)
 		rainEmitter.Color = ColorSequence.new(Color3.fromRGB(205, 220, 240))
-		rainEmitter.Transparency = NumberSequence.new(0.2)
-		rainEmitter.LightEmission = 0.2
+		rainEmitter.Transparency = NumberSequence.new(0.35)
+		rainEmitter.LightEmission = 0.4
 		rainEmitter.Orientation = Enum.ParticleOrientation.FacingCameraWorldUp
 		rainEmitter.Rate = 0
 		rainEmitter.Parent = rainPart

@@ -1325,6 +1325,10 @@ The owner tests in Studio and sends screenshots; previews of new art are rendere
    ctx.reserve so later layout / Kit.rng use is unchanged (WORLD_VERSION 47). Tutorial T09 (same slot, no save shift)
    = goal kind "Talent" (state goal in QuestService: own `count` talents); T08 reads "Reach Arts Lv.5". Relic Seeker
    starts by the General Store keeper (Origins npc "Shop").
+   0.1.11-remake (owner: Mastery must not need a weapon): General Store `Bandage` (allyHeal 0.25: InventoryService
+   UseItem heals the most hurt party member within 20 studs, never a downed one, else yourself, through
+   CombatService.HealPlayer with you as healer = healMult + Doctor XP) and `PatchPlanks` (shipRepair 0.06, 150).
+   Ship repair items refuse on a full-HP ship (were used up for nothing). Icons reuse medkit / wood.
 1. Wait for the owner's verdict on v0.10.3 (hills/flowers/grass); fix what they point at.
 2. Voxel art pass: monsters DONE v0.11.0 (voxel_monsters.py; AssetService sizes = shape base x style.scale,
    MonsterService.RefreshModels swaps placeholder island mobs). Pets + fruits DONE v0.11.1 (voxel_pets.py).

@@ -133,6 +133,10 @@ local function playClip(h, name, fade)
 end
 
 local function attach(r, h)
+	local push = r:FindFirstChild("ParkourCarry") -- a wall-jump push must not fight the new grab
+	if push then
+		push:Destroy()
+	end
 	if not att then
 		att = Instance.new("Attachment")
 		att.Name = "ParkourAtt"
@@ -279,6 +283,41 @@ local function startWallRun(r, h, hit, side, speed)
 	return true
 end
 
+-- keep a horizontal push for a moment after leaving a wall: the Humanoid's air control
+-- would otherwise snap the velocity back to walk speed along the stick (the kick went 2 studs out)
+local carryLv
+local function carry(r, v, seconds)
+	if carryLv then
+		carryLv.Parent:Destroy()
+	end
+	local a = Instance.new("Attachment")
+	a.Name = "ParkourCarry"
+	a.Parent = r
+	local c = Instance.new("LinearVelocity")
+	c.Attachment0 = a
+	c.RelativeTo = Enum.ActuatorRelativeTo.World
+	c.VelocityConstraintMode = Enum.VelocityConstraintMode.Plane
+	c.PrimaryTangentAxis = Vector3.xAxis
+	c.SecondaryTangentAxis = Vector3.zAxis
+	c.PlaneVelocity = Vector2.new(v.X, v.Z)
+	c.MaxForce = 4e4
+	c.Parent = a
+	carryLv = c
+	task.delay(seconds, function()
+		a:Destroy()
+		if carryLv == c then
+			carryLv = nil
+		end
+	end)
+end
+
+local function dropCarry()
+	if carryLv then
+		carryLv.Parent:Destroy()
+		carryLv = nil
+	end
+end
+
 -- jump away from a wall (from a wall run: forward + out; from a climb: a back flip)
 local function kickOff(r, h, n, along, flip)
 	stop("fall")
@@ -291,6 +330,7 @@ local function kickOff(r, h, n, along, flip)
 		r.CFrame = CFrame.lookAt(r.Position, r.Position + n)
 	end
 	r.AssemblyLinearVelocity = v
+	carry(r, v, P.WallJumpCarry)
 	Anim.Play(h, flip and "Parkour_WallFlip" or "Parkour_WallJump", { fade = 0.05 })
 	Stamina.Drain(4)
 end
@@ -349,7 +389,7 @@ local function tryVault(r, h, dir)
 	mode = "vault"
 	local p2 = Vector3.new(far.X, g.Position.Y + rh, far.Z)
 	-- the curve peaks at (p0 + 2 p1 + p2) / 4: put p1 so the ROOT tops out at topY + 0.75 rh (tucked feet clear the top)
-	local peakY = topY + rh * 0.75 + 0.4
+	local peakY = topY + rh * 0.9 + 0.4
 	local mid = Vector3.new(low.Position.X, 2 * peakY - (p0.Y + p2.Y) / 2, low.Position.Z) + fwd * (edgeK * 0.5)
 	local speed = math.max(flat(r.AssemblyLinearVelocity) and Vector3.new(r.AssemblyLinearVelocity.X, 0, r.AssemblyLinearVelocity.Z).Magnitude or 0, h.WalkSpeed)
 	d = { t = 0, p0 = p0, p1 = mid, p2 = p2, dur = P.VaultTime, dir = fwd, speed = speed }
@@ -501,6 +541,9 @@ function Parkour.Start()
 				end
 			end
 			fall.minV, fall.rollArmed = 0, false
+			if now - kickAt > 0.1 then
+				dropCarry() -- landed: walking takes over again
+			end
 		else
 			fall.minV = math.min(fall.minV, r.AssemblyLinearVelocity.Y)
 		end

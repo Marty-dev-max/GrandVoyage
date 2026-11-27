@@ -190,7 +190,7 @@ return {
 	Parkour = {
 		ClimbSpeed = 11, ClimbSide = 8, ClimbPerSec = 16, ClimbStart = 8,
 		WallRunTime = 1.2, WallRunPerSec = 18, WallRunUp = 7, WallRunMinSpeed = 20,
-		WallJumpOut = 30, WallJumpUp = 44,
+		WallJumpOut = 30, WallJumpUp = 44, WallJumpCarry = 0.35,
 		HangPerSec = 4, MantleTime = 0.38,
 		VaultMin = 1.3, VaultMax = 4.8, VaultTime = 0.4, VaultDepth = 6, VaultReach = 3.2,
 		SlideCost = 12, SlideTime = 0.8, SlideBoost = 1.3, SlideJump = 1.15,

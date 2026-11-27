@@ -1321,6 +1321,10 @@ The owner tests in Studio and sends screenshots; previews of new art are rendere
    Master opens Talents. Client `UI/Talents.lua` (Pick window = 3 big cards, Talents window tabs Talents / Mastery),
    menu tile "Talents" key T with a picks badge, hotbar set 1 = "ARTS", Auto Battle key F10. Station Assignment and
    Mastery actives (plan Lv30/50) come later; class hpMod/spMod still follow the weapon's class. Checked in Play.
+   0.1.10-remake (owner): NO Job Master NPC (Daybreak, Epilogue, WorldBuilder standardNPCs): each spot keeps its
+   ctx.reserve so later layout / Kit.rng use is unchanged (WORLD_VERSION 47). Tutorial T09 (same slot, no save shift)
+   = goal kind "Talent" (state goal in QuestService: own `count` talents); T08 reads "Reach Arts Lv.5". Relic Seeker
+   starts by the General Store keeper (Origins npc "Shop").
 1. Wait for the owner's verdict on v0.10.3 (hills/flowers/grass); fix what they point at.
 2. Voxel art pass: monsters DONE v0.11.0 (voxel_monsters.py; AssetService sizes = shape base x style.scale,
    MonsterService.RefreshModels swaps placeholder island mobs). Pets + fruits DONE v0.11.1 (voxel_pets.py).

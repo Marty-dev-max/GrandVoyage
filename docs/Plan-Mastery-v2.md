@@ -1,6 +1,6 @@
 # Plan: Field Mastery v2 (ของเล่นของแต่ละอาชีพ)
 
-> สถานะ: **M1 + M2 (Cook) ทำแล้ว v0.1.12-remake · M3 (Gunner) ทำแล้ว v0.1.14-remake** · ต่อไป M4 Shipwright + Doctor (27 พ.ย. 2026) · ฐาน = ตารางที่เจ้าของเกมส่งมา + ไอเดียเพิ่ม (ดาวความอร่อย, รีโหลดเพอร์เฟกต์, กระแสน้ำ)
+> สถานะ: **M1 + M2 (Cook) ทำแล้ว v0.1.12-remake · M3 (Gunner) ทำแล้ว v0.1.14-remake · M4 (Shipwright + Doctor) ทำแล้ว v0.1.16-remake** · ต่อไป M5 Navigator (27 พ.ย. 2026) · ฐาน = ตารางที่เจ้าของเกมส่งมา + ไอเดียเพิ่ม (ดาวความอร่อย, รีโหลดเพอร์เฟกต์, กระแสน้ำ)
 > ของตอนนี้ (v0.1.11-remake): 5 สาย Lv 1-50, XP จากการทำงานพื้นฐาน, Lv 10/30/50 = โบนัสติดตัว (Config/Mastery.lua)
 
 ## 0. หลักการ
@@ -126,7 +126,7 @@
 | M1 | Timing Bar กลาง + โครง perk ใหม่ (Lv 10/30/50 ตามตาราง) (สกิล Mastery ในชุด BASIC ย้ายไปทำพร้อม M3/M4: ตอนนี้ perk Lv50 ขึ้นว่า SOON) | กลาง | - |
 | M2 | **Cook**: วัตถุดิบ 4 อย่าง, สูตร S/M/L, ทำอาหารที่กองไฟ, ★1-3, บัฟตามจาน | ใหญ่ | M1 |
 | M3 | **Gunner**: รีโหลดเพอร์เฟกต์, Chain/Bomb Shot, Full Broadside | กลาง | M1 |
-| M4 | **Shipwright + Doctor**: ซ่อมมีจังหวะ, Emergency Repair, Adrenaline Revive, Miracle Mist, Antidote | กลาง | M1 |
+| M4 | **Shipwright + Doctor**: ซ่อมมีจังหวะ, Emergency Repair, Adrenaline Revive, Miracle Mist, Antidote (ทำแล้ว v0.1.16-remake ยกเว้น Antidote: รอสถานะผิดปกติของ R5) | กลาง | M1 |
 | M5 | **Navigator ส่วนที่ 1**: ทิศลม + กระแสน้ำ + Wind Reader | กลาง | - |
 | M6 | **Navigator ส่วนที่ 2**: พายุ + น้ำวน + Storm Sense + Master Helmsman | ใหญ่ | M5 (ระบบอากาศใหม่) |
 | ภายหลัง | Galley Stove บนเรือ, สถานะผิดปกติบนผู้เล่น (พร้อม R5), ใบเรือ/พวงมาลัยเสีย | | |

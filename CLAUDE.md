@@ -1368,6 +1368,20 @@ The owner tests in Studio and sends screenshots; previews of new art are rendere
    show (use a click on the water, or Net.Request with a target, in tests). Test fights sink NPC ships = real rewards
    on the owner's save: keep tests short. 0.1.15: shotFor never mutates; fireMain sets ship.shot = "Round" only
    after a volley fired (a failed volley used to drop the note and leave the HUD on Chain). One real click = -1 powder.
+   0.1.16-remake = Plan-Mastery-v2 M4 (Shipwright + Doctor). MASTERY SKILLS = `MasteryCfg.Skills` (class "Mastery",
+   `mastery` = field, `lv` = needed level), merged into Classes.SkillById (NOT Classes.Common: skill points must never
+   learn them); SkillSets adds them to the end of the BASIC set only once unlocked; CombatService CastSkill casts them
+   at skill level 1 (a field level as `lv` would scale them x7-x10). EmergencyRepair (Shipwright 30, ShipRepair,
+   power 0.45, `plug`, cd 150; also Sailing ship-card row4 button: E/F/Z/C are Sailing keys at the helm) and
+   MiracleMist (Doctor 50, PartyHeal `pct` 0.4 of each one's max HP, `cleanse`). `Combat.Cleanse` drops buffs with a
+   negative stat: players have no poison / fire / bleed yet, R5 statuses hook in there (Antidote item deferred to R5).
+   Timed repair: Bag Use on a shipRepair item -> `RepairStart` { uid } (same checks as UseItem via repairCheck:
+   aboard your own ship, damaged OR leaking) -> TimingBar (Shipwright) -> UseItem { uid, token, t }: MasteryCfg.Repair
+   Mult {1, 1.2, 1.5}, quality 3 plugs (ShipService.RepairNearby / RepairOwned 3rd arg `plug` = flood 0 +
+   "LEAKS PLUGGED!"); UseItem without a token = quality 1. `Ship.IsAboard(player, ship)`. Adrenaline Revive
+   (MasteryCfg.Revive, Doctor 30): Interact halves the RevivePrompt HoldDuration LOCALLY (attr BaseHold keeps the
+   server value), KnockdownService gives the revived player buff "Adrenaline" { def = 0.5 } 8 s. Not checked in Play
+   yet (the owner's Play session was running); the revive needs two players.
 1. Wait for the owner's verdict on v0.10.3 (hills/flowers/grass); fix what they point at.
 2. Voxel art pass: monsters DONE v0.11.0 (voxel_monsters.py; AssetService sizes = shape base x style.scale,
    MonsterService.RefreshModels swaps placeholder island mobs). Pets + fruits DONE v0.11.1 (voxel_pets.py).

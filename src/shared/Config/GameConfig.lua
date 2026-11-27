@@ -4,16 +4,16 @@ return {
 	LogoLines = { "LARPTALES", "VOXEL SEAS" },
 	LogoImage = 133908417032160, -- v0.25.87: pixel logo board floating behind the menu character (tools/gen_logo.py); nil = text logo
 	-- bump on every change: shown bottom-right in game and printed in Output, so you can tell which code is running
-	Version = "0.25.157",
+	Version = "0.25.158",
 	SagaName = "Azure East Saga",
 	-- title menu UPDATE LOG lines (newest first, at most 6: more ran off the top of the screen, v0.25.156)
 	UpdateNotes = {
+		"Carved block figureheads: paint and stretch them",
 		"Harpoons and fire pots on the bow fire forward",
 		"Faster character load on the title screen",
 		"Crow's nest shows the range on your aim",
 		"Test Sail your ship; harpoons, fire pots, powder kegs",
 		"Gun ports, bilge pumps, crow's nest, ship lamps",
-		"Shipyard: castles, balconies, flags, windows, themes",
 	},
 	DataStoreName = "GV_Player_v1",
 	GuildStoreName = "GV_Guild_v1",

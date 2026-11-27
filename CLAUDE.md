@@ -1157,6 +1157,12 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     fire over the stem (the bulwark crossing ahead of it counts as a port) and past jib / bowsprit / figurehead boxes
     (ShipParts `figurehead = true` on RamHead / LionHead): -50..50 on every preset (Galleon: on top of the forecastle,
     y 1.5). Checked in Play: bow harpoon hit a Marine ship 14 deg off the bow.
+    v0.25.158 (owner: the ball figureheads looked like round blobs): RamHead / LionHead = block carvings in ShipModel
+    BuildPart on an 8-cell grid of the footprint (ram: long face, curled ivory horns; lion: rayed mane, open mouth),
+    only the stem mount collides. Paint zone `figure` (H.Zones / ZoneName FIGURE / DefaultPaint gold, Marine white):
+    H.BuildItem passes PaintOf(design).figure as the color for `figurehead` parts; ScaleRule figurehead = xyz 0.6..2.5.
+    Builder fills paint zones missing from older saves with DefaultPaint (theme SAVE needs every zone). Bow fire pot
+    checked in Play (hit 900 -> 860, burn ticks to 711).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

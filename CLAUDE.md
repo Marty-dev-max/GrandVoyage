@@ -1271,6 +1271,19 @@ The owner tests in Studio and sends screenshots; previews of new art are rendere
    fallHit is delayed 0.15 s so those reports arrive first. Combat / Sprint / Guard refuse while Parkour.Busy() (not the
    slide). Clips Parkour_* in AnimClips NOT uploaded (Studio only). No server anti-warp check yet. Checked every move in
    Play on a sky course (the Daybreak map has props that block test runs: build test courses at y 400).
+   R1 stats (0.1.6-remake, Plan-Remake sec 3): `Formulas.StatNames` = VIT END WIL WPN MAR FRU (`StatInfo` names
+   Vitality / Endurance / Willpower / Weaponry / Martial Arts / Fruit Mastery), GameConfig.Stats (Start 6 + PerLevel 3,
+   1 point per +1, MaxStat 100 each, MaxTotal 300 together; `PointsAt(level)`, `Spent(stats)`; level-up sets statPoints
+   = PointsAt - Spent). Attributes start at 0; DataService load: `statsV ~= 2` -> stats zeroed + every point of the
+   level back (statsV is NOT in the template: reconcile would skip the migration). Item / card / fruit / Toki bonuses
+   use the same UPPERCASE keys (Items, Cards, Fruits.stats, Toki stats, ItemDB ascend; `Formulas.StatLine(def)` prints
+   them). Derived: ATK = Martial Arts with Fists / Knuckles / Shoes (`Formulas.Martial`, d.martial) else Weaponry,
+   MATK (magic weapons) = Weaponry, `d.fruitAtk` = Fruit Mastery (CombatService passes magic = "fruit" for every fruit
+   hit: hitTarget picks fruitAtk; only magic == true is a never-miss half-DEF spell), Endurance -> d.maxStamina /
+   d.staminaRegen (player attrs MaxStamina / StaminaRegen read by Controllers/Stamina) + FLEE + move speed, Willpower ->
+   SP, MDEF, KnockdownService will power (WillPerWil), SP regen. No luck stat (card drop chance is plain). Class
+   `build`s use the new keys (Auto upgrade + Job Master rings). Monster types (STR/AGI/DEX/INT) are untouched until the
+   damage-type pass. Checked in Play: old save migrated (Lv 2 = 9 points), +5 END -> Stamina 105, punches kill monkeys.
 1. Wait for the owner's verdict on v0.10.3 (hills/flowers/grass); fix what they point at.
 2. Voxel art pass: monsters DONE v0.11.0 (voxel_monsters.py; AssetService sizes = shape base x style.scale,
    MonsterService.RefreshModels swaps placeholder island mobs). Pets + fruits DONE v0.11.1 (voxel_pets.py).

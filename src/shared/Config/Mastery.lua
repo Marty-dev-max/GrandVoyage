@@ -46,7 +46,7 @@ M.Fields = {
 		perks = {
 			{ lv = 10, name = "Steady Hands", text = "Your heals +20%, healing items ready 25% sooner", bonus = { healMult = 0.2, itemCdCut = 0.25 } },
 			{ lv = 30, name = "Adrenaline Revive", text = "Revive 2x faster; they stand up with +20% HP and +50% DEF for 8 s", bonus = { reviveHp = 0.2 } },
-			{ lv = 50, name = "Miracle Mist", text = "Skill (Basic set): a mist that heals everyone near you 40% HP" },
+			{ lv = 50, name = "Miracle Mist", text = "Skill (Basic set): a mist that heals your party within 35 studs 40% HP" },
 		},
 	},
 	Gunner = {
@@ -126,7 +126,7 @@ end
 
 -- Mastery v2 M4: Shipwright timed repairs (Patch Planks / Repair Kit through the Timing Bar), quality 1..3 -> x mult;
 -- green also pumps every drop of water out of the hull. A plain Use (no bar) = quality 1.
-M.Repair = { Mult = { 1, 1.2, 1.5 }, PlugAt = 3 }
+M.Repair = { Mult = { 1, 1.2, 1.5 }, FloodCut = { 0.3, 0.5, 1 } } -- FloodCut = share of the water pumped out
 -- Adrenaline Revive (Doctor Lv 30): your revive hold is this much shorter, and they get this armor buff
 M.Revive = { lv = 30, HoldK = 0.5, Buff = { def = 0.5 }, Seconds = 8 }
 
@@ -136,7 +136,7 @@ M.Skills = {
 	{ id = "EmergencyRepair", name = "Emergency Repair", mastery = "Shipwright", lv = 30, kind = "ShipRepair", sp = 25,
 		cd = 150, power = 0.45, plug = true, maxLevel = 1, fx = "Repair", desc = "Patch 45% of the ship you stand on and plug every leak." },
 	{ id = "MiracleMist", name = "Miracle Mist", mastery = "Doctor", lv = 50, kind = "PartyHeal", sp = 30, cd = 90,
-		radius = 35, pct = 0.4, cleanse = true, maxLevel = 1, fx = "Heal", desc = "A healing mist: everyone near you gets 40% of their HP back." },
+		radius = 35, pct = 0.4, cleanse = true, maxLevel = 1, fx = "Heal", desc = "A healing mist: your party within 35 studs gets 40% of their HP back." },
 }
 for _, s in ipairs(M.Skills) do
 	s.class = "Mastery"

@@ -288,7 +288,7 @@ local function setup()
 				end
 			end
 			local RC = MasteryCfg.Repair
-			if not R.ShipService.RepairOwned(player, def.shipRepair * RC.Mult[q], q >= RC.PlugAt) then
+			if not R.ShipService.RepairOwned(player, def.shipRepair * RC.Mult[q], RC.FloodCut[q]) then
 				return false, "You must be aboard your own ship"
 			end
 			if q > 1 then

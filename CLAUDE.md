@@ -1377,7 +1377,7 @@ The owner tests in Studio and sends screenshots; previews of new art are rendere
    negative stat: players have no poison / fire / bleed yet, R5 statuses hook in there (Antidote item deferred to R5).
    Timed repair: Bag Use on a shipRepair item -> `RepairStart` { uid } (same checks as UseItem via repairCheck:
    aboard your own ship, damaged OR leaking) -> TimingBar (Shipwright) -> UseItem { uid, token, t }: MasteryCfg.Repair
-   Mult {1, 1.2, 1.5}, quality 3 plugs (ShipService.RepairNearby / RepairOwned 3rd arg `plug` = flood 0 +
+   Mult {1, 1.2, 1.5} + FloodCut {0.3, 0.5, 1} (ShipService.RepairNearby / RepairOwned 3rd arg `plug` = true or a share; 1 = flood 0 +
    "LEAKS PLUGGED!"); UseItem without a token = quality 1. `Ship.IsAboard(player, ship)`. Adrenaline Revive
    (MasteryCfg.Revive, Doctor 30): Interact halves the RevivePrompt HoldDuration LOCALLY (attr BaseHold keeps the
    server value), KnockdownService gives the revived player buff "Adrenaline" { def = 0.5 } 8 s. Not checked in Play

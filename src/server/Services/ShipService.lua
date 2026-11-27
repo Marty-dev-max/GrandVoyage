@@ -824,7 +824,8 @@ function Ship.AddShipBuff(player, id, value, duration)
 	return true
 end
 
--- plug = true pumps every drop of water out too (remake M4: a green timed repair, Emergency Repair)
+-- plug = true (or 1) pumps every drop of water out too, a number 0..1 that share of it (remake M4: timed repairs,
+-- Emergency Repair)
 function Ship.RepairNearby(player, pct, plug)
 	local s = shipUnder(player)
 	if not s or s.sinking or (s.owner and s.owner ~= player and not R.PartyService.Same(s.owner, player)) then
@@ -833,9 +834,12 @@ function Ship.RepairNearby(player, pct, plug)
 	local before = s.hp
 	local d = R.PlayerService.Derived(player)
 	s.hp = math.min(s.maxHp, s.hp + s.maxHp * pct * (1 + (d and d.repairMult or 0))) -- remake R3: Shipwright perks
-	if plug and (s.flood or 0) > 0 then
-		s.flood = 0
-		Net.FX("Miss", { pos = s.root.Position + Vector3.new(0, 6, 0), text = "LEAKS PLUGGED!" }, s.root.Position, 300)
+	local cut = plug == true and 1 or math.clamp(tonumber(plug) or 0, 0, 1)
+	if cut > 0 and (s.flood or 0) > 0 then
+		s.flood = cut >= 1 and 0 or s.flood * (1 - cut)
+		if cut >= 1 then
+			Net.FX("Miss", { pos = s.root.Position + Vector3.new(0, 6, 0), text = "LEAKS PLUGGED!" }, s.root.Position, 300)
+		end
 	end
 	setAttrs(s)
 	if not s.test and s.hp > before then

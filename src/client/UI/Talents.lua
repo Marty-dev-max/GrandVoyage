@@ -171,11 +171,12 @@ local function renderMastery(body, st)
 		local perks = New("Frame", { BackgroundTransparency = 1, Position = UDim2.new(0, 360, 0, 10), Size = UDim2.new(1, -370, 1, -20), Parent = row })
 		UI.List(perks, Enum.FillDirection.Horizontal, 8)
 		for j, perk in ipairs(f.perks) do
-			local on = e.lv >= perk.lv
+			local on = e.lv >= perk.lv and not perk.soon
 			local chip = New("Frame", { BackgroundColor3 = on and f.color:Lerp(T.PanelDeep, 0.55) or T.PanelDeep:Lerp(Color3.new(0, 0, 0), 0.3), Size = UDim2.new(1 / #f.perks, -6, 1, 0), LayoutOrder = j, Parent = perks })
 			UI.Corner(chip, 8)
 			UI.Stroke(chip, on and f.color or T.Edge, 2)
-			UI.Text(chip, "LV " .. perk.lv, 12, on and T.Gold or T.TextSoft, "Display", { Position = UDim2.fromOffset(6, 6), Size = UDim2.new(1, -12, 0, 16), TextXAlignment = Enum.TextXAlignment.Left })
+			-- Mastery v2: perks of later plan phases say SOON (docs/Plan-Mastery-v2.md)
+			UI.Text(chip, "LV " .. perk.lv .. (perk.soon and "  SOON" or ""), 12, on and T.Gold or (perk.soon and T.Orange or T.TextSoft), "Display", { Position = UDim2.fromOffset(6, 6), Size = UDim2.new(1, -12, 0, 16), TextXAlignment = Enum.TextXAlignment.Left })
 			UI.Text(chip, perk.name, 14, on and T.Text or T.TextSoft, "Display", { Position = UDim2.fromOffset(6, 26), Size = UDim2.new(1, -12, 0, 20), TextXAlignment = Enum.TextXAlignment.Left })
 			UI.Text(chip, perk.text, 12, on and T.Green or T.TextSoft, "Semi", { Position = UDim2.fromOffset(6, 50), Size = UDim2.new(1, -12, 1, -56), TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextWrapped = true })
 		end

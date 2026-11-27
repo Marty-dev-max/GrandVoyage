@@ -1467,10 +1467,16 @@ function Combat.Start()
 				local d = R.PlayerService.Derived(pl)
 				local hum = R.PlayerService.Humanoid(pl)
 				if d and hum and hum.Health > 0 and not R.KnockdownService.IsDowned(pl) then
+					-- Mastery v2 M2: cooked food buffs (hpRegen / spRegen) speed regen up; HP regen from food keeps
+					-- going at half strength in a fight
+					local bf = Combat.GetBuffs(pl)
 					local sp = pl:GetAttribute("SP") or 0
-					pl:SetAttribute("SP", math.min(d.maxSp, sp + 1 + d.maxSp * 0.015 + d.WIL * 0.1))
+					pl:SetAttribute("SP", math.min(d.maxSp, sp + (1 + d.maxSp * 0.015 + d.WIL * 0.1) * (1 + (bf.spRegen or 0))))
+					local hpTick = hum.MaxHealth * 0.015 + d.VIT * 0.3
 					if now - (lastHurt[pl] or 0) > 6 then
-						hum.Health = math.min(hum.MaxHealth, hum.Health + hum.MaxHealth * 0.015 + d.VIT * 0.3)
+						hum.Health = math.min(hum.MaxHealth, hum.Health + hpTick * (1 + (bf.hpRegen or 0)))
+					elseif (bf.hpRegen or 0) > 0 then
+						hum.Health = math.min(hum.MaxHealth, hum.Health + hpTick * bf.hpRegen * 0.5)
 					end
 				end
 				local list = buffs[pl]

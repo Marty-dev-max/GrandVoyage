@@ -321,7 +321,7 @@ function F.Compute(profile, buffs)
 	d.moveSpeed = math.min(24, 17 + END * 0.04) * herSpeed * (1 + (b.speedPct or 0))
 	-- Endurance: the Stamina bar (Controllers/Stamina reads the player attributes MaxStamina / StaminaRegen)
 	d.maxStamina = math.floor((GameConfig.Stamina.Max + END * SC.StaminaPerEnd) * (1 + (b.staminaPct or 0)))
-	d.staminaRegen = GameConfig.Stamina.Regen * (1 + END * SC.RegenPerEnd) * (1 + (b.staminaRegenPct or 0))
+	d.staminaRegen = GameConfig.Stamina.Regen * (1 + END * SC.RegenPerEnd) * (1 + (b.staminaRegenPct or 0) + (buffs.stamRegen or 0))
 	-- remake R3 talents / mastery: guard (GuardService), damage types + specials (CombatService), field work
 	d.blockCut = math.min(0.6, b.blockCut or 0)
 	d.postureCut = math.min(0.6, b.postureCut or 0)
@@ -336,6 +336,8 @@ function F.Compute(profile, buffs)
 	d.healMult = b.healMult or 0
 	d.foodMult = b.foodMult or 0
 	d.reviveHp = b.reviveHp or 0
+	d.plankSave = math.min(0.8, b.plankSave or 0) -- Mastery v2: Shipwright Sturdy Patch
+	d.itemCdCut = math.min(0.5, b.itemCdCut or 0) -- Mastery v2: Doctor Steady Hands (healing items)
 	d.reloadCut = math.min(0.5, b.reloadCut or 0)
 	d.cannonDamage = (b.cannonDamage or 0) + (cls.passive and cls.passive.cannonDamage or 0)
 	d.shipSpeed = (b.shipSpeed or 0) + (cls.passive and cls.passive.shipSpeed or 0)

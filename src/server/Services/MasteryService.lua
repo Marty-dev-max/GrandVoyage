@@ -58,7 +58,7 @@ function MS.Add(player, field, xp)
 		R.PlayerService.Notify(player, f.name .. " Mastery Lv." .. m.lv .. "!", "level")
 		for _, perk in ipairs(f.perks) do
 			if perk.lv == m.lv then
-				R.PlayerService.Notify(player, "New perk: " .. perk.name .. " (" .. perk.text .. ")", "good")
+				R.PlayerService.Notify(player, (perk.soon and "Perk reached (coming soon): " or "New perk: ") .. perk.name .. " (" .. perk.text .. ")", "good")
 			end
 		end
 	end
@@ -83,7 +83,56 @@ function MS.State(p)
 	return out
 end
 
+-- ===== Timing Bar (Mastery v2 M1): one press, green = 3, yellow = 2, else 1 =====
+-- The server places the zones and keeps the start time; the client sends how long it ran before the press. That time
+-- may be up to Timing.Lag older than the server's own clock (ping) but never newer, so a late press can't be
+-- re-timed into the green.
+local timings = {} -- [player] = { token, t0, green = {a, b}, yellow = {a, b}, field, data }
+
+function MS.TimingStart(player, field, data)
+	local p = R.PlayerService.Profile(player)
+	if not p then
+		return nil
+	end
+	local T = MasteryCfg.Timing
+	local gw = MasteryCfg.GreenWidth(MasteryCfg.Level(p, field))
+	local center = 0.2 + math.random() * 0.6
+	local g = { math.max(0, center - gw / 2), math.min(1, center + gw / 2) }
+	local y = { math.max(0, g[1] - T.Yellow), math.min(1, g[2] + T.Yellow) }
+	local token = tostring(math.random(1, 1e9))
+	timings[player] = { token = token, t0 = os.clock(), green = g, yellow = y, field = field, data = data }
+	return { token = token, green = g, yellow = y, sweep = T.Sweep, timeout = T.Timeout }
+end
+
+-- returns quality 1..3 and the data given to TimingStart (nil if there is no such run)
+function MS.TimingFinish(player, token, clientT)
+	local run = timings[player]
+	if not run or run.token ~= token then
+		return nil
+	end
+	timings[player] = nil
+	local T = MasteryCfg.Timing
+	local serverT = os.clock() - run.t0
+	local t = tonumber(clientT)
+	if not t or t ~= t or t > serverT + 0.05 or t < serverT - T.Lag or serverT > T.Timeout + T.Lag then
+		t = nil -- no believable press: plain result
+	end
+	local q = 1
+	if t then
+		local x = MasteryCfg.Needle(t)
+		if x >= run.green[1] and x <= run.green[2] then
+			q = 3
+		elseif x >= run.yellow[1] and x <= run.yellow[2] then
+			q = 2
+		end
+	end
+	return q, run.data
+end
+
 function MS.Start()
+	Players.PlayerRemoving:Connect(function(player)
+		timings[player] = nil
+	end)
 	local G = MasteryCfg.Gain
 	-- Navigator: every second seated at a moving ship's helm
 	task.spawn(function()

@@ -25,13 +25,13 @@ end
 mob("ForestMonkey", { name = "Forest Monkey", level = 1, hp = 60, atk = 8, def = 2, exp = 12, jobExp = 8, beli = { 5, 12 },
 	style = { shape = "monkey", color = Color3.fromRGB(170, 110, 70), scale = 1 },
 	-- monkeys hoard shells stolen from the shore (Crab Shell is the Hermit companion's evolution material)
-	drops = { { "MonkeyFur", 0.6, 1, 2 }, { "CrabShell", 0.2, 1, 1 }, { "MeatOnBone", 0.15, 1, 1 }, { "Bandana", 0.02, 1, 1 } } })
+	drops = { { "MonkeyFur", 0.6, 1, 2 }, { "CrabShell", 0.2, 1, 1 }, { "RawMeat", 0.3, 1, 1 }, { "Bandana", 0.02, 1, 1 } } })
 mob("JungleTiger", { name = "Jungle Tiger", level = 4, hp = 150, atk = 17, def = 4, exp = 32, jobExp = 22, beli = { 10, 25 },
 	style = { shape = "cat", color = Color3.fromRGB(250, 160, 60), scale = 1.1 }, moveSpeed = 16,
-	drops = { { "TigerPelt", 0.5, 1, 2 }, { "MeatOnBone", 0.2, 1, 1 } } })
+	drops = { { "TigerPelt", 0.5, 1, 2 }, { "RawMeat", 0.4, 1, 2 } } })
 mob("WildBoar", { name = "Wild Boar", level = 6, hp = 230, atk = 24, def = 8, exp = 50, jobExp = 34, beli = { 15, 35 },
 	style = { shape = "boar", color = Color3.fromRGB(140, 95, 75), scale = 1.2 }, -- not aggressive (v0.25.4: new players got mobbed)
-	drops = { { "BoarTusk", 0.5, 1, 2 }, { "MeatOnBone", 0.3, 1, 2 } } })
+	drops = { { "BoarTusk", 0.5, 1, 2 }, { "RawMeat", 0.6, 1, 2 } } })
 mob("MountainBandit", { name = "Mountain Bandit", level = 8, hp = 320, atk = 32, def = 10, exp = 75, jobExp = 50, beli = { 30, 60 },
 	style = { shape = "humanoid", color = Color3.fromRGB(120, 100, 80), scale = 1, hat = "bandana" }, aggro = true, aggroRadius = 14,
 	drops = { { "Sword_Plain", 0.03, 1, 1 }, { "SteelOre", 0.08, 1, 1 }, { "BeardDark", 0.01, 1, 1 } } })

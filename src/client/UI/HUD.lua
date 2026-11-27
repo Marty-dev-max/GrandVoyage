@@ -1381,7 +1381,7 @@ function HUD.Loot(data)
 	end
 end
 
-local buffIcons = { IronBody = "🛡", EagleEye = "🦅", HeatedLeg = "🔥", MirageVeil = "🌫", Adrenaline = "💉", SteelFrame = "🔩" }
+local buffIcons = { IronBody = "🛡", EagleEye = "🦅", HeatedLeg = "🔥", MirageVeil = "🌫", Adrenaline = "💉", SteelFrame = "🔩", Food = "🍖", Cuisine = "🌶", Feast = "🍗" }
 local lastBuffs
 local function refresh()
 	local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")

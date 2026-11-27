@@ -357,6 +357,7 @@ local function sync(player)
 			pearlsBound = p.pearlsBound,
 			expBoostUntil = p.expBoostUntil,
 			classSwitches = p.classSwitches,
+			mastery = p.mastery, -- Mastery v2: the Cook window reads the Cook level
 			settings = p.settings,
 		},
 		derived = derived[player],

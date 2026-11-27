@@ -644,6 +644,7 @@ end
 -- icon name for an item definition (Config/Items)
 local ITEM_ICON = {
 	MeatOnBone = "meat_s", RoastShank = "meat_m", BigFeast = "meat_l", TangerineJuice = "grog_s", SeaGrog = "grog_m", CaptainsKeg = "grog_l", RepairKit = "repairkit", PatchPlanks = "wood", Bandage = "medkit", RefineGuard = "charm",
+	RawMeat = "meat", FreshFish = "sharkfin", Tangerine = "juice", Spice = "flame", GrilledFish = "meat_s", FishStew = "potion", PepperSkewer = "meat_m", LeviathanFeast = "meat_l",
 	CaptainsLog = "book", SeaEgg = "egg", GoldenEgg = "golden_egg", SeaBait = "bait", Wood = "wood", TreasureWood = "wood_gold",
 	SailCloth = "cloth", SteelOre = "ore", TidecoreShard = "shard", PureTidecore = "shard_pure",
 	TreasureMap = "map", WantedPoster = "poster", MarineBadge = "badge", CompassCharm = "charm",
@@ -673,6 +674,7 @@ function UI.ItemIconName(def)
 		return wIcon
 	end
 	return ITEM_ICON[def.id]
+		or (def.cookedFrom and ITEM_ICON[def.cookedFrom]) -- Mastery v2: 2-3 star dishes look like their plain one
 		or (def.fruit and ("fruit_" .. string.lower(def.fruit)))
 		or (def.weaponType and WEAPON_ICON[def.weaponType])
 		or KIND_ICON[def.kind]

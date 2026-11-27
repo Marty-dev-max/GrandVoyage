@@ -24,6 +24,7 @@ local Prices = require(script.Parent.Prices)
 local CardArt = require(script.Parent.CardArt)
 local ForgeScene = require(script.Parent.ForgeScene)
 local TalentsUI = require(script.Parent.Talents) -- remake R3 Talent cards + Field Mastery
+local CookUI = require(script.Parent.Cook) -- Mastery v2 M2 cooking at campfires
 local State = require(script.Parent.Parent.State)
 local Audio = require(script.Parent.Parent.Controllers.Audio)
 local Settings = require(script.Parent.Parent.Controllers.Settings)
@@ -4844,5 +4845,6 @@ end
 Panels.Blacksmith = Panels.Refine
 Panels.Talents = TalentsUI.Open
 Panels.TalentPick = TalentsUI.Pick
+Panels.Cook = CookUI.Open
 
 return Panels

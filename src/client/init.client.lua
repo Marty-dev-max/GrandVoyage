@@ -297,7 +297,7 @@ local handlers = {
 	end,
 	-- the server opens a window for you (v0.25.72: the Toki color picker right after buying it)
 	OpenPanel = function(d)
-		if type(d.name) == "string" and (d.name == "TokiColor" or d.name == "Recruit") then
+		if type(d.name) == "string" and (d.name == "TokiColor" or d.name == "Recruit" or d.name == "Cook") then
 			Panels.Open(d.name, d.args)
 		end
 	end,

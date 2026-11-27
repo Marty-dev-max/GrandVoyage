@@ -249,6 +249,62 @@ local mats = {
 for _, m in ipairs(mats) do
 	add(m[1], { name = m[2], kind = "Material", price = m[3], stack = true, rarity = m[4], desc = m[5] })
 end
+
+-- ===== Cooking (Mastery v2 M2): ingredients, new dishes, 2 / 3 star versions (Config/Recipes) =====
+local Recipes = require(script.Parent.Recipes)
+add("RawMeat", { name = "Raw Meat", desc = "Cook it at a campfire.", kind = "Material", ingredient = true, price = 30, stack = true, rarity = "Common" })
+add("FreshFish", { name = "Fresh Fish", desc = "Cook it at a campfire.", kind = "Material", ingredient = true, price = 40, stack = true, rarity = "Common" })
+add("Tangerine", { name = "Tangerine", desc = "Juice it at a campfire.", kind = "Material", ingredient = true, price = 30, stack = true, rarity = "Common" })
+add("Spice", { name = "Sea Spice", desc = "Hot peppers and salt. Medium and large recipes need it.", kind = "Material", ingredient = true, price = 40, stack = true, rarity = "Common" })
+add("GrilledFish", { name = "Grilled Fish", desc = "Restores 20% HP.", kind = "Consumable", heal = 0.2, price = 90, stack = true, cd = 1.5, rarity = "Common" })
+add("FishStew", { name = "Fish Stew", desc = "Restores 35% HP.", kind = "Consumable", heal = 0.35, price = 280, stack = true, cd = 2, rarity = "Common" })
+add("PepperSkewer", { name = "Pepper Skewer", desc = "Restores 20% HP. +8% damage for 5 minutes.", kind = "Consumable", heal = 0.2, price = 400, stack = true, cd = 2, rarity = "Uncommon",
+	buff = { id = "Cuisine", stats = { atk = 0.08 }, dur = 300 } })
+add("LeviathanFeast", { name = "Leviathan Feast", desc = "Restores 50% HP. Your whole party nearby: faster HP and SP regen, +10% defense for 15 minutes.", kind = "Consumable", heal = 0.5, price = 1500, stack = true, cd = 5, rarity = "Epic",
+	buff = { id = "Feast", stats = { hpRegen = 0.5, spRegen = 0.5, def = 0.1 }, dur = 900, party = true } })
+for _, r in ipairs(Recipes.List) do
+	local base = Items[r.id]
+	assert(base, "Recipes: no item " .. r.id)
+	-- never worth more sold than its ingredients cost to buy
+	local cost = 0
+	for ing, n in pairs(r.needs) do
+		cost += (Items[ing] and Items[ing].price or 0) * n
+	end
+	base.sellCap = math.floor(cost * 0.9)
+	base.recipe = r.id
+	for stars, s in pairs(Recipes.Stars) do
+		local d = table.clone(base)
+		d.id = nil
+		d.name = s.prefix .. " " .. base.name
+		d.heal = base.heal and base.heal * s.heal or nil
+		d.healSp = base.healSp and base.healSp * s.heal or nil
+		d.stars = stars
+		d.cookedFrom = r.id
+		-- the dish's own buff gets stronger; plain dishes get one by main ingredient
+		local stats = {}
+		for k, v in pairs(Recipes.Buff[r.kind] or {}) do
+			stats[k] = v * s.buffK
+		end
+		if base.buff then
+			for k, v in pairs(base.buff.stats) do
+				stats[k] = math.max(stats[k] or 0, v * (1 + (s.buffK - 1) * 0.5))
+			end
+			d.buff = { id = base.buff.id, stats = stats, dur = base.buff.dur, party = base.buff.party }
+		else
+			d.buff = { id = "Food", stats = stats, dur = s.dur }
+		end
+		local parts = {}
+		for k, v in pairs(stats) do
+			table.insert(parts, "+" .. math.floor(v * 100 + 0.5) .. "% " .. (Recipes.BuffText[k] or k))
+		end
+		table.sort(parts)
+		local healText = (d.heal and ("Restores " .. math.floor(d.heal * 100 + 0.5) .. "% HP. ") or "")
+			.. (d.healSp and ("Restores " .. math.floor(d.healSp * 100 + 0.5) .. "% SP. ") or "")
+		d.desc = string.rep("*", stars) .. " " .. healText .. table.concat(parts, ", ") .. " for " .. math.floor(d.buff.dur / 60) .. " min"
+			.. (d.buff.party and " (whole party nearby)." or ".")
+		add(Recipes.ItemId(r.id, stars), d)
+	end
+end
 -- story key item (quest T12): the next island's name only shows once your compass points to it (owner, v0.22.4)
 add("SeaCompass", { name = "Sea Compass", kind = "Material", price = 0, stack = true, rarity = "Epic", key = true,
 	desc = "An old brass compass. Each time you finish an island's story, it points to the next port and reveals its name." })
@@ -278,7 +334,7 @@ end
 
 -- General store stock
 local Shop = {
-	"MeatOnBone", "RoastShank", "BigFeast", "TangerineJuice", "SeaGrog", "CaptainsKeg", "Bandage", "PatchPlanks", "RepairKit", "SeaBait", "SteelOre", "Wood", "SailCloth",
+	"MeatOnBone", "RoastShank", "BigFeast", "TangerineJuice", "SeaGrog", "CaptainsKeg", "Bandage", "PatchPlanks", "RepairKit", "RawMeat", "FreshFish", "Tangerine", "Spice", "SeaBait", "SteelOre", "Wood", "SailCloth",
 	"SailorVest", "Bandana", "CompassCharm", "SeastoneBracer", "BeardDark", "BeardBrown", "ClownWig",
 	"Ammo_Musket",
 	"Knuckles_Plain", "Sword_Plain", "Slingshot_Plain", "Shoes_Plain", "StormBaton_Plain", "MedKit_Plain", "Hammer_Plain",

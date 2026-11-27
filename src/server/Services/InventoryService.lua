@@ -231,7 +231,7 @@ local function setup()
 		if not def or def.kind ~= "Consumable" or def.special then
 			return false, "Cannot use"
 		end
-		local key = player.UserId .. def.id
+		local key = player.UserId .. (def.cookedFrom or def.id) -- star dishes share their plain one's cooldown
 		if itemCooldowns[key] and os.clock() < itemCooldowns[key] then
 			return false, "On cooldown"
 		end
@@ -302,8 +302,32 @@ local function setup()
 			local max = player:GetAttribute("MaxSP") or 100
 			player:SetAttribute("SP", math.min(max, (player:GetAttribute("SP") or 0) + max * def.healSp * foodK))
 		end
-		itemCooldowns[key] = os.clock() + (def.cd or 1)
-		Inv.RemoveUid(player, entry.uid, 1)
+		-- Mastery v2 M2: cooked dishes carry a buff (Config/Recipes); a party one reaches everyone near you
+		if def.buff then
+			local targets = { player }
+			if def.buff.party then
+				local myRoot = R.PlayerService.Root(player)
+				for _, m in ipairs(R.PartyService.Members(player)) do
+					local mr = R.PlayerService.Root(m)
+					if m ~= player and mr and myRoot and (mr.Position - myRoot.Position).Magnitude <= 40 then
+						table.insert(targets, m)
+					end
+				end
+			end
+			for _, m in ipairs(targets) do
+				R.CombatService.AddBuff(m, def.buff.id or "Food", def.buff.stats, def.buff.dur or 60)
+				if m ~= player then
+					R.PlayerService.Notify(m, player.DisplayName .. " shared a " .. def.name .. "!", "good")
+				end
+			end
+		end
+		-- Mastery v2: Doctor Steady Hands = healing items ready sooner
+		local cdK = (def.heal or def.healSp or def.allyHeal) and (1 - (dd and dd.itemCdCut or 0)) or 1
+		itemCooldowns[key] = os.clock() + (def.cd or 1) * cdK
+		-- Mastery v2: Shipwright Sturdy Patch = a chance to keep the planks / kit
+		if not (def.shipRepair and math.random() < (dd and dd.plankSave or 0)) then
+			Inv.RemoveUid(player, entry.uid, 1)
+		end
 		local root = R.PlayerService.Root(player)
 		if root then
 			Net.FX("UseItem", { pos = root.Position, id = def.id }, root.Position, 200)
@@ -511,7 +535,7 @@ local function setup()
 		if not Inv.RemoveUid(player, entry.uid, qty) then
 			return false, "Cannot sell (unequip it first)"
 		end
-		R.PlayerService.AddBeli(player, math.floor((def.price or 0) * 0.5) * qty)
+		R.PlayerService.AddBeli(player, math.floor(math.min((def.price or 0) * 0.5, def.sellCap or math.huge)) * qty) -- sellCap: cooked food (Config/Recipes)
 		return true
 	end, 0.2)
 end

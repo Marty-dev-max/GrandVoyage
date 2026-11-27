@@ -1150,7 +1150,9 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     v0.25.156: title menu = DataService.PrefetchSlots on PlayerAdded (slot keys + account read in parallel, the first
     MenuSlots takes it, menuCache edits win); Menu shows no character until MenuSlots answers (was the default look).
     UPDATE LOG keeps at most 6 lines (17 ran off the top of the title screen). Aim lines need Manned > 0 (a new save
-    with no crew sees no aim at all). Checked in Play: range tag "65 / 230", own character on the title screen.
+    with no crew sees no aim at all). Checked in Play: range tag "65 / 230", own character on the title screen. Harpoon
+    (hit, rope Beam, NPC 27.6 -> 10.9 studs/s) and keg (180 dmg under an NPC hull) checked in Play too. A forward-facing
+    harpoon at the Sloop bow gets NO arc (bulwark, not at a port): mount specials at the sides like cannons.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

@@ -24,6 +24,7 @@ local function blocked(char)
 		return require(script.Parent.Flight).IsFlying()
 	end)
 	return (ok and swimming) or (okF and flying) or char:GetAttribute("Downed") or player:GetAttribute("Vending")
+		or require(script.Parent.Parent.State).blocking -- remake R1: no running behind a raised guard
 end
 
 function Sprint.Start()
@@ -46,6 +47,10 @@ function Sprint.Start()
 			return
 		end
 		if running and (not UserInputService:IsKeyDown(Enum.KeyCode.W) or hum.MoveDirection.Magnitude < 0.1 or blocked(char)) then
+			running = false
+		end
+		-- remake R1: running costs stamina; empty = back to walking
+		if running and not require(script.Parent.Stamina).Drain(GameConfig.Stamina.SprintPerSec * dt) then
 			running = false
 		end
 		local base = player:GetAttribute("BaseSpeed")

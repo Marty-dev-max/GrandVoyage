@@ -309,7 +309,19 @@ function Combat.MonsterHit(mob, player, mult)
 	local crit = mob.def.critChance and math.random() < mob.def.critChance
 	local typeK = MonsterTypes.Mult(mob.def.mtype, classType(player))
 	local dmg = Formulas.Damage(mob.def.atk, d.def, (mult or 1) * typeK * (crit and 1.5 or 1), mob.def.isBoss and 5 or 1)
+	-- remake R1: dash i-frames, Block (front, x0.3 + posture) and Parry (the monster is dazed) come first
+	local guarded, gk = R.GuardService.Check(player, mob.root and mob.root.Position, dmg, { boss = mob.def.isBoss })
+	if gk == "parry" then
+		R.MonsterService.Stun(mob, mob.def.isBoss and GameConfig.Guard.ParryStunBoss or GameConfig.Guard.ParryStun)
+		return
+	elseif not guarded then
+		return
+	end
+	dmg = guarded
 	Combat.DamagePlayer(player, dmg, crit and { crit = true } or nil)
+	if gk == "block" then
+		return -- a blocked blow never stuns or shoves
+	end
 	-- INT monsters can stun (the client freezes movement for a moment)
 	if mob.def.stunChance and math.random() < mob.def.stunChance and not R.KnockdownService.IsDowned(player) then
 		local root = R.PlayerService.Root(player)
@@ -456,7 +468,16 @@ local function hitTarget(attacker, target, mult, magic, opts)
 		-- PvP damage is reduced by 40% so fights last longer
 		local pdef = opts.ignoreDef and 0 or (magic and td.mdef or td.def)
 		local dmg, isCrit = Formulas.Damage(atk, pdef, mult * 0.6, magic and 0 or crit)
-		Combat.DamagePlayer(target.player, dmg, { crit = isCrit, killer = attacker })
+		-- remake R1: the target's dodge / block / parry (a parry stuns the attacker)
+		local aroot = R.PlayerService.Root(attacker)
+		local guarded, gk = R.GuardService.Check(target.player, aroot and aroot.Position, dmg)
+		if gk == "parry" then
+			Net.Push(attacker, "Stun", { seconds = GameConfig.Guard.ParryStunPvP })
+			return
+		elseif not guarded then
+			return
+		end
+		Combat.DamagePlayer(target.player, guarded, { crit = isCrit, killer = attacker })
 	end
 end
 
@@ -706,6 +727,7 @@ local function setup()
 			return false
 		end
 		lastDash[player] = now
+		R.GuardService.OnDash(player) -- remake R1: i-frames
 		local dir = Vector3.new(data.dir.X, 0, data.dir.Z)
 		dir = dir.Magnitude > 0.01 and dir.Unit or root.CFrame.LookVector
 		Net.FX("Dash", { from = root.Position, to = root.Position + dir * GameConfig.Dash.Speed * GameConfig.Dash.Duration, char = player.Character }, root.Position, 250)

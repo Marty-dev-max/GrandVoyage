@@ -64,6 +64,7 @@ function Combat.NotePress()
 end
 -- returns perfect (this hit), flawless (the finisher of an all-perfect string)
 local function m1Swing(interval)
+	require(script.Parent.Guard).Lower() -- remake R1: swinging drops the guard
 	local m, rh = m1Prof()
 	local readyAt = lastAttack + m1Gap(interval or 1.2)
 	local inString = os.clock() - m1.at < m.reset
@@ -479,6 +480,7 @@ function Combat.CastSkill(skillId, targetModel, aim, charge)
 	if not skill then
 		return false
 	end
+	require(script.Parent.Guard).Lower() -- remake R1: so does a skill
 	if skill.kind == "Stairs" then
 		return Combat.StairsStart(skillId)
 	end
@@ -892,9 +894,14 @@ function Combat.Dash()
 	if not r or not h or h.Health <= 0 or os.clock() < Combat.dashReadyAt then
 		return
 	end
-	if h.Sit or h:GetState() == Enum.HumanoidStateType.Swimming then
+	if h.Sit or h:GetState() == Enum.HumanoidStateType.Swimming or h:GetAttribute("Stunned") then
 		return
 	end
+	-- remake R1: a dash costs stamina, drops the guard and gives the server's i-frames (GuardService.OnDash)
+	if not require(script.Parent.Stamina).Use(GameConfig.Stamina.Dash) then
+		return
+	end
+	require(script.Parent.Guard).Lower(true)
 	Combat.dashReadyAt = os.clock() + cfg.Cooldown
 	if Flight.IsFlying() then
 		-- flying: a burst along where the camera looks, added to the flight velocity and fading out (momentum)

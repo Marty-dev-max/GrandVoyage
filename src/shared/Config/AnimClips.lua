@@ -632,6 +632,14 @@ C.Shield_Hold = { rig = "R15", loop = true, priority = "Action", length = 0.5, k
 	{ t = 0.25, pose = with(CANNON, { UpperTorso = { -12, 0, 0 }, RightUpperArm = { 86, 0, -8 }, LeftUpperArm = { 86, 0, 8 } }) },
 	{ t = 0.5, pose = with(CANNON, { UpperTorso = { -10, 0, 0 } }) },
 } }
+-- ===== Remake R1: Block (hold F, Controllers/Guard): forearms crossed in front of the face, upper body only =====
+local BLOCK = { RightUpperArm = { 78, 0, -32 }, RightLowerArm = { 112, 0, 0 }, LeftUpperArm = { 84, 0, 30 }, LeftLowerArm = { 108, 0, 0 },
+	UpperTorso = { -10, 0, 0 }, Head = { -6, 0, 0 } }
+C.Guard_Block = { rig = "R15", loop = true, priority = "Action", length = 0.8, keys = {
+	{ t = 0, pose = BLOCK },
+	{ t = 0.4, pose = with(BLOCK, { UpperTorso = { -12, 0, 0 }, RightUpperArm = { 80, 0, -32 }, LeftUpperArm = { 86, 0, 30 } }) },
+	{ t = 0.8, pose = BLOCK },
+} }
 -- Barrier Dome: arms raised wide, holding the dome up
 local DOME = { RightUpperArm = { 150, 0, 40 }, LeftUpperArm = { 150, 0, -40 }, RightLowerArm = { 20, 0, 0 }, LeftLowerArm = { 20, 0, 0 },
 	UpperTorso = { 8, 0, 0 }, Head = { 14, 0, 0 }, RightUpperLeg = { 0, 0, 12 }, LeftUpperLeg = { 0, 0, -12 }, LowerTorso = { 0, 0, 0, 0, -0.15, 0 } }

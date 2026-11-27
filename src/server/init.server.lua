@@ -13,6 +13,7 @@ local order = {
 	"InventoryService",
 	"CombatService",
 	"KnockdownService",
+	"GuardService",
 	"WeaponService",
 	"MonsterService",
 	"PartyService",

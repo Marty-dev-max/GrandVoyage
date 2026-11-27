@@ -4,16 +4,16 @@ return {
 	LogoLines = { "LARPTALES", "VOXEL SEAS" },
 	LogoImage = 133908417032160, -- v0.25.87: pixel logo board floating behind the menu character (tools/gen_logo.py); nil = text logo
 	-- bump on every change: shown bottom-right in game and printed in Output, so you can tell which code is running
-	Version = "0.1.0-remake",
+	Version = "0.1.1-remake",
 	SagaName = "Azure East Saga",
 	-- title menu UPDATE LOG lines (newest first, at most 6: more ran off the top of the screen, v0.25.156)
 	UpdateNotes = {
+		"Hold F to block, tap F just before a hit to parry",
+		"Stamina for dash and sprint; dash dodges hits",
 		"REMAKE test build: new saves, nothing carries over",
 		"Figureheads always sit in the middle of the bow",
 		"Carved block figureheads: paint and stretch them",
 		"Harpoons and fire pots on the bow fire forward",
-		"Faster character load on the title screen",
-		"Crow's nest shows the range on your aim",
 	},
 	DataStoreName = "GV_Player_r1",
 	GuildStoreName = "GV_Guild_r1",
@@ -158,9 +158,26 @@ return {
 		LeashRadius = 160,
 	},
 	-- Dash (Q): a quick burst in the direction you move (or face); the server enforces the cooldown
-	Dash = { Cooldown = 2.5, Speed = 120, Duration = 0.14 }, -- v0.25.26: faster, shorter burst + hard stop (~same distance)
+	Dash = { Cooldown = 1.0, Speed = 120, Duration = 0.14 }, -- v0.25.26: faster, shorter burst; remake R1: 1 s cooldown, stamina (Stamina.Dash) is the real limit
 	-- v0.25.89 (owner): double-tap W to run (Controllers/Sprint): WalkSpeed = BaseSpeed x Mult while W stays held
 	Sprint = { Mult = 1.55, TapWindow = 0.3, Fov = 6 },
+	-- ===== Remake R1 core feel (docs/Plan-Movement-Combat-v3.md sec 3-4; Controllers/Stamina + Guard, Services/GuardService) =====
+	-- Stamina (client-side, movement only): dash, sprint, climbing / wall running later. Empty = no dash, sprint stops.
+	Stamina = { Max = 100, Regen = 30, RegenDelay = 0.8, Dash = 22, SprintPerSec = 8 },
+	-- Block (hold F): blows from the front deal BlockMult and fill Posture; full Posture = guard break (stunned).
+	-- Parry: a blow landing within ParryWindow (+ ParryGrace for ping) of pressing F does nothing and stuns the
+	-- attacker; pressing again within ParryCooldown gives no parry window (no spamming).
+	Guard = { BlockMult = 0.3, FrontDot = 0.2, WalkMult = 0.55, ParryWindow = 0.2, ParryGrace = 0.12, ParryCooldown = 0.7,
+		ParryStun = 1.0, ParryStunBoss = 0.45, ParryStunPvP = 0.6, ParryHeal = 25,
+		PostureMax = 100, PostureFlat = 8, PostureK = 1.6, PostureBoss = 1.5, PostureDrain = 22, DrainDelay = 1.2,
+		BreakStun = 1.2 },
+	-- Dash i-frames: blows that land within IFrames (+ Grace for ping) of a dash miss ("DODGE")
+	Dodge = { IFrames = 0.15, Grace = 0.12 },
+	-- Fall damage (owner: a very high fall knocks you down, it never kills outright): drops above Safe studs cost
+	-- PerStud x max HP per stud (capped at Max); DownAt or more = knocked down. Bounce (rubber) users take none.
+	Fall = { Safe = 24, PerStud = 0.011, Max = 0.9, DownAt = 110, FallVel = 6 },
+	-- hit edges (owner: thin red gradient, "just visible", no blood): alpha from damage / max HP, fades in Fade s
+	HurtEdge = { Strongest = 0.45, Weakest = 0.85, Fade = 0.4 },
 	-- hotbar: 12 skill slots (keys 1-6, then 7 8 9 0 - =) and 8 quick item slots (F1-F8); empty slot = ""
 	SkillBarSize = 6, -- v0.25.71: E R F Z X C = the 6 skills of the picked set (Shared/Modules/SkillSets)
 	ItemBarSize = 8,

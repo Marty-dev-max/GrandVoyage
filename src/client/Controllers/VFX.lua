@@ -1220,6 +1220,38 @@ end
 handlers.Miss = function(d)
 	VFX.Number(d.pos, d.text or "MISS", Color3.fromRGB(180, 190, 210))
 end
+-- remake R1 (Services/GuardService): parry / block / guard break / hard landing. No blood: sparks, blocks, dust.
+handlers.Guard = function(d)
+	local pos = typeof(d.pos) == "Vector3" and d.pos
+	if not pos then
+		return
+	end
+	local mine = d.char == localPlayer.Character
+	if d.kind == "parry" then
+		local gold = Color3.fromRGB(255, 236, 170)
+		VFX.Burst(pos, 3.5, gold, 0.3)
+		VFX.Sparks(pos, Color3.new(1, 1, 1), 18, 16)
+		VFX.Number(pos + Vector3.new(0, 1.5, 0), "PARRY!", Color3.fromRGB(255, 220, 90), true)
+		Audio.Play("ShieldBlock", { pos = pos, pitch = 1.3, volume = 0.9 })
+		Audio.Play("Crit", { pos = pos, pitch = 1.2, volume = 0.5 })
+		if mine then
+			VFX.ImpactFrame()
+		end
+	elseif d.kind == "block" then
+		VFX.Sparks(pos, Color3.fromRGB(190, 215, 255), 7, 8)
+		VFX.Number(pos + Vector3.new(0, 1.5, 0), "BLOCK", Color3.fromRGB(170, 195, 230))
+		Audio.Play("ShieldBlock", { pos = pos, pitch = 0.9, volume = 0.5 })
+	elseif d.kind == "break" then
+		VFX.Burst(pos, 4.5, Color3.fromRGB(255, 130, 60), 0.4)
+		VFX.Number(pos + Vector3.new(0, 1.5, 0), "GUARD BREAK", Color3.fromRGB(255, 120, 60), true)
+		Audio.Play("PunchHeavy", { pos = pos, pitch = 0.8 })
+	elseif d.kind == "land" then
+		local k = math.clamp(tonumber(d.k) or 0.2, 0, 1)
+		VFX.Ring(pos, 4 + k * 10, Color3.fromRGB(200, 180, 140), 0.45)
+		Voxels.Blocks(pos + Vector3.new(0, 0.5, 0), { count = 6 + math.floor(k * 14), colors = { Color3.fromRGB(150, 125, 95), Color3.fromRGB(190, 170, 130) }, size = 0.4, speed = 8 + k * 10, up = 10, collide = false, life = 0.6 })
+		Audio.Play("ImpactThump", { pos = pos, pitch = 0.7, volume = 0.4 + k * 0.5 })
+	end
+end
 handlers.Heal = function(d)
 	VFX.Number(d.pos, "+" .. tostring(d.amount), Color3.fromRGB(110, 255, 140))
 end

@@ -858,7 +858,7 @@ function Panels.Stats()
 			end
 			powerLabel.Text = table.concat(parts, "   ")
 		end
-		subLabel.Text = UI.Colored("Base Lv." .. p.baseLevel, Color3.new(1, 1, 1)) .. "     " .. UI.Colored("Job Lv." .. p.jobLevel, T.Gold)
+		subLabel.Text = UI.Colored("Base Lv." .. p.baseLevel, Color3.new(1, 1, 1)) .. "     " .. UI.Colored("Arts Lv." .. p.jobLevel, T.Gold)
 		if not drawn then
 			drawn = true
 			local wEntry = p.equipment.weapon and Formulas.FindItem(p, p.equipment.weapon)

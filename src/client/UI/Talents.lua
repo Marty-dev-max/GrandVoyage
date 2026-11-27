@@ -160,8 +160,8 @@ local function renderMastery(body, st)
 		UI.Text(row, string.upper(f.name), 18, f.color, "Display", { Position = UDim2.fromOffset(90, 10), Size = UDim2.fromOffset(260, 24), TextXAlignment = Enum.TextXAlignment.Left })
 		local maxed = e.lv >= MasteryCfg.Max
 		UI.Text(row, "Lv." .. e.lv .. " / " .. MasteryCfg.Max, 16, T.Text, "Number", { Position = UDim2.fromOffset(90, 36), Size = UDim2.fromOffset(160, 20), TextXAlignment = Enum.TextXAlignment.Left })
-		local bar = UI.Bar(row, f.color, UDim2.fromOffset(240, 14), nil, 0)
-		bar.Position = UDim2.fromOffset(90, 60)
+		local bar = UI.Bar(row, f.color, UDim2.fromOffset(240, 16), nil, 0)
+		bar.back.Position = UDim2.fromOffset(90, 60)
 		local ratio = maxed and 1 or math.clamp((e.xp or 0) / math.max(1, e.next or 1), 0, 1)
 		pcall(function()
 			bar:Set(ratio, maxed and "MAX" or ((e.xp or 0) .. " / " .. (e.next or 0)))
@@ -193,7 +193,7 @@ function TL.Open()
 			UI.Text(body, "Loading...", 16, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 30) })
 			return
 		end
-		UI.TabBar(body, { { "Talents", "skills", "Talents" }, { "Mastery", "hammer", "Mastery" } }, tab, function(t)
+		UI.TabBar(body, { { "Talents", "🃏", "Talents" }, { "Mastery", "🔨", "Mastery" } }, tab, function(t)
 			tab = t
 			render()
 		end)

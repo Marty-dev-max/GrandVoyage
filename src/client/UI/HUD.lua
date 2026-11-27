@@ -166,7 +166,7 @@ local function buildRing(parent, pos)
 		jobColor = T.Purple,
 	}
 	UI.Tooltip(frame, function()
-		return string.format("<b>Base Lv.%d</b>  <font color=\"#40DE6E\">EXP %.1f%%</font>\n<b>Job Lv.%d</b>  JOB EXP %.1f%%", player:GetAttribute("Level") or 1, ring.target.base * 100, player:GetAttribute("JobLevel") or 1, ring.target.job * 100), T.Green
+		return string.format("<b>Base Lv.%d</b>  <font color=\"#40DE6E\">EXP %.1f%%</font>\n<b>Arts Lv.%d</b>  ARTS EXP %.1f%%", player:GetAttribute("Level") or 1, ring.target.base * 100, player:GetAttribute("JobLevel") or 1, ring.target.job * 100), T.Green
 	end)
 	return ring
 end
@@ -756,7 +756,7 @@ local itemSlots, barRows
 local setSlots = {}
 -- the icon a set button shows
 local SET_ICON = { Basic = "anchor", Armament = "toki_arm", Observation = "toki_obs", Conqueror = "toki_conq" }
-local SET_LABEL = { Class = "CLASS", Fruit = "FRUIT", Basic = "BASIC", Armament = "ARM", Observation = "OBS", Conqueror = "CONQ" }
+local SET_LABEL = { Class = "ARTS", Fruit = "FRUIT", Basic = "BASIC", Armament = "ARM", Observation = "OBS", Conqueror = "CONQ" }
 local function setIcon(p, set)
 	if set.id == "Class" then
 		local c = p and ClassesCfg.Classes[p.class]
@@ -1406,7 +1406,7 @@ local function refresh()
 	local guildColor = faction == "Marine" and T.Marine or (faction == "Pirate" and T.Pirate or T.Gold)
 	bars.cls.RichText = true
 	bars.cls.Text = (fruitDef and (fruitDef.icon .. " ") or "") .. (cls and cls.icon or "") .. " " .. UI.Colored(player:GetAttribute("ClassName") or "", cls and cls.color or T.Text)
-		.. "  •  Job Lv." .. (player:GetAttribute("JobLevel") or 1) .. (guild and ("  •  " .. UI.Colored(guild, guildColor)) or "")
+		.. "  •  Arts Lv." .. (player:GetAttribute("JobLevel") or 1) .. (guild and ("  •  " .. UI.Colored(guild, guildColor)) or "")
 	ring.jobColor = cls and (cls.ringColor or cls.color) or T.Purple
 	ring.face.BackgroundColor3 = (cls and cls.color or T.Ocean):Lerp(Color3.fromRGB(10, 10, 20), 0.6)
 	ring.setFaceFx(cls and cls.color or T.Ocean)

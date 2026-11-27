@@ -1868,20 +1868,24 @@ local function stepShip(ship, dt, now)
 	-- 0.1.22 (owner: the bow should swing with the water going round, and the spin should fling you out): in a
 	-- whirlpool the current turns the bow along the flow (round the eye, a little inward), half as hard while you
 	-- steer; sailing WITH the spin gathers `sling` speed, which stays for a moment after you steer out
+	-- 0.1.23: the water grips the hull (own speed x grip) and the sling is STORED while you ride the ring, then
+	-- released as extra speed the moment the bow leaves the flow (steer out = off on the tangent)
 	local wFlow = nil
+	local grip = 1
 	local wh0 = ship.whirl
 	if not ship.npc and wh0 and (ship.whirlK or 0) > 0 and now >= (ship.whirlFree or 0) then
 		local toC = Vector3.new(wh0.x - pos.X, 0, wh0.z - pos.Z)
 		if toC.Magnitude > 1 then
 			local u = toC.Unit
 			wFlow = Vector3.new(-u.Z, 0, u.X)
+			grip = 1 - Weather.Whirl.Grip * ship.whirlK
 			if not (ht and now < ht.untilT) then
 				-- a little inward outside the Orbit ring, a little outward inside it (so a ship under sail rides the ring)
 				local bias = 0.35 * math.clamp((toC.Magnitude - Weather.Whirl.Orbit) / Weather.Whirl.Orbit, -1, 1)
 				local flow = (wFlow + u * bias).Unit
 				-- 0.1.23: the current turns the bow at least as fast as the ship goes round (speed / distance), so a
 				-- ship under sail stays on the ring and gathers sling; steering lets go (SteerHold) = off on the tangent
-				local need = (math.abs(ship.speed) + (ship.sling or 0) + Weather.Whirl.Swirl * (1 + Weather.Whirl.SwirlIn))
+				local need = (math.abs(ship.speed) * grip + Weather.Whirl.Swirl * (1 + Weather.Whirl.SwirlIn))
 					/ math.max(toC.Magnitude, Weather.Whirl.Orbit * 0.5)
 				local rate = math.min(Weather.Whirl.MaxTurn, math.max(Weather.Whirl.FlowTurn, need * 1.15)) * math.min(1, ship.whirlK * 2)
 					* (ship.steer ~= 0 and Weather.Whirl.SteerHold or 1)
@@ -1890,11 +1894,12 @@ local function stepShip(ship, dt, now)
 		end
 	end
 	local fwd = Vector3.new(-math.sin(ship.yaw), 0, -math.cos(ship.yaw))
-	local vel = fwd * ship.speed
+	local vel = fwd * ship.speed * grip
 	if not ship.npc then
 		local along = wFlow and fwd:Dot(wFlow) or 0
 		local sling = ship.sling or 0
-		if wFlow and along > 0.5 and ship.speed > 4 then
+		local riding = wFlow and along > 0.5 and ship.speed > 4
+		if riding then
 			sling = math.min(Weather.Whirl.Sling * math.min(1, ship.whirlK * 3), sling + Weather.Whirl.SlingGain * along * dt)
 			if sling > Weather.Whirl.Sling * 0.6 and ship.owner then
 				toast(ship.owner, "🌀 Riding the spin! Steer out now to slingshot away", "good", "sling")
@@ -1903,7 +1908,9 @@ local function stepShip(ship, dt, now)
 			sling = math.max(0, sling - Weather.Whirl.SlingDecay * dt)
 		end
 		ship.sling = sling
-		vel += fwd * sling
+		if not riding then
+			vel += fwd * sling
+		end
 	end
 	if not ship.npc and ship.curDir and (ship.curK or 0) > 0 then
 		vel += ship.curDir * Currents.Drift * ship.curK -- Mastery v2 M5: a current carries the hull along

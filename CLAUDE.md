@@ -1225,6 +1225,11 @@ The owner tests in Studio and sends screenshots; previews of new art are rendere
 
 ## Next up
 
+0. **REMAKE (owner, 27 Nov 2026)**: Deepwoken-feel overworld remake IN THIS PROJECT (new DataStore name, own branch,
+   friend playtest postponed until the new core works). No Job classes (Field Job Mastery + Talent cards instead),
+   new 6-stat set with a 300 cap, Origin + weapon picked at character creation, any weapon for anyone, bigger world.
+   Master plan + phases R0-R8 + IP name map: `docs/Plan-Remake.md`; movement/combat picks: `docs/Plan-Movement-Combat-v3.md`.
+   Items 1-4 below are from before the remake.
 1. Wait for the owner's verdict on v0.10.3 (hills/flowers/grass); fix what they point at.
 2. Voxel art pass: monsters DONE v0.11.0 (voxel_monsters.py; AssetService sizes = shape base x style.scale,
    MonsterService.RefreshModels swaps placeholder island mobs). Pets + fruits DONE v0.11.1 (voxel_pets.py).

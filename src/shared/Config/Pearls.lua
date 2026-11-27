@@ -44,6 +44,6 @@ P.Products = {
 	{ productId = 3732181832, pearls = 1200, name = "Trophy of Gems", icon = "st_gems_l" },
 }
 
-P.LedgerStore = "GV_PearlLedger_v1"
+P.LedgerStore = "GV_PearlLedger_r1"
 
 return P

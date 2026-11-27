@@ -4,19 +4,19 @@ return {
 	LogoLines = { "LARPTALES", "VOXEL SEAS" },
 	LogoImage = 133908417032160, -- v0.25.87: pixel logo board floating behind the menu character (tools/gen_logo.py); nil = text logo
 	-- bump on every change: shown bottom-right in game and printed in Output, so you can tell which code is running
-	Version = "0.25.160",
+	Version = "0.1.0-remake",
 	SagaName = "Azure East Saga",
 	-- title menu UPDATE LOG lines (newest first, at most 6: more ran off the top of the screen, v0.25.156)
 	UpdateNotes = {
+		"REMAKE test build: new saves, nothing carries over",
 		"Figureheads always sit in the middle of the bow",
 		"Carved block figureheads: paint and stretch them",
 		"Harpoons and fire pots on the bow fire forward",
 		"Faster character load on the title screen",
 		"Crow's nest shows the range on your aim",
-		"Test Sail your ship; harpoons, fire pots, powder kegs",
 	},
-	DataStoreName = "GV_Player_v1",
-	GuildStoreName = "GV_Guild_v1",
+	DataStoreName = "GV_Player_r1",
+	GuildStoreName = "GV_Guild_r1",
 	AutoSaveInterval = 120,
 
 	-- every avatar is reset to the same R15 proportions + default body parts (face/hair/clothes kept); needs the

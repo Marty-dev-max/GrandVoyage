@@ -1293,6 +1293,19 @@ The owner tests in Studio and sends screenshots; previews of new art are rendere
    gone from combat; MonsterTypes stays only for monster fighting styles (Monsters TYPE_OF) and card art. Nameplate =
    chip row on top (CHIP_ROW 0.27 of a taller plate: BillboardGuis clip outside their box), weak "+" green left,
    resist "-" red right. BossFocus attr = the weak type (HUD "WEAK TO: X x1.3"); Index monsters "+WEAK -RESIST" once met.
+   R2 character creation (0.1.8-remake): `Config/Origins` (Order Castaway / MarineCadet / BountyHunter / Outlaw /
+   RelicSeeker: story, perk, limit, island, npc role for the start spot, faction, bounty, kit, mult; WeaponOrder Fists /
+   Kicks / Katana / Musket / Hammer / Powders -> item *_Plain + dtype + stat; `O.Mult(origin, kind, level)`).
+   `Services/OriginService`: Apply(d, origin, weapon) once per slot (weapon replaces the starter Knuckles entry, kit,
+   faction, bounty, d.originSpawn), SpawnCFrame (first spawn 8 studs in front of `WB.FindNPC(role, island)`),
+   RewardMult(p, src, "exp"|"beli") (src { kind mob|boss|chest|dungeon, human }) used by PS.GiveExp (5th arg src),
+   PartyService.ShareExp, MonsterService drops, ChestService, DungeonService; DamageMult in CombatService hitTarget.
+   Menu: saving a NEW look (or PLAY on a slot without an origin) -> screens "origin" -> "weapon" -> SET SAIL =
+   MenuSaveLook { origin, weapon } then Play; MenuPlay refuses a slot without one. Any weapon for anyone (Inventory
+   class lock removed). Races give stat points: Looks heritage `stats` -> Formulas.RaceStats (Stats BONUS column).
+   All Origins start on Daybreak for now (Origin islands in R5). Checked in Play: old save -> Outlaw + Katana -> spawned
+   at the Tavern Keeper, Pirate, bounty 5000, Sword_Plain held, Islander +2 VIT +2 WIL. Musket card shows the old
+   slingshot icon (new musket icon later).
 1. Wait for the owner's verdict on v0.10.3 (hills/flowers/grass); fix what they point at.
 2. Voxel art pass: monsters DONE v0.11.0 (voxel_monsters.py; AssetService sizes = shape base x style.scale,
    MonsterService.RefreshModels swaps placeholder island mobs). Pets + fruits DONE v0.11.1 (voxel_pets.py).

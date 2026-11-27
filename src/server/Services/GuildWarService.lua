@@ -333,6 +333,12 @@ function GW.Start()
 			p.mastery[field] = { lv = math.clamp(tonumber(lv), 1, 50), xp = 0 }
 			R.PlayerService.Recompute(player)
 			R.PlayerService.MarkDirty(player)
+		elseif data.cmd == "crew" then -- remake: deckhand count for ship tests (re-summon the ship after)
+			local p = R.DataService.Get(player)
+			if p then
+				p.crew = math.clamp(math.floor(tonumber(data.value) or 0), 0, 40)
+				R.PlayerService.MarkDirty(player)
+			end
 		elseif data.cmd == "joblevel" then
 			local p = R.DataService.Get(player)
 			p.jobLevel = math.max(p.jobLevel, 10)

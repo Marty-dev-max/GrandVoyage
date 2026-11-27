@@ -95,6 +95,29 @@ function Combat.HasBuff(player, id)
 	return false
 end
 
+-- remake M4: wash off the bad effects (any buff with a negative stat). Players have no poison / fire / bleed yet:
+-- those come with R5 and should hook in here (Miracle Mist, the later Antidote).
+function Combat.Cleanse(player)
+	local list = buffs[player]
+	if not list then
+		return
+	end
+	local changed = false
+	for i = #list, 1, -1 do
+		for _, v in pairs(list[i].stats) do
+			if type(v) == "number" and v < 0 then
+				table.remove(list, i)
+				changed = true
+				break
+			end
+		end
+	end
+	if changed then
+		syncBuffAttr(player)
+		R.PlayerService.Recompute(player)
+	end
+end
+
 local function weaponType(player)
 	-- equipped weapon, else the class's own style (Modules/WeaponInfo, shared with the client)
 	return WeaponInfo.TypeOf(R.DataService.Get(player))
@@ -1044,13 +1067,19 @@ local function setup()
 			if not lv then
 				return false, "You do not have the " .. skill.toki .. " Toki"
 			end
+		elseif skill and skill.mastery then
+			-- remake M4 Mastery skills: open at that field's level, always cast at skill level 1
+			if MasteryCfg.Level(p, skill.mastery) < skill.lv then
+				return false, "Needs " .. skill.mastery .. " Mastery Lv." .. skill.lv
+			end
+			lv = 1
 		else
 			lv = skill and p.skills[skill.id]
 		end
 		if not lv then
 			return false, "Skill not learned"
 		end
-		if not skill.fruit and not skill.toki and skill.class ~= p.class and skill.class ~= "Common" then
+		if not skill.fruit and not skill.toki and not skill.mastery and skill.class ~= p.class and skill.class ~= "Common" then
 			return false, "Switch to " .. (ClassesCfg.Classes[skill.class] and ClassesCfg.Classes[skill.class].name or "that class") .. " to use this skill"
 		end
 		local pumped = skill.fruit == "Bounce" and skill.id ~= "F_GearUp" and Combat.Pumped(player)
@@ -1365,7 +1394,12 @@ local function setup()
 			fxData.radius = skill.radius
 			local amount = (skill.power or 100) * (1 + 0.2 * (lv - 1)) + d.matk * 1.2
 			for _, m in ipairs(partyInRadius(player, skill.radius or 30)) do
-				Combat.HealPlayer(m, amount, player)
+				local mh = skill.pct and R.PlayerService.Humanoid(m)
+				-- remake M4 Miracle Mist: `pct` = a share of each one's own max HP
+				Combat.HealPlayer(m, mh and mh.MaxHealth * skill.pct or amount, player)
+				if skill.cleanse then
+					Combat.Cleanse(m)
+				end
 			end
 		elseif kind == "Buff" or kind == "PartyBuff" then
 			local stats = {}
@@ -1406,7 +1440,7 @@ local function setup()
 				return false, "You must be on a ship"
 			end
 		elseif kind == "ShipRepair" then
-			if not R.ShipService.RepairNearby(player, skill.power * (1 + 0.2 * (lv - 1))) then
+			if not R.ShipService.RepairNearby(player, skill.power * (1 + 0.2 * (lv - 1)), skill.plug) then
 				return false, "You must be on a ship"
 			end
 		end
@@ -1418,7 +1452,7 @@ local function setup()
 			R.FruitService.OnCast(player)
 		end
 		lastAttack[player] = now
-		if not skill.fruit and not skill.toki and kind ~= "ShipBuff" and kind ~= "ShipRepair" then
+		if not skill.fruit and not skill.toki and not skill.mastery and kind ~= "ShipBuff" and kind ~= "ShipRepair" then
 			R.WeaponService.Draw(player, weaponType(player))
 		end
 		if fxData then

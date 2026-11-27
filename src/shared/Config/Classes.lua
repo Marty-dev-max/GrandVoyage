@@ -183,6 +183,11 @@ for _, s in ipairs(require(script.Parent.Toki).Skills) do
 	skillById[s.id] = s
 end
 
+-- Mastery skills (remake M4, Config/Mastery, class = "Mastery": unlocked by a field's Mastery level)
+for _, s in ipairs(require(script.Parent.Mastery).Skills) do
+	skillById[s.id] = s
+end
+
 return {
 	Classes = Classes,
 	SecondJobs = SecondJobs,

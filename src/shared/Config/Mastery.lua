@@ -15,10 +15,10 @@ M.Order = { "Shipwright", "Navigator", "Cook", "Doctor", "Gunner" }
 M.Fields = {
 	Shipwright = {
 		name = "Shipwright", icon = "hammer", color = Color3.fromRGB(196, 120, 70),
-		how = "Repair ships: Patch Planks, Repair Kits or hammer skills",
+		how = "Repair ships with Patch Planks / Repair Kits (stop the bar in the green: x1.5 and no more leaks)",
 		perks = {
 			{ lv = 10, name = "Sturdy Patch", text = "Repairs +30%, 25% chance to keep the planks", bonus = { repairMult = 0.3, plankSave = 0.25 } },
-			{ lv = 30, name = "Emergency Repair", text = "Skill: patch the whole ship and every leak at once", soon = true },
+			{ lv = 30, name = "Emergency Repair", text = "Skill (Basic set / ship card): patch 45% of the hull and plug every leak at once" },
 			{ lv = 50, name = "Reinforced Hull", text = "Ships you sail have +20% hull HP", bonus = { shipHp = 0.2 } },
 		},
 	},
@@ -45,8 +45,8 @@ M.Fields = {
 		how = "Heal others (Bandages, healing skills) and revive downed players",
 		perks = {
 			{ lv = 10, name = "Steady Hands", text = "Your heals +20%, healing items ready 25% sooner", bonus = { healMult = 0.2, itemCdCut = 0.25 } },
-			{ lv = 30, name = "Adrenaline Revive", text = "Players you revive stand up with +20% HP", bonus = { reviveHp = 0.2 } },
-			{ lv = 50, name = "Miracle Mist", text = "Skill: a healing mist that cures the whole party", soon = true },
+			{ lv = 30, name = "Adrenaline Revive", text = "Revive 2x faster; they stand up with +20% HP and +50% DEF for 8 s", bonus = { reviveHp = 0.2 } },
+			{ lv = 50, name = "Miracle Mist", text = "Skill (Basic set): a mist that heals everyone near you 40% HP" },
 		},
 	},
 	Gunner = {
@@ -122,6 +122,24 @@ M.Gain = {
 -- XP for the next level
 function M.ToNext(level)
 	return math.floor(30 + level * 18 + level * level * 0.6)
+end
+
+-- Mastery v2 M4: Shipwright timed repairs (Patch Planks / Repair Kit through the Timing Bar), quality 1..3 -> x mult;
+-- green also pumps every drop of water out of the hull. A plain Use (no bar) = quality 1.
+M.Repair = { Mult = { 1, 1.2, 1.5 }, PlugAt = 3 }
+-- Adrenaline Revive (Doctor Lv 30): your revive hold is this much shorter, and they get this armor buff
+M.Revive = { lv = 30, HoldK = 0.5, Buff = { def = 0.5 }, Seconds = 8 }
+
+-- Mastery skills (M4): class "Mastery", merged into Classes.SkillById, shown at the end of the BASIC set once the
+-- field reaches `lv` (SkillSets). Never learned with skill points; they always cast at skill level 1.
+M.Skills = {
+	{ id = "EmergencyRepair", name = "Emergency Repair", mastery = "Shipwright", lv = 30, kind = "ShipRepair", sp = 25,
+		cd = 150, power = 0.45, plug = true, maxLevel = 1, fx = "Repair", desc = "Patch 45% of the ship you stand on and plug every leak." },
+	{ id = "MiracleMist", name = "Miracle Mist", mastery = "Doctor", lv = 50, kind = "PartyHeal", sp = 30, cd = 90,
+		radius = 35, pct = 0.4, cleanse = true, maxLevel = 1, fx = "Heal", desc = "A healing mist: everyone near you gets 40% of their HP back." },
+}
+for _, s in ipairs(M.Skills) do
+	s.class = "Mastery"
 end
 
 function M.Level(profile, field)

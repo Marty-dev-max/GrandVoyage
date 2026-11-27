@@ -10,6 +10,8 @@ local CollectionService = game:GetService("CollectionService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local UI = require(script.Parent.Parent.UI.UIKit)
+local State = require(script.Parent.Parent.State)
+local MasteryCfg = require(game:GetService("ReplicatedStorage").Shared.Config.Mastery)
 
 local Interact = {}
 local T = UI.Theme
@@ -49,6 +51,12 @@ local function buildPrompt(prompt, inputType)
 			conn:Disconnect()
 			prompt.Enabled = false
 		end)
+	elseif prompt.Name == "RevivePrompt" then
+		-- remake M4 Adrenaline Revive: a Doctor Lv 30+ holds a shorter revive (local: the hold is timed on your client)
+		local base = prompt:GetAttribute("BaseHold") or prompt.HoldDuration
+		prompt:SetAttribute("BaseHold", base)
+		local m = State.profile and State.profile.mastery and State.profile.mastery.Doctor
+		prompt.HoldDuration = ((m and m.lv) or 1) >= MasteryCfg.Revive.lv and base * MasteryCfg.Revive.HoldK or base
 	end
 	local actionText = mine and "Get up" or prompt.ActionText
 	local objectText = mine and string.format("Will power %d%% (one try)", math.floor((prompt:GetAttribute("Will") or 0.1) * 100 + 0.5)) or prompt.ObjectText

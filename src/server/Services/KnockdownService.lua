@@ -147,7 +147,14 @@ function KD.Down(player)
 			-- remake R3: the reviver's Doctor perks / talents (d.reviveHp) and Doctor Mastery for the revive
 			local hd = R.PlayerService.Derived(helper)
 			standUp(player, math.min(1, CFG.ReviveHp + (hd and hd.reviveHp or 0)))
-			R.MasteryService.Add(helper, "Doctor", require(ReplicatedStorage.Shared.Config.Mastery).Gain.Revive)
+			local MasteryCfg = require(ReplicatedStorage.Shared.Config.Mastery)
+			-- remake M4 Adrenaline Revive (Doctor Lv 30): they stand up with a short armor buff
+			local RV = MasteryCfg.Revive
+			if MasteryCfg.Level(R.PlayerService.Profile(helper), "Doctor") >= RV.lv then
+				R.CombatService.AddBuff(player, "Adrenaline", table.clone(RV.Buff), RV.Seconds)
+				R.PlayerService.Notify(player, "Adrenaline! +" .. math.floor(RV.Buff.def * 100) .. "% DEF for " .. RV.Seconds .. " s", "good")
+			end
+			R.MasteryService.Add(helper, "Doctor", MasteryCfg.Gain.Revive)
 			R.PlayerService.Notify(player, helper.DisplayName .. " revived you!", "good")
 			R.PlayerService.Notify(helper, "You revived " .. player.DisplayName .. "!", "good")
 		end

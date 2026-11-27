@@ -216,6 +216,41 @@ local function setup()
 		return true
 	end)
 
+	-- remake M4: can a Patch Plank / Repair Kit be used on your ship right now?
+	local function repairCheck(player)
+		local ship = R.ShipService.GetShipOf(player)
+		if not ship or not R.ShipService.IsAboard(player, ship) then
+			return false, "You must be aboard your own ship"
+		end
+		if ship.hp and ship.maxHp and ship.hp >= ship.maxHp and (ship.flood or 0) < 0.5 then
+			return false, "Your ship is not damaged"
+		end
+		return true
+	end
+
+	-- remake M4 (Shipwright): start the Timing Bar for a repair item; UseItem { uid, token, t } finishes it
+	Net.Handle("RepairStart", function(player, data)
+		local p = profile(player)
+		local entry = type(data) == "table" and Formulas.FindItem(p, data.uid)
+		local def = entry and ItemDB.ForEntry(entry)
+		if not def or not def.shipRepair then
+			return false, "Cannot use"
+		end
+		local key = player.UserId .. def.id
+		if itemCooldowns[key] and os.clock() < itemCooldowns[key] then
+			return false, "On cooldown"
+		end
+		local ok, why = repairCheck(player)
+		if not ok then
+			return false, why
+		end
+		local run = R.MasteryService.TimingStart(player, "Shipwright", { uid = entry.uid })
+		if not run then
+			return false
+		end
+		return { ok = true, data = run }
+	end, 0.5)
+
 	Net.Handle("UseItem", function(player, data)
 		local p = profile(player)
 		local entry = Formulas.FindItem(p, data.uid)
@@ -240,12 +275,24 @@ local function setup()
 			return false
 		end
 		if def.shipRepair then
-			local ship = R.ShipService.GetShipOf(player)
-			if ship and ship.hp and ship.maxHp and ship.hp >= ship.maxHp then
-				return false, "Your ship is not damaged"
+			local ok, why = repairCheck(player)
+			if not ok then
+				return false, why
 			end
-			if not R.ShipService.RepairOwned(player, def.shipRepair) then
+			-- remake M4: a timed repair (RepairStart -> Timing Bar) brings its token; no token = a plain repair
+			local q = 1
+			if data.token then
+				local got, run = R.MasteryService.TimingFinish(player, data.token, data.t)
+				if got and run and run.uid == entry.uid then
+					q = got
+				end
+			end
+			local RC = MasteryCfg.Repair
+			if not R.ShipService.RepairOwned(player, def.shipRepair * RC.Mult[q], q >= RC.PlugAt) then
 				return false, "You must be aboard your own ship"
+			end
+			if q > 1 then
+				R.PlayerService.Notify(player, q == 3 and "Perfect repair! x" .. RC.Mult[3] .. ", no more leaks" or "Good repair! x" .. RC.Mult[2], "good")
 			end
 		end
 		-- remake 0.1.11 Bandage: the most hurt party member within reach (never a downed one: that is a revive), else

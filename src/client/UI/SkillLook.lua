@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ClassesCfg = require(ReplicatedStorage.Shared.Config.Classes)
 local FruitsCfg = require(ReplicatedStorage.Shared.Config.Fruits)
 local SkillIcons = require(ReplicatedStorage.Shared.Config.SkillIcons) -- v0.24.14: one pixel-art icon per skill
+local MasteryCfg = require(ReplicatedStorage.Shared.Config.Mastery)
 local UI = require(script.Parent.UIKit)
 
 local SkillLook = {}
@@ -44,6 +45,10 @@ function SkillLook.Color(sk)
 		return cls.color
 	end
 	local f = sk.fruit and FruitsCfg.ById[sk.fruit]
+	if sk.mastery then
+		local field = MasteryCfg.Fields[sk.mastery] -- remake M4 Mastery skills: the field's color
+		return field and field.color or UI.Theme.Accent
+	end
 	if sk.toki then
 		-- your own Toki color
 		local hex = game:GetService("Players").LocalPlayer:GetAttribute("TokiColor_" .. sk.toki)

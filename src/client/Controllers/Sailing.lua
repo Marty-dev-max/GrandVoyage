@@ -21,14 +21,21 @@ local Settings = require(script.Parent.Settings)
 local Atmos = require(script.Parent.Atmos)
 local State = require(script.Parent.Parent.State)
 local MasteryCfg = require(Shared.Config.Mastery)
+local ClassesCfg = require(Shared.Config.Classes) -- remake M4: the Emergency Repair skill
 
 local Sailing = {}
 local Gunner = MasteryCfg.Gunner
 
-local function gunnerLv()
-	local m = State.profile and State.profile.mastery and State.profile.mastery.Gunner
+local function masteryLv(field)
+	local m = State.profile and State.profile.mastery and State.profile.mastery[field]
 	return (m and m.lv) or 1
 end
+local function gunnerLv()
+	return masteryLv("Gunner")
+end
+-- remake M4: Emergency Repair (Shipwright Lv 30) also has a button on the ship card (its skill key is taken at the helm)
+local EMERGENCY = ClassesCfg.SkillById.EmergencyRepair
+local repairReadyAt = 0
 local player = Players.LocalPlayer
 local T = UI.Theme
 local New = UI.New
@@ -159,7 +166,17 @@ local function buildHud()
 		Sailing.FireAtNearest("Broadside")
 	end)
 	broadH.LayoutOrder = 2
-	hud = { frame = f, name = name, hp = hp, zone = zone, zoneText = zoneText, speedT = speedT, windT = windT, sailT = sailT, gunT = gunT, reload = reload,
+	local row4 = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 36), LayoutOrder = 9, Visible = false, Parent = f })
+	UI.List(row4, Enum.FillDirection.Horizontal, 4)
+	local repairB = UI.Button(row4, "EMERGENCY REPAIR", T.Green, UDim2.fromOffset(320, 34), function()
+		local res = Net.Request("CastSkill", { skillId = EMERGENCY.id })
+		if res.ok then
+			repairReadyAt = os.clock() + ((res.data and res.data.cd) or EMERGENCY.cd)
+		elseif res.msg and not res.throttled then
+			UI.Toast(res.msg, "bad")
+		end
+	end)
+	hud = { frame = f, row4 = row4, repairB = repairB, name = name, hp = hp, zone = zone, zoneText = zoneText, speedT = speedT, windT = windT, sailT = sailT, gunT = gunT, reload = reload,
 		specialB = specialB, specialH = specialH, kegB = kegB, kegH = kegH, lightB = lightB, zones = zones,
 		row3 = row3, shotB = shotB, shotH = shotH, broadB = broadB, broadH = broadH }
 end
@@ -299,6 +316,13 @@ local function updateHud(ship)
 	if shotOn then
 		local def = Gunner.Shots[ship:GetAttribute("Shot") or "Round"] or Gunner.Shots.Round
 		hud.shotB.Text = "Z: " .. string.upper(def.name)
+	end
+	-- Shipwright tool (Lv 30)
+	local repairOn = EMERGENCY ~= nil and masteryLv("Shipwright") >= EMERGENCY.lv
+	hud.row4.Visible = repairOn
+	if repairOn then
+		local wait = repairReadyAt - os.clock()
+		hud.repairB.Text = wait > 0 and string.format("EMERGENCY REPAIR %ds", math.ceil(wait)) or "EMERGENCY REPAIR"
 	end
 	if broadOn then
 		local wait = (player:GetAttribute("BroadsideReady") or 0) - now

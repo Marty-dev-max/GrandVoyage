@@ -824,7 +824,8 @@ function Ship.AddShipBuff(player, id, value, duration)
 	return true
 end
 
-function Ship.RepairNearby(player, pct)
+-- plug = true pumps every drop of water out too (remake M4: a green timed repair, Emergency Repair)
+function Ship.RepairNearby(player, pct, plug)
 	local s = shipUnder(player)
 	if not s or s.sinking or (s.owner and s.owner ~= player and not R.PartyService.Same(s.owner, player)) then
 		return false
@@ -832,6 +833,10 @@ function Ship.RepairNearby(player, pct)
 	local before = s.hp
 	local d = R.PlayerService.Derived(player)
 	s.hp = math.min(s.maxHp, s.hp + s.maxHp * pct * (1 + (d and d.repairMult or 0))) -- remake R3: Shipwright perks
+	if plug and (s.flood or 0) > 0 then
+		s.flood = 0
+		Net.FX("Miss", { pos = s.root.Position + Vector3.new(0, 6, 0), text = "LEAKS PLUGGED!" }, s.root.Position, 300)
+	end
 	setAttrs(s)
 	if not s.test and s.hp > before then
 		R.MasteryService.Add(player, "Shipwright", (s.hp - before) * MasteryCfg.Gain.RepairPerHp)
@@ -976,12 +981,17 @@ function Ship.EndTest(player)
 	return false
 end
 
-function Ship.RepairOwned(player, pct)
+function Ship.RepairOwned(player, pct, plug)
 	local s = Ship.GetShipOf(player)
 	if not s or shipUnder(player) ~= s then
 		return false
 	end
-	return Ship.RepairNearby(player, pct)
+	return Ship.RepairNearby(player, pct, plug)
+end
+
+-- standing on (or seated in) that ship
+function Ship.IsAboard(player, ship)
+	return ship ~= nil and shipUnder(player) == ship
 end
 
 -- ===== NPC ships =====

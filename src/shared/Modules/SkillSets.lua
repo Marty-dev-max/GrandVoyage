@@ -10,6 +10,7 @@ local Shared = ReplicatedStorage.Shared
 local ClassesCfg = require(Shared.Config.Classes)
 local FruitsCfg = require(Shared.Config.Fruits)
 local TokiCfg = require(Shared.Config.Toki)
+local MasteryCfg = require(Shared.Config.Mastery)
 
 local S = {}
 S.Size = 6
@@ -51,6 +52,12 @@ function S.Skills(p, n)
 	elseif set.id == "Basic" then
 		for _, sk in ipairs(ClassesCfg.Classes.Common.skills) do
 			add(sk, (p.skills[sk.id] or 0) > 0)
+		end
+		-- remake M4: Mastery skills join the set only once their field is high enough (no dim slots for most players)
+		for _, sk in ipairs(MasteryCfg.Skills) do
+			if MasteryCfg.Level(p, sk.mastery) >= sk.lv then
+				add(sk, true)
+			end
 		end
 	elseif set.toki then
 		for _, sk in ipairs(TokiCfg.Skills) do

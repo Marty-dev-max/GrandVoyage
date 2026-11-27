@@ -25,6 +25,8 @@ local CardArt = require(script.Parent.CardArt)
 local ForgeScene = require(script.Parent.ForgeScene)
 local TalentsUI = require(script.Parent.Talents) -- remake R3 Talent cards + Field Mastery
 local CookUI = require(script.Parent.Cook) -- Mastery v2 M2 cooking at campfires
+local TimingBarUI = require(script.Parent.TimingBar) -- Mastery v2 M4 timed ship repairs
+local MasteryCfg = require(Shared.Config.Mastery)
 local State = require(script.Parent.Parent.State)
 local Audio = require(script.Parent.Parent.Controllers.Audio)
 local Settings = require(script.Parent.Parent.Controllers.Settings)
@@ -519,6 +521,16 @@ function Panels.Inventory(args)
 		end
 		if def.kind == "Consumable" and not def.special then
 			act("Use", T.Green, function()
+				if def.shipRepair then
+					-- remake M4 Shipwright: a repair is timed (green = x1.5 and the leaks plugged)
+					local st = req("RepairStart", { uid = entry.uid })
+					if not (st.ok and st.data) then
+						return
+					end
+					local t = TimingBarUI.Run(st.data, { title = "Patching the hull...", color = MasteryCfg.Fields.Shipwright.color })
+					req("UseItem", { uid = entry.uid, token = st.data.token, t = t })
+					return
+				end
 				req("UseItem", { uid = entry.uid })
 			end)
 		end

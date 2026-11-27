@@ -1230,6 +1230,10 @@ The owner tests in Studio and sends screenshots; previews of new art are rendere
    new 6-stat set with a 300 cap, Origin + weapon picked at character creation, any weapon for anyone, bigger world.
    Master plan + phases R0-R8 + IP name map: `docs/Plan-Remake.md`; movement/combat picks: `docs/Plan-Movement-Combat-v3.md`.
    Items 1-4 below are from before the remake.
+   BRANCHES (owner, 27 Nov): remake work lives on branch **`remake`** (push it there, NOT to main); `main` = the current
+   game (only its own fixes). The owner switches the mirror folder with `update.bat` (-> main) / `update-remake.bat`
+   (-> remake). Keep each .bat byte-identical on both branches (git swaps a running .bat otherwise). The remake uses its
+   own DataStores (`GV_*_r1` names in GameConfig / Pearls) and Version strings ending in `-remake`.
 1. Wait for the owner's verdict on v0.10.3 (hills/flowers/grass); fix what they point at.
 2. Voxel art pass: monsters DONE v0.11.0 (voxel_monsters.py; AssetService sizes = shape base x style.scale,
    MonsterService.RefreshModels swaps placeholder island mobs). Pets + fruits DONE v0.11.1 (voxel_pets.py).

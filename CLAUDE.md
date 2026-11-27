@@ -1329,6 +1329,8 @@ The owner tests in Studio and sends screenshots; previews of new art are rendere
    UseItem heals the most hurt party member within 20 studs, never a downed one, else yourself, through
    CombatService.HealPlayer with you as healer = healMult + Doctor XP) and `PatchPlanks` (shipRepair 0.06, 150).
    Ship repair items refuse on a full-HP ship (were used up for nothing). Icons reuse medkit / wood.
+   Next: docs/Plan-Mastery-v2.md (owner table: per-job XP sources, Lv 10 passive / 30 unlock / 50 skill, shared
+   Timing Bar, Cook stars ★1-3, Gunner perfect reload + shot types, Navigator wind direction + currents + weather).
 1. Wait for the owner's verdict on v0.10.3 (hills/flowers/grass); fix what they point at.
 2. Voxel art pass: monsters DONE v0.11.0 (voxel_monsters.py; AssetService sizes = shape base x style.scale,
    MonsterService.RefreshModels swaps placeholder island mobs). Pets + fruits DONE v0.11.1 (voxel_pets.py).

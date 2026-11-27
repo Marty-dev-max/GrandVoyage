@@ -1351,6 +1351,22 @@ The owner tests in Studio and sends screenshots; previews of new art are rendere
    Space on the bar checked in Play (Space sunk, no jump). Most CookFires are MobZones camp fires (mobs within 5-30
    studs); the quiet one is the Daybreak spawn campfire next to Rowan (E there talks to Rowan unless you stand on
    the far side). Mastery BASIC-set skills (plan M1) moved to M3/M4.
+   0.1.14-remake = Plan-Mastery-v2 M3 Gunner (`MasteryCfg.Gunner`: Reload / Shots / ShotOrder / Broadside). ShipService
+   `fireMain(player, data, broadside)` behind FireCannons + new `Broadside` request; volley(..., guns, o) takes
+   o = { shot, ignoreReload } and returns firedGuns; fireBall / impact carry `shot` (Chain: s.chainUntil / chainSlow in
+   stepShip maxSpeed; Bomb: splash x radius for ships + mobs, crew x mob damage; FX Cannonball kind chain / bomb).
+   Shot = ship.shot (attr Shot), `SetShot` checks Gunner lv; Gunpowder (now in the General Store) is taken once per
+   volley AFTER it fires; none = ship.shot back to Round + note. ACTIVE RELOAD: after a player volley with reload
+   > 0.6 s, ship.activeReload { start (server time), dur, green, yellow, guns, used } -> attrs ReloadStart / ReloadDur /
+   ReloadZone "ga,gb,ya,yb" ("" once tried); `ActiveReload` { t = client GetServerTimeNow } (Timing.Lag check):
+   green = fired guns ready now, yellow = their remaining reload halved, XP Gain.ReloadPerfect / ReloadGood.
+   Broadside: player attr BroadsideReady (server time), Gunner Lv 50, x1.3, every gun that bears (crew limit ignored).
+   Client Sailing: reload bar zones + "F IN THE GREEN", `Sailing.Fire` (F / FIRE button: active reload first),
+   `Sailing.NextShot` (Z), C = FireAtNearest("Broadside"); ship card row3 (shown from Gunner Lv 30), card x 62 (clear
+   of the vitals tubes); Combat passes Z / C at the helm. Admin cmds `field` "Gunner:50" and `crew` N (Studio tests;
+   re-summon the ship after crew). F / C need a target: a ship within 280 or the aim mark, which MCP's moveTo does not
+   show (use a click on the water, or Net.Request with a target, in tests). Test fights sink NPC ships = real rewards
+   on the owner's save: keep tests short.
 1. Wait for the owner's verdict on v0.10.3 (hills/flowers/grass); fix what they point at.
 2. Voxel art pass: monsters DONE v0.11.0 (voxel_monsters.py; AssetService sizes = shape base x style.scale,
    MonsterService.RefreshModels swaps placeholder island mobs). Pets + fruits DONE v0.11.1 (voxel_pets.py).

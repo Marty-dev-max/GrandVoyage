@@ -8,12 +8,12 @@ return {
 	SagaName = "Azure East Saga",
 	-- title menu UPDATE LOG lines (newest first, at most 6: more ran off the top of the screen, v0.25.156)
 	UpdateNotes = {
+		"GUNNER: F in the green while reloading = instant reload. Chain / Bomb Shot (Z), Full Broadside (C)",
 		"COOKING: press E at any campfire. Good timing = tasty 2-3 star food with buffs",
 		"Talent cards (T): pick 1 of 3 every level. Field Mastery for ship jobs",
 		"Bandage + Patch Planks (General Store): anyone trains Doctor and Shipwright",
 		"No classes, no Job Master: the weapon you hold picks your Weapon Arts",
 		"New characters pick an Origin (5) and a starting weapon (6); races give stat points",
-		"Damage types: Slash, Blunt, Pierce, Element. Monsters show weak (+) and resist (-)",
 	},
 	DataStoreName = "GV_Player_r1",
 	GuildStoreName = "GV_Guild_r1",

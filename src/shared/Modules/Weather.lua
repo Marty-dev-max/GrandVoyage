@@ -22,10 +22,11 @@ W.Storm = {
 	Life = { 360, 600 }, -- seconds a storm lasts (it grows in / fades out over Fade)
 	Fade = 45,
 	Gap = { 60, 180 }, -- seconds before a gone storm comes back somewhere else
-	DmgPerSec = 0.004, -- x max hull HP per second at strength 1 (the eye); a whole minute in the eye = 24%
+	DmgPerSec = 0.003, -- x max hull HP per second at strength 1 (the eye): a minute in the eye ~ 18% + lightning + leaks
+	-- (0.1.19 test: 0.004 + strikes 0.12 x 3% took a galleon 16% in 28 s: lightning + water in the hull doubled it)
 	Shove = 9, -- studs/s sideways push at strength 1
 	WindK = 1.25, -- wind x this in a storm (more power, gusty)
-	Strike = { Chance = 0.12, Dmg = 0.03 }, -- each second at strength >= 0.4: chance of a lightning hit, x max HP
+	Strike = { Chance = 0.08, Dmg = 0.025 }, -- each second at strength >= 0.4: chance of a lightning hit, x max HP
 	ClearIsland = 220, -- a storm never starts within an island's radius + this
 }
 

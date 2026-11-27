@@ -2634,13 +2634,14 @@ function Panels.FastTravel()
 				marks = {}
 				for _, e in ipairs(WeatherCtl.List()) do
 					local c = sc(e.x, e.z)
-					local rw = math.max(0.012, sc(e.x + e.r, e.z).X - c.X) -- radius in width units (x scale)
+					local rw = math.max(0.022, sc(e.x + e.r, e.z).X - c.X) -- radius in width units (x scale), never smaller than ~36 px across
 					local m = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(c.X, c.Y), Size = UDim2.fromScale(rw * 2, rw * 2), BackgroundTransparency = e.kind == "S" and 0.45 or 0.3,
 						BackgroundColor3 = e.kind == "S" and Color3.fromRGB(70, 70, 96) or Color3.fromRGB(14, 50, 92), ZIndex = 4, Parent = layer })
 					New("UIAspectRatioConstraint", { AspectRatio = 1, DominantAxis = Enum.DominantAxis.Width, Parent = m })
 					m:SetAttribute("PxKeep", true)
 					UI.Corner(m, 999)
-					UI.Text(m, e.kind == "S" and "⛈" or "🌀", 18, T.Text, "Bold", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(28, 28), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 5 })
+					UI.Stroke(m, e.kind == "S" and Color3.fromRGB(200, 200, 230) or Color3.fromRGB(120, 220, 255), 2).LineJoinMode = Enum.LineJoinMode.Round
+					UI.Text(m, e.kind == "S" and "⛈" or "🌀", 22, T.Text, "Bold", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(32, 32), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 5 })
 					table.insert(marks, m)
 				end
 			end

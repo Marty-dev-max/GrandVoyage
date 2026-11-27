@@ -71,7 +71,8 @@ end
 -- Mastery v2 M6 (Controllers/Weather): 0 = clear .. 1 = in a storm's eye: dark grey air, dim light, a lightning flash
 -- adds a short bright pulse (Atmos.Flash)
 local stormK, flashK = 0, 0
-local STORM = { atm = Color3.fromRGB(70, 78, 92), dens = 0.5, haze = 2.2, amb = Color3.fromRGB(70, 76, 92), bright = 0.6 }
+local STORM = { atm = Color3.fromRGB(62, 68, 80), dens = 0.58, haze = 3, amb = Color3.fromRGB(60, 66, 82), bright = 0.4,
+	tint = Color3.fromRGB(196, 206, 222), sat = -0.45, cb = -0.08 }
 function Atmos.SetStorm(k)
 	stormK = math.clamp(k or 0, 0, 1)
 end
@@ -319,6 +320,12 @@ function Atmos.Start()
 			cc.Saturation = L.sat
 			cc.Contrast = L.con
 			cc.Brightness = L.cb
+			if stormK > 0.01 then -- M6: grey, washed-out storm light (the sea's bright blocks need this, Lighting alone barely dims them)
+				local s = stormK * 0.85
+				cc.TintColor = cc.TintColor:Lerp(STORM.tint, s)
+				cc.Saturation = lerp(cc.Saturation, STORM.sat, s)
+				cc.Brightness = lerp(cc.Brightness, STORM.cb, s) + flashK * 0.25
+			end
 		end
 		if bloom and bloom.Enabled then
 			bloom.Intensity = L.bloom

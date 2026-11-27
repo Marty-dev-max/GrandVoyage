@@ -79,27 +79,38 @@ end
 -- ===== storms: a lid of dark blocks + rain curtains under it =====
 local cloudSets = {} -- [id] = { parts = {}, offs = {}, tr = {} }
 local function buildCloud(s)
-	local set = { parts = {}, offs = {}, base = {} }
-	local n = 18
-	for i = 1, n do
-		local a = hash(s.id, i) * math.pi * 2
-		local rr = math.sqrt(hash(i, s.id + 3)) * s.r * 0.85
-		local w = 40 + hash(s.id + i, 5) * 50
-		local y = CLOUD_Y[1] + hash(i, 9 + s.id) * (CLOUD_Y[2] - CLOUD_Y[1])
-		local shade = 52 + math.floor(hash(i, s.id + 11) * 30)
-		local p = block(Vector3.new(w, 14 + hash(i, 2) * 14, w * (0.7 + hash(i, 4) * 0.6)), Color3.fromRGB(shade, shade + 4, shade + 14), 0)
-		p.CastShadow = true -- the storm darkens the sea under it
-		table.insert(set.parts, p)
-		table.insert(set.offs, Vector3.new(math.cos(a) * rr, y, math.sin(a) * rr))
-		table.insert(set.base, 0)
+	-- (0.1.19 look pass: one flat lid read as a faint smudge through the haze) a towering heap: a wide dark base
+	-- layer, then smaller, lighter layers stacked toward the middle, so it reads as a storm cloud from far away
+	local set = { parts = {}, offs = {}, base = {}, curtain = {} }
+	local LAYERS = { { n = 16, y = 80, spread = 0.9, w = { 60, 110 }, h = { 18, 26 }, shade = 38 }, { n = 12, y = 104, spread = 0.7, w = { 55, 95 }, h = { 22, 30 }, shade = 58 },
+		{ n = 9, y = 132, spread = 0.5, w = { 50, 85 }, h = { 24, 34 }, shade = 80 }, { n = 6, y = 162, spread = 0.32, w = { 45, 75 }, h = { 26, 36 }, shade = 104 },
+		{ n = 3, y = 192, spread = 0.18, w = { 40, 60 }, h = { 24, 30 }, shade = 126 } }
+	local k = 0
+	for li, L in ipairs(LAYERS) do
+		for i = 1, L.n do
+			k += 1
+			local a = hash(s.id, k) * math.pi * 2
+			local rr = math.sqrt(hash(k, s.id + 3)) * s.r * L.spread
+			local w = L.w[1] + hash(s.id + k, 5) * (L.w[2] - L.w[1])
+			local h = L.h[1] + hash(k, 2 + li) * (L.h[2] - L.h[1])
+			local shade = L.shade + math.floor(hash(k, s.id + 11) * 16)
+			local p = block(Vector3.new(w, h, w * (0.75 + hash(k, 4) * 0.5)), Color3.fromRGB(shade, shade + 3, shade + 12), 0)
+			p.CastShadow = li == 1 -- the base layer darkens the sea under it
+			table.insert(set.parts, p)
+			table.insert(set.offs, Vector3.new(math.cos(a) * rr, L.y + (hash(k, 7) - 0.5) * 8, math.sin(a) * rr))
+			table.insert(set.base, 0)
+			table.insert(set.curtain, false)
+		end
 	end
-	for i = 1, 7 do -- rain curtains: tall see-through grey columns hanging from the cloud
-		local a = hash(s.id, 40 + i) * math.pi * 2
-		local rr = math.sqrt(hash(40 + i, s.id)) * s.r * 0.7
-		local p = block(Vector3.new(36, 100, 36), Color3.fromRGB(120, 130, 150), 0.82)
+	for i = 1, 9 do -- rain shafts: tall grey columns from the cloud base down to the sea
+		local a = hash(s.id, 60 + i) * math.pi * 2
+		local rr = math.sqrt(hash(60 + i, s.id)) * s.r * 0.75
+		local wdt = 30 + hash(i, s.id + 61) * 24
+		local p = block(Vector3.new(wdt, 76, wdt), Color3.fromRGB(78, 86, 104), 0.62)
 		table.insert(set.parts, p)
-		table.insert(set.offs, Vector3.new(math.cos(a) * rr, 48, math.sin(a) * rr))
-		table.insert(set.base, 0.82)
+		table.insert(set.offs, Vector3.new(math.cos(a) * rr, 36, math.sin(a) * rr))
+		table.insert(set.base, 0.62)
+		table.insert(set.curtain, true)
 	end
 	return set
 end
@@ -202,10 +213,10 @@ local function rain(k, camPos)
 		rainEmitter.EmissionDirection = Enum.NormalId.Bottom
 		rainEmitter.Speed = NumberRange.new(110, 130)
 		rainEmitter.Lifetime = NumberRange.new(0.9, 1.1)
-		rainEmitter.Size = NumberSequence.new(0.12)
-		rainEmitter.Squash = NumberSequence.new(-3) -- long thin drops
-		rainEmitter.Color = ColorSequence.new(Color3.fromRGB(200, 215, 235))
-		rainEmitter.Transparency = NumberSequence.new(0.35)
+		rainEmitter.Size = NumberSequence.new(0.32)
+		rainEmitter.Squash = NumberSequence.new(2.5) -- long thin drops
+		rainEmitter.Color = ColorSequence.new(Color3.fromRGB(205, 220, 240))
+		rainEmitter.Transparency = NumberSequence.new(0.2)
 		rainEmitter.LightEmission = 0.2
 		rainEmitter.Orientation = Enum.ParticleOrientation.FacingCameraWorldUp
 		rainEmitter.Rate = 0
@@ -251,10 +262,16 @@ local function step(dt)
 				local rot = CFrame.Angles(0, t * 0.02, 0)
 				for i, p in ipairs(set.parts) do
 					local o = rot * set.offs[i]
+					local x, z = e.x + o.X, e.z + o.Z
 					table.insert(parts, p)
-					table.insert(cfs, CFrame.new(e.x + o.X, GameConfig.SeaLevel + o.Y, e.z + o.Z))
-					-- fade in / out with the storm's own strength
-					local tr = 1 - (1 - set.base[i]) * math.clamp(e.k * 1.3, 0, 1)
+					table.insert(cfs, CFrame.new(x, GameConfig.SeaLevel + o.Y, z))
+					-- fade in / out with the storm's own strength; a rain shaft close to the camera fades out (from
+					-- inside it was a big see-through box in front of you)
+					local vis = math.clamp(e.k * 1.3, 0, 1)
+					if set.curtain[i] then
+						vis *= math.clamp((W.Flat(camPos.X, camPos.Z, x, z) - 50) / 120, 0, 1)
+					end
+					local tr = 1 - (1 - set.base[i]) * vis
 					if math.abs(p.Transparency - tr) > 0.02 then
 						p.Transparency = tr
 					end

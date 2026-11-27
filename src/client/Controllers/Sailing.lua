@@ -387,10 +387,10 @@ local function updateHud(ship)
 	-- Mastery v2 M6: weather wins the chip: whirlpool > storm > Storm Sense warning (Navigator Lv 30) > current
 	local wk, sk = ship:GetAttribute("Whirl") or 0, ship:GetAttribute("Storm") or 0
 	if wk > 0 then
-		hud.zoneText.Text = "🌀 WHIRLPOOL!  •  full sail away from the middle"
+		hud.zoneText.Text = "🌀 WHIRLPOOL!  •  sail out of it"
 		hud.zone.BackgroundColor3 = T.Red
 	elseif sk > 0.05 then
-		hud.zoneText.Text = "⛈ IN A STORM  •  the hull is taking damage"
+		hud.zoneText.Text = "⛈ STORM!  •  hull taking damage"
 		hud.zone.BackgroundColor3 = T.Purple
 	elseif masteryLv("Navigator") >= 30 then
 		local p = ship:GetPivot().Position

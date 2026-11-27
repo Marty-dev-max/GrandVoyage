@@ -323,6 +323,16 @@ function GW.Start()
 			R.PlayerService.MarkDirty(player)
 		elseif data.cmd == "pearls" then
 			R.PearlService.Credit(player, 1000, "dev")
+		elseif data.cmd == "field" then -- remake: Field Job Mastery level for tests, value "Gunner:50"
+			local field, lv = tostring(data.value or ""):match("^(%a+):(%d+)$")
+			local p = R.DataService.Get(player)
+			if not field or not p or not table.find({ "Shipwright", "Navigator", "Cook", "Doctor", "Gunner" }, field) then
+				return false, "use Field:Level, e.g. Gunner:50"
+			end
+			p.mastery = p.mastery or {}
+			p.mastery[field] = { lv = math.clamp(tonumber(lv), 1, 50), xp = 0 }
+			R.PlayerService.Recompute(player)
+			R.PlayerService.MarkDirty(player)
 		elseif data.cmd == "joblevel" then
 			local p = R.DataService.Get(player)
 			p.jobLevel = math.max(p.jobLevel, 10)

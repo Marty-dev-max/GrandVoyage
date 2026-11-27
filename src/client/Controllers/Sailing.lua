@@ -108,11 +108,17 @@ local function buildHud()
 	end
 	local speedT, windT, sailT, gunT = cell("SPEED", 1), cell("WIND", 2), cell("SAILS", 3), cell("GUNS", 4)
 	-- Mastery v2 M5: a little arrow in the WIND cell = where the wind blows, seen from the helm (up = the bow)
-	local windArrow = New("Frame", { Name = "WindArrow", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(1, -9, 0, 9), Size = UDim2.fromOffset(14, 14), BackgroundTransparency = 1, Parent = windT.Parent })
-	New("Frame", { BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 4), Size = UDim2.fromOffset(2, 10), BackgroundColor3 = T.Gold, Parent = windArrow })
-	New("Frame", { BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 0), Size = UDim2.fromOffset(2, 2), BackgroundColor3 = T.Gold, Parent = windArrow })
-	New("Frame", { BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 2), Size = UDim2.fromOffset(6, 2), BackgroundColor3 = T.Gold, Parent = windArrow })
-	New("Frame", { BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 4), Size = UDim2.fromOffset(10, 2), BackgroundColor3 = T.Gold, Parent = windArrow })
+	-- (0.1.18: 22 px with a dark outline; the 14 px one read like a pointing hand) sits right of the % value
+	local windArrow = New("Frame", { Name = "WindArrow", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(1, -12, 0, 28), Size = UDim2.fromOffset(22, 22), BackgroundTransparency = 1, Parent = windT.Parent })
+	-- pixel rows { y, width, height }: a stepped arrowhead on top of a thick shaft
+	local ARROW = { { 0, 4, 2 }, { 2, 8, 2 }, { 4, 12, 2 }, { 6, 16, 2 }, { 8, 6, 12 } }
+	windT.Size = UDim2.new(1, -20, 0, 22) -- the % centres in the room left of the arrow
+	for layer = 1, 2 do
+		local grow = layer == 1 and 2 or 0
+		for _, r in ipairs(ARROW) do
+			New("Frame", { BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, r[1] + 1 - grow / 2), Size = UDim2.fromOffset(r[2] + grow, r[3] + grow), BackgroundColor3 = layer == 1 and Color3.fromRGB(28, 22, 40) or T.Gold, ZIndex = layer + 1, Parent = windArrow })
+		end
+	end
 	local zone = New("Frame", { Size = UDim2.new(1, 0, 0, 24), BackgroundColor3 = T.Ocean, LayoutOrder = 4, Parent = f })
 	UI.Corner(zone, 6)
 	UI.Stroke(zone, T.Edge, 2)

@@ -294,22 +294,24 @@ function SM.BuildPart(p, cf, colorOverride)
 		main = b(0, -2.5, 2.5, 3, 3, 3, dark(color, 0.35)) -- mount against the stem
 		main.CanCollide = true
 		if p.id == "RamHead" then
-			b(0, 0.5, 0.5, 4, 4, 4, color) -- skull
-			b(0, -0.5, -2.5, 3, 3, 3, color) -- snout
-			b(0, 0.2, -3.6, 2.2, 1.4, 1, light(color, 0.15))
+			b(0, 1, 1, 3.6, 3.6, 3.6, color) -- skull
+			b(0, 0.2, -2.0, 2.8, 3.0, 3.6, color) -- long face
+			b(0, 1.8, -1.6, 1.6, 0.5, 2.8, light(color, 0.12)) -- roman nose ridge
+			b(0, -0.4, -4.3, 2.2, 2.2, 1.2, light(color, 0.15)) -- muzzle
+			b(0, -1.2, -4.4, 1.8, 0.2, 1.1, dark(color, 0.45)) -- mouth line
+			b(0, 3.1, 1.0, 2.4, 0.8, 2.2, light(color, 0.25)) -- wool tuft
+			local horn = color:Lerp(Color3.fromRGB(245, 232, 205), 0.55)
 			for _, s in ipairs({ -1, 1 }) do
-				b(s * 0.5, 0.2, -4.15, 0.5, 0.5, 0.3, dark(color, 0.6), Enum.Material.SmoothPlastic) -- nostril
-				b(s * 2.05, 1.0, -0.8, 0.3, 0.8, 0.8, eye, Enum.Material.SmoothPlastic)
-				b(s * 2.4, 0.6, 1.6, 1.0, 0.6, 1.4, dark(color, 0.1)) -- ear
-				-- curled horn: back over the head, out, down and forward again
-				local horn = color:Lerp(Color3.fromRGB(120, 80, 40), 0.45)
-				for i, pt in ipairs({ { 2.4, 2.6, 1.4, 1.6 }, { 3.4, 3.0, 2.4, 1.5 }, { 4.3, 2.4, 3.0, 1.4 }, { 4.9, 1.3, 2.6, 1.3 }, { 5.0, 0.2, 1.6, 1.2 }, { 4.6, -0.6, 0.5, 1.1 }, { 3.9, -0.6, -0.4, 1.0 } }) do
-					b(s * pt[1], pt[2], pt[3], pt[4], pt[4], pt[4], i % 2 == 0 and dark(horn, 0.18) or horn)
+				b(s * 0.55, 0.1, -4.95, 0.3, 0.5, 0.2, dark(color, 0.6), Enum.Material.SmoothPlastic) -- nostril
+				b(s * 1.85, 1.3, -0.3, 0.3, 0.7, 0.9, eye, Enum.Material.SmoothPlastic)
+				b(s * 1.8, 1.9, -0.3, 0.5, 0.4, 1.2, dark(color, 0.2)) -- brow
+				b(s * 2.3, 0.9, 1.0, 1.2, 0.5, 0.8, dark(color, 0.1)) -- ear
+				-- curled horn: back over the head, out, down past the ear and forward along the cheek
+				for i, pt in ipairs({ { 1.9, 2.9, 1.8, 1.8 }, { 2.8, 3.2, 2.8, 1.7 }, { 3.7, 2.7, 3.4, 1.6 }, { 4.2, 1.6, 3.2, 1.5 }, { 4.3, 0.5, 2.4, 1.4 },
+					{ 4.0, -0.4, 1.2, 1.3 }, { 3.4, -0.6, 0.1, 1.1 }, { 3.0, 0.1, -0.7, 0.9 }, { 3.0, 1.0, -0.9, 0.7 } }) do
+					b(s * pt[1], pt[2], pt[3], pt[4], pt[4], pt[4], i % 2 == 0 and dark(horn, 0.2) or horn)
 				end
 			end
-			b(0, -1.4, -3.2, 2.6, 0.3, 1.8, dark(color, 0.4)) -- mouth line
-			b(0, 2.0, -1.6, 4.2, 0.8, 0.6, dark(color, 0.15)) -- brow
-			b(0, 2.9, 0.8, 3, 0.8, 2.6, light(color, 0.2)) -- wool tuft
 		else
 			local mane = color:Lerp(Color3.fromRGB(150, 62, 24), 0.55)
 			b(0, 0.5, 1.5, 7, 5, 2, mane)

@@ -1259,6 +1259,18 @@ The owner tests in Studio and sends screenshots; previews of new art are rendere
    (back on State.lastCombat, a click, a non-movement key, the pointer near the bottom, blocking, HP < 35%; touch
    only fades to 0.55). Quest tracker = one 36 px line (goal, count, distance), click = Quests window Story tab, which
    now has a NOW card with Replay talk + Skip tutorial. Menu fold tab hidden in row mode. Checked in Play on PC.
+   R1 parkour (0.1.5-remake): `Controllers/Parkour` (GameConfig.Parkour) modes climb / wallrun / hang / mantle / vault
+   / slide. Physics = PlatformStand + LinearVelocity + AlignOrientation (like Flight); vault and mantle drive r.CFrame on
+   a bezier (lv.MaxForce 0). Space facing a wall = climb (W = up whatever the camera: `stickInput`), the top = hang,
+   Space = mantle; sprint-jump beside a wall = wall run (Space = kickOff to the next wall, `carry` keeps the outward
+   push WallJumpCarry s or Humanoid air control eats it); Space while climbing = back flip; falling past a ledge = auto
+   hang; sprinting into a low wall (VaultMin..Max) = vault, thick = mantle; Slide key (Ctrl) while running; Q while
+   falling fast = roll (`Parkour.TryRoll` from Combat.Dash; reach = max(RollNear, |vy| x RollLead); running fast rolls
+   by itself above RollAuto). Climb / wall run drain Stamina. Server (GuardService): Net "Parkour" grab (8-dir wall ray
+   within GrabWall -> no fall damage for GrabGrace) / roll (fall damage x RollMult, knockdown height x RollDownMult);
+   fallHit is delayed 0.15 s so those reports arrive first. Combat / Sprint / Guard refuse while Parkour.Busy() (not the
+   slide). Clips Parkour_* in AnimClips NOT uploaded (Studio only). No server anti-warp check yet. Checked every move in
+   Play on a sky course (the Daybreak map has props that block test runs: build test courses at y 400).
 1. Wait for the owner's verdict on v0.10.3 (hills/flowers/grass); fix what they point at.
 2. Voxel art pass: monsters DONE v0.11.0 (voxel_monsters.py; AssetService sizes = shape base x style.scale,
    MonsterService.RefreshModels swaps placeholder island mobs). Pets + fruits DONE v0.11.1 (voxel_pets.py).

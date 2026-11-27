@@ -8,12 +8,12 @@ return {
 	SagaName = "Azure East Saga",
 	-- title menu UPDATE LOG lines (newest first, at most 6: more ran off the top of the screen, v0.25.156)
 	UpdateNotes = {
+		"Figureheads always sit in the middle of the bow",
 		"Carved block figureheads: paint and stretch them",
 		"Harpoons and fire pots on the bow fire forward",
 		"Faster character load on the title screen",
 		"Crow's nest shows the range on your aim",
 		"Test Sail your ship; harpoons, fire pots, powder kegs",
-		"Gun ports, bilge pumps, crow's nest, ship lamps",
 	},
 	DataStoreName = "GV_Player_v1",
 	GuildStoreName = "GV_Guild_v1",

@@ -1164,6 +1164,10 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     Builder fills paint zones missing from older saves with DefaultPaint (theme SAVE needs every zone). Bow fire pot
     checked in Play (hit 900 -> 860, burn ticks to 711). Builder checked in Play: WIDTH/HEIGHT/LENGTH steppers +
     FIGURE red -> SAVE -> LAUNCH: the server ship's RamHead has the same size (6.25 x 6.04 x 8.09) and color.
+    v0.25.159: figureheads stay on the centre line like conform parts (Builder newItem + drag, ShipHull.Sanitize x = 0;
+    an off-centre old save is fixed on its next SAVE). Lion checked in Play the same way (card place, steppers, min 0.6
+    clamp, FIGURE blue, paint theme save with 7 zones, LAUNCH -> centred). Simulated mouse drags (MCP mouseButtonDown +
+    moveTo) do not move builder items: test drag code another way.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

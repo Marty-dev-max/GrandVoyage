@@ -1221,6 +1221,16 @@ local function playerPos(player)
 	return root and root.Position
 end
 
+-- remake R2: the first NPC with that role on that island (OriginService start spots)
+function WB.FindNPC(role, islandId)
+	for _, n in ipairs(npcs) do
+		if n.role == role and (islandId == nil or n.island == islandId) then
+			return n
+		end
+	end
+	return nil
+end
+
 function WB.NearNPC(player, role, range)
 	local pos = playerPos(player)
 	if not pos then

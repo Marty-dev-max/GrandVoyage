@@ -16,6 +16,9 @@ local Net = require(ReplicatedStorage.Shared.Modules.Net)
 local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
 local Looks = require(ReplicatedStorage.Shared.Config.Looks)
 local Classes = require(ReplicatedStorage.Shared.Config.Classes)
+local Origins = require(ReplicatedStorage.Shared.Config.Origins)
+local DamageTypes = require(ReplicatedStorage.Shared.Config.DamageTypes)
+local Formulas = require(ReplicatedStorage.Shared.Modules.Formulas)
 local VoxelChar = require(ReplicatedStorage.Shared.Modules.VoxelChar)
 local UI = require(script.Parent.UIKit)
 local Prices = require(script.Parent.Prices)
@@ -37,6 +40,7 @@ local bankSpins = 0 -- bought spins on the account (any slot can use them)
 local slotLocked = {} -- [i] = true while a paid slot is still locked
 local current = 1 -- selected slot
 local editing -- { slot, look, heritage, spins }
+local creating -- remake R2: { slot, origin, weapon } while picking a new character's Origin + starting weapon
 local stage, preview, previewKey
 local yaw = 0
 local camMode = "title"
@@ -334,6 +338,7 @@ end
 local CAMS = {
 	title = { pos = Vector3.new(4.5, 5.2, -17), at = Vector3.new(1.2, 4.2, 0), fov = 50 },
 	slots = { pos = Vector3.new(0, 7, -22), at = Vector3.new(0, 5.5, 0), fov = 50 },
+	origin = { pos = Vector3.new(0, 3.4, -18), at = Vector3.new(0, 1.0, 0), fov = 50 }, -- remake R2: character above the cards
 	edit = { pos = Vector3.new(0.4, 4.4, -10.5), at = Vector3.new(0.4, 3.6, 0), fov = 42 },
 }
 local camPos, camAt
@@ -437,9 +442,10 @@ local function show(name)
 	for n, f in pairs(screens) do
 		f.Visible = n == name
 	end
-	camMode = (name == "edit" and "edit") or (name == "slots" and "slots") or "title"
+	camMode = (name == "edit" and "edit") or (name == "slots" and "slots") or ((name == "origin" or name == "weapon") and "origin") or "title"
 	if name == "title" then
 		editing = nil
+		creating = nil
 	end
 	if not slotsLoaded and not editing then
 		if preview then
@@ -459,8 +465,8 @@ local function slotLine(i)
 	if not s then
 		return "SLOT " .. i .. "  -  NEW CHARACTER"
 	end
-	local cls = Classes.Classes[s.class]
-	return string.format("SLOT %d  -  LV.%d %s", i, s.level, string.upper(cls and cls.name or s.class))
+	local o = Origins.List[s.origin or ""]
+	return string.format("SLOT %d  -  LV.%d %s", i, s.level, o and string.upper(o.name) or "NO ORIGIN YET")
 end
 
 local function buildTitle()
@@ -581,8 +587,8 @@ local function buildSlots()
 					end
 				end
 			elseif s then
-				local cls = Classes.Classes[s.class]
-				c.info.Text = string.format("LV.%d  %s\n%s", s.level, string.upper(cls and cls.name or s.class), heritageLabel(s.heritage, s.variant))
+				local o = Origins.List[s.origin or ""]
+				c.info.Text = string.format("LV.%d  %s\n%s", s.level, o and string.upper(o.name) or "NO ORIGIN YET", heritageLabel(s.heritage, s.variant))
 				c.play.Text = "PLAY"
 				c.edit.Text = "EDIT"
 			else
@@ -604,6 +610,111 @@ local function buildSlots()
 			c.title.TextColor3 = (i == current) and PIXEL.green or PIXEL.gold
 			c.title.Text = (slotLocked[i] and "🔒 " or "") .. ((i == current) and ("SLOT " .. i .. "  <") or ("SLOT " .. i))
 		end
+	end
+end
+
+-- ===== remake R2: Origin + starting weapon (Config/Origins), picked once after the look =====
+local refreshOrigin, refreshWeapon
+local RED = Color3.fromRGB(255, 120, 110)
+
+-- one pick card: { icon, title, color, lines = { {text, color, height} } } -> card frame, select(on)
+local function pickCard(parent, order, spec, onPick)
+	local card = pixelFrame(parent, { Size = UDim2.new(spec.w or 0.2, -12, 1, 0), LayoutOrder = order })
+	local stroke = card:FindFirstChildOfClass("UIStroke")
+	local glow = New("Frame", { Name = "Pick", BackgroundColor3 = spec.color, BackgroundTransparency = 0.82, BorderSizePixel = 0, Size = UDim2.fromScale(1, 1), Visible = false, Parent = card })
+	local band = New("Frame", { BackgroundColor3 = spec.color, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 6), Parent = card })
+	band.ZIndex = 2
+	UI.Icon(card, spec.icon, 52, { Position = UDim2.fromOffset(12, 16) })
+	label(card, string.upper(spec.title), 15, spec.color, { Position = UDim2.fromOffset(72, 20), Size = UDim2.new(1, -80, 0, 44) })
+	local y = 76
+	for _, l in ipairs(spec.lines) do
+		label(card, l[1], l[4] or 10, l[2], { Position = UDim2.fromOffset(12, y), Size = UDim2.new(1, -24, 0, l[3]) })
+		y += l[3] + 6
+	end
+	local hit = New("TextButton", { BackgroundTransparency = 1, Text = "", Size = UDim2.fromScale(1, 1), ZIndex = 5, Parent = card })
+	hit.Activated:Connect(function()
+		Audio.Play("BlkClick")
+		onPick()
+	end)
+	local function select(on)
+		glow.Visible = on
+		stroke.Color = on and PIXEL.gold or PIXEL.edge
+		stroke.Thickness = on and 4 or 3
+	end
+	return card, select
+end
+
+local function pickScreen(name, title, sub)
+	local f = New("Frame", { Name = name, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Visible = false, Parent = gui })
+	screens[string.lower(name)] = f
+	label(f, title, 30, PIXEL.cream, { TextXAlignment = Enum.TextXAlignment.Center, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 34), Size = UDim2.fromOffset(800, 40) })
+	label(f, sub, 11, Color3.fromRGB(190, 200, 230), { TextXAlignment = Enum.TextXAlignment.Center, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 80), Size = UDim2.fromOffset(800, 18) })
+	local row = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 6, 1, -110), Size = UDim2.new(0.96, 0, 0, 330), Parent = f })
+	UI.List(row, Enum.FillDirection.Horizontal, 12, Enum.HorizontalAlignment.Center)
+	return f, row
+end
+
+local function buildOrigin()
+	local f, row = pickScreen("Origin", "CHOOSE YOUR ORIGIN", "Where your story starts. You cannot change it later.")
+	local selects = {}
+	for i, id in ipairs(Origins.Order) do
+		local o = Origins.List[id]
+		local _, sel = pickCard(row, i, {
+			icon = o.icon, title = o.name, color = o.color,
+			lines = { { o.story, Color3.fromRGB(205, 212, 236), 78 }, { "+ " .. o.perk, PIXEL.green, 72 }, { "- " .. o.limit, RED, 60 } },
+		}, function()
+			creating.origin = id
+			refreshOrigin()
+		end)
+		selects[id] = sel
+	end
+	pixelButton(f, "BACK", PIXEL.cream, UDim2.fromOffset(180, 46), function()
+		show("title")
+		refreshTitle()
+	end, { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 40, 1, -36) })
+	local nextBtn = pixelButton(f, "NEXT", PIXEL.green, UDim2.fromOffset(220, 50), function()
+		if creating and creating.origin then
+			show("weapon")
+			refreshWeapon()
+		end
+	end, { AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -40, 1, -34) })
+	refreshOrigin = function()
+		for id, sel in pairs(selects) do
+			sel(creating ~= nil and creating.origin == id)
+		end
+		nextBtn.Text = (creating and creating.origin) and ("NEXT: " .. string.upper(Origins.List[creating.origin].name)) or "PICK ONE"
+	end
+end
+
+local function buildWeapon()
+	local f, row = pickScreen("Weapon", "CHOOSE YOUR WEAPON", "Anyone can use any weapon later. This is the one you start with.")
+	local selects = {}
+	local n = #Origins.WeaponOrder
+	for i, id in ipairs(Origins.WeaponOrder) do
+		local w = Origins.Weapons[id]
+		local dt = DamageTypes.Info[w.dtype]
+		local st = Formulas.StatInfo[w.stat]
+		local _, sel = pickCard(row, i, {
+			icon = w.icon, title = w.name, color = dt.color, w = 1 / n,
+			lines = { { string.upper(dt.name) .. " DAMAGE", dt.color, 22, 11 }, { "Grows with " .. (st and st.name or w.stat), PIXEL.gold, 40 }, { w.desc, Color3.fromRGB(205, 212, 236), 80 } },
+		}, function()
+			creating.weapon = id
+			refreshWeapon()
+		end)
+		selects[id] = sel
+	end
+	pixelButton(f, "BACK", PIXEL.cream, UDim2.fromOffset(180, 46), function()
+		show("origin")
+		refreshOrigin()
+	end, { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 40, 1, -36) })
+	local startBtn = pixelButton(f, "SET SAIL", PIXEL.gold, UDim2.fromOffset(240, 52), function()
+		Menu.FinishCreate()
+	end, { AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -40, 1, -34) })
+	refreshWeapon = function()
+		for id, sel in pairs(selects) do
+			sel(creating ~= nil and creating.weapon == id)
+		end
+		startBtn.Text = (creating and creating.weapon) and "SET SAIL" or "PICK ONE"
 	end
 end
 
@@ -850,7 +961,7 @@ local function buildEdit()
 		local h = Looks.HeritageById[editing.heritage or "Islander"]
 		herName.Text = "YOU'RE " .. heritageLabel(editing.heritage, editing.variant) .. "!"
 		herName.TextColor3 = h and h.color or PIXEL.gold
-		herPerk.Text = h and (h.perk .. ". " .. h.desc) or ""
+		herPerk.Text = h and ((h.stats and (Formulas.StatLine(h.stats) .. ". ") or "") .. h.perk .. ". " .. h.desc) or ""
 		local total = (editing.spins or 0) + bankSpins
 		spinsText.Text = string.format("%d SPINS LEFT", total)
 		spinBtn.Text = total > 0 and "SPIN" or "NO SPINS"
@@ -1138,9 +1249,39 @@ function Menu.Done()
 	slots[editing.slot] = res.data
 	current = editing.slot
 	editing = nil
+	if not res.data.origin then
+		Menu.StartCreate(current) -- remake R2: a new character picks its Origin + weapon next
+		return
+	end
 	show("title")
 	refreshTitle()
 	UI.Toast("Character saved", "good")
+end
+
+-- remake R2: Origin -> weapon screens for a slot that has a look but no Origin yet
+function Menu.StartCreate(slot)
+	current = slot
+	creating = { slot = slot, origin = nil, weapon = Origins.DefaultWeapon }
+	show("origin")
+	refreshOrigin()
+end
+
+function Menu.FinishCreate()
+	if not creating or not creating.origin or not creating.weapon then
+		return
+	end
+	local s = slots[creating.slot]
+	local res = Net.Request("MenuSaveLook", { slot = creating.slot, look = s and s.look or Looks.Default(), origin = creating.origin, weapon = creating.weapon })
+	if res.data then
+		slots[creating.slot] = res.data
+	end
+	if not res.ok or not (res.data and res.data.origin) then
+		UI.Toast(res.msg or "Could not save your Origin", "bad")
+		return
+	end
+	current = creating.slot
+	creating = nil
+	Menu.Play()
 end
 
 local playing = false
@@ -1148,6 +1289,17 @@ local fade
 function Menu.Play()
 	if playing then
 		return
+	end
+	-- remake R2: an empty slot is created first, a slot without an Origin picks one first
+	if slotsLoaded and not slotLocked[current] then
+		local s = slots[current]
+		if not s then
+			Menu.Edit(current)
+			return
+		elseif not s.origin then
+			Menu.StartCreate(current)
+			return
+		end
 	end
 	playing = true
 	local res = Net.Request("MenuPlay", { slot = current })
@@ -1319,6 +1471,8 @@ function Menu.Open()
 	buildTitle()
 	buildSlots()
 	buildEdit()
+	buildOrigin()
+	buildWeapon()
 	if not setupDone then
 		setupDone = true
 		hookDrag()

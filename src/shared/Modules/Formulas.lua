@@ -5,6 +5,7 @@ local Classes = require(Shared.Config.Classes).Classes
 local FruitsCfg = require(Shared.Config.Fruits)
 local TokiCfg = require(Shared.Config.Toki)
 local PetsCfg = require(Shared.Config.Pets)
+local LooksCfg = require(Shared.Config.Looks)
 local ItemDB = require(Shared.Modules.ItemDB)
 
 local F = {}
@@ -162,6 +163,12 @@ function F.MonsterPower(def)
 	return math.floor(def.level * 5 + (def.atk or 0) + (def.def or 0) * 3 + (def.hp or 0) / 8)
 end
 
+-- remake R2: the race's bonus attribute points (Config/Looks Heritages `stats`), outside the 300 point cap
+function F.RaceStats(profile)
+	local h = LooksCfg.HeritageById[profile.heritage or "Islander"]
+	return (h and h.stats) or {}
+end
+
 -- v0.25.69: where each attribute's bonus comes from, for the Stats tooltip: { STR = { { "Gear", 2 }, { "Fruit", 3 } } }
 function F.StatSources(profile)
 	local out = {}
@@ -192,7 +199,10 @@ function F.StatSources(profile)
 	local toki = F.TokiStats(profile)
 	local fruitDef = profile.fruit and FruitsCfg.ById[profile.fruit.id]
 	local fruit = profile.fruit and FruitsCfg.StatsFor(profile.fruit.id, profile.fruit.mastery) or {}
+	local race = F.RaceStats(profile)
+	local raceDef = LooksCfg.HeritageById[profile.heritage or "Islander"]
 	for _, k in ipairs(F.StatNames) do
+		add(k, raceDef and ("Race: " .. raceDef.name) or "Race", race[k])
 		add(k, "Gear", gear[k])
 		add(k, "Cards", cards[k])
 		add(k, fruitDef and (fruitDef.name .. " (Mastery " .. (profile.fruit.mastery or 0) .. ")") or "Fruit", fruit[k])
@@ -218,6 +228,10 @@ function F.Compute(profile, buffs)
 				end
 			end
 		end
+	end
+	-- remake R2: race attribute points
+	for stat, v in pairs(F.RaceStats(profile)) do
+		b[stat] = (b[stat] or 0) + v
 	end
 	-- Toki (v0.25.70): Conqueror = every attribute; Armament / Observation = their two
 	for stat, v in pairs(F.TokiStats(profile)) do

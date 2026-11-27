@@ -336,7 +336,8 @@ local function jobCap(p)
 end
 
 -- pos (optional): world position the EXP came from; the client flies EXP orbs from there into the level ring
-function PS.GiveExp(player, base, job, pos)
+-- src (optional, remake R2): { kind = "mob" | "boss" | "chest" | "dungeon", human = bool } for the Origin perks
+function PS.GiveExp(player, base, job, pos, src)
 	local p = PS.Profile(player)
 	local d = derived[player]
 	if not p then
@@ -344,6 +345,7 @@ function PS.GiveExp(player, base, job, pos)
 	end
 	local mult = 1 + (d and d.expPct or 0) + ((p.expBoostUntil or 0) > os.time() and 0.5 or 0)
 		+ ((R.StoreService and R.StoreService.BoostActive(player, "exp")) and 1 or 0) -- Store 2x EXP (account-wide)
+	mult *= R.OriginService.RewardMult(p, src, "exp")
 	base = math.floor(base * mult)
 	job = math.floor(job * mult)
 	if base > 0 or job > 0 then
@@ -498,7 +500,10 @@ local function onCharacter(player, char)
 	end
 	hum.BreakJointsOnDeath = false
 	task.defer(function()
-		PS.TeleportTo(player, PS.SpawnCFrame(p.lastIsland))
+		-- remake R2: on its home island a character (re)spawns at its Origin's spot (Config/Origins)
+		local cf = R.OriginService.SpawnCFrame(p)
+		p.originSpawn = nil
+		PS.TeleportTo(player, cf or PS.SpawnCFrame(p.lastIsland))
 	end)
 	local d = PS.Recompute(player)
 	if d then
@@ -533,6 +538,7 @@ local function enterGame(player, slot)
 	player:SetAttribute("Slot", slot)
 	player:SetAttribute("Heritage", p.heritage)
 	player:SetAttribute("HeritageMode", p.heritageMode)
+	player:SetAttribute("Origin", p.origin)
 	PS.SetAttributes(player)
 	R.GuildService.OnPlayerJoin(player)
 	player.CharacterAdded:Connect(function(char)
@@ -588,11 +594,24 @@ local function setupMenuHandlers()
 			return false, "Unlock this slot first"
 		end
 		local look = Looks.Sanitize(data.look)
+		-- remake R2: a character without an Origin takes the picked Origin + starting weapon (once, never changed)
+		local origin = type(data.origin) == "string" and data.origin or nil
+		local weapon = type(data.weapon) == "string" and data.weapon or nil
+		local originErr
 		local sum, err = R.DataService.EditSlot(player, slot, function(d)
 			d.look = look
+			if origin and not d.origin then
+				local ok, why = R.OriginService.Apply(d, origin, weapon)
+				if not ok then
+					originErr = why
+				end
+			end
 		end)
 		if not sum then
 			return false, err
+		end
+		if originErr then
+			return false, originErr, sum
 		end
 		return true, "Character saved", sum
 	end, 0.5, true)
@@ -674,6 +693,12 @@ local function setupMenuHandlers()
 		end
 		if entering[player] then
 			return false, "Loading..."
+		end
+		-- remake R2: every character starts from an Origin (the menu asks for one first)
+		local list = R.DataService.ListSlots(player)
+		local s = list and list[slot]
+		if not s or not s.origin then
+			return false, "Pick an Origin first"
 		end
 		entering[player] = true
 		local ok, p = pcall(enterGame, player, slot)

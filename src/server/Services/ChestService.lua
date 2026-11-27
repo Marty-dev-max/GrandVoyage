@@ -33,8 +33,10 @@ local function roll(def, level)
 end
 
 local function give(player, beli, exp, items, pos)
+	local src = { kind = "chest" } -- remake R2: Relic Seeker perk
+	beli = math.floor(beli * R.OriginService.RewardMult(R.PlayerService.Profile(player), src, "beli"))
 	R.PlayerService.AddBeli(player, beli)
-	R.PlayerService.GiveExp(player, exp, math.floor(exp * 0.5))
+	R.PlayerService.GiveExp(player, exp, math.floor(exp * 0.5), nil, src)
 	for _, it in ipairs(items) do
 		R.InventoryService.AddItem(player, it.id, it.qty)
 	end

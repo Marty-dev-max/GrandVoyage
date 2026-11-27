@@ -10,6 +10,7 @@ local order = {
 	"AssetService",
 	"DataService",
 	"PlayerService",
+	"OriginService",
 	"InventoryService",
 	"CombatService",
 	"KnockdownService",

@@ -536,6 +536,8 @@ local function summary(data)
 		class = data.class or "Brawler",
 		jobLevel = data.jobLevel or 1,
 		played = data.lastPlayed or 0,
+		origin = data.origin, -- remake R2 (Config/Origins); nil = not picked yet
+		weapon = data.originWeapon,
 	}
 end
 

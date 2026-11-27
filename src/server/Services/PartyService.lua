@@ -85,10 +85,10 @@ function Party.Join(player, mate)
 end
 
 -- Share EXP with nearby party members
-function Party.ShareExp(player, base, job, pos)
+function Party.ShareExp(player, base, job, pos, src)
 	local p = partyOf[player]
 	if not p then
-		R.PlayerService.GiveExp(player, base, job, pos)
+		R.PlayerService.GiveExp(player, base, job, pos, src)
 		return
 	end
 	local near = {}
@@ -103,7 +103,7 @@ function Party.ShareExp(player, base, job, pos)
 	end
 	local bonus = 1 + 0.1 * (#near - 1)
 	for _, m in ipairs(near) do
-		R.PlayerService.GiveExp(m, base * bonus / #near, job * bonus / #near, pos)
+		R.PlayerService.GiveExp(m, base * bonus / #near, job * bonus / #near, pos, src)
 	end
 end
 

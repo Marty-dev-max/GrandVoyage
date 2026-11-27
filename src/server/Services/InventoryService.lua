@@ -189,12 +189,7 @@ local function setup()
 		if def.seastone and p.fruit then
 			return false, "Seastone drains Cursed Fruit users: you cannot wear it"
 		end
-		if def.kind == "Weapon" then
-			local cls = Classes[p.class]
-			if not table.find(cls.weapons, def.weaponType) then
-				return false, cls.name .. " cannot use this weapon"
-			end
-		end
+		-- remake: any character can use any weapon (no class locks)
 		if player:GetAttribute("Vending") then
 			return false, "Close your stall first"
 		end

@@ -415,7 +415,7 @@ local function hitTarget(attacker, target, mult, magic, opts)
 		-- remake: damage types (Config/DamageTypes). Fruit hits are Element, everything else follows the weapon.
 		local dtype = opts.dtype or (magic == "fruit" and "Element") or DamageTypes.OfWeapon(weaponType(attacker))
 		local typeK, match = DamageTypes.Mult(dtype, mob.def.id)
-		bonus *= typeK
+		bonus *= typeK * R.OriginService.DamageMult(R.PlayerService.Profile(attacker)) -- remake R2 Origin (Relic Seeker)
 		local mdef = opts.ignoreDef and 0 or (spell and mob.def.def * 0.5 or mob.def.def)
 		local dmg, isCrit = Formulas.Damage(atk, mdef, mult * bonus, spell and 0 or crit)
 		if opts.split and not mob.def.isBoss then

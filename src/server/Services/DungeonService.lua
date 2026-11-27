@@ -57,8 +57,9 @@ local function finish(inst, success)
 	for _, pl in ipairs(inst.players) do
 		if pl.Parent then
 			if success then
-				R.PlayerService.AddBeli(pl, def.reward.beli)
-				R.PlayerService.GiveExp(pl, def.reward.exp, def.reward.exp * 0.7)
+				local src = { kind = "dungeon" } -- remake R2: Relic Seeker perk
+				R.PlayerService.AddBeli(pl, math.floor(def.reward.beli * R.OriginService.RewardMult(R.PlayerService.Profile(pl), src, "beli")))
+				R.PlayerService.GiveExp(pl, def.reward.exp, def.reward.exp * 0.7, nil, src)
 				R.MonsterService.RollDrops(pl, { drops = def.reward.items, beli = nil }, 1)
 				Net.Push(pl, "Banner", { title = "DUNGEON CLEAR!", subtitle = def.name })
 				R.QuestService.Event(pl, "Dungeon", def.id)

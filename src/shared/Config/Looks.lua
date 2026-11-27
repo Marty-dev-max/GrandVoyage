@@ -51,12 +51,13 @@ L.Mouths = {
 -- (weights; rarer variants exist) and small perks (Formulas.Compute). Cinderwing (0.1%) is special: its look is
 -- locked (dark brown skin, white hair, big black wings + a flame on the back) and it switches between two modes:
 -- FLAME (hits much harder) and CALM (moves much faster). Winged heritages can glide (hold Jump in the air).
+-- remake R2: `stats` = bonus attribute points from the race (outside the 300 cap, like gear: Formulas.Compute / StatSources)
 L.Heritages = {
 	{ id = "Islander", name = "Islander", chance = 69.9, color = Color3.fromRGB(236, 220, 190),
-		desc = "Born on the Azure islands. Steady and balanced.", perk = "+5% max HP, +5% EXP",
+		desc = "Born on the Azure islands. Steady and balanced.", perk = "+5% max HP, +5% EXP", stats = { VIT = 2, WIL = 2 },
 		variants = { { name = "Islander", weight = 1 } } },
 	{ id = "Skyborn", name = "Skyborn", chance = 15, color = Color3.fromRGB(150, 220, 255),
-		desc = "Folk of the high clouds, with small feathered wings.", perk = "Glide, +15% jump, +5% speed, +5% FLEE", glide = true,
+		desc = "Folk of the high clouds, with small feathered wings.", perk = "Glide, +15% jump, +5% speed, +5% FLEE", glide = true, stats = { END = 3, WPN = 1 },
 		-- v0.25.8 (owner): variants differ by wing SHAPE (VoxelChar WING_SHAPES), not only color
 		variants = {
 			{ name = "Sparrow Wings", weight = 60, shape = "sparrow", wing = "F8F8FF", tip = "BEE6FF" },
@@ -65,7 +66,7 @@ L.Heritages = {
 			{ name = "Angel Wings", weight = 3, shape = "angel", wing = "FFFFFF", tip = "FFE6A0" },
 		} },
 	{ id = "Tidekin", name = "Tidekin", chance = 10, color = Color3.fromRGB(60, 210, 190),
-		desc = "Children of the reef, with a fin crest.", perk = "+60% breath, +8% max SP, +5% DEF",
+		desc = "Children of the reef, with a fin crest.", perk = "+60% breath, +8% max SP, +5% DEF", stats = { VIT = 2, END = 2 },
 		-- v0.25.8 (owner): fins sit where that kind of fish has them
 		variants = {
 			{ name = "Reef Fin", weight = 55, fins = "reef", fin = "3CC8BE" }, -- head crest + ear fins
@@ -74,7 +75,7 @@ L.Heritages = {
 			{ name = "Manta Fins", weight = 5, fins = "manta", fin = "2846A0" }, -- wide flat fins from the shoulders
 		} },
 	{ id = "Beastkin", name = "Beastkin", chance = 3, color = Color3.fromRGB(246, 170, 60),
-		desc = "Wild folk with sharp ears and a tail.", perk = "+5% ATK, +5% speed",
+		desc = "Wild folk with sharp ears and a tail.", perk = "+5% ATK, +5% speed", stats = { MAR = 3, END = 1 },
 		variants = {
 			{ name = "Cat Ears", weight = 40, ears = "cat" },
 			{ name = "Rabbit Ears", weight = 25, ears = "rabbit" },
@@ -82,7 +83,7 @@ L.Heritages = {
 			{ name = "Fox Ears", weight = 15, ears = "fox" },
 		} },
 	{ id = "Oni", name = "Oni", chance = 2, color = Color3.fromRGB(240, 70, 60),
-		desc = "Horned mountain folk of old island tales.", perk = "+8% ATK, +6% DEF",
+		desc = "Horned mountain folk of old island tales.", perk = "+8% ATK, +6% DEF", stats = { VIT = 2, WPN = 2 },
 		variants = {
 			{ name = "Twin Horns", weight = 50, horns = "twin", horn = "F0E6D2" },
 			{ name = "Crimson Horn", weight = 30, horns = "single", horn = "C82832" },
@@ -90,7 +91,7 @@ L.Heritages = {
 		} },
 	{ id = "Cinderwing", name = "Cinderwing", chance = 0.1, color = Color3.fromRGB(255, 120, 40), mythic = true,
 		desc = "A near-lost people: great black wings and a living flame on the back.",
-		perk = "Free flight, +10% HP. FLAME: +25% ATK/MATK. CALM: +20% speed, +10% FLEE, flies 25% faster", glide = true, fly = true, modes = true,
+		perk = "Free flight, +10% HP. FLAME: +25% ATK/MATK. CALM: +20% speed, +10% FLEE, flies 25% faster", glide = true, fly = true, modes = true, stats = { END = 2, WIL = 2, FRU = 2 },
 		lock = { skin = "6E4630", hair1 = "F4F4F4", hair2 = "D2D4DE" },
 		variants = { { name = "Cinderwing", weight = 1 } } },
 }

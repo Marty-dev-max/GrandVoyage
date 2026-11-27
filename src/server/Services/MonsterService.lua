@@ -323,6 +323,11 @@ function MS.InRadius(pos, radius)
 	return out
 end
 
+-- remake R2: what kind of foe this was, for the Origin reward perks (OriginService.RewardMult)
+local function rewardSrcOf(def)
+	return { kind = def.isBoss and "boss" or "mob", human = R.OriginService.IsHuman(def) }
+end
+
 local function rollDrops(player, def, mult, pos)
 	local d = R.PlayerService.Derived(player)
 	if R.StoreService and R.StoreService.BoostActive(player, "drop") then
@@ -361,7 +366,7 @@ local function rollDrops(player, def, mult, pos)
 	end
 	local beli = def.beli and math.random(def.beli[1], def.beli[2]) or 0
 	if beli > 0 then
-		beli = math.floor(beli * (1 + (d and d.beliPct or 0)))
+		beli = math.floor(beli * (1 + (d and d.beliPct or 0)) * R.OriginService.RewardMult(R.PlayerService.Profile(player), rewardSrcOf(def), "beli"))
 		R.PlayerService.AddBeli(player, beli)
 	end
 	-- pos: where the loot bursts out on the client before flying into the HUD
@@ -376,12 +381,13 @@ local function die(mob, killer)
 	end
 	mob.dead = true
 	local def = mob.def
+	local rewardSrc = rewardSrcOf(def) -- remake R2: Origin perks (boss / monster, humanoid or not)
 	-- EXP is shared by damage contribution
 	local top, topDmg = nil, 0
 	for pl, dmg in pairs(mob.damageBy) do
 		if pl.Parent then
 			local share = math.clamp(dmg / mob.maxHp, 0, 1)
-			R.PartyService.ShareExp(pl, def.exp * share, def.jobExp * share, mob.root.Position)
+			R.PartyService.ShareExp(pl, def.exp * share, def.jobExp * share, mob.root.Position, rewardSrc)
 			R.QuestService.Event(pl, "Kill", def.id)
 			local pp = R.PlayerService.Profile(pl) -- v0.25.127 Index: defeated count per monster
 			if pp then
@@ -398,7 +404,7 @@ local function die(mob, killer)
 		rollDrops(top, def, 1, mob.root and mob.root.Position)
 		if def.isBoss then
 			Net.PushAll("Announce", { text = "👑 MVP! " .. top.DisplayName .. " defeated " .. def.name .. "!", kind = "mvp" })
-			R.PlayerService.GiveExp(top, def.exp * 0.3, def.jobExp * 0.3, mob.root.Position)
+			R.PlayerService.GiveExp(top, def.exp * 0.3, def.jobExp * 0.3, mob.root.Position, rewardSrc)
 			for pl, dmg in pairs(mob.damageBy) do
 				if pl ~= top and pl.Parent and dmg / mob.maxHp >= 0.05 then
 					R.PlayerService.AddBeli(pl, math.floor((def.beli and def.beli[1] or 0) * 0.3))

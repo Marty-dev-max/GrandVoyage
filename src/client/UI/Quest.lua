@@ -596,7 +596,8 @@ function Quest.Start()
 	end
 	RunService.Heartbeat:Connect(function()
 		local h = State.profile and State.profile.hunt
-		hunt.Visible = not Quest.collapsed and ((type(h) == "table" and MonstersCfg[h.id] ~= nil) or suggested ~= nil)
+		-- remake R1 (less clutter): only while a hunt is running; the suggestion ("NEW ... START") lives in Quests -> Hunts
+		hunt.Visible = not Quest.collapsed and ((type(h) == "table" and MonstersCfg[h.id] ~= nil))
 		if hunt.Visible then
 			-- sit right under the tracker (or in its place when the story is done)
 			local tp = tracker.Position

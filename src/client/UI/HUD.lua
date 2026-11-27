@@ -377,6 +377,8 @@ local function buildStatus()
 		end
 		partyHp = {}
 		local members = State.party or {}
+		-- remake R1 (owner: less clutter): no strip at all outside a party (P / the Menu hub open the Party window)
+		partyBar.Visible = #members > 0
 		if #members == 0 then
 			local b = UI.Button(partyRow, "👥 PARTY", T.Green, UDim2.fromOffset(112, 26), function()
 				Panels.Open("Party")
@@ -467,10 +469,10 @@ local function buildStatus()
 		return "<b>Doubloons</b>\nEarned from monsters, ships and bosses.", T.Gold
 	end)
 	money = ml
-	local _, bl, bic = segment(2, "☠", T.Pirate, 128, function()
+	local bseg, bl, bic = segment(2, "☠", T.Pirate, 128, function()
 		return "<b>Bounty / Merit</b>\nPirates earn Bounty, Marines earn Merit.", T.Pirate
 	end)
-	bounty = { label = bl, icon = bic }
+	bounty = { label = bl, icon = bic, seg = bseg }
 	local _, pl = segment(3, PearlsCfg.Icon, Color3.fromRGB(150, 225, 255), 120, function()
 		return "<b>Gems</b>\nEarned from chests, exploring, story quests and MVP bosses. Spend them in the Gem Shop or trade them in stalls (Lv." .. PearlsCfg.Trade.MinLevel .. "+).", Color3.fromRGB(150, 225, 255)
 	end)
@@ -526,8 +528,8 @@ local function menuTile(parent, it)
 	-- v0.25.17 / v0.25.29 (owner): the tile's own colors + its themed floating particles + a shine sweeping across
 	UI.DressMenuTile(tile, it, 7)
 	UI.Shine(tile, math.random())
-	UI.Icon(tile, it[1], 54, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 0) })
-	UI.Text(tile, string.upper(it[5]), 14, Color3.new(1, 1, 1), "Display", { AnchorPoint = Vector2.new(0, 1), Size = UDim2.new(1, 0, 0, 18), Position = UDim2.new(0, 0, 1, -4), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false })
+	UI.Icon(tile, it[1], 54, { Name = "TileIcon", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 0) })
+	UI.Text(tile, string.upper(it[5]), 14, Color3.new(1, 1, 1), "Display", { Name = "TileLabel", AnchorPoint = Vector2.new(0, 1), Size = UDim2.new(1, 0, 0, 18), Position = UDim2.new(0, 0, 1, -4), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false })
 	if it[4] then
 		local key = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(6, 6), Size = UDim2.fromOffset(22, 22), BackgroundColor3 = T.PanelDeep, ZIndex = 3, Parent = tile })
 		UI.Corner(key, 6)
@@ -540,6 +542,11 @@ local function menuTile(parent, it)
 	UI.Tactile(tile)
 	tile.Activated:Connect(function()
 		Panels.Toggle(it[2])
+	end)
+	-- the name lives in a tooltip (PC row menu hides the tile labels)
+	UI.Tooltip(tile, function()
+		local k = it[4] and Hotkeys.Label(it[2]) or ""
+		return "<b>" .. it[5] .. "</b>" .. (k ~= "" and ("  [" .. k .. "]") or ""), it[3]
 	end)
 	-- red count badge (unspent stat / skill points)
 	local badge = New("Frame", { Name = "Badge", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(1, -4, 0, 4), Size = UDim2.fromOffset(28, 22), BackgroundColor3 = T.Red, Visible = false, ZIndex = 6, Parent = tile })
@@ -1304,6 +1311,8 @@ local function refresh()
 		bounty.label.Text = "Civilian"
 		bounty.label.TextColor3 = T.TextSoft
 	end
+	-- remake R1: the pill only shows once you have picked a side (Civilian = nothing to show)
+	bounty.seg.Visible = faction == "Pirate" or faction == "Marine"
 	local pts = (player:GetAttribute("StatPoints") or 0) + (player:GetAttribute("SkillPoints") or 0)
 	-- unspent points show as red badges on the Stats / Skills tiles (the long "+ POINTS" button is gone)
 	pointsBtn.Parent.Visible = false
@@ -1354,6 +1363,10 @@ local function refresh()
 		s.stroke.Color = n == active and Color3.new(1, 1, 1) or T.Edge
 		s.stroke.Thickness = n == active and 4 or 3
 		s.auto.Visible = open and SkillSets.Auto(p, n)
+		-- remake R1 (less clutter): a set you cannot use yet (no fruit, no Toki) is not shown at all
+		if s.holder.Visible ~= open then
+			s.holder.Visible = open
+		end
 	end
 	-- the skills of the picked set (E R F Z X C)
 	local now = os.clock()
@@ -1380,6 +1393,10 @@ local function refresh()
 		s.auto.Visible = false
 		s.icon.ImageTransparency = (entry and not entry.ready) and 0.65 or 0
 		s.stroke.Color = (skill and (player:GetAttribute("SP") or 0) < skill.sp) and T.Red or T.Edge
+		-- remake R1: empty skill slots are hidden (the slot keeps its key cap, so E R V... still read right)
+		if s.holder.Visible ~= (skill ~= nil) then
+			s.holder.Visible = skill ~= nil
+		end
 	end
 	-- dash cooldown sweep
 	if HUD.dashSlot then
@@ -1550,16 +1567,33 @@ function HUD.Layout()
 	targetFrame.Size = UDim2.fromOffset(compact and 300 or 380, 70)
 	-- menu: 3 small columns on phones, 2 big columns elsewhere
 	local grid = menuFrame:FindFirstChildOfClass("UIGridLayout")
+	-- remake R1 (owner: "make it easier to read, less cluttered"): on PC the menu is ONE row of icon tiles under the
+	-- currency pills (labels in the tooltip, keys on the tiles) instead of a 2 x 4 column down the right side
+	local rowMenu = not compact
+	HUD.rowMenu = rowMenu
 	if compact then
 		-- 4 small columns x 3 rows so the menu ends well above the mobile attack button
 		menuScale.Scale = 0.8
 		menuFrame.Size = UDim2.fromOffset(326, 166)
+		menuFrame.Position = UDim2.new(1, -16, 0, 116)
 	else
-		menuScale.Scale = 1
-		menuFrame.Size = UDim2.fromOffset(158, 344)
+		menuScale.Scale = 0.8
+		menuFrame.Size = UDim2.fromOffset(8 * 62 + 7 * 6, 62)
+		menuFrame.Position = UDim2.new(1, -16, 0, 62)
 	end
 	if grid then
 		grid.HorizontalAlignment = Enum.HorizontalAlignment.Right
+		grid.CellSize = rowMenu and UDim2.fromOffset(62, 62) or UDim2.fromOffset(74, 78)
+		grid.CellPadding = rowMenu and UDim2.fromOffset(6, 6) or UDim2.fromOffset(10, 8)
+	end
+	for _, d in ipairs(menuFrame:GetDescendants()) do
+		if d.Name == "TileLabel" then
+			d.Visible = not rowMenu
+		elseif d.Name == "TileIcon" then
+			d.AnchorPoint = rowMenu and Vector2.new(0.5, 0.5) or Vector2.new(0.5, 0)
+			d.Position = rowMenu and UDim2.fromScale(0.5, 0.5) or UDim2.new(0.5, 0, 0, 0)
+			d.Size = UDim2.fromOffset(rowMenu and 48 or 54, rowMenu and 48 or 54)
+		end
 	end
 	-- quest tracker sits under the player card
 	if HUD.questFrame then
@@ -1582,7 +1616,7 @@ function HUD.Layout()
 		end
 	end
 	-- toasts sit just left of the menu column (they used to slide under the currency pills)
-	local menuW = compact and 326 * 0.8 or 158
+	local menuW = compact and 326 * 0.8 or 0 -- (PC: the menu is a row along the top now, nothing on the right side)
 	UI.ToastHolder.Position = UDim2.new(1, -(menuW + 32), 0, 222)
 	-- the style meter (vertical tube) stands middle-right: left of the menu column, or under the small phone menu
 	if compact then

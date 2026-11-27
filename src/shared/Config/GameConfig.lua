@@ -4,16 +4,16 @@ return {
 	LogoLines = { "LARPTALES", "VOXEL SEAS" },
 	LogoImage = 133908417032160, -- v0.25.87: pixel logo board floating behind the menu character (tools/gen_logo.py); nil = text logo
 	-- bump on every change: shown bottom-right in game and printed in Output, so you can tell which code is running
-	Version = "0.1.1-remake",
+	Version = "0.1.2-remake",
 	SagaName = "Azure East Saga",
 	-- title menu UPDATE LOG lines (newest first, at most 6: more ran off the top of the screen, v0.25.156)
 	UpdateNotes = {
+		"Cleaner screen: menu is one row of icons, fewer buttons",
 		"Hold F to block, tap F just before a hit to parry",
 		"Stamina for dash and sprint; dash dodges hits",
 		"REMAKE test build: new saves, nothing carries over",
 		"Figureheads always sit in the middle of the bow",
 		"Carved block figureheads: paint and stretch them",
-		"Harpoons and fire pots on the bow fire forward",
 	},
 	DataStoreName = "GV_Player_r1",
 	GuildStoreName = "GV_Guild_r1",

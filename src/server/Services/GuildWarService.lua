@@ -333,6 +333,13 @@ function GW.Start()
 			p.mastery[field] = { lv = math.clamp(tonumber(lv), 1, 50), xp = 0 }
 			R.PlayerService.Recompute(player)
 			R.PlayerService.MarkDirty(player)
+		elseif data.cmd == "shiphurt" then -- remake M4: hole your own ship for repair tests (value = damage, adds water)
+			local ship = R.ShipService.GetShipOf(player)
+			if not ship then
+				return false, "no ship out"
+			end
+			local dmg = math.clamp(math.floor(tonumber(data.value) or 300), 1, math.max(1, math.floor(ship.hp) - 1))
+			R.ShipService.DamageShip(ship, dmg)
 		elseif data.cmd == "crew" then -- remake: deckhand count for ship tests (re-summon the ship after)
 			local p = R.DataService.Get(player)
 			if p then

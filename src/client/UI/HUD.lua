@@ -689,7 +689,12 @@ local function buildMenu()
 	RunService.RenderStepped:Connect(function()
 		local w = menu.Size.X.Offset * menuScale.Scale
 		tabHolder.Position = menu.Position + UDim2.fromOffset(menu.Visible and (-w - 6) or 0, 0)
-		tabHolder.Visible = not UI.AnyOpen()
+		-- remake HUD: no fold tab for the one-row PC menu (it is small already; the pixel font drew ▶ as an empty bar)
+		if HUD.rowMenu and not menu.Visible then
+			menu.Visible = true
+			tab.Text = "▶"
+		end
+		tabHolder.Visible = not UI.AnyOpen() and not HUD.rowMenu
 	end)
 	-- v0.25.44: window keys come from Controllers/Hotkeys (rebindable; CAS, so the camera's I / O zoom no longer eats
 	-- the Bag key)

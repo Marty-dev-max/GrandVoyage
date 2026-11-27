@@ -1250,6 +1250,15 @@ The owner tests in Studio and sends screenshots; previews of new art are rendere
    the screen left empty (toasts / style meter at the edge). Hidden until useful: party strip (only in a party), faction
    pill (only Pirate / Marine), locked skill sets + empty skill slots, hunt card (only while a hunt runs). HUD tooltips
    drop when a window opens. Phone (compact) layout unchanged apart from those hides; not checked on a phone yet.
+   HUD 2 (0.1.3-remake, owner: vertical bars, portrait may go, no Auto): the character card + level ring + portrait are
+   hidden (still built: refresh / EXP orbs use them); `vitals` = HUD buildVitals: 3 vertical tubes (HP, SP, thin EXP)
+   over a small level badge bottom-left, no text (numbers in the tooltip), tubes keep the :Set / :SetColor shape of
+   UI.Bar so `bars.hp / bars.sp` point at them. No Auto Battle (GameConfig.AutoBattle = false: Combat.SetAuto refuses,
+   AUTO switch + gear hidden; tutorial T04 is now "Guard Up" = QS.Event "Guard" from GuardService block/parry).
+   Hotbar = CanvasGroup "Hotbar" (24 px head room so hover jumps are not clipped) fading after HotbarFade.Calm s
+   (back on State.lastCombat, a click, a non-movement key, the pointer near the bottom, blocking, HP < 35%; touch
+   only fades to 0.55). Quest tracker = one 36 px line (goal, count, distance), click = Quests window Story tab, which
+   now has a NOW card with Replay talk + Skip tutorial. Menu fold tab hidden in row mode. Checked in Play on PC.
 1. Wait for the owner's verdict on v0.10.3 (hills/flowers/grass); fix what they point at.
 2. Voxel art pass: monsters DONE v0.11.0 (voxel_monsters.py; AssetService sizes = shape base x style.scale,
    MonsterService.RefreshModels swaps placeholder island mobs). Pets + fruits DONE v0.11.1 (voxel_pets.py).

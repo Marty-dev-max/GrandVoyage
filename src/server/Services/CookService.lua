@@ -27,9 +27,19 @@ local function inMap(inst)
 	return (world and inst:IsDescendantOf(world)) or (hand and inst:IsDescendantOf(hand))
 end
 
+-- a shop NPC's walk-in ring nearby (the Blacksmith's forge burns inside the smithy): not a cooking fire
+local function byShopNpc(pos)
+	for _, m in ipairs(CollectionService:GetTagged("NPC")) do
+		if m:GetAttribute("ZoneColor") and m.PrimaryPart and (m.PrimaryPart.Position - pos).Magnitude < 20 then
+			return true
+		end
+	end
+	return false
+end
+
 local function dress(fire)
 	local part = fire.Parent
-	if not part or not part:IsA("BasePart") or not inMap(part) or part:FindFirstChild("CookPrompt") then
+	if not part or not part:IsA("BasePart") or not inMap(part) or part:FindFirstChild("CookPrompt") or byShopNpc(part.Position) then
 		return
 	end
 	local prompt = Instance.new("ProximityPrompt")

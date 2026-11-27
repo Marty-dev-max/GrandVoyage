@@ -142,6 +142,24 @@ function Cook.Open()
 		end
 	end
 	render()
+	-- the bag changed (bought, looted, cooked): redraw the counts, at most every half second
+	local pending = false
+	local conn
+	conn = State.Changed:Connect(function(kind)
+		if not UI.IsOpen("Cook") then
+			conn:Disconnect()
+			return
+		end
+		if kind == "profile" and not pending and not busy then
+			pending = true
+			task.delay(0.5, function()
+				pending = false
+				if UI.IsOpen("Cook") and not busy then
+					render()
+				end
+			end)
+		end
+	end)
 end
 
 return Cook

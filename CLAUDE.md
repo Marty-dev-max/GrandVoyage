@@ -1168,6 +1168,7 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     an off-centre old save is fixed on its next SAVE). Lion checked in Play the same way (card place, steppers, min 0.6
     clamp, FIGURE blue, paint theme save with 7 zones, LAUNCH -> centred). Simulated mouse drags (MCP mouseButtonDown +
     moveTo) do not move builder items: test drag code another way.
+    v0.25.160 (owner): Marines pick the figurehead color freely (no livery override for Paint:figure; PAINT note says so).
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

@@ -1016,7 +1016,7 @@ local function paintTab(outer)
 	New("UIPadding", { PaddingRight = UDim.new(0, 10), Parent = body })
 	local faction = State.profile and State.profile.faction
 	if faction == "Marine" then
-		local t = UI.Text(body, "Marine ships sail in the Marine livery (white hull, navy rails). Deck color can still be changed.", 12, T.TextSoft, "Semi",
+		local t = UI.Text(body, "Marine ships sail in the Marine livery (white hull, navy rails). Deck and figurehead colors are yours to pick.", 12, T.TextSoft, "Semi",
 			{ Size = UDim2.new(1, 0, 0, 34), LayoutOrder = 0 })
 		t.TextWrapped = true
 	end

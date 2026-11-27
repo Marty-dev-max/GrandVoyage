@@ -722,6 +722,8 @@ function H.Arcs(design)
 			local yM = it.y + size.Y * 0.45
 			local hw0 = hwAt(it.z)
 			local port = math.abs(it.y) < 1 and math.abs(it.x) > 1 and math.abs(it.x) > hw0 - 4
+			-- v0.25.157 (owner): a harpoon / fire pot on the bow fires forward over the stem (a bow chaser)
+			local chaser = def.cannon.special and math.abs(it.x) < 3 and it.z > sl.L - 10
 			local fire, cur = {}, nil
 			local trav = math.min(cs.trav, 180)
 			local n = math.floor(trav * 2 / ARC_STEP + 0.5)
@@ -737,7 +739,7 @@ function H.Arcs(design)
 						local hw = hwAt(pz)
 						local nowInside = math.abs(px) <= hw
 						if inside and not nowInside then
-							local atPort = port and math.abs(pz - it.z) <= 1.6
+							local atPort = (port and math.abs(pz - it.z) <= 1.6) or (chaser and pz > it.z)
 							if yM < wall and not atPort then
 								clear = false
 								break

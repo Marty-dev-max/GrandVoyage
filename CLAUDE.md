@@ -1284,6 +1284,15 @@ The owner tests in Studio and sends screenshots; previews of new art are rendere
    SP, MDEF, KnockdownService will power (WillPerWil), SP regen. No luck stat (card drop chance is plain). Class
    `build`s use the new keys (Auto upgrade + Job Master rings). Monster types (STR/AGI/DEX/INT) are untouched until the
    damage-type pass. Checked in Play: old save migrated (Lv 2 = 9 points), +5 END -> Stamina 105, punches kill monkeys.
+   R1 damage types (0.1.7-remake): `Config/DamageTypes` = Slash / Blunt / Pierce / Element (Info: icon sword /
+   knuckles / musket_ball / flame), Weak 1.3 / Resist 0.7, `Weapon` map (Fists/Knuckles/Shoes/Hammer/StormBaton Blunt,
+   Sword Slash, Slingshot Pierce, MedKit Element), `Of[monsterId] = { resist, weak }` (first pass, owner: tune per
+   island in R5; edit only this table), `Mult(dtype, id)` -> k, "weak"/"resist". CombatService hitTarget: dtype =
+   opts.dtype (skill field `dtype`) or Element for fruit hits or the equipped weapon's; MS.Damage(..., match) -> Damage
+   FX `match` -> VFX "WEAK!" / "RESIST" over your own numbers. The class type matchup (MonsterTypes.Mult both ways) is
+   gone from combat; MonsterTypes stays only for monster fighting styles (Monsters TYPE_OF) and card art. Nameplate =
+   chip row on top (CHIP_ROW 0.27 of a taller plate: BillboardGuis clip outside their box), weak "+" green left,
+   resist "-" red right. BossFocus attr = the weak type (HUD "WEAK TO: X x1.3"); Index monsters "+WEAK -RESIST" once met.
 1. Wait for the owner's verdict on v0.10.3 (hills/flowers/grass); fix what they point at.
 2. Voxel art pass: monsters DONE v0.11.0 (voxel_monsters.py; AssetService sizes = shape base x style.scale,
    MonsterService.RefreshModels swaps placeholder island mobs). Pets + fruits DONE v0.11.1 (voxel_pets.py).

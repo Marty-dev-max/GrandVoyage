@@ -174,6 +174,47 @@ local Forts = {
 	{ id = "FortEast", name = "Fort Gullwatch", x = 9300, z = 500 },
 }
 
+-- R5 (remake): the world is GameConfig.WorldScale x bigger. Island positions, sizes and every offset below grow by it at
+-- load (runtime code reads the scaled numbers). `island.raw` keeps the hand-tuned numbers the island builders were laid
+-- out with: WorldBuilder builds an island with them (Islands.WithRaw) and then scales the finished map around its center.
+local GameConfig = require(script.Parent.GameConfig)
+local S = GameConfig.WorldScale or 1
+for _, isl in ipairs(Islands) do
+	local raw = { radius = isl.radius, townRadius = isl.townRadius, town = isl.town, spawns = {}, minis = {} }
+	for k, sp in ipairs(isl.spawns or {}) do
+		raw.spawns[k] = { offset = sp.offset, radius = sp.radius }
+		sp.offset *= S
+		sp.radius *= S
+	end
+	for k, sp in ipairs(isl.minis or {}) do
+		raw.minis[k] = { offset = sp.offset, radius = sp.radius }
+		sp.offset *= S
+		sp.radius *= S
+	end
+	if isl.boss then
+		raw.boss = { offset = isl.boss.offset, indoorY = isl.boss.indoorY, wakeRadius = isl.boss.wakeRadius }
+		isl.boss.offset = isl.boss.offset and isl.boss.offset * S
+		isl.boss.indoorY = isl.boss.indoorY and isl.boss.indoorY * S
+		isl.boss.wakeRadius = isl.boss.wakeRadius and isl.boss.wakeRadius * S
+	end
+	if isl.arena then
+		raw.arena = { offset = isl.arena.offset, radius = isl.arena.radius }
+		isl.arena.offset = isl.arena.offset and isl.arena.offset * S
+		isl.arena.radius = isl.arena.radius and isl.arena.radius * S
+	end
+	isl.raw = raw
+	isl.x *= S
+	isl.z = isl.z and isl.z * S
+	isl.radius *= S
+	isl.townRadius = isl.townRadius and isl.townRadius * S
+	isl.town = isl.town and isl.town * S
+end
+RedLine.x *= S
+for _, f in ipairs(Forts) do
+	f.x *= S
+	f.z *= S
+end
+
 local byId = {}
 for i, island in ipairs(Islands) do
 	island.index = i
@@ -207,7 +248,56 @@ for i = 2, #Islands do
 	end
 end
 
+-- Run fn with the island's hand-tuned (unscaled, unturned) numbers swapped in: the island builders lay out with these.
+-- x / z stay (the builder works at the island's own x, z 0, and the finished map is scaled around that center).
+local function WithRaw(isl, fn)
+	local raw = isl.raw
+	if not raw then
+		return fn()
+	end
+	local saved = { radius = isl.radius, townRadius = isl.townRadius, town = isl.town, spawns = {}, minis = {} }
+	isl.radius, isl.townRadius, isl.town = raw.radius, raw.townRadius, raw.town
+	for k, sp in ipairs(isl.spawns or {}) do
+		saved.spawns[k] = { sp.offset, sp.radius }
+		sp.offset, sp.radius = raw.spawns[k].offset, raw.spawns[k].radius
+	end
+	for k, sp in ipairs(isl.minis or {}) do
+		saved.minis[k] = { sp.offset, sp.radius }
+		sp.offset, sp.radius = raw.minis[k].offset, raw.minis[k].radius
+	end
+	if isl.boss and raw.boss then
+		saved.boss = { isl.boss.offset, isl.boss.indoorY, isl.boss.wakeRadius }
+		isl.boss.offset, isl.boss.indoorY, isl.boss.wakeRadius = raw.boss.offset, raw.boss.indoorY, raw.boss.wakeRadius
+	end
+	if isl.arena and raw.arena then
+		saved.arena = { isl.arena.offset, isl.arena.radius }
+		isl.arena.offset, isl.arena.radius = raw.arena.offset, raw.arena.radius
+	end
+	local lo = isl.localOffsets
+	isl.localOffsets = nil
+	local ok, err = pcall(fn)
+	isl.localOffsets = lo
+	isl.radius, isl.townRadius, isl.town = saved.radius, saved.townRadius, saved.town
+	for k, sp in ipairs(isl.spawns or {}) do
+		sp.offset, sp.radius = saved.spawns[k][1], saved.spawns[k][2]
+	end
+	for k, sp in ipairs(isl.minis or {}) do
+		sp.offset, sp.radius = saved.minis[k][1], saved.minis[k][2]
+	end
+	if saved.boss then
+		isl.boss.offset, isl.boss.indoorY, isl.boss.wakeRadius = saved.boss[1], saved.boss[2], saved.boss[3]
+	end
+	if saved.arena then
+		isl.arena.offset, isl.arena.radius = saved.arena[1], saved.arena[2]
+	end
+	if not ok then
+		error(err, 0)
+	end
+end
+
 return {
+	WithRaw = WithRaw,
+	Scale = S,
 	List = Islands,
 	ById = byId,
 	RedLine = RedLine,

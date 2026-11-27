@@ -63,6 +63,44 @@ local HULL_STYLES = {
 	Marine = { hull = Color3.fromRGB(240, 240, 246), trim = Color3.fromRGB(60, 100, 190), stripe = Color3.fromRGB(232, 192, 80) },
 }
 
+-- R5 (remake): every ship is GameConfig.WorldScale bigger than its design (the world grew x1.5 with it). The design,
+-- the shipyard editor and ShipHull stay in design studs; the built model is scaled around the waterline point under
+-- the root (so the waterline stays at sea level and the draft grows), and its speed / cannon range grow the same.
+local SCALE = GameConfig.WorldScale or 1
+local function scaleShipModel(model, pivot, S)
+	if S == 1 then
+		return
+	end
+	local parts, targets = {}, {}
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("BasePart") then
+			local rel = pivot:ToObjectSpace(d.CFrame)
+			table.insert(parts, d)
+			table.insert(targets, pivot * (rel.Rotation + rel.Position * S))
+		end
+	end
+	for _, part in ipairs(parts) do
+		part.Size *= S
+		for _, c in ipairs(part:GetChildren()) do
+			if c:IsA("Attachment") then
+				c.Position *= S
+			elseif c:IsA("SpecialMesh") then
+				c.Scale *= S
+			elseif c:IsA("PointLight") or c:IsA("SpotLight") or c:IsA("SurfaceLight") then
+				c.Range = math.min(60, c.Range * S)
+			elseif c:IsA("JointInstance") then
+				c.C0 = c.C0.Rotation + c.C0.Position * S
+				c.C1 = c.C1.Rotation + c.C1.Position * S
+			elseif c:IsA("SurfaceGui") and c.SizingMode == Enum.SurfaceGuiSizingMode.PixelsPerStud then
+				c.PixelsPerStud /= S
+			end
+		end
+	end
+	for i, part in ipairs(parts) do
+		part.CFrame = targets[i]
+	end
+end
+
 local function buildShip(design, cf, opts)
 	nextId += 1
 	local minV, maxV = ShipModel.Bounds(design)
@@ -88,6 +126,8 @@ local function buildShip(design, cf, opts)
 			warn("[ShipService] hull dressing failed:", class)
 		end
 	end
+	scaleShipModel(model, cf * CFrame.new(0, G * 0.5, 0), SCALE)
+	width, length = width * SCALE, length * SCALE
 
 	local root = Instance.new("Part")
 	root.Name = "ShipRoot"
@@ -122,6 +162,8 @@ local function buildShip(design, cf, opts)
 					child:SetAttribute("Range", math.floor(c.range))
 					c.port = not c.lob and ShipHull.PortSide(design, partList[idx]) or nil -- v0.25.155 (#34)
 				end
+				c.range *= SCALE -- R5: bigger world, bigger ships, longer shots
+				child:SetAttribute("Range", math.floor(c.range))
 				c.special = pdef.cannon.special
 				table.insert(c.special and specialParts or cannonParts, c)
 			end
@@ -1344,13 +1386,13 @@ local function addCrew(ship, def)
 			if child.Name == "Helm" then
 				-- behind the wheel, facing the bow
 				local at = main.Position - root.CFrame.LookVector * 3
-				table.insert(spots, { pos = at, face = root.CFrame.LookVector, y = main.Position.Y - G / 2, role = "helm" })
+				table.insert(spots, { pos = at, face = root.CFrame.LookVector, y = main.Position.Y - G * SCALE / 2, role = "helm" })
 			elseif (ShipParts[child.Name] and ShipParts[child.Name].cannon) then
 				cannons += 1
 				if def.cannons <= 6 or cannons % 2 == 1 then
 					local look = main.CFrame.LookVector
 					local at = main.Position - Vector3.new(look.X, 0, look.Z).Unit * 3.2
-					table.insert(spots, { pos = at, face = look, y = main.Position.Y - G / 2, role = "gunner" })
+					table.insert(spots, { pos = at, face = look, y = main.Position.Y - G * SCALE / 2, role = "gunner" })
 				end
 			end
 		end
@@ -1426,15 +1468,15 @@ function addRecruits(ship, list) -- (forward-declared above Ship.Launch)
 		local main = child:IsA("Model") and child.PrimaryPart
 		if main then
 			if child.Name == "Helm" then
-				deckY = main.Position.Y - G / 2
+				deckY = main.Position.Y - G * SCALE / 2
 				for _, sx in ipairs({ -1, 1 }) do
 					table.insert(posts.deck, { pos = main.Position + root.CFrame.RightVector * sx * 3.5 + root.CFrame.LookVector * 2, face = root.CFrame.LookVector, y = deckY })
 				end
 			elseif (ShipParts[child.Name] and ShipParts[child.Name].cannon) then
 				local look = main.CFrame.LookVector
-				table.insert(posts.Gunner, { pos = main.Position - Vector3.new(look.X, 0, look.Z).Unit * 3.2, face = look, y = main.Position.Y - G / 2 })
+				table.insert(posts.Gunner, { pos = main.Position - Vector3.new(look.X, 0, look.Z).Unit * 3.2, face = look, y = main.Position.Y - G * SCALE / 2 })
 			elseif child.Name == "OarBench" then
-				table.insert(posts.Rower, { pos = main.Position, face = root.CFrame.LookVector, y = main.Position.Y - G / 2 })
+				table.insert(posts.Rower, { pos = main.Position, face = root.CFrame.LookVector, y = main.Position.Y - G * SCALE / 2 })
 			end
 		end
 	end
@@ -1847,9 +1889,10 @@ local function stepShip(ship, dt, now)
 	if (ship.chainUntil or 0) > now then
 		maxSpeed *= ship.chainSlow or 1 -- Mastery v2 M3: Chain Shot tore the sails
 	end
+	maxSpeed *= SCALE -- R5: the ship and the sea are x WorldScale, so it covers them as fast as before
 	ship.maxSpeed = maxSpeed
-	local targetSpeed = ship.throttle >= 0 and ship.throttle * maxSpeed or ship.throttle * math.min(maxSpeed, 10)
-	local accel = targetSpeed > ship.speed and 9 or 14
+	local targetSpeed = ship.throttle >= 0 and ship.throttle * maxSpeed or ship.throttle * math.min(maxSpeed, 10 * SCALE)
+	local accel = (targetSpeed > ship.speed and 9 or 14) * SCALE
 	if ship.speed < targetSpeed then
 		ship.speed = math.min(targetSpeed, ship.speed + accel * dt)
 	else
@@ -1863,7 +1906,7 @@ local function stepShip(ship, dt, now)
 		ship.yaw += math.clamp(diff, -HARD_TURN_RATE * dt, HARD_TURN_RATE * dt)
 	else
 		ship.hardTurn = nil
-		ship.yaw -= ship.steer * turnRate * dt * math.clamp(0.35 + math.abs(ship.speed) / 40, 0.35, 1)
+		ship.yaw -= ship.steer * turnRate * dt * math.clamp(0.35 + math.abs(ship.speed) / (40 * SCALE), 0.35, 1)
 	end
 	-- 0.1.22 (owner: the bow should swing with the water going round, and the spin should fling you out): in a
 	-- whirlpool the current turns the bow along the flow (round the eye, a little inward), half as hard while you

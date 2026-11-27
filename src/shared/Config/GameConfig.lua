@@ -1,19 +1,19 @@
 -- GameConfig: core constants. Tune game balance here.
-return {
+local GameConfig = {
 	GameName = "LarpTales: Voxel Seas", -- player-facing name (v0.24.9, owner); code/files/DataStores keep the GrandVoyage names
 	LogoLines = { "LARPTALES", "VOXEL SEAS" },
 	LogoImage = 133908417032160, -- v0.25.87: pixel logo board floating behind the menu character (tools/gen_logo.py); nil = text logo
 	-- bump on every change: shown bottom-right in game and printed in Output, so you can tell which code is running
-	Version = "0.1.23-remake",
+	Version = "0.1.24-remake",
 	SagaName = "Azure East Saga",
 	-- title menu UPDATE LOG lines (newest first, at most 6: more ran off the top of the screen, v0.25.156)
 	UpdateNotes = {
+		"THE WORLD IS BIGGER: islands, the open sea and every ship are 1.5x the size",
 		"WHIRLPOOLS are real vortexes now: ride the spin round, then steer out to slingshot away",
 		"STORMS + WHIRLPOOLS at sea: they batter the hull. Navigators see them coming (Lv 30) and Hard Turn out (Lv 50)",
 		"SAILING: the wind now has a direction (arrow on the ship card). Sea currents between islands: ride them!",
 		"SHIPWRIGHT + DOCTOR: time your ship repairs (green = x1.5, no leaks), Emergency Repair, Miracle Mist, faster revives",
 		"GUNNER: F in the green while reloading = instant reload. Chain / Bomb Shot (Z), Full Broadside (C)",
-		"COOKING: press E at any campfire. Good timing = tasty 2-3 star food with buffs",
 	},
 	DataStoreName = "GV_Player_r1",
 	GuildStoreName = "GV_Guild_r1",
@@ -227,3 +227,19 @@ return {
 
 	RespawnTime = 5,
 }
+
+-- R5 (remake, owner 28 Nov 2026): the world is WorldScale x bigger next to the characters. Islands (their buildings,
+-- ground, trees, docks), the distances between them (the sea and its bounds) and every ship grow by it; players, NPCs,
+-- monsters and human-size props (barrels, crates, lamps, benches, stalls, chests) keep their size. Island config is
+-- scaled in Config/Islands, the built map in WorldBuilder.buildIsland, ships in ShipService.buildShip.
+GameConfig.WorldScale = 1.5
+do
+	local S = GameConfig.WorldScale
+	GameConfig.Lane.HalfWidth *= S
+	GameConfig.Lane.EdgeWidth *= S
+	GameConfig.World.MinX *= S
+	GameConfig.World.MaxX *= S
+	GameConfig.World.HalfZ *= S
+end
+
+return GameConfig

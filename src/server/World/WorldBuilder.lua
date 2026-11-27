@@ -591,7 +591,8 @@ local LAYOUTS = {
 	Epilogue = { module = require(script.Parent.Epilogue), seed = 20261127 },
 }
 
-local function buildIsland(island)
+-- the island exactly as its builder lays it out (hand-tuned numbers from Islands.WithRaw, at z 0, unturned)
+local function buildIslandRaw(island)
 	if island.layout == "Daybreak" then
 		-- Advance the shared Kit random stream exactly as the previous Daybreak did (built into a detached model
 		-- that is thrown away), so every island after it keeps its layout; then build the new Daybreak on its own stream.
@@ -610,27 +611,6 @@ local function buildIsland(island)
 		end)
 		return f
 	end
-	-- v0.25.11: islands spread north/south. The generic builder (and its many absolute coordinates) works at z 0, so
-	-- build there and move the finished island, including position attributes (dock LaunchCf / LandCf ...).
-	local dz = island.z or 0
-	island.yardAngle = yardAngle(island, dz)
-	island.z = nil
-	-- build unturned: swap the turned config offsets for the local ones while the island is laid out
-	local lo = island.localOffsets
-	local turned
-	if lo then
-		turned = { spawns = {}, boss = island.boss and island.boss.offset, arena = island.arena and island.arena.offset }
-		for k, sp in ipairs(island.spawns) do
-			turned.spawns[k] = sp.offset
-			sp.offset = lo.spawns[k]
-		end
-		if island.boss then
-			island.boss.offset = lo.boss
-		end
-		if island.arena then
-			island.arena.offset = lo.arena
-		end
-	end
 	local f
 	local layout = island.layout and LAYOUTS[island.layout]
 	if layout then
@@ -648,42 +628,154 @@ local function buildIsland(island)
 	else
 		f = buildIslandGeneric(island)
 	end
-	island.z = dz
-	if lo then
-		for k, sp in ipairs(island.spawns) do
-			sp.offset = turned.spawns[k]
-		end
-		if island.boss then
-			island.boss.offset = turned.boss
-		end
-		if island.arena then
-			island.arena.offset = turned.arena
+	return f
+end
+
+-- R5 (remake): scale a finished island around its center (cx, 0, 0) by S, then turn it by yaw and move it to z dz.
+-- Everything grows (ground, buildings, trees, docks; y about sea level) except people-size things, which keep their
+-- size and only move with the ground: NPC models, chests, and Kit props built inside Kit.Human (they carry the
+-- attribute HumanAt = the point they stand on). Position attributes (dock LaunchCf, prop Base, ...) move the same
+-- way; EnvProp Height grows with the trees.
+local function placeIsland(f, cx, S, yaw, dz)
+	local T = CFrame.new(cx, 0, dz) * CFrame.Angles(0, yaw, 0) * CFrame.new(-cx, 0, 0)
+	local function sp(v)
+		return Vector3.new(cx + (v.X - cx) * S, v.Y * S, v.Z * S)
+	end
+	local function mapCf(cf)
+		return T * (cf.Rotation + sp(cf.Position))
+	end
+	local function moveAttrs(o)
+		for k, v in pairs(o:GetAttributes()) do
+			if typeof(v) == "CFrame" then
+				o:SetAttribute(k, mapCf(v))
+			elseif typeof(v) == "Vector3" then
+				o:SetAttribute(k, T * sp(v))
+			elseif k == "Height" and type(v) == "number" and S ~= 1 then
+				o:SetAttribute(k, v * S)
+			end
 		end
 	end
-	local yaw = island.yaw or 0
-	if dz ~= 0 or yaw ~= 0 then
-		-- turn around the island center, then move to its z (positions in attributes too: docks, plots, props)
-		local T = CFrame.new(island.x, 0, dz) * CFrame.Angles(0, yaw, 0) * CFrame.new(-island.x, 0, 0)
-		local function moveAttrs(o)
-			for k, v in pairs(o:GetAttributes()) do
-				if typeof(v) == "CFrame" or typeof(v) == "Vector3" then
-					o:SetAttribute(k, T * v)
+	-- people-size models: keep the size, move them so their feet land where the ground went
+	local keep = {}
+	if S ~= 1 then
+		for _, tag in ipairs({ "NPC", "Chest" }) do
+			for _, m in ipairs(CollectionService:GetTagged(tag)) do
+				if m:IsA("Model") and m:IsDescendantOf(f) then
+					keep[m] = true
 				end
 			end
 		end
-		moveAttrs(f)
-		-- targets first, then assign: welded (unanchored) assemblies would otherwise move twice
-		local parts, targets = {}, {}
-		for _, o in ipairs(f:GetDescendants()) do
-			if o:IsA("BasePart") then
-				table.insert(parts, o)
-				table.insert(targets, T * o.CFrame)
+	end
+	local function keptModel(o)
+		local m = o:FindFirstAncestorWhichIsA("Model")
+		while m and m ~= f do
+			if keep[m] then
+				return m
 			end
+			m = m:FindFirstAncestorWhichIsA("Model")
+		end
+		return nil
+	end
+	moveAttrs(f)
+	-- targets first, then assign: welded (unanchored) assemblies would otherwise move twice
+	local parts, targets, grow = {}, {}, {}
+	for _, o in ipairs(f:GetDescendants()) do
+		if o:IsA("BasePart") then
+			local km = S ~= 1 and keptModel(o)
+			if km then
+				-- feet = the bottom of the model's box (computed once per model below)
+				table.insert(parts, o)
+				table.insert(targets, km)
+			else
+				local at = o:GetAttribute("HumanAt")
+				if S ~= 1 and typeof(at) == "Vector3" then
+					table.insert(parts, o)
+					table.insert(targets, T * (o.CFrame.Rotation + (sp(at) + (o.Position - at))))
+				else
+					table.insert(parts, o)
+					table.insert(targets, mapCf(o.CFrame))
+					if S ~= 1 then
+						table.insert(grow, o)
+					end
+				end
+			end
+		end
+		if not (S ~= 1 and (keep[o] or keptModel(o))) then
 			moveAttrs(o)
 		end
-		for i, part in ipairs(parts) do
-			part.CFrame = targets[i]
+	end
+	-- kept models: one offset per model (bottom center of its box -> scaled + turned)
+	local shift = {}
+	for m in pairs(keep) do
+		local cf, size = m:GetBoundingBox()
+		local foot = cf.Position - Vector3.new(0, size.Y / 2, 0)
+		local to = T * sp(foot)
+		shift[m] = { rot = T.Rotation, from = foot, to = to }
+		local M = CFrame.new(to) * T.Rotation * CFrame.new(-foot)
+		local list = m:GetDescendants()
+		table.insert(list, m)
+		for _, o in ipairs(list) do
+			if not (keep[o] and o ~= m) then -- a kept model inside another one moves with its own offset
+				for k, v in pairs(o:GetAttributes()) do
+					if typeof(v) == "CFrame" or typeof(v) == "Vector3" then
+						o:SetAttribute(k, M * v)
+					end
+				end
+			end
 		end
+	end
+	for i, t in ipairs(targets) do
+		if typeof(t) == "Instance" then
+			local sh = shift[t]
+			targets[i] = CFrame.new(sh.to) * sh.rot * CFrame.new(-sh.from) * parts[i].CFrame
+		end
+	end
+	for _, part in ipairs(grow) do
+		part.Size *= S
+		for _, c in ipairs(part:GetChildren()) do
+			if c:IsA("Attachment") then
+				c.Position *= S
+			elseif c:IsA("SpecialMesh") then
+				c.Scale *= S
+			elseif c:IsA("PointLight") or c:IsA("SpotLight") or c:IsA("SurfaceLight") then
+				c.Range = math.min(60, c.Range * S)
+			elseif c:IsA("JointInstance") then
+				c.C0 = c.C0.Rotation + c.C0.Position * S
+				c.C1 = c.C1.Rotation + c.C1.Position * S
+			elseif c:IsA("SurfaceGui") and c.SizingMode == Enum.SurfaceGuiSizingMode.PixelsPerStud then
+				c.PixelsPerStud /= S
+			end
+		end
+	end
+	for i, part in ipairs(parts) do
+		part.CFrame = targets[i]
+	end
+end
+
+local function buildIsland(island)
+	-- v0.25.11: islands spread north/south. The builders (and their many absolute coordinates) work at z 0, so
+	-- build there and move the finished island, including position attributes (dock LaunchCf / LandCf ...).
+	-- v0.25.21: build unturned (Islands.WithRaw swaps the unturned offsets in), then turn by island.yaw.
+	-- R5: built with the hand-tuned (unscaled) numbers, then scaled by WorldScale around the island center.
+	local dz = island.z or 0
+	if island.layout ~= "Daybreak" then
+		island.yardAngle = yardAngle(island, dz)
+	end
+	local f
+	IslandsCfg.WithRaw(island, function()
+		island.z = nil
+		local ok, err = pcall(function()
+			f = buildIslandRaw(island)
+		end)
+		island.z = dz
+		if not ok then
+			error(err, 0)
+		end
+	end)
+	local S = IslandsCfg.Scale or 1
+	local yaw = island.yaw or 0
+	if dz ~= 0 or yaw ~= 0 or S ~= 1 then
+		placeIsland(f, island.x, S, yaw, dz)
 	end
 	return f
 end
@@ -1018,7 +1110,7 @@ end
 -- away and rebuilt from code at server start (so the owner's published place updates through Rojo too).
 -- Hand-built content made in Studio goes in workspace.Handmade (never touched by rebuilds). Kit props placed there
 -- (tagged EnvProp/EnvPart) are dressed with the stylized meshes like the generated ones.
-WB.WORLD_VERSION = 47 -- v47 (0.1.10-remake): no Job Master NPC (spots stay reserved); v46 (v0.25.150): no shipyard platform, the slips float (boardwalk only); v45 (v0.25.149): Courier Gull Post at every harbor, Marine Registrar by the Conch Bay stairs; v44 (v0.25.148): roof ridges sit on the stepped roof (no floating beam); v43 (v0.25.147): voxel stadium big top + the Confetti Crew occupying Marmalade; v42 (v0.25.146): Big Top for Captain Confetti, Epilogue execution platform; v41 (v0.25.143): a look of their own for every island quest giver; v40 (v0.25.142): one Tavern Keeper on Daybreak (inside the tavern); v39 (v0.25.141): tavern awning above the doorway; v38 (v0.25.140): enterable Daybreak tavern / smithy / store with their NPC inside; v37 (v0.25.134): organic voxel island outlines (IslandShape); v36 v36 (v0.25.133): Epilogue Town hand-laid; v35 v35 (v0.25.132): Mikan Isles hand-laid; v34 (v0.25.131): Barracuda Bistro hand-laid (World/Barracuda); v33 (v0.25.130): Honeyslope hand-laid (World/Honeyslope); v32 (v0.25.129): the Brig (jail cell) at the Conch Bay garrison; v31 (v0.25.120): Power board is a map piece in front of the west house; v30 (v0.25.119): Bounty Board moved to the west street house; v29 (v0.25.118): Job Master walk-in ring + new look; v28 (v0.25.115): DeFlicker stacks faces within 0.035 (grass under the plaza paving); v27 (v0.25.113): no Bay Serpent buoys/sign, wooden shipyard plots, voxel barrels/crates/chests; v26 (v0.25.112): DeFlicker pass, hill caps one step apart per lobe; v25 (v0.25.109): no island name signs at the docks; v24 (v0.25.108): Marine Registrar in Conch Bay, no Guild Registrar; v23 (v0.25.107): Tavern Keeper beside the Shipwright; v22 (v0.25.27): shipyards snap to the island side nearest the next island; v21 (v0.25.25): shipyards face the next island, circus ship offshore; v20 (v0.25.24): Marmalade Town hand-laid (World/Marmalade); v19 (v0.25.23): Conch Bay street spawns keep their houses; v18 (v0.25.22): Conch Bay terraced (quay, two terraces, garrison plateau, tapered towers); v17 (v0.25.21): islands turned to face the previous one, Conch Bay stairs; v16 (v0.25.20): Daybreak spawn by Rowan, Conch Bay hand-laid (World/ConchBay); v15 (v0.25.11): islands spread north/south, wider sea, islets; v14 (v0.25.6): Daybreak spawn by the campfire; v13: voxel NPCs; v12: Voxelize pass
+WB.WORLD_VERSION = 48 -- v48 (0.1.24-remake, R5): islands built x GameConfig.WorldScale (1.5) around their center, people-size props keep their size; v47 (0.1.10-remake): no Job Master NPC (spots stay reserved); v46 (v0.25.150): no shipyard platform, the slips float (boardwalk only); v45 (v0.25.149): Courier Gull Post at every harbor, Marine Registrar by the Conch Bay stairs; v44 (v0.25.148): roof ridges sit on the stepped roof (no floating beam); v43 (v0.25.147): voxel stadium big top + the Confetti Crew occupying Marmalade; v42 (v0.25.146): Big Top for Captain Confetti, Epilogue execution platform; v41 (v0.25.143): a look of their own for every island quest giver; v40 (v0.25.142): one Tavern Keeper on Daybreak (inside the tavern); v39 (v0.25.141): tavern awning above the doorway; v38 (v0.25.140): enterable Daybreak tavern / smithy / store with their NPC inside; v37 (v0.25.134): organic voxel island outlines (IslandShape); v36 v36 (v0.25.133): Epilogue Town hand-laid; v35 v35 (v0.25.132): Mikan Isles hand-laid; v34 (v0.25.131): Barracuda Bistro hand-laid (World/Barracuda); v33 (v0.25.130): Honeyslope hand-laid (World/Honeyslope); v32 (v0.25.129): the Brig (jail cell) at the Conch Bay garrison; v31 (v0.25.120): Power board is a map piece in front of the west house; v30 (v0.25.119): Bounty Board moved to the west street house; v29 (v0.25.118): Job Master walk-in ring + new look; v28 (v0.25.115): DeFlicker stacks faces within 0.035 (grass under the plaza paving); v27 (v0.25.113): no Bay Serpent buoys/sign, wooden shipyard plots, voxel barrels/crates/chests; v26 (v0.25.112): DeFlicker pass, hill caps one step apart per lobe; v25 (v0.25.109): no island name signs at the docks; v24 (v0.25.108): Marine Registrar in Conch Bay, no Guild Registrar; v23 (v0.25.107): Tavern Keeper beside the Shipwright; v22 (v0.25.27): shipyards snap to the island side nearest the next island; v21 (v0.25.25): shipyards face the next island, circus ship offshore; v20 (v0.25.24): Marmalade Town hand-laid (World/Marmalade); v19 (v0.25.23): Conch Bay street spawns keep their houses; v18 (v0.25.22): Conch Bay terraced (quay, two terraces, garrison plateau, tapered towers); v17 (v0.25.21): islands turned to face the previous one, Conch Bay stairs; v16 (v0.25.20): Daybreak spawn by Rowan, Conch Bay hand-laid (World/ConchBay); v15 (v0.25.11): islands spread north/south, wider sea, islets; v14 (v0.25.6): Daybreak spawn by the campfire; v13: voxel NPCs; v12: Voxelize pass
 
 -- Old copies of the map can hide anywhere in Workspace: a renamed or regrouped World, an island dragged into
 -- Handmade, single NPCs / chests / docks pasted from an old bake. They draw on top of the new islands and register

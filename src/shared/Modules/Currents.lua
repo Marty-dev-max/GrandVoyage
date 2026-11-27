@@ -12,6 +12,14 @@ C.Side = 160 -- the outbound and return lanes sit this far either side of the st
 C.Clear = 140 -- lanes start / stop this far outside each island's radius
 C.Boost = 0.25 -- x(1 + Boost) top speed sailing straight down a lane's middle, x(1 - Boost) straight against
 C.Drift = 5 -- studs/s every ship is carried along in a lane's middle
+-- R5: the world (islands, sea spacing, ships) is GameConfig.WorldScale bigger: lanes widen and drift faster with it
+do
+	local S = Islands.Scale or 1
+	C.HalfWidth *= S
+	C.Side *= S
+	C.Clear *= S
+	C.Drift *= S
+end
 
 C.Lanes = {}
 do

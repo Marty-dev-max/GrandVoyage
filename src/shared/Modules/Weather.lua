@@ -59,6 +59,20 @@ W.Whirl = {
 	SwirlIn = 0.6, -- the swirl is this much stronger at the eye than at 2 x Orbit
 }
 
+-- R5: the world (islands, sea spacing, ships and their speed) is GameConfig.WorldScale bigger: storms and whirlpools
+-- grow with it (sizes and the speeds they push ships at), so they feel the same next to a bigger ship
+do
+	local S = Islands.Scale or 1
+	local st, wh = W.Storm, W.Whirl
+	st.Radius = { st.Radius[1] * S, st.Radius[2] * S }
+	st.Speed = { st.Speed[1] * S, st.Speed[2] * S }
+	st.Shove *= S
+	st.ClearIsland *= S
+	for _, k in ipairs({ "Radius", "Core", "Pull", "Swirl", "Depth", "Pit", "Sling", "SlingGain", "SlingDecay", "Orbit" }) do
+		wh[k] *= S
+	end
+end
+
 -- the sea weather lives in: east of the first island, short of the Red Line, inside the windy lane
 W.MinX = -300
 W.MaxX = Islands.RedLine.x - Islands.RedLine.thickness / 2 - 400

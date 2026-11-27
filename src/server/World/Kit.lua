@@ -76,6 +76,9 @@ function Kit.P(size, color, cf, opts)
 	if opts.name then
 		p.Name = opts.name
 	end
+	if Kit.humanAt then
+		p:SetAttribute("HumanAt", Kit.humanAt) -- R5: people-size prop, keeps its size when the island is scaled
+	end
 	if opts.decor then
 		p.CanQuery = false
 		p.CanTouch = false
@@ -121,6 +124,22 @@ local function decor(opts)
 	return opts
 end
 Kit.decor = decor
+
+-- R5 (remake): build a people-size prop (barrel, crate, lamp, bench, stall): every part made inside carries the
+-- attribute HumanAt = `at` (the point it stands on). WorldBuilder scales islands by GameConfig.WorldScale but moves
+-- these props with the ground instead of growing them. An outer Kit.Human wins (a crate stack moves as one).
+function Kit.Human(at, fn, ...)
+	if Kit.humanAt then
+		return fn(...)
+	end
+	Kit.humanAt = at
+	local ok, a, b = pcall(fn, ...)
+	Kit.humanAt = nil
+	if not ok then
+		error(a, 0)
+	end
+	return a, b
+end
 
 function Kit.Model(name)
 	local m = Instance.new("Model")
@@ -315,6 +334,9 @@ end
 -- v0.25.113 (owner: the map barrels were plain blocky posts, make them like the title-menu ones): a bulging voxel
 -- barrel = octagon slices (two crossed blocks each), iron hoops, a plank lid. No rng (keeps every island's stream).
 function Kit.Barrel(pos)
+	return Kit.Human(pos, Kit._barrel, pos)
+end
+function Kit._barrel(pos)
 	local k = 1.12
 	local cf = CFrame.new(pos)
 	local staves, hoop = Color3.fromRGB(150, 92, 50), Color3.fromRGB(58, 50, 46)
@@ -335,6 +357,9 @@ end
 
 -- v0.25.113: crates get a dark frame (corner posts + top and bottom rims) and a plank face, like voxel crates
 function Kit.Crate(pos, size, yaw)
+	return Kit.Human(pos, Kit._crate, pos, size, yaw)
+end
+function Kit._crate(pos, size, yaw)
 	size = size or 2.4
 	local cf = CFrame.new(pos + Vector3.new(0, size / 2, 0)) * CFrame.Angles(0, yaw or rng:NextNumber(0, 1.5), 0)
 	P(Vector3.one * size, C.LightWood, cf, decor({ material = M.WoodPlanks }))
@@ -353,6 +378,9 @@ function Kit.Crate(pos, size, yaw)
 end
 
 function Kit.CrateStack(pos)
+	return Kit.Human(pos, Kit._crateStack, pos)
+end
+function Kit._crateStack(pos)
 	Kit.Crate(pos, 2.6)
 	Kit.Crate(pos + Vector3.new(2.8, 0, 0.4), 2.4)
 	Kit.Crate(pos + Vector3.new(1.3, 2.6, 0.2), 2.2)
@@ -360,6 +388,9 @@ function Kit.CrateStack(pos)
 end
 
 function Kit.Lamp(pos)
+	return Kit.Human(pos, Kit._lamp, pos)
+end
+function Kit._lamp(pos)
 	P(Vector3.new(0.5, 8, 0.5), Color3.fromRGB(50, 50, 58), CFrame.new(pos + Vector3.new(0, 4, 0)), decor({ material = M.Metal }))
 	local bulb = P(Vector3.new(1.4, 1.6, 1.4), Color3.fromRGB(255, 220, 140), CFrame.new(pos + Vector3.new(0, 8.6, 0)), decor({ material = M.Neon, collide = false }))
 	Wedge(Vector3.new(2, 0.8, 1), Color3.fromRGB(50, 50, 58), CFrame.new(pos + Vector3.new(0, 9.7, 0.5)), decor({ collide = false }))
@@ -373,6 +404,9 @@ function Kit.Lamp(pos)
 end
 
 function Kit.Bench(cf)
+	return Kit.Human(cf.Position, Kit._bench, cf)
+end
+function Kit._bench(cf)
 	P(Vector3.new(5, 0.4, 1.6), C.LightWood, cf * CFrame.new(0, 1.4, 0), decor({ material = M.Wood }))
 	P(Vector3.new(5, 1.4, 0.3), C.LightWood, cf * CFrame.new(0, 2.3, 0.7), decor({ material = M.Wood }))
 	for _, x in ipairs({ -2, 2 }) do
@@ -396,6 +430,9 @@ function Kit.Fence(a, b, color)
 end
 
 function Kit.Stall(cf, awning)
+	return Kit.Human(cf.Position, Kit._stall, cf, awning)
+end
+function Kit._stall(cf, awning)
 	awning = awning or Color3.fromRGB(240, 80, 70)
 	P(Vector3.new(7, 2.6, 3), C.LightWood, cf * CFrame.new(0, 1.3, 0), decor({ material = M.WoodPlanks }))
 	for _, x in ipairs({ -3.3, 3.3 }) do

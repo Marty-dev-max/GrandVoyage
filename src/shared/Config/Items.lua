@@ -217,6 +217,9 @@ add("RoastShank", { name = "Roast Shank", desc = "Restores 35% HP.", kind = "Con
 add("SeaGrog", { name = "Sea Grog", desc = "Restores 45% SP.", kind = "Consumable", healSp = 0.45, price = 420, stack = true, cd = 2, rarity = "Uncommon" })
 add("CaptainsKeg", { name = "Captain's Keg", desc = "Restores 70% SP.", kind = "Consumable", healSp = 0.7, price = 1100, stack = true, cd = 3, rarity = "Uncommon" })
 add("RepairKit", { name = "Ship Repair Kit", desc = "Repairs 20% of your ship's HP.", kind = "Consumable", shipRepair = 0.2, price = 1200, stack = true, cd = 8, rarity = "Uncommon" })
+-- remake 0.1.11 (owner): Doctor / Shipwright Mastery for everyone, whatever weapon you hold (the arts only make it faster)
+add("PatchPlanks", { name = "Patch Planks", desc = "Anyone can nail them on: repairs 6% of your ship's HP. Trains Shipwright Mastery.", kind = "Consumable", shipRepair = 0.06, price = 150, stack = true, cd = 3, rarity = "Common" })
+add("Bandage", { name = "Bandage", desc = "Heals the most hurt party member near you (or yourself) by 25% HP. Trains Doctor Mastery.", kind = "Consumable", allyHeal = 0.25, price = 60, stack = true, cd = 3, rarity = "Common" })
 add("CaptainsLog", { name = "Captain's Log", desc = "+50% EXP for 30 minutes.", kind = "Consumable", expBoost = 1800, price = 2000, stack = true, cd = 1, rarity = "Rare" })
 add("RefineGuard", { name = "Willpower Charm", desc = "Prevents downgrade and breaking on a failed refine.", kind = "Consumable", price = 50000, stack = true, special = "RefineGuard", rarity = "Legendary" })
 
@@ -275,7 +278,7 @@ end
 
 -- General store stock
 local Shop = {
-	"MeatOnBone", "RoastShank", "BigFeast", "TangerineJuice", "SeaGrog", "CaptainsKeg", "RepairKit", "SeaBait", "SteelOre", "Wood", "SailCloth",
+	"MeatOnBone", "RoastShank", "BigFeast", "TangerineJuice", "SeaGrog", "CaptainsKeg", "Bandage", "PatchPlanks", "RepairKit", "SeaBait", "SteelOre", "Wood", "SailCloth",
 	"SailorVest", "Bandana", "CompassCharm", "SeastoneBracer", "BeardDark", "BeardBrown", "ClownWig",
 	"Ammo_Musket",
 	"Knuckles_Plain", "Sword_Plain", "Slingshot_Plain", "Shoes_Plain", "StormBaton_Plain", "MedKit_Plain", "Hammer_Plain",

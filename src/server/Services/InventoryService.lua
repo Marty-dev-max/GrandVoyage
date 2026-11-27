@@ -240,8 +240,48 @@ local function setup()
 			return false
 		end
 		if def.shipRepair then
+			local ship = R.ShipService.GetShipOf(player)
+			if ship and ship.hp and ship.maxHp and ship.hp >= ship.maxHp then
+				return false, "Your ship is not damaged"
+			end
 			if not R.ShipService.RepairOwned(player, def.shipRepair) then
 				return false, "You must be aboard your own ship"
+			end
+		end
+		-- remake 0.1.11 Bandage: the most hurt party member within reach (never a downed one: that is a revive), else
+		-- yourself. Goes through CombatService.HealPlayer with you as the healer = healMult + Doctor Mastery XP.
+		if def.allyHeal then
+			local myRoot = R.PlayerService.Root(player)
+			local function hurt(m)
+				local mh = R.PlayerService.Humanoid(m)
+				local mr = R.PlayerService.Root(m)
+				if not (mh and mr and myRoot) or mh.Health <= 0 or R.KnockdownService.IsDowned(m) then
+					return nil
+				end
+				if (mr.Position - myRoot.Position).Magnitude > 20 then
+					return nil
+				end
+				local ratio = mh.Health / math.max(1, mh.MaxHealth)
+				return ratio < 0.999 and ratio or nil
+			end
+			-- others first (the most hurt), yourself only when nobody else needs it
+			local best, bestRatio = nil, 1
+			for _, m in ipairs(R.PartyService.Members(player)) do
+				local ratio = m ~= player and hurt(m)
+				if ratio and ratio < bestRatio then
+					best, bestRatio = m, ratio
+				end
+			end
+			if not best and hurt(player) then
+				best = player
+			end
+			if not best then
+				return false, "Nobody near you is hurt"
+			end
+			local bh = R.PlayerService.Humanoid(best)
+			R.CombatService.HealPlayer(best, bh.MaxHealth * def.allyHeal, player)
+			if best ~= player then
+				R.PlayerService.Notify(best, player.DisplayName .. " patched you up!", "good")
 			end
 		end
 		-- v0.25.77 Sea Cook Hearty Meal: a feast buff makes food and drinks heal more (buff stat foodHeal)

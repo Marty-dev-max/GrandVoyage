@@ -3465,6 +3465,9 @@ function Panels.Settings(args)
 			devGrid("Cursed Fruits", "🍎", T.Pink, fruitButtons)
 			devGrid("Role", "🏴", T.Red, { { "Four Tempests", "role", "FourTempests" }, { "Seven Privateers", "role", "SevenPrivateers" }, { "Remove Role", "role", "none" } })
 			devGrid("Toki", "👑", T.Gold, { { "Conqueror Toki", "toki", "Conqueror" }, { "Remove Toki", "toki", "none" } })
+			-- remake M6 tests: weather spawns where the server sees your ship (or you); Navigator levels change the save
+			devGrid("Sea Weather", "⛈", T.Purple, { { "Storm Here", "storm", "storm" }, { "Whirlpool Ahead", "storm", "whirl" }, { "Clear Test Weather", "storm", "clear" },
+				{ "Navigator Lv30", "field", "Navigator:30" }, { "Navigator Lv50", "field", "Navigator:50" }, { "Navigator Lv3 (back)", "field", "Navigator:3:24" } })
 			devGrid("Pets & World", "🐾", T.Green, { { "Eggs + Bait", "eggs" }, { "Pet +15 Lv", "petlevel" }, { "Reset Chests", "chestreset" }, { "Model Gallery", "models" }, { "Guild War", "gw_start" }, { "End War", "gw_end" } })
 			-- time of day preview (client only)
 			UI.Section(list, "🌅", "Time of Day", T.Gold)

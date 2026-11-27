@@ -1180,6 +1180,11 @@ local function damageFX(d)
 		VFX.Sparks(d.pos - Vector3.new(0, 1, 0), color, 3, 3)
 		return
 	end
+	-- remake damage types (Config/DamageTypes): your own hits say when they found the weak spot or got resisted
+	if d.src == localPlayer.UserId and (d.match == "weak" or d.match == "resist") then
+		local weak = d.match == "weak"
+		VFX.Number(d.pos + Vector3.new(0, 2.2, 0), weak and "WEAK!" or "RESIST", weak and Color3.fromRGB(120, 245, 130) or Color3.fromRGB(170, 170, 185), false, nil, 0.75)
+	end
 	-- every hit flashes; crits get focus lines and a shockwave (anime impact frame)
 	local hitPos = d.pos - Vector3.new(0, 1.5, 0)
 	if d.crit then

@@ -7,7 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local ClassesCfg = require(Shared.Config.Classes)
 local Monsters = require(Shared.Config.Monsters)
-local MonsterTypes = require(Shared.Config.MonsterTypes)
+local DamageTypes = require(Shared.Config.DamageTypes)
 local ItemDB = require(Shared.Modules.ItemDB)
 local Rarity = require(Shared.Modules.Rarity)
 local FruitsCfg = require(Shared.Config.Fruits)
@@ -1194,8 +1194,8 @@ function HUD.updateBossPanel(tgt, underIntro)
 		return
 	end
 	local focus = tgt:GetAttribute("BossFocus")
-	local ty = focus and MonsterTypes[focus]
-	HUD.bossFocus.Text = ty and ("DMG FOCUS: " .. ty.name .. " x" .. string.format("%.1f", MonsterTypes.Bonus or 1.2)) or ""
+	local ty = focus and DamageTypes.Info[focus]
+	HUD.bossFocus.Text = ty and ("WEAK TO: " .. string.upper(ty.name) .. " x" .. string.format("%.1f", DamageTypes.Weak)) or ""
 	HUD.bossFocus.TextColor3 = ty and ty.color or T.Text
 	local share = {}
 	for entry in string.gmatch(tgt:GetAttribute("DmgShare") or "", "[^;]+") do

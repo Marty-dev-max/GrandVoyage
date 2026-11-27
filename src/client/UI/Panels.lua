@@ -4694,7 +4694,7 @@ local BLADE_LEDGER = {
 	{ "Awakened", "Twenty Tides, Awakened", "Coming soon" },
 }
 local indexTab = "Blades"
-local Types = require(Shared.Config.MonsterTypes)
+local Types = require(Shared.Config.DamageTypes)
 function Panels.Index()
 	local win = UI.Window("Index", "Index", UDim2.fromOffset(980, 600), T.Gold, "📖", { fullscreen = true })
 	local body = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Parent = win.body })
@@ -4808,9 +4808,10 @@ function Panels.Index()
 							line(c, 26, "?", 44, T.TextSoft, "Display")
 						end
 						line(c, 100, k > 0 and d.name or "???", 14, T.Text)
-						local ty = Types[d.mtype or ""]
-						local tl = line(c, 122, "Lv." .. d.level .. (ty and ("  " .. d.mtype) or ""), 12, ty and ty.color or T.TextSoft)
-						tl.TextColor3 = ty and ty.color or T.TextSoft
+						-- remake: weak (+) / resist (-) damage types once you have met it (Config/DamageTypes)
+						local res, weak = Types.Pair(d.id)
+						local tl = line(c, 122, "Lv." .. d.level .. ((k > 0 and weak) and ("  +" .. string.upper(weak) .. " -" .. string.upper(res)) or ""), 12, T.TextSoft)
+						tl.TextColor3 = T.TextSoft
 						line(c, 144, string.rep("★", d.stars or 1), 12, T.Gold)
 						line(c, 166, k > 0 and ("Defeated " .. UI.Format(k)) or "Not met yet", 12, k > 0 and T.Green or T.TextSoft, "Display")
 					end

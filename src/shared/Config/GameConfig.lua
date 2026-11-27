@@ -4,15 +4,15 @@ return {
 	LogoLines = { "LARPTALES", "VOXEL SEAS" },
 	LogoImage = 133908417032160, -- v0.25.87: pixel logo board floating behind the menu character (tools/gen_logo.py); nil = text logo
 	-- bump on every change: shown bottom-right in game and printed in Output, so you can tell which code is running
-	Version = "0.1.6-remake",
+	Version = "0.1.7-remake",
 	SagaName = "Azure East Saga",
 	-- title menu UPDATE LOG lines (newest first, at most 6: more ran off the top of the screen, v0.25.156)
 	UpdateNotes = {
+		"Damage types: Slash, Blunt, Pierce, Element. Monsters show weak (+) and resist (-)",
 		"New stats: Vitality, Endurance, Willpower, Weaponry, Martial Arts, Fruit Mastery (300 cap)",
 		"Parkour: climb, wall run, ledge hang, vault, slide, roll",
 		"HP / SP / EXP are slim tubes; hotbar hides when calm",
 		"No Auto Battle: you fight yourself",
-		"Cleaner screen: menu is one row of icons, fewer buttons",
 		"Hold F to block, tap F just before a hit to parry",
 	},
 	DataStoreName = "GV_Player_r1",

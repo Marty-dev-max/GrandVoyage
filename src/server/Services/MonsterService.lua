@@ -4,7 +4,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local Reach = require(Shared.Modules.Reach)
 local Monsters = require(Shared.Config.Monsters)
-local MonsterTypes = require(Shared.Config.MonsterTypes)
+local DamageTypes = require(Shared.Config.DamageTypes)
+local Icons = require(Shared.Config.Icons)
 local GameConfig = require(Shared.Config.GameConfig)
 local Islands = require(Shared.Config.Islands)
 local ItemDB = require(Shared.Modules.ItemDB)
@@ -65,11 +66,9 @@ local function bossAttrs(mob)
 		table.insert(parts, (l[1]:gsub("[|;]", "")) .. "|" .. l[2])
 	end
 	mob.model:SetAttribute("BossDrops", table.concat(parts, ";"))
-	for k, v in pairs(MonsterTypes) do
-		if type(v) == "table" and v.beats and def.mtype and table.find(v.beats, def.mtype) then
-			mob.model:SetAttribute("BossFocus", k)
-		end
-	end
+	-- remake: the damage type this boss is weak to (Config/DamageTypes)
+	local _, weak = DamageTypes.Pair(def.id)
+	mob.model:SetAttribute("BossFocus", weak)
 end
 
 local function shareUpdate(mob)
@@ -106,31 +105,50 @@ local function makeBar(mob)
 	local elite = mob.def.mini ~= nil -- v0.25.148 mini boss: gold ELITE plate, no boss intro / music
 	local bb = ModelFactory.Billboard(root, mob.def.name, (elite and "ELITE  " or "") .. "Lv." .. mob.def.level .. "  " .. string.rep("★", mob.def.stars or 1),
 		mob.def.isBoss and Color3.fromRGB(255, 90, 90) or elite and Color3.fromRGB(255, 205, 70) or Color3.new(1, 1, 1), 3 + (mob.def.style.scale or 1) * 2.5)
-	-- type badge (v0.25.18): colored square with the type's kanji left of the name
-	local ty = mob.def.mtype and MonsterTypes[mob.def.mtype]
-	if ty then
-		local badge = Instance.new("TextLabel")
-		badge.Name = "TypeBadge"
-		badge.Position = UDim2.fromOffset(0, 0)
-		badge.Size = UDim2.new(0, 30, 0.55, 0)
-		badge.BackgroundColor3 = ty.color
-		badge.BorderSizePixel = 0
-		badge.Font = Enum.Font.GothamBlack
-		badge.TextScaled = true
-		badge.Text = ty.kanji
-		badge.TextColor3 = Color3.new(1, 1, 1)
-		badge.TextStrokeTransparency = 0.4
-		badge.Parent = bb
+	-- remake damage types (Config/DamageTypes): weak chip (green, "+") at the left end of the level line, resist chip
+	-- (red, "-") at the right end, each showing its type's icon
+	local res, weak = DamageTypes.Pair(mob.def.id)
+	local function chip(name, dtype, xScale, anchorX, rim, sign)
+		local info = DamageTypes.Info[dtype]
+		local f = Instance.new("Frame")
+		f.Name = name
+		f.AnchorPoint = Vector2.new(anchorX, 0)
+		f.Position = UDim2.new(xScale, anchorX == 0 and 4 or -4, 0.55, 0)
+		f.Size = UDim2.fromOffset(24, 24)
+		f.BackgroundColor3 = Color3.fromRGB(24, 22, 34)
+		f.BackgroundTransparency = 0.15
+		f.BorderSizePixel = 0
+		f.Parent = bb
 		local st = Instance.new("UIStroke")
 		st.Thickness = 2
-		st.Color = Color3.fromRGB(20, 20, 30)
+		st.Color = rim
 		st.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-		st.Parent = badge
-		local title = bb:FindFirstChild("Title")
-		if title then
-			title.Position = UDim2.fromOffset(34, 0)
-			title.Size = UDim2.new(1, -34, 0.55, 0)
-		end
+		st.Parent = f
+		local img = Instance.new("ImageLabel")
+		img.BackgroundTransparency = 1
+		img.Size = UDim2.fromScale(0.86, 0.86)
+		img.Position = UDim2.fromScale(0.07, 0.07)
+		img.Image = Icons[info.icon] or ""
+		img.ResampleMode = Enum.ResamplerMode.Pixelated
+		img.ImageTransparency = sign == "-" and 0.25 or 0
+		img.Parent = f
+		local s = Instance.new("TextLabel")
+		s.BackgroundTransparency = 1
+		s.AnchorPoint = Vector2.new(1, 1)
+		s.Position = UDim2.new(1, 5, 1, 4)
+		s.Size = UDim2.fromOffset(13, 13)
+		s.Font = Enum.Font.Arcade
+		s.TextScaled = true
+		s.Text = sign
+		s.TextColor3 = rim
+		s.TextStrokeTransparency = 0
+		s.Parent = f
+	end
+	if weak then
+		chip("WeakChip", weak, 0, 0, Color3.fromRGB(110, 235, 120), "+")
+	end
+	if res then
+		chip("ResistChip", res, 1, 1, Color3.fromRGB(235, 80, 80), "-")
 	end
 	bb.Size = UDim2.fromOffset(mob.def.isBoss and 260 or elite and 210 or 170, 62)
 	bb.MaxDistance = mob.def.isBoss and 260 or elite and 160 or 110
@@ -463,7 +481,8 @@ function MS.Provoke(mob, player)
 end
 
 -- kind (optional) colors the number on clients: fire, burn, poison, ice, shock, pierce, pet, cannon
-function MS.Damage(mob, amount, player, crit, kind)
+-- match = "weak" / "resist" from Config/DamageTypes (CombatService hitTarget): a tag over the number
+function MS.Damage(mob, amount, player, crit, kind, match)
 	if mob.dead then
 		return
 	end
@@ -481,7 +500,7 @@ function MS.Damage(mob, amount, player, crit, kind)
 		R.KnockdownService.OnMobHit(mob, player)
 		MS.Provoke(mob, player)
 	end
-	Net.FX("Damage", { pos = mob.root.Position + Vector3.new(0, 3, 0), amount = amount, crit = crit, kind = kind, src = player and player.UserId or 0, model = mob.model }, mob.root.Position, 250)
+	Net.FX("Damage", { pos = mob.root.Position + Vector3.new(0, 3, 0), amount = amount, crit = crit, kind = kind, match = match, src = player and player.UserId or 0, model = mob.model }, mob.root.Position, 250)
 	if mob.walkTrack and os.clock() - (mob.hitAnimAt or 0) > 0.35 then
 		mob.hitAnimAt = os.clock()
 		Anim.Play(mob.hum, mob.hitClip or "Mon_Hit", { fade = 0.03 })

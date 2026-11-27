@@ -4,7 +4,7 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local ClassesCfg = require(Shared.Config.Classes)
-local MonsterTypes = require(Shared.Config.MonsterTypes)
+local DamageTypes = require(Shared.Config.DamageTypes)
 local Reach = require(ReplicatedStorage.Shared.Modules.Reach)
 local Formulas = require(Shared.Modules.Formulas)
 local Net = require(Shared.Modules.Net)
@@ -12,12 +12,6 @@ local GameConfig = require(Shared.Config.GameConfig)
 
 local Combat = {}
 local R
--- v0.25.37: the player's class type (Config/Classes mtype) for the type matchups
-local function classType(player)
-	local p = R and R.DataService.Get(player)
-	local c = p and ClassesCfg.Classes[p.class]
-	return c and c.mtype
-end
 local buffs = {} -- player -> { {id, stats, expires} }
 local lastAttack = {}
 local skillCd = {} -- player -> { skillId -> time }
@@ -307,8 +301,8 @@ function Combat.MonsterHit(mob, player, mult)
 		return
 	end
 	local crit = mob.def.critChance and math.random() < mob.def.critChance
-	local typeK = MonsterTypes.Mult(mob.def.mtype, classType(player))
-	local dmg = Formulas.Damage(mob.def.atk, d.def, (mult or 1) * typeK * (crit and 1.5 or 1), mob.def.isBoss and 5 or 1)
+	-- remake: no class type matchup any more (damage types only change what players deal to monsters)
+	local dmg = Formulas.Damage(mob.def.atk, d.def, (mult or 1) * (crit and 1.5 or 1), mob.def.isBoss and 5 or 1)
 	-- remake R1: dash i-frames, Block (front, x0.3 + posture) and Parry (the monster is dazed) come first
 	local guarded, gk = R.GuardService.Check(player, mob.root and mob.root.Position, dmg, { boss = mob.def.isBoss })
 	if gk == "parry" then
@@ -418,7 +412,10 @@ local function hitTarget(attacker, target, mult, magic, opts)
 		if mob.def.style and mob.def.style.shape == "fishman" then
 			bonus += d.dmgVsSeafolk
 		end
-		bonus *= MonsterTypes.Mult(classType(attacker), mob.def.mtype)
+		-- remake: damage types (Config/DamageTypes). Fruit hits are Element, everything else follows the weapon.
+		local dtype = opts.dtype or (magic == "fruit" and "Element") or DamageTypes.OfWeapon(weaponType(attacker))
+		local typeK, match = DamageTypes.Mult(dtype, mob.def.id)
+		bonus *= typeK
 		local mdef = opts.ignoreDef and 0 or (spell and mob.def.def * 0.5 or mob.def.def)
 		local dmg, isCrit = Formulas.Damage(atk, mdef, mult * bonus, spell and 0 or crit)
 		if opts.split and not mob.def.isBoss then
@@ -428,7 +425,7 @@ local function hitTarget(attacker, target, mult, magic, opts)
 		else
 			mob.splitKill = nil
 		end
-		R.MonsterService.Damage(mob, dmg, attacker, isCrit, opts.element)
+		R.MonsterService.Damage(mob, dmg, attacker, isCrit, opts.element, match)
 		R.PetService.OnOwnerHit(attacker, mob)
 		-- knockback on the hits that should feel heavy (combo finisher, Heavy Attack, strong skills; crits a little)
 		local knock = opts.knock or (isCrit and 2.5 or nil)
@@ -1101,6 +1098,10 @@ local function setup()
 		if skill.split then
 			skillOpts = skillOpts or {}
 			skillOpts.split = skill.split -- v0.25.77 Swordsman: a kill by this skill cuts the monster in two
+		end
+		if skill.dtype then
+			skillOpts = skillOpts or {}
+			skillOpts.dtype = skill.dtype -- remake: a skill can name its own damage type (Config/DamageTypes)
 		end
 		-- knockback (v0.24.12): damage skills shove on their LAST hit; power = the skill's multiplier (Heavy Attack 2.2+)
 		local knockPower = skill.knockPower or (skill.heavy and math.max(2.2, mult)) or mult

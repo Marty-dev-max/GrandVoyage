@@ -640,6 +640,101 @@ C.Guard_Block = { rig = "R15", loop = true, priority = "Action", length = 0.8, k
 	{ t = 0.4, pose = with(BLOCK, { UpperTorso = { -12, 0, 0 }, RightUpperArm = { 80, 0, -32 }, LeftUpperArm = { 86, 0, 30 } }) },
 	{ t = 0.8, pose = BLOCK },
 } }
+-- ===== remake R1 parkour (Controllers/Parkour): climb, hang, mantle, vault, wall run, wall jump / flip, slide, roll =====
+-- Whole-body flips and rolls turn LowerTorso (the root joint) in 90 degree steps so every key-to-key blend takes the
+-- intended way round: +rx = head goes back (back flip), -rx = head goes forward (forward roll).
+local CLIMB_A = { RightUpperArm = { 165, 0, 8 }, RightLowerArm = { 20, 0, 0 }, LeftUpperArm = { 115, 0, -8 }, LeftLowerArm = { 70, 0, 0 },
+	RightUpperLeg = { 12, 0, 0 }, RightLowerLeg = { -25, 0, 0 }, LeftUpperLeg = { 62, 0, 0 }, LeftLowerLeg = { -85, 0, 0 },
+	UpperTorso = { -6, 4, 0 }, Head = { 12, 0, 0 } }
+local CLIMB_B = { RightUpperArm = { 115, 0, 8 }, RightLowerArm = { 70, 0, 0 }, LeftUpperArm = { 165, 0, -8 }, LeftLowerArm = { 20, 0, 0 },
+	RightUpperLeg = { 62, 0, 0 }, RightLowerLeg = { -85, 0, 0 }, LeftUpperLeg = { 12, 0, 0 }, LeftLowerLeg = { -25, 0, 0 },
+	UpperTorso = { -6, -4, 0 }, Head = { 12, 0, 0 } }
+C.Parkour_Climb = { rig = "R15", loop = true, priority = "Action", length = 0.7, keys = {
+	{ t = 0, pose = CLIMB_A }, { t = 0.35, pose = CLIMB_B }, { t = 0.7, pose = CLIMB_A },
+} }
+local HANG = { RightUpperArm = { 168, 0, 12 }, RightLowerArm = { 14, 0, 0 }, LeftUpperArm = { 168, 0, -12 }, LeftLowerArm = { 14, 0, 0 },
+	RightUpperLeg = { 12, 0, 0 }, RightLowerLeg = { -18, 0, 0 }, LeftUpperLeg = { 4, 0, 0 }, LeftLowerLeg = { -10, 0, 0 },
+	UpperTorso = { 4, 0, 0 }, Head = { 16, 0, 0 } }
+C.Parkour_Hang = { rig = "R15", loop = true, priority = "Action", length = 1.6, keys = {
+	{ t = 0, pose = HANG },
+	{ t = 0.8, pose = with(HANG, { RightUpperLeg = { 6, 0, 0 }, LeftUpperLeg = { 12, 0, 0 }, LeftLowerLeg = { -20, 0, 0 }, UpperTorso = { 2, 0, 0 } }) },
+	{ t = 1.6, pose = HANG },
+} }
+C.Parkour_Mantle = { rig = "R15", priority = "Action", keys = {
+	{ t = 0, pose = HANG },
+	{ t = 0.14, pose = { RightUpperArm = { 95, 0, 14 }, RightLowerArm = { 115, 0, 0 }, LeftUpperArm = { 95, 0, -14 }, LeftLowerArm = { 115, 0, 0 },
+		RightUpperLeg = { 78, 0, 0 }, RightLowerLeg = { -105, 0, 0 }, LeftUpperLeg = { 20, 0, 0 }, LeftLowerLeg = { -40, 0, 0 }, UpperTorso = { -18, 0, 0 } } },
+	{ t = 0.28, pose = { RightUpperArm = { -12, 0, 16 }, RightLowerArm = { 10, 0, 0 }, LeftUpperArm = { -12, 0, -16 }, LeftLowerArm = { 10, 0, 0 },
+		RightUpperLeg = { 40, 0, 0 }, RightLowerLeg = { -60, 0, 0 }, LeftUpperLeg = { 85, 0, 0 }, LeftLowerLeg = { -110, 0, 0 }, UpperTorso = { -28, 0, 0 } } },
+	{ t = 0.42, pose = { UpperTorso = { -8, 0, 0 }, RightUpperLeg = { 10, 0, 0 }, RightLowerLeg = { -15, 0, 0 } } },
+} }
+C.Parkour_Vault = { rig = "R15", priority = "Action", keys = {
+	{ t = 0, pose = { RightUpperArm = { 40, 0, 0 }, LeftUpperArm = { -30, 0, 0 }, UpperTorso = { -12, 0, 0 } } },
+	{ t = 0.12, pose = { RightUpperArm = { 55, 0, 10 }, RightLowerArm = { 5, 0, 0 }, LeftUpperArm = { 110, 0, -50 }, LeftLowerArm = { 30, 0, 0 },
+		RightUpperLeg = { 70, 0, 20 }, RightLowerLeg = { -95, 0, 0 }, LeftUpperLeg = { 75, 0, 20 }, LeftLowerLeg = { -100, 0, 0 },
+		UpperTorso = { -20, -10, -12 }, LowerTorso = { 0, 0, 18 }, Head = { 10, 0, 0 } } },
+	{ t = 0.26, pose = { RightUpperArm = { 20, 0, 30 }, LeftUpperArm = { 90, 0, -60 }, LeftLowerArm = { 20, 0, 0 },
+		RightUpperLeg = { 85, 0, 10 }, RightLowerLeg = { -60, 0, 0 }, LeftUpperLeg = { 60, 0, 10 }, LeftLowerLeg = { -50, 0, 0 },
+		UpperTorso = { -8, -6, -6 }, LowerTorso = { 0, 0, 10 } } },
+	{ t = 0.42, pose = { RightUpperLeg = { 30, 0, 0 }, RightLowerLeg = { -40, 0, 0 }, LeftUpperLeg = { -10, 0, 0 }, UpperTorso = { -10, 0, 0 } } },
+} }
+-- wall run: a running cycle, the wall-side arm reaching out to the wall (the body tilt comes from Parkour's AlignOrientation)
+local function wallRun(side)
+	local s = side == "L" and -1 or 1
+	local function key(k)
+		local p = {
+			RightUpperLeg = { 55 * k, 0, 0 }, RightLowerLeg = { k > 0 and -70 or -25, 0, 0 },
+			LeftUpperLeg = { -55 * k, 0, 0 }, LeftLowerLeg = { k > 0 and -25 or -70, 0, 0 },
+			RightUpperArm = { -45 * k, 0, 6 }, RightLowerArm = { 60, 0, 0 },
+			LeftUpperArm = { 45 * k, 0, -6 }, LeftLowerArm = { 60, 0, 0 },
+			UpperTorso = { -14, 0, 0 }, Head = { 8, 0, 0 },
+		}
+		if s < 0 then
+			p.LeftUpperArm = { 30, 0, -70 }
+			p.LeftLowerArm = { 15, 0, 0 }
+		else
+			p.RightUpperArm = { 30, 0, 70 }
+			p.RightLowerArm = { 15, 0, 0 }
+		end
+		return p
+	end
+	return { rig = "R15", loop = true, priority = "Action", length = 0.44, keys = {
+		{ t = 0, pose = key(1) }, { t = 0.22, pose = key(-1) }, { t = 0.44, pose = key(1) },
+	} }
+end
+C.Parkour_WallRunL = wallRun("L")
+C.Parkour_WallRunR = wallRun("R")
+C.Parkour_WallJump = { rig = "R15", priority = "Action", keys = {
+	{ t = 0, pose = { RightUpperLeg = { 60, 0, 0 }, RightLowerLeg = { -90, 0, 0 }, LeftUpperLeg = { 50, 0, 0 }, LeftLowerLeg = { -80, 0, 0 }, UpperTorso = { -15, 0, 0 } } },
+	{ t = 0.12, pose = { RightUpperArm = { 150, 0, 20 }, LeftUpperArm = { 150, 0, -20 }, RightUpperLeg = { -15, 0, 0 }, LeftUpperLeg = { 10, 0, 0 }, LeftLowerLeg = { -30, 0, 0 }, UpperTorso = { 8, 0, 0 } } },
+	{ t = 0.4, pose = {} },
+} }
+local TUCK = { RightUpperLeg = { 100, 0, 0 }, RightLowerLeg = { -120, 0, 0 }, LeftUpperLeg = { 100, 0, 0 }, LeftLowerLeg = { -120, 0, 0 },
+	RightUpperArm = { 60, 0, 10 }, RightLowerArm = { 90, 0, 0 }, LeftUpperArm = { 60, 0, -10 }, LeftLowerArm = { 90, 0, 0 }, Head = { -15, 0, 0 } }
+C.Parkour_WallFlip = { rig = "R15", priority = "Action2", keys = {
+	{ t = 0, pose = { RightUpperArm = { 150, 0, 20 }, LeftUpperArm = { 150, 0, -20 } } },
+	{ t = 0.1, pose = with(TUCK, { LowerTorso = { 90, 0, 0, 0, 0.8, 0 } }) },
+	{ t = 0.2, pose = with(TUCK, { LowerTorso = { 180, 0, 0, 0, 1.0, 0 } }) },
+	{ t = 0.3, pose = with(TUCK, { LowerTorso = { 270, 0, 0, 0, 0.8, 0 } }) },
+	{ t = 0.42, pose = { LowerTorso = { 360, 0, 0 }, RightUpperLeg = { 25, 0, 0 }, RightLowerLeg = { -30, 0, 0 }, RightUpperArm = { 40, 0, 40 }, LeftUpperArm = { 40, 0, -40 } } },
+	{ t = 0.55, pose = {} },
+} }
+C.Parkour_Roll = { rig = "R15", priority = "Action2", keys = {
+	{ t = 0, pose = with(TUCK, { LowerTorso = { 0, 0, 0, 0, -1.0, 0 }, UpperTorso = { -30, 0, 0 } }) },
+	{ t = 0.1, pose = with(TUCK, { LowerTorso = { -90, 0, 0, 0, -1.4, 0 } }) },
+	{ t = 0.2, pose = with(TUCK, { LowerTorso = { -180, 0, 0, 0, -1.6, 0 } }) },
+	{ t = 0.3, pose = with(TUCK, { LowerTorso = { -270, 0, 0, 0, -1.4, 0 } }) },
+	{ t = 0.4, pose = { LowerTorso = { -360, 0, 0, 0, -0.8, 0 }, RightUpperLeg = { 60, 0, 0 }, RightLowerLeg = { -90, 0, 0 }, LeftUpperLeg = { 20, 0, 0 }, LeftLowerLeg = { -60, 0, 0 }, UpperTorso = { -20, 0, 0 } } },
+	{ t = 0.55, pose = {} },
+} }
+local SLIDE = { LowerTorso = { 22, 0, 0, 0, -1.3, 0 }, UpperTorso = { -14, 0, 0 }, Head = { -10, 0, 0 },
+	RightUpperLeg = { 72, 0, 0 }, RightLowerLeg = { -6, 0, 0 }, LeftUpperLeg = { 30, 0, -8 }, LeftLowerLeg = { -95, 0, 0 },
+	RightUpperArm = { 35, 0, 35 }, RightLowerArm = { 30, 0, 0 }, LeftUpperArm = { -25, 0, -45 }, LeftLowerArm = { 10, 0, 0 } }
+C.Parkour_Slide = { rig = "R15", loop = true, priority = "Action", length = 0.6, keys = {
+	{ t = 0, pose = SLIDE },
+	{ t = 0.3, pose = with(SLIDE, { LowerTorso = { 20, 0, 0, 0, -1.25, 0 }, RightUpperArm = { 38, 0, 38 } }) },
+	{ t = 0.6, pose = SLIDE },
+} }
 -- Barrier Dome: arms raised wide, holding the dome up
 local DOME = { RightUpperArm = { 150, 0, 40 }, LeftUpperArm = { 150, 0, -40 }, RightLowerArm = { 20, 0, 0 }, LeftLowerArm = { 20, 0, 0 },
 	UpperTorso = { 8, 0, 0 }, Head = { 14, 0, 0 }, RightUpperLeg = { 0, 0, 12 }, LeftUpperLeg = { 0, 0, -12 }, LowerTorso = { 0, 0, 0, 0, -0.15, 0 } }

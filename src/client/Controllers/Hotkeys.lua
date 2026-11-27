@@ -12,6 +12,7 @@ local Hotkeys = {}
 Hotkeys.Actions = {
 	-- remake R1 (owner): F = Block / Parry, so skill 3 moved to V and Race mode to 7
 	{ "Block", "Block / Parry", "F" },
+	{ "Slide", "Slide (while running)", "LeftControl" },
 	{ "Skill1", "Skill 1", "E" }, { "Skill2", "Skill 2", "R" }, { "Skill3", "Skill 3", "V" },
 	{ "Skill4", "Skill 4", "Z" }, { "Skill5", "Skill 5", "X" }, { "Skill6", "Skill 6", "C" },
 	-- v0.25.71 (owner): 1-6 pick the skill SET (Shared/Modules/SkillSets), E R F Z X C cast that set's skills

@@ -33,6 +33,9 @@ local function canGuard(h)
 	if h:GetState() == Enum.HumanoidStateType.Swimming then
 		return false
 	end
+	if require(script.Parent.Parkour).Busy() then
+		return false -- remake R1: no guard while climbing, wall running or sliding
+	end
 	local okF, flying = pcall(function()
 		return require(script.Parent.Flight).IsFlying()
 	end)

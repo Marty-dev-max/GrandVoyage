@@ -25,6 +25,7 @@ local function blocked(char)
 	end)
 	return (ok and swimming) or (okF and flying) or char:GetAttribute("Downed") or player:GetAttribute("Vending")
 		or require(script.Parent.Parent.State).blocking -- remake R1: no running behind a raised guard
+		or (require(script.Parent.Parkour).Busy() and require(script.Parent.Parkour).Mode() ~= "slide") -- remake R1: climbing / wall running set their own speed (a slide keeps the run going)
 end
 
 function Sprint.Start()

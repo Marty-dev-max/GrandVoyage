@@ -7,6 +7,9 @@
 --     Pressing again within ParryCooldown opens no window, so mashing F never parries.
 --   Dodge: CombatService's Dash handler calls GS.OnDash; blows inside the i-frames miss ("DODGE").
 --   Falls: watched on the server from the replicated root velocity (no client report to trust).
+--     Parkour (Controllers/Parkour) may soften one: "grab" (a wall caught me: only counted with a wall within
+--     Parkour.GrabWall studs) cancels a fall that ends within GrabGrace s; "roll" (Dash key before landing) takes
+--     RollMult of the damage and raises the knock-down height by RollDownMult. Falls are judged 0.15 s late for that.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -17,6 +20,7 @@ local GS = {}
 local R
 local G = GameConfig.Guard
 local F = GameConfig.Fall
+local PK = GameConfig.Parkour
 local st = {} -- player -> { on, t0, lastStart, parryOpen, posture, hitAt, brokenUntil, dodgeUntil }
 
 function GS.Init(registry)
@@ -120,14 +124,20 @@ local function fallHit(player, drop)
 	if not hum or hum.Health <= 0 or player.Character:GetAttribute("Invulnerable") then
 		return
 	end
-	local k = math.min(F.Max, (drop - F.Safe) * F.PerStud)
+	local s = st[player]
+	local now = os.clock()
+	if s and now - (s.grabAt or -99) < PK.GrabGrace then
+		return -- caught a wall / ledge (Parkour)
+	end
+	local rolled = s ~= nil and now - (s.rollAt or -99) < PK.RollWindow + 0.25
+	local k = math.min(F.Max, (drop - F.Safe) * F.PerStud) * (rolled and PK.RollMult or 1)
 	local dmg = math.max(1, math.floor(hum.MaxHealth * k))
 	local root = R.PlayerService.Root(player)
 	if root then
-		Net.FX("Guard", { kind = "land", pos = root.Position - Vector3.new(0, 2.6, 0), char = player.Character, k = k }, root.Position, 200)
+		Net.FX("Guard", { kind = "land", pos = root.Position - Vector3.new(0, 2.6, 0), char = player.Character, k = k, roll = rolled or nil }, root.Position, 200)
 	end
 	R.CombatService.DamagePlayer(player, dmg, nil)
-	if drop >= F.DownAt and not R.KnockdownService.IsDowned(player) and hum.Health > 0 then
+	if drop >= F.DownAt * (rolled and PK.RollDownMult or 1) and not R.KnockdownService.IsDowned(player) and hum.Health > 0 then
 		R.KnockdownService.Down(player)
 	end
 end
@@ -156,6 +166,43 @@ function GS.Start()
 		publish(player, s)
 		return true
 	end, 0.02)
+
+	-- Parkour reports: "grab" = a wall stopped my fall (verified: a wall near the root), "roll" = landing roll armed
+	local wallRays = {}
+	for i = 0, 7 do
+		local a = i * math.pi / 4
+		table.insert(wallRays, Vector3.new(math.cos(a), 0, math.sin(a)) * PK.GrabWall)
+	end
+	Net.Handle("Parkour", function(player, data)
+		if type(data) ~= "table" then
+			return false
+		end
+		local s = S(player)
+		local root = R.PlayerService.Root(player)
+		if not root then
+			return false
+		end
+		if data.kind == "roll" then
+			s.rollAt = os.clock()
+			return true
+		elseif data.kind == "grab" then
+			local rp = RaycastParams.new()
+			rp.FilterType = Enum.RaycastFilterType.Exclude
+			rp.FilterDescendantsInstances = { player.Character }
+			rp.RespectCanCollide = true
+			for _, y in ipairs({ 0, 1.5, -1 }) do
+				for _, dir in ipairs(wallRays) do
+					local hit = workspace:Raycast(root.Position + Vector3.new(0, y, 0), dir, rp)
+					if hit and math.abs(hit.Normal.Y) < 0.4 then
+						s.grabAt = os.clock()
+						return true
+					end
+				end
+			end
+			return false
+		end
+		return false
+	end, 0.1)
 
 	Players.PlayerRemoving:Connect(function(player)
 		st[player] = nil
@@ -214,7 +261,7 @@ function GS.Start()
 					local drop, impact = f.peak - p.Y, -f.minV
 					f.peak = nil
 					if drop > F.Safe and impact > safeV and p.Y > SEA + 3 then
-						task.spawn(fallHit, player, drop)
+						task.delay(0.15, fallHit, player, drop) -- a beat late: a Parkour grab / roll report may still be on its way
 					end
 				end
 			end

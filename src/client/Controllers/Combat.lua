@@ -51,6 +51,11 @@ local function m1Gap(interval)
 	return interval * ((inString and m1.n >= GameConfig.M1.Hits) and m.finish or m.quick)
 end
 local function m1Ready(interval)
+	-- remake R1 parkour: no swings while climbing, wall running, hanging or vaulting (a slide is fine)
+	local pk = require(script.Parent.Parkour).Mode()
+	if pk and pk ~= "slide" then
+		return false
+	end
 	return os.clock() - lastAttack >= m1Gap(interval)
 end
 -- a fresh press of the attack button / mouse (not the hold-repeat)
@@ -480,6 +485,10 @@ function Combat.CastSkill(skillId, targetModel, aim, charge)
 	if not skill then
 		return false
 	end
+	local pk = require(script.Parent.Parkour).Mode()
+	if pk and pk ~= "slide" then
+		return false -- remake R1: hands are busy on the wall
+	end
 	require(script.Parent.Guard).Lower() -- remake R1: so does a skill
 	if skill.kind == "Stairs" then
 		return Combat.StairsStart(skillId)
@@ -901,6 +910,11 @@ function Combat.Dash()
 		return
 	end
 	if h.Sit or h:GetState() == Enum.HumanoidStateType.Swimming or h:GetAttribute("Stunned") then
+		return
+	end
+	-- remake R1 parkour: the dash key just before a big landing = a roll (no stamina); no dash off a wall
+	local Parkour = require(script.Parent.Parkour)
+	if Parkour.Busy() or Parkour.TryRoll() then
 		return
 	end
 	-- remake R1: a dash costs stamina, drops the guard and gives the server's i-frames (GuardService.OnDash)

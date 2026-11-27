@@ -4,16 +4,16 @@ return {
 	LogoLines = { "LARPTALES", "VOXEL SEAS" },
 	LogoImage = 133908417032160, -- v0.25.87: pixel logo board floating behind the menu character (tools/gen_logo.py); nil = text logo
 	-- bump on every change: shown bottom-right in game and printed in Output, so you can tell which code is running
-	Version = "0.1.3-remake",
+	Version = "0.1.4-remake",
 	SagaName = "Azure East Saga",
 	-- title menu UPDATE LOG lines (newest first, at most 6: more ran off the top of the screen, v0.25.156)
 	UpdateNotes = {
+		"Parkour: climb, wall run, ledge hang, vault, slide, roll",
 		"HP / SP / EXP are slim tubes; hotbar hides when calm",
 		"No Auto Battle: you fight yourself",
 		"Cleaner screen: menu is one row of icons, fewer buttons",
 		"Hold F to block, tap F just before a hit to parry",
 		"Stamina for dash and sprint; dash dodges hits",
-		"REMAKE test build: new saves, nothing carries over",
 	},
 	DataStoreName = "GV_Player_r1",
 	GuildStoreName = "GV_Guild_r1",
@@ -182,6 +182,22 @@ return {
 	Fall = { Safe = 24, PerStud = 0.011, Max = 0.9, DownAt = 110, FallVel = 6 },
 	-- hit edges (owner: thin red gradient, "just visible", no blood): alpha from damage / max HP, fades in Fade s
 	HurtEdge = { Strongest = 0.45, Weakest = 0.85, Fade = 0.4 },
+	-- Parkour (remake R1, S1-S7 + S10; Controllers/Parkour, server checks in GuardService). Speeds in studs/s, costs in stamina.
+	-- Space in the air at a wall = climb (W up, S down, A/D sideways, Space = flip off), beside a wall while running fast
+	-- = wall run (Space = jump off, chain to the next wall), falling past a ledge while pushing into the wall = hang
+	-- (W / Space = climb up, S = let go). Space into a low wall = vault (running into it vaults by itself).
+	-- Ctrl while running = slide (Space = slide jump). Dash key just before landing a big fall = roll (less damage).
+	Parkour = {
+		ClimbSpeed = 11, ClimbSide = 8, ClimbPerSec = 16, ClimbStart = 8,
+		WallRunTime = 1.2, WallRunPerSec = 18, WallRunUp = 7, WallRunMinSpeed = 20,
+		WallJumpOut = 30, WallJumpUp = 44,
+		HangPerSec = 4, MantleTime = 0.38,
+		VaultMin = 1.3, VaultMax = 4.8, VaultTime = 0.4, VaultDepth = 6, VaultReach = 3.2,
+		SlideCost = 12, SlideTime = 0.8, SlideBoost = 1.3, SlideJump = 1.15,
+		RollWindow = 0.8, RollMult = 0.35, RollDownMult = 1.6, RollNear = 18, RollFall = 40,
+		GrabGrace = 0.6, -- the server skips a fall that ends on a wall grab (checked: a wall within GrabWall studs)
+		GrabWall = 4.5,
+	},
 	-- hotbar: 12 skill slots (keys 1-6, then 7 8 9 0 - =) and 8 quick item slots (F1-F8); empty slot = ""
 	SkillBarSize = 6, -- v0.25.71: E R F Z X C = the 6 skills of the picked set (Shared/Modules/SkillSets)
 	ItemBarSize = 8,

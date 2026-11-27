@@ -1234,6 +1234,17 @@ The owner tests in Studio and sends screenshots; previews of new art are rendere
    game (only its own fixes). The owner switches the mirror folder with `update.bat` (-> main) / `update-remake.bat`
    (-> remake). Keep each .bat byte-identical on both branches (git swaps a running .bat otherwise). The remake uses its
    own DataStores (`GV_*_r1` names in GameConfig / Pearls) and Version strings ending in `-remake`.
+   NEVER check out `remake` (or `main`) itself in a session worktree: git refuses to check out a branch another worktree
+   holds, so the owner's .bat (and Rojo, which serves the owner's folder) would be stuck. Work on a `claude/...` branch
+   and `git push origin HEAD:remake`; to test in Studio, `git pull` inside the owner's folder only while it is on
+   `remake` (a pull while it sits on main merges remake INTO main: happened once, fixed with `git branch -f main`).
+   Remake answers so far: docs/Plan-Remake.md sec 12.
+   R1a (0.1.1-remake): `Services/GuardService` (Block F / Parry / Posture / dash i-frames / server-side fall damage,
+   called from CombatService.MonsterHit + PvP hitTarget + Dash), client `Controllers/Stamina` (dash, sprint; bars under
+   the screen centre, hidden when full), `Controllers/Guard` (F hold, BLOCK touch button, clip Guard_Block NOT uploaded:
+   plays in Studio only), `Controllers/HurtEdge` (thin red edge per hit), VFX handlers.Guard. Checked in Play vs
+   Mountain Bandits: block 37 -> 11, parry = DAZED, dash = DODGE, 70-stud fall -49% HP, 130 studs = knocked down.
+   MCP keyDown does not keep a key held (IsKeyDown false): test held keys by invoking the Request remote from the client.
 1. Wait for the owner's verdict on v0.10.3 (hills/flowers/grass); fix what they point at.
 2. Voxel art pass: monsters DONE v0.11.0 (voxel_monsters.py; AssetService sizes = shape base x style.scale,
    MonsterService.RefreshModels swaps placeholder island mobs). Pets + fruits DONE v0.11.1 (voxel_pets.py).

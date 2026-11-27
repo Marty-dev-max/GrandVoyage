@@ -2092,6 +2092,15 @@ handlers.Cannonball = function(d)
 		VFX.Projectile(d.from, d.to, Color3.fromRGB(170, 175, 185), 0.9, d.t, math.clamp(dist * 0.04, 2, 10), Color3.fromRGB(200, 170, 120))
 	elseif d.kind == "firepot" then
 		VFX.Projectile(d.from, d.to, Color3.fromRGB(255, 130, 40), 1.8, d.t, arc, Color3.fromRGB(255, 90, 30))
+	elseif d.kind == "chain" then
+		-- Mastery v2 M3: Chain Shot = two linked iron balls flying side by side, a rusty trail between them
+		local side = (d.to - d.from):Cross(Vector3.yAxis)
+		side = side.Magnitude > 0.01 and side.Unit * 1.1 or Vector3.xAxis
+		VFX.Projectile(d.from + side, d.to + side, Color3.fromRGB(60, 58, 62), 1.1, d.t, arc, Color3.fromRGB(150, 110, 80))
+		VFX.Projectile(d.from - side, d.to - side, Color3.fromRGB(60, 58, 62), 1.1, d.t, arc, Color3.fromRGB(150, 110, 80))
+	elseif d.kind == "bomb" then
+		-- Bomb Shot = a bigger black shell trailing sparks
+		VFX.Projectile(d.from, d.to, Color3.fromRGB(25, 22, 24), 2.3, d.t, arc, Color3.fromRGB(255, 160, 60))
 	else
 		VFX.Projectile(d.from, d.to, Color3.fromRGB(35, 35, 40), d.lob and 2.2 or 1.6, d.t, arc, Color3.fromRGB(150, 150, 150))
 	end

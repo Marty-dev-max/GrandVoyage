@@ -20,8 +20,15 @@ local Audio = require(script.Parent.Audio)
 local Settings = require(script.Parent.Settings)
 local Atmos = require(script.Parent.Atmos)
 local State = require(script.Parent.Parent.State)
+local MasteryCfg = require(Shared.Config.Mastery)
 
 local Sailing = {}
+local Gunner = MasteryCfg.Gunner
+
+local function gunnerLv()
+	local m = State.profile and State.profile.mastery and State.profile.mastery.Gunner
+	return (m and m.lv) or 1
+end
 local player = Players.LocalPlayer
 local T = UI.Theme
 local New = UI.New
@@ -70,7 +77,7 @@ local zoneInfo = {
 -- v0.25.113 (owner: the panel hid behind the character card, too much small text): a compact card ABOVE the character
 -- card: name + HP, four big readouts (speed / wind / sails / guns), the zone chip, the reload bar, four buttons
 local function buildHud()
-	local f = New("Frame", { Name = "ShipHUD", AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 16, 1, -192), Size = UDim2.fromOffset(340, 262), BackgroundColor3 = Color3.new(1, 1, 1), Visible = false, Parent = UI.Root })
+	local f = New("Frame", { Name = "ShipHUD", AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 16, 1, -192), Size = UDim2.fromOffset(340, 262), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = Color3.new(1, 1, 1), Visible = false, Parent = UI.Root })
 	UI.Corner(f, 14)
 	New("UIGradient", { Color = ColorSequence.new(T.PanelTop, T.PanelDeep), Rotation = 90, Parent = f })
 	UI.Stroke(f, T.Edge, 3)
@@ -95,6 +102,11 @@ local function buildHud()
 	local zoneText = UI.Text(zone, "", 14, T.Text, "Bold", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center })
 	local reload = UI.Bar(f, T.Orange, UDim2.new(1, 0, 0, 18), "READY")
 	reload.back.LayoutOrder = 5
+	-- Mastery v2 M3: the active-reload zones (F once while the fill passes the green)
+	local function zoneFrame(color, tr)
+		return New("Frame", { BackgroundColor3 = color, BackgroundTransparency = tr, BorderSizePixel = 0, ZIndex = 2, Visible = false, Parent = reload.back })
+	end
+	local zones = { y1 = zoneFrame(T.Gold, 0.45), y2 = zoneFrame(T.Gold, 0.45), g = zoneFrame(T.Green, 0.15) }
 	local row = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 42), LayoutOrder = 6, Parent = f })
 	UI.List(row, Enum.FillDirection.Horizontal, 4)
 	local function btn(text, color, w, order, fn)
@@ -108,7 +120,7 @@ local function buildHud()
 		sailLevel = math.min(3, sailLevel + 1)
 	end)
 	btn("🔥 FIRE", T.Red, 80, 3, function()
-		Sailing.FireAtNearest()
+		Sailing.Fire()
 	end)
 	btn("⚓ DOCK", T.Green, 80, 4, function()
 		local res = Net.Request("DockShip")
@@ -135,14 +147,26 @@ local function buildHud()
 			task.spawn(Net.Request, "ShipLights", { mode = nextMode })
 		end
 	end)
+	-- Mastery v2 M3 (Gunner Lv 30 / 50): shot type (Z) and Full Broadside (C)
+	local row3 = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 36), LayoutOrder = 8, Visible = false, Parent = f })
+	UI.List(row3, Enum.FillDirection.Horizontal, 4)
+	local shotB, shotH = UI.Button(row3, "Z: ROUND", T.OceanDark, UDim2.fromOffset(156, 34), function()
+		Sailing.NextShot()
+	end)
+	shotH.LayoutOrder = 1
+	local broadB, broadH = UI.Button(row3, "C: BROADSIDE", T.Red, UDim2.fromOffset(160, 34), function()
+		Sailing.FireAtNearest("Broadside")
+	end)
+	broadH.LayoutOrder = 2
 	hud = { frame = f, name = name, hp = hp, zone = zone, zoneText = zoneText, speedT = speedT, windT = windT, sailT = sailT, gunT = gunT, reload = reload,
-		specialB = specialB, specialH = specialH, kegB = kegB, kegH = kegH, lightB = lightB }
+		specialB = specialB, specialH = specialH, kegB = kegB, kegH = kegH, lightB = lightB, zones = zones,
+		row3 = row3, shotB = shotB, shotH = shotH, broadB = broadB, broadH = broadH }
 end
 
 -- v0.25.155 (#21): the TEST SAIL panel above the ship card: wind and time of day to try, then back to the builder
 local testHud
 local function buildTestHud()
-	local f = New("Frame", { Name = "TestSailHUD", AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 16, 1, -462), Size = UDim2.fromOffset(340, 132), BackgroundColor3 = Color3.new(1, 1, 1), Visible = false, Parent = UI.Root })
+	local f = New("Frame", { Name = "TestSailHUD", AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 16, 1, -502), Size = UDim2.fromOffset(340, 132), BackgroundColor3 = Color3.new(1, 1, 1), Visible = false, Parent = UI.Root })
 	UI.Corner(f, 12)
 	New("UIGradient", { Color = ColorSequence.new(T.PanelTop, T.PanelDeep), Rotation = 90, Parent = f })
 	UI.Stroke(f, T.Edge, 3)
@@ -245,11 +269,39 @@ local function updateHud(ship)
 	hud.windT.Text = wind .. "%"
 	hud.sailT.Text = sailLevel < 0 and "BACK" or (sailLevel == 0 and "OFF" or sailText())
 	hud.gunT.Text = (ship:GetAttribute("Manned") or 0) .. "/" .. (ship:GetAttribute("Cannons") or 0)
-	local left = (ship:GetAttribute("ReloadEnd") or 0) - workspace:GetServerTimeNow()
+	local now = workspace:GetServerTimeNow()
+	local left = (ship:GetAttribute("ReloadEnd") or 0) - now
+	local zone = ship:GetAttribute("ReloadZone") or ""
+	local dur = ship:GetAttribute("ReloadDur") or 0
+	local zs = hud.zones
 	if left > 0 then
-		hud.reload:Set(math.clamp(1 - left / GameConfig.Ship.ReloadTime, 0, 1), string.format("RELOADING %.1fs", left))
+		local frac = dur > 0 and math.clamp((now - (ship:GetAttribute("ReloadStart") or now)) / dur, 0, 1) or math.clamp(1 - left / GameConfig.Ship.ReloadTime, 0, 1)
+		hud.reload:Set(frac, string.format("RELOADING %.1fs", left) .. (zone ~= "" and "  •  F IN THE GREEN" or ""))
 	else
 		hud.reload:Set(1, "READY  •  F / click water")
+	end
+	local ga, gb, ya, yb = string.match(zone, "^([%d%.]+),([%d%.]+),([%d%.]+),([%d%.]+)$")
+	local showZone = left > 0 and ga ~= nil
+	zs.g.Visible, zs.y1.Visible, zs.y2.Visible = showZone, showZone, showZone
+	if showZone then
+		ga, gb, ya, yb = tonumber(ga), tonumber(gb), tonumber(ya), tonumber(yb)
+		zs.g.Position, zs.g.Size = UDim2.fromScale(ga, 0), UDim2.fromScale(gb - ga, 1)
+		zs.y1.Position, zs.y1.Size = UDim2.fromScale(ya, 0), UDim2.fromScale(ga - ya, 1)
+		zs.y2.Position, zs.y2.Size = UDim2.fromScale(gb, 0), UDim2.fromScale(yb - gb, 1)
+	end
+	-- Gunner tools
+	local glv = gunnerLv()
+	local shotOn, broadOn = glv >= Gunner.Shots.Chain.lv, glv >= Gunner.Broadside.lv
+	hud.row3.Visible = shotOn or broadOn
+	hud.shotH.Visible = shotOn
+	hud.broadH.Visible = broadOn
+	if shotOn then
+		local def = Gunner.Shots[ship:GetAttribute("Shot") or "Round"] or Gunner.Shots.Round
+		hud.shotB.Text = "Z: " .. string.upper(def.name)
+	end
+	if broadOn then
+		local wait = (player:GetAttribute("BroadsideReady") or 0) - now
+		hud.broadB.Text = wait > 0 and string.format("C: BROADSIDE %ds", math.ceil(wait)) or "C: BROADSIDE"
 	end
 end
 
@@ -270,13 +322,65 @@ end
 local function fire(target)
 	task.spawn(function()
 		local res = Net.Request("FireCannons", { target = target })
-		if not res.ok and res.msg and not res.throttled then
-			UI.Toast(res.msg, "bad")
+		if res.msg and not res.throttled then
+			UI.Toast(res.msg, res.ok and "info" or "bad") -- ok + msg = e.g. "Out of Gunpowder: fired Round Shot"
 		end
 	end)
 end
 
--- what = "FireCannons" (F) or "FireSpecial" (R: harpoon guns / fire pots, v0.25.155)
+-- Mastery v2 M3: F / FIRE while the reload bar shows its green zone = the one ACTIVE RELOAD try
+local function tryReload(ship)
+	local now = workspace:GetServerTimeNow()
+	if (ship:GetAttribute("ReloadZone") or "") == "" or (ship:GetAttribute("ReloadEnd") or 0) <= now then
+		return false
+	end
+	task.spawn(function()
+		local res = Net.Request("ActiveReload", { t = now })
+		local q = res.ok and res.data and res.data.q
+		if q == 3 then
+			UI.Toast("PERFECT RELOAD!", "good")
+			if hud then
+				UI.Pop(hud.reload.back, 1.15)
+			end
+		elseif q == 2 then
+			UI.Toast("Good reload: half the wait", "info")
+		elseif q == 1 then
+			UI.Toast("Missed the reload window", "info")
+		end
+	end)
+	return true
+end
+
+function Sailing.Fire()
+	local ship = myShip()
+	if ship and seated(ship) and tryReload(ship) then
+		return
+	end
+	Sailing.FireAtNearest()
+end
+
+-- Z: the next unlocked shot (Round -> Chain -> Bomb)
+function Sailing.NextShot()
+	local ship = myShip()
+	if not ship or not seated(ship) then
+		return
+	end
+	if gunnerLv() < Gunner.Shots.Chain.lv then
+		UI.Toast("Chain & Bomb Shot unlock at Gunner Mastery Lv." .. Gunner.Shots.Chain.lv, "info")
+		return
+	end
+	local order = Gunner.ShotOrder
+	local i = table.find(order, ship:GetAttribute("Shot") or "Round") or 1
+	local nextId = order[i % #order + 1]
+	task.spawn(function()
+		local res = Net.Request("SetShot", { shot = nextId })
+		if res.msg and not res.throttled then
+			UI.Toast(res.msg, res.ok and "info" or "bad")
+		end
+	end)
+end
+
+-- what = "FireCannons" (F) or "FireSpecial" (R: harpoon guns / fire pots, v0.25.155) or "Broadside" (C, Gunner Lv 50)
 function Sailing.FireAtNearest(what)
 	local ship = myShip()
 	if not ship or not ship.PrimaryPart then
@@ -289,8 +393,8 @@ function Sailing.FireAtNearest(what)
 	local fire = function(target)
 		task.spawn(function()
 			local res = Net.Request(what or "FireCannons", { target = target })
-			if not res.ok and res.msg and not res.throttled then
-				UI.Toast(res.msg, "bad")
+			if res.msg and not res.throttled then
+				UI.Toast(res.msg, res.ok and "good" or "bad")
 			end
 		end)
 	end
@@ -611,7 +715,13 @@ function Sailing.Start()
 				fire(p)
 			end
 		elseif input.KeyCode == Enum.KeyCode.F then
-			Sailing.FireAtNearest()
+			Sailing.Fire()
+		elseif input.KeyCode == Enum.KeyCode.Z then
+			Sailing.NextShot()
+		elseif input.KeyCode == Enum.KeyCode.C then
+			if gunnerLv() >= Gunner.Broadside.lv then
+				Sailing.FireAtNearest("Broadside")
+			end
 		elseif input.KeyCode == Enum.KeyCode.R then
 			local p = not UI.IsMobile and waterPoint(UserInputService:GetMouseLocation())
 			if p and (p - ship.PrimaryPart.Position).Magnitude < 300 then

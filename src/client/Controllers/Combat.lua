@@ -1478,7 +1478,8 @@ function Combat.Start()
 			local key = Hotkeys.Key("Skill" .. i)
 			-- E still talks / opens what you stand by (a prompt card is up), and at your ship's helm E docks, F fires
 			-- the cannons, R the harpoon / fire pots and X drops a powder keg (Sailing): those keys pass on there
-			if State.build.active or (key == "E" and Interact.AnyShown()) or ((key == "E" or key == "F" or key == "R" or key == "X") and atHelm()) then
+			-- (Mastery v2 M3: Z picks the cannon shot, C fires a Full Broadside)
+			if State.build.active or (key == "E" and Interact.AnyShown()) or ((key == "E" or key == "F" or key == "R" or key == "X" or key == "Z" or key == "C") and atHelm()) then
 				return false
 			end
 			local id = State.profile and Combat.BarId(i)

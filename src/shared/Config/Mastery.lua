@@ -51,11 +51,11 @@ M.Fields = {
 	},
 	Gunner = {
 		name = "Gunner", icon = "gunpowder", color = Color3.fromRGB(110, 170, 230),
-		how = "Hit enemy ships with your cannons (fire from the helm)",
+		how = "Hit enemy ships with your cannons (fire from the helm). F in the green while reloading = perfect reload",
 		perks = {
 			{ lv = 10, name = "Quick Loader", text = "Cannons reload 25% faster", bonus = { reloadCut = 0.25 } },
-			{ lv = 30, name = "Chain & Bomb Shot", text = "Unlocks chain shot (slows ships) and bomb shot", soon = true },
-			{ lv = 50, name = "Full Broadside", text = "Skill: every gun fires at once, even while reloading", soon = true },
+			{ lv = 30, name = "Chain & Bomb Shot", text = "Z at the helm picks Chain Shot (slows ships) or Bomb Shot (wide blast)" },
+			{ lv = 50, name = "Full Broadside", text = "C at the helm: every gun fires at once, even while reloading, x1.3" },
 		},
 	},
 }
@@ -81,6 +81,28 @@ function M.Needle(t)
 	return x <= 1 and x or 2 - x
 end
 
+-- Gunner tools (Mastery v2 M3, docs/Plan-Mastery-v2.md sec 3), all at the helm of your own ship (ShipService):
+-- ACTIVE RELOAD: after a volley the reload bar shows a green (+ yellow) zone, F / FIRE once while the fill passes it:
+--   green = the guns that fired are ready now, yellow = the rest of their reload is halved, else nothing (one try).
+-- SHOTS (Z cycles, ship attr Shot): Chain / Bomb cost Gunpowder per VOLLEY (not per gun); out of powder = Round.
+-- BROADSIDE (C): every gun that bears fires, reloading or not, damage x Mult; cooldown per player.
+M.Gunner = {
+	Reload = {
+		CenterMin = 0.35, -- where the green zone's middle may sit along the reload bar (fraction of the bar)
+		CenterMax = 0.75,
+		Yellow = 0.1, -- extra on each side of the green
+	},
+	ShotOrder = { "Round", "Chain", "Bomb" },
+	Shots = {
+		Round = { name = "Round Shot", lv = 1, dmg = 1 },
+		Chain = { name = "Chain Shot", fx = "chain", lv = 30, dmg = 0.6, slow = 0.65, seconds = 8, powder = 1,
+			text = "Tears sails: the ship hit sails at 65% speed for 8 s (half damage)" },
+		Bomb = { name = "Bomb Shot", fx = "bomb", lv = 30, dmg = 1, splash = 2.2, crew = 1.6, powder = 1,
+			text = "Bursts wide: hits a bigger area and deck crew take +60%" },
+	},
+	Broadside = { lv = 50, mult = 1.3, cooldown = 45 },
+}
+
 -- XP gains per action (MasteryService): per HP repaired / healed, per second at the helm, per cannon hit, per meal
 M.Gain = {
 	RepairPerHp = 0.12, -- Shipwright: 100 hull HP repaired = 12 XP
@@ -93,6 +115,8 @@ M.Gain = {
 	Revive = 40, -- Doctor: a revive
 	CannonHit = 3, -- Gunner: per ball that hits a hostile ship
 	CannonPerDmg = 0.04,
+	ReloadPerfect = 5, -- Gunner: active reload in the green
+	ReloadGood = 2, -- ... in the yellow
 }
 
 -- XP for the next level

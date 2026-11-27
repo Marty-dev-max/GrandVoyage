@@ -212,6 +212,14 @@ local function setAttrs(ship)
 	if ship.specials and #ship.specials > 0 then
 		m:SetAttribute("SpecialEnd", ship.specialEnd or 0)
 	end
+	-- Mastery v2 M3: the shot loaded in the main guns and the active-reload zone ("" = no try left)
+	if not ship.npc then
+		m:SetAttribute("Shot", ship.shot or "Round")
+		local a = ship.activeReload
+		m:SetAttribute("ReloadStart", a and a.start or 0)
+		m:SetAttribute("ReloadDur", a and a.dur or 0)
+		m:SetAttribute("ReloadZone", (a and not a.used) and string.format("%.3f,%.3f,%.3f,%.3f", a.green[1], a.green[2], a.yellow[1], a.yellow[2]) or "")
+	end
 end
 
 -- v0.25.155 (#34): which side's gun ports are shut because that side dips toward the water (1 starboard, -1 port)
@@ -555,13 +563,15 @@ local function specialHit(gun, s, damage, srcShip, player)
 	end
 end
 
-local function impact(pos, damage, srcShip, player, lock, gun)
+-- `shot` (Mastery v2 M3) = a MasteryCfg.Gunner.Shots entry for a player's main guns (Chain / Bomb), else nil
+local function impact(pos, damage, srcShip, player, lock, gun, shot)
 	local hitSomething = false
+	local splashK = shot and shot.splash or 1
 	for _, s in pairs(ships) do
 		if s ~= srcShip and not s.sinking and hostile(srcShip, s) then
 			-- v0.24.0: hits are measured to the ship's whole hull (not a circle around its middle), and the ship the
 			-- shot was aimed at counts a wider margin (it was moving while the ball flew)
-			local extra = cfg.SplashRadius * (s == lock and 0.9 or 0.5)
+			local extra = cfg.SplashRadius * splashK * (s == lock and 0.9 or 0.5)
 			if overShip(s, pos, extra) then
 				Ship.DamageShip(s, damage, srcShip, player)
 				if player and not s.test and not (srcShip and srcShip.test) then
@@ -570,17 +580,21 @@ local function impact(pos, damage, srcShip, player, lock, gun)
 				if gun and gun.special and not s.sinking then
 					specialHit(gun, s, damage, srcShip, player)
 				end
+				if shot and shot.slow and not s.sinking then
+					s.chainUntil = os.clock() + shot.seconds -- torn sails (Chain Shot)
+					s.chainSlow = shot.slow
+				end
 				hitSomething = true
 			end
 		end
 	end
 	if player then
-		for _, mob in ipairs(R.MonsterService.InRadius(pos, cfg.SplashRadius + 4)) do
-			R.MonsterService.Damage(mob, damage * 1.5, player, false, gun and gun.special == "firepot" and "fire" or "cannon")
+		for _, mob in ipairs(R.MonsterService.InRadius(pos, cfg.SplashRadius * splashK + 4)) do
+			R.MonsterService.Damage(mob, damage * 1.5 * (shot and shot.crew or 1), player, false, gun and gun.special == "firepot" and "fire" or "cannon")
 			hitSomething = true
 		end
 	end
-	Net.FX(hitSomething and "Explosion" or "Splash", { pos = Vector3.new(pos.X, math.max(pos.Y, 0), pos.Z), radius = cfg.SplashRadius }, pos, 600)
+	Net.FX(hitSomething and "Explosion" or "Splash", { pos = Vector3.new(pos.X, math.max(pos.Y, 0), pos.Z), radius = cfg.SplashRadius * splashK }, pos, 600)
 end
 
 -- the hostile ship a shot is aimed at (the click landed on or near it), if any
@@ -597,7 +611,7 @@ local function aimedShip(srcShip, target)
 	return best
 end
 
-local function fireBall(from, target, damage, range, srcShip, player, gun)
+local function fireBall(from, target, damage, range, srcShip, player, gun, shot)
 	local shotSpeed = cfg.CannonballSpeed * (gun and gun.speed or 1)
 	-- lead a moving target ship: aim where it will be when the ball lands (v0.24.0: shots used to land behind
 	-- sailing NPC ships, so they never got hit)
@@ -622,8 +636,8 @@ local function fireBall(from, target, damage, range, srcShip, player, gun)
 		dist = range
 	end
 	local t = dist / shotSpeed + 0.25
-	Net.FX("Cannonball", { from = from, to = target, t = t, lob = gun and gun.lob or nil, kind = gun and gun.special or nil }, from, 700)
-	task.delay(t, impact, target, damage, srcShip, player, lock, gun)
+	Net.FX("Cannonball", { from = from, to = target, t = t, lob = gun and gun.lob or nil, kind = (gun and gun.special) or (shot and shot.fx) or nil }, from, 700)
+	task.delay(t, impact, target, damage, srcShip, player, lock, gun, shot)
 end
 
 -- the target's bearing from a point in the ship's own frame (0 = bow, 90 = starboard), as ShipHull.Arcs counts it
@@ -634,10 +648,14 @@ local function bearingOf(ship, pos, target)
 	return math.deg(math.atan2(to:Dot(right), to:Dot(fwd)))
 end
 
--- returns fired, bearing (how many guns could bear on the target, ready or not), shut (guns behind a shut port)
+-- returns fired, bearing (how many guns could bear on the target, ready or not), shut (guns behind a shut port),
+-- firedGuns (the cannon tables that fired)
 -- `guns` = which list (ship.cannons by default; the special weapons use ship.specials)
-local function volley(ship, target, count, damageMult, player, spread, fixedDamage, guns)
+-- `o` (Mastery v2 M3): { shot = Gunner.Shots entry, ignoreReload = true (Full Broadside) }
+local function volley(ship, target, count, damageMult, player, spread, fixedDamage, guns, o)
+	o = o or {}
 	local chosen = {}
+	local firedGuns = {}
 	local bearing, shut = 0, 0
 	local now = os.clock()
 	local shutSide = player and portShutSide(ship) or 0
@@ -665,7 +683,7 @@ local function volley(ship, target, count, damageMult, player, spread, fixedDama
 				end
 				if ok then
 					bearing += 1
-					if not player or (c.readyAt or 0) <= now then
+					if not player or o.ignoreReload or (c.readyAt or 0) <= now then
 						table.insert(chosen, { c = c, pos = pos, dot = score })
 					end
 				end
@@ -687,13 +705,14 @@ local function volley(ship, target, count, damageMult, player, spread, fixedDama
 		local item = chosen[i]
 		local err = spread and Vector3.new((math.random() - 0.5) * spread, 0, (math.random() - 0.5) * spread) or Vector3.zero
 		local lane = player and Vector3.new(item.pos.X - center.X, 0, item.pos.Z - center.Z) or Vector3.zero
-		task.delay((i - 1) * 0.09, fireBall, item.pos, target + lane + err, fixedDamage or item.c.damage * damageMult, item.c.range, ship, player, item.c)
+		task.delay((i - 1) * 0.09, fireBall, item.pos, target + lane + err, fixedDamage or item.c.damage * damageMult, item.c.range, ship, player, item.c, o.shot)
 		if player then
 			item.c.readyAt = now + cfg.ReloadTime * (ship.reloadMult or 1) * (item.c.reload or 1)
 		end
 		fired += 1
+		table.insert(firedGuns, item.c)
 	end
-	return fired, bearing, shut
+	return fired, bearing, shut, firedGuns
 end
 
 -- ===== Player ships =====
@@ -1556,6 +1575,9 @@ local function stepShip(ship, dt, now)
 	if (ship.slowUntil or 0) > now then
 		maxSpeed *= HARPOON_SLOW -- v0.25.155 (#29): a harpoon line drags on the hull
 	end
+	if (ship.chainUntil or 0) > now then
+		maxSpeed *= ship.chainSlow or 1 -- Mastery v2 M3: Chain Shot tore the sails
+	end
 	ship.maxSpeed = maxSpeed
 	local targetSpeed = ship.throttle >= 0 and ship.throttle * maxSpeed or ship.throttle * math.min(maxSpeed, 10)
 	local accel = targetSpeed > ship.speed and 9 or 14
@@ -1689,7 +1711,38 @@ function Ship.Start()
 		return Ship.Dock(player)
 	end, 1)
 
-	Net.Handle("FireCannons", function(player, data)
+	-- ===== main guns (F / click water; C = Full Broadside) =====
+	local Gunner = MasteryCfg.Gunner
+	-- the earliest gun still reloading -> ship.reloadEnd (server time) for the HUD bar
+	local function reloadEndOf(ship, now)
+		local nextReady = math.huge
+		for _, c in ipairs(ship.cannons) do
+			if (c.readyAt or 0) > now then
+				nextReady = math.min(nextReady, c.readyAt)
+			end
+		end
+		return nextReady < math.huge and nextReady - now or 0
+	end
+
+	-- the shot this volley really uses: Chain / Bomb need the Gunner level and one Gunpowder (taken after it fires)
+	local function shotFor(player, ship)
+		local id = ship.shot or "Round"
+		local def = Gunner.Shots[id]
+		local p = R.PlayerService.Profile(player)
+		if not def or id == "Round" then
+			return nil
+		end
+		if MasteryCfg.Level(p, "Gunner") < def.lv then
+			ship.shot = "Round"
+			return nil, "Round Shot loaded (Chain / Bomb need Gunner Mastery Lv." .. def.lv .. ")"
+		end
+		if R.InventoryService.Count(player, "Gunpowder") < (def.powder or 0) then
+			return nil, "Out of Gunpowder: fired Round Shot"
+		end
+		return def
+	end
+
+	local function fireMain(player, data, broadside)
 		local ship = Ship.GetShipOf(player)
 		if not ship or shipUnder(player) ~= ship then
 			return false, "You must be aboard your own ship"
@@ -1699,17 +1752,32 @@ function Ship.Start()
 		if not (hum and hum.SeatPart and hum.SeatPart.Name == "HelmSeat") then
 			return false, "Take the helm to fire the cannons"
 		end
-		local target = typeof(data.target) == "Vector3" and data.target
-		if not target then
+		local target = type(data) == "table" and typeof(data.target) == "Vector3" and data.target
+		if not target or target.X ~= target.X or target.Z ~= target.Z then
 			return false
 		end
 		local now = os.clock()
 		if ship.stats.cannonsManned <= 0 then
 			return false, "No crew to man the cannons (recruit at a tavern)"
 		end
+		local serverNow = workspace:GetServerTimeNow()
+		if broadside then
+			local p = R.PlayerService.Profile(player)
+			if MasteryCfg.Level(p, "Gunner") < Gunner.Broadside.lv then
+				return false, "Full Broadside needs Gunner Mastery Lv." .. Gunner.Broadside.lv
+			end
+			local left = (player:GetAttribute("BroadsideReady") or 0) - serverNow
+			if left > 0 then
+				return false, string.format("Full Broadside ready in %ds", math.ceil(left))
+			end
+		end
 		local d = R.PlayerService.Derived(player) or {}
-		-- v0.25.153: every gun reloads on its own (swivels fast, mortars slow); a shot fires the ready guns that bear
-		local fired, bearing, shut = volley(ship, target, ship.stats.cannonsManned, 1 + (d.cannonDamage or 0), player, 6)
+		local shot, note = shotFor(player, ship)
+		local mult = (1 + (d.cannonDamage or 0)) * (shot and shot.dmg or 1) * (broadside and Gunner.Broadside.mult or 1)
+		-- v0.25.153: every gun reloads on its own (swivels fast, mortars slow); a shot fires the ready guns that bear.
+		-- Full Broadside: every gun that bears fires, reloading or not
+		local count = broadside and #ship.cannons or ship.stats.cannonsManned
+		local fired, bearing, shut, firedGuns = volley(ship, target, count, mult, player, 6, nil, nil, { shot = shot, ignoreReload = broadside })
 		ship.portsUntil = now + 8 -- v0.25.155 (#34): the lids swing open for the broadside
 		if fired == 0 then
 			if bearing == 0 and shut > 0 then
@@ -1717,17 +1785,89 @@ function Ship.Start()
 			end
 			return false, bearing > 0 and "Reloading" or "Target is outside your firing arcs (turn broadside)"
 		end
+		if shot and shot.powder then
+			R.InventoryService.RemoveItem(player, "Gunpowder", shot.powder)
+		end
+		if broadside then
+			player:SetAttribute("BroadsideReady", serverNow + Gunner.Broadside.cooldown)
+			Net.FX("Explosion", { pos = ship.root.Position + Vector3.new(0, 4, 0), radius = 4 }, ship.root.Position, 600)
+		end
 		ship.lastVolley = now
-		local nextReady = math.huge
-		for _, c in ipairs(ship.cannons) do
-			if (c.readyAt or 0) > now then
-				nextReady = math.min(nextReady, c.readyAt)
+		local dur = reloadEndOf(ship, now)
+		ship.reloadEnd = serverNow + dur
+		-- ACTIVE RELOAD (Mastery v2 M3): a green zone somewhere along this reload, wider with Gunner Mastery
+		if dur > 0.6 then
+			local RC = Gunner.Reload
+			local gw = MasteryCfg.GreenWidth(MasteryCfg.Level(R.PlayerService.Profile(player), "Gunner"))
+			local c = RC.CenterMin + math.random() * (RC.CenterMax - RC.CenterMin)
+			local g = { math.max(0, c - gw / 2), math.min(1, c + gw / 2) }
+			ship.activeReload = { start = serverNow, dur = dur, green = g, yellow = { math.max(0, g[1] - RC.Yellow), math.min(1, g[2] + RC.Yellow) }, guns = firedGuns }
+		else
+			ship.activeReload = nil
+		end
+		setAttrs(ship)
+		return { ok = true, msg = note or (broadside and "FULL BROADSIDE!" or nil) }
+	end
+
+	Net.Handle("FireCannons", function(player, data)
+		return fireMain(player, data, false)
+	end, 0.3)
+
+	Net.Handle("Broadside", function(player, data)
+		return fireMain(player, data, true)
+	end, 1)
+
+	-- F / FIRE while the reload bar runs: one try per reload; `t` = the client's server-clock time of the press
+	Net.Handle("ActiveReload", function(player, data)
+		local ship = helmShip(player)
+		local a = ship and ship.activeReload
+		if not a or a.used then
+			return false
+		end
+		a.used = true
+		local serverNow = workspace:GetServerTimeNow()
+		local t = type(data) == "table" and tonumber(data.t)
+		if not t or t ~= t or t > serverNow + 0.05 or t < serverNow - MasteryCfg.Timing.Lag then
+			t = serverNow -- unbelievable stamp: judge by when it arrived
+		end
+		local x = (t - a.start) / a.dur
+		local q = 1
+		if x >= a.green[1] and x <= a.green[2] then
+			q = 3
+		elseif x >= a.yellow[1] and x <= a.yellow[2] then
+			q = 2
+		end
+		local now = os.clock()
+		if q > 1 then
+			for _, c in ipairs(a.guns) do
+				if (c.readyAt or 0) > now then
+					c.readyAt = q == 3 and now or now + (c.readyAt - now) / 2
+				end
+			end
+			ship.reloadEnd = serverNow + reloadEndOf(ship, now)
+			if not ship.test then
+				R.MasteryService.Add(player, "Gunner", q == 3 and MasteryCfg.Gain.ReloadPerfect or MasteryCfg.Gain.ReloadGood)
 			end
 		end
-		ship.reloadEnd = workspace:GetServerTimeNow() + (nextReady < math.huge and nextReady - now or 0)
 		setAttrs(ship)
-		return true
-	end, 0.3)
+		return { ok = true, data = { q = q } }
+	end, 0.2)
+
+	-- Z at the helm: Round -> Chain -> Bomb (only the unlocked ones)
+	Net.Handle("SetShot", function(player, data)
+		local ship = Ship.GetShipOf(player)
+		local id = type(data) == "table" and data.shot
+		local def = type(id) == "string" and Gunner.Shots[id]
+		if not ship or not def then
+			return false
+		end
+		if MasteryCfg.Level(R.PlayerService.Profile(player), "Gunner") < def.lv then
+			return false, def.name .. " needs Gunner Mastery Lv." .. def.lv
+		end
+		ship.shot = id
+		setAttrs(ship)
+		return { ok = true, msg = def.name .. " loaded" .. (def.powder and " (1 Gunpowder per volley)" or "") }
+	end, 0.2)
 
 	-- v0.25.155 (#29): R at the helm fires the special weapons (harpoon guns, fire pots) that bear on the target
 	Net.Handle("FireSpecial", function(player, data)

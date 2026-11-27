@@ -58,10 +58,10 @@ H.Groups = { "Hull", "Guns", "Sails", "Cabins", "Other" }
 
 H.Sections = { "V", "U", "F" }
 H.SectionName = { V = "V KEEL", U = "ROUND", F = "FLAT" }
-H.Zones = { "hull", "bottom", "stripe", "deck", "rail", "sail" }
-H.ZoneName = { hull = "HULL", bottom = "BOTTOM", stripe = "STRIPE", deck = "DECK", rail = "RAILS", sail = "SAILS" }
-H.DefaultPaint = { hull = "#96623A", bottom = "#6E3028", stripe = "#E8C050", deck = "#D6A56E", rail = "#5C3C26", sail = "#F6F1E2" }
-H.MarinePaint = { hull = "#F0F1F6", bottom = "#283C78", stripe = "#E8C050", deck = "#D6A56E", rail = "#2C4A96", sail = "#F5F8FF" }
+H.Zones = { "hull", "bottom", "stripe", "deck", "rail", "sail", "figure" } -- figure = figurehead (v0.25.158)
+H.ZoneName = { hull = "HULL", bottom = "BOTTOM", stripe = "STRIPE", deck = "DECK", rail = "RAILS", sail = "SAILS", figure = "FIGURE" }
+H.DefaultPaint = { hull = "#96623A", bottom = "#6E3028", stripe = "#E8C050", deck = "#D6A56E", rail = "#5C3C26", sail = "#F6F1E2", figure = "#E8C050" }
+H.MarinePaint = { hull = "#F0F1F6", bottom = "#283C78", stripe = "#E8C050", deck = "#D6A56E", rail = "#2C4A96", sail = "#F5F8FF", figure = "#F0F1F6" }
 H.Palette = {
 	"#F6F1E2", "#D6A56E", "#96623A", "#5C3C26", "#3A2A20", "#1E1E24",
 	"#6E3028", "#B83A32", "#E07A2E", "#E8C050", "#7FB548", "#2E7D4F",
@@ -94,6 +94,8 @@ function H.ScaleRule(id)
 		return { axes = "xy", min = 0.5, max = 4 }
 	elseif def.thrust then
 		return { axes = "xy", min = 0.6, max = 1.8 }
+	elseif def.figurehead then
+		return { axes = "xyz", min = 0.6, max = 2.5 } -- v0.25.158: stretch the carving's width / height / length
 	end
 	return { axes = "u", min = 0.75, max = 1.5 }
 end
@@ -1228,6 +1230,9 @@ function H.BuildItem(it, originCf, colorFn, buildPart, design)
 	local cf, size = H.ItemCFrame(it)
 	local p = { id = it.id, x = math.floor(it.x), y = math.floor(it.y), z = math.floor(it.z), r = 0 }
 	local color = colorFn and colorFn(p) or nil
+	if not color and ShipParts[it.id].figurehead and design then
+		color = H.PaintOf(design, colorFn).figure
+	end
 	local m
 	if rule.axes == "u" then
 		local unit = ShipParts[it.id].size * G

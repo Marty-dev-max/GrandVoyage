@@ -279,19 +279,59 @@ function SM.BuildPart(p, cf, colorOverride)
 		local win = mk(model, "Part", Vector3.new(G * 0.5, G * 0.4, 0.2), Color3.fromRGB(255, 230, 150), cf * CFrame.new(sz.X * 0.25, 0, -sz.Z / 2 - 0.05), Enum.Material.Neon)
 		win.CanCollide = false
 	elseif p.id == "RamHead" or p.id == "LionHead" then
-		main = mk(model, "Part", Vector3.new(G * 0.6, G * 0.6, G * 0.6), Color3.fromRGB(196, 140, 88), cf * CFrame.new(0, -G * 0.2, 0), Enum.Material.Wood)
-		local head = mk(model, "Part", Vector3.new(G * 1.1, G * 1.1, G * 1.1), color, cf * CFrame.new(0, G * 0.25, -G * 0.2))
-		head.Shape = Enum.PartType.Ball
-		head.CanCollide = false
+		-- v0.25.158 (owner: the ball heads looked like round blobs): carved block heads on an 8-cell grid of the
+		-- footprint (so the builder's x / y / z scaling stretches them), facing -Z; color = the FIGURE paint zone
+		local ux, uy, uz = sz.X / 8, sz.Y / 8, sz.Z / 8
+		local function b(x, y, z, w, h, d, c, mat)
+			local q = mk(model, "Part", Vector3.new(w * ux, h * uy, d * uz), c, cf * CFrame.new(x * ux, y * uy, z * uz), mat or Enum.Material.Wood)
+			q.CanCollide = false
+			return q
+		end
+		local function light(c, k)
+			return c:Lerp(Color3.new(1, 1, 1), k)
+		end
+		local eye = Color3.fromRGB(28, 22, 20)
+		main = b(0, -2.5, 2.5, 3, 3, 3, dark(color, 0.35)) -- mount against the stem
+		main.CanCollide = true
 		if p.id == "RamHead" then
-			for _, side in ipairs({ -1, 1 }) do
-				local horn = mk(model, "Part", Vector3.new(G * 0.5, G * 0.5, G * 0.5), Color3.fromRGB(240, 200, 120), cf * CFrame.new(side * G * 0.5, G * 0.4, -G * 0.1))
-				horn.Shape = Enum.PartType.Ball
-				horn.CanCollide = false
+			b(0, 0.5, 0.5, 4, 4, 4, color) -- skull
+			b(0, -0.5, -2.5, 3, 3, 3, color) -- snout
+			b(0, 0.2, -3.6, 2.2, 1.4, 1, light(color, 0.15))
+			for _, s in ipairs({ -1, 1 }) do
+				b(s * 0.5, 0.2, -4.15, 0.5, 0.5, 0.3, dark(color, 0.6), Enum.Material.SmoothPlastic) -- nostril
+				b(s * 2.05, 1.0, -0.8, 0.3, 0.8, 0.8, eye, Enum.Material.SmoothPlastic)
+				b(s * 2.4, 0.6, 1.6, 1.0, 0.6, 1.4, dark(color, 0.1)) -- ear
+				-- curled horn: back over the head, out, down and forward again
+				local horn = color:Lerp(Color3.fromRGB(120, 80, 40), 0.45)
+				for i, pt in ipairs({ { 2.4, 2.6, 1.4, 1.6 }, { 3.4, 3.0, 2.4, 1.5 }, { 4.3, 2.4, 3.0, 1.4 }, { 4.9, 1.3, 2.6, 1.3 }, { 5.0, 0.2, 1.6, 1.2 }, { 4.6, -0.6, 0.5, 1.1 }, { 3.9, -0.6, -0.4, 1.0 } }) do
+					b(s * pt[1], pt[2], pt[3], pt[4], pt[4], pt[4], i % 2 == 0 and dark(horn, 0.18) or horn)
+				end
 			end
+			b(0, -1.4, -3.2, 2.6, 0.3, 1.8, dark(color, 0.4)) -- mouth line
+			b(0, 2.0, -1.6, 4.2, 0.8, 0.6, dark(color, 0.15)) -- brow
+			b(0, 2.9, 0.8, 3, 0.8, 2.6, light(color, 0.2)) -- wool tuft
 		else
-			local mane = cyl(model, G * 0.35, G * 1.7, Color3.fromRGB(230, 120, 40), cf * CFrame.new(0, G * 0.25, 0) * CFrame.Angles(0, math.pi / 2, 0))
-			mane.CanCollide = false
+			local mane = color:Lerp(Color3.fromRGB(150, 62, 24), 0.55)
+			b(0, 0.5, 1.5, 7, 5, 2, mane)
+			b(0, 0.5, 1.5, 5, 7, 2, mane)
+			for k = 0, 7 do
+				local a = k * math.pi / 4 + math.pi / 8
+				b(math.cos(a) * 4.2, 0.5 + math.sin(a) * 4.2, 1.2, 1.8, 1.8, 1.6, k % 2 == 0 and dark(mane, 0.15) or mane)
+				local a2 = k * math.pi / 4
+				b(math.cos(a2) * 3.2, 0.5 + math.sin(a2) * 3.2, 0.2, 1.5, 1.5, 1.4, k % 2 == 0 and light(mane, 0.1) or dark(mane, 0.08))
+			end
+			b(0, 0.3, -1.2, 4.4, 4.4, 3, color) -- face
+			b(0, 1.7, -2.9, 4.6, 0.9, 0.8, dark(color, 0.12)) -- brow
+			b(0, -0.8, -3.3, 3.2, 2, 1.6, light(color, 0.15)) -- muzzle
+			b(0, 0.2, -4.0, 1.4, 0.9, 0.6, dark(color, 0.55)) -- nose
+			b(0, -1.9, -3.3, 2.2, 0.5, 1.4, Color3.fromRGB(90, 30, 26), Enum.Material.SmoothPlastic) -- open mouth
+			b(0, -2.5, -3.0, 2.4, 0.8, 1.6, color) -- chin
+			for _, s in ipairs({ -1, 1 }) do
+				b(s * 1.1, 1.0, -2.75, 0.9, 0.7, 0.3, eye, Enum.Material.SmoothPlastic)
+				b(s * 0.6, -1.6, -4.0, 0.35, 0.6, 0.3, Color3.fromRGB(245, 240, 225), Enum.Material.SmoothPlastic) -- fang
+				b(s * 1.9, 2.8, -0.4, 1.2, 1.2, 1.0, color) -- ear
+				b(s * 1.9, 2.8, -0.95, 0.6, 0.6, 0.15, dark(color, 0.35))
+			end
 		end
 	elseif p.id == "Barrel" then
 		main = mk(model, "Part", Vector3.new(G * 0.66, G * 0.82, G * 0.66), color, cf * CFrame.new(0, -G / 2 + G * 0.41, 0), Enum.Material.Wood)

@@ -1020,7 +1020,7 @@ local function paintTab(outer)
 			{ Size = UDim2.new(1, 0, 0, 34), LayoutOrder = 0 })
 		t.TextWrapped = true
 	end
-	local zones = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 84), LayoutOrder = 1, Parent = body })
+	local zones = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 128), LayoutOrder = 1, Parent = body })
 	New("UIGridLayout", { CellSize = UDim2.new(1 / 3, -6, 0, 38), CellPadding = UDim2.fromOffset(6, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = zones })
 	for i, z in ipairs(ShipHull.Zones) do
 		local b = New("TextButton", { Text = "", AutoButtonColor = false, LayoutOrder = i, BackgroundColor3 = T.PanelDeep, Parent = zones })
@@ -1919,6 +1919,10 @@ function Builder.OnState(data)
 		saved = ShipHull.Clone(data.design)
 		if saved.v ~= 2 then
 			saved = ShipHull.FromV1(saved) -- the server converts on enter; this only guards an old push
+		end
+		saved.paint = saved.paint or {}
+		for z, hex in pairs(ShipHull.DefaultPaint) do
+			saved.paint[z] = saved.paint[z] or hex -- zones added later (figure, v0.25.158) on older saves
 		end
 		if fresh then
 			work = ShipHull.Clone(saved)

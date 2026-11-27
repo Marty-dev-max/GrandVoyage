@@ -11,6 +11,8 @@ local order = {
 	"DataService",
 	"PlayerService",
 	"OriginService",
+	"MasteryService",
+	"TalentService",
 	"InventoryService",
 	"CombatService",
 	"KnockdownService",

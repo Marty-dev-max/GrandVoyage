@@ -14,7 +14,7 @@ local TokiCfg = require(Shared.Config.Toki)
 local S = {}
 S.Size = 6
 S.Sets = {
-	{ id = "Class", name = "Class" },
+	{ id = "Class", name = "Arts" }, -- remake R3: Weapon Arts (the skills of the weapon in hand)
 	{ id = "Fruit", name = "Cursed Fruit" },
 	{ id = "Basic", name = "Basic" },
 	{ id = "Armament", name = "Armament Toki", toki = "Armament" },

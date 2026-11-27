@@ -15,6 +15,7 @@ local ShipHull = require(Shared.Modules.ShipHull)
 local SeaZones = require(Shared.Modules.SeaZones)
 local Net = require(Shared.Modules.Net)
 local Recruits = require(Shared.Config.Recruits)
+local MasteryCfg = require(Shared.Config.Mastery)
 local Reach = require(Shared.Modules.Reach)
 local CollectionService = game:GetService("CollectionService")
 
@@ -368,6 +369,8 @@ end
 local function skillHitList(player, list, damage)
 	local src = attackerShip(player)
 	local hit = false
+	local d = R.PlayerService.Derived(player)
+	damage *= 1 + (d and d.shipHitMult or 0) -- remake R3 talent Hull Breaker
 	for _, s in ipairs(list) do
 		if s ~= src and (not src or hostile(src, s)) and (src or s.npc) then
 			Ship.DamageShip(s, damage, src, player)
@@ -561,6 +564,9 @@ local function impact(pos, damage, srcShip, player, lock, gun)
 			local extra = cfg.SplashRadius * (s == lock and 0.9 or 0.5)
 			if overShip(s, pos, extra) then
 				Ship.DamageShip(s, damage, srcShip, player)
+				if player and not s.test and not (srcShip and srcShip.test) then
+					R.MasteryService.Add(player, "Gunner", MasteryCfg.Gain.CannonHit + damage * MasteryCfg.Gain.CannonPerDmg) -- remake R3
+				end
 				if gun and gun.special and not s.sinking then
 					specialHit(gun, s, damage, srcShip, player)
 				end
@@ -723,7 +729,7 @@ function Ship.Launch(player, slot, at, testDesign)
 	local ship = buildShip(design, at or dock.launchCf, { name = "Ship_" .. player.UserId, dress = false, colorFn = ShipModel.FactionColorFn(p and p.faction) })
 	ship.owner = player
 	ship.stats = stats
-	ship.reloadMult = 1 - rb.reload
+	ship.reloadMult = math.max(0.4, 1 - rb.reload - (derived.reloadCut or 0)) -- remake R3: Gunner perks / talents
 	ship.easy = type(p.settings) == "table" and type(p.settings.client) == "table" and p.settings.client.shipEasy == true -- #23
 	ship.pumps = stats.pumps or 0
 	if (stats.kegs or 0) > 0 then
@@ -805,8 +811,12 @@ function Ship.RepairNearby(player, pct)
 		return false
 	end
 	local before = s.hp
-	s.hp = math.min(s.maxHp, s.hp + s.maxHp * pct)
+	local d = R.PlayerService.Derived(player)
+	s.hp = math.min(s.maxHp, s.hp + s.maxHp * pct * (1 + (d and d.repairMult or 0))) -- remake R3: Shipwright perks
 	setAttrs(s)
+	if not s.test and s.hp > before then
+		R.MasteryService.Add(player, "Shipwright", (s.hp - before) * MasteryCfg.Gain.RepairPerHp)
+	end
 	Net.FX("Repair", { pos = s.root.Position, radius = s.radius, amount = math.floor(s.hp - before) }, s.root.Position, 400)
 	return true
 end

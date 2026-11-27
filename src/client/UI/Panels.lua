@@ -23,6 +23,7 @@ local UI = require(script.Parent.UIKit)
 local Prices = require(script.Parent.Prices)
 local CardArt = require(script.Parent.CardArt)
 local ForgeScene = require(script.Parent.ForgeScene)
+local TalentsUI = require(script.Parent.Talents) -- remake R3 Talent cards + Field Mastery
 local State = require(script.Parent.Parent.State)
 local Audio = require(script.Parent.Parent.Controllers.Audio)
 local Settings = require(script.Parent.Parent.Controllers.Settings)
@@ -1387,6 +1388,9 @@ local function statRing(parent, stat, rank, k, color, size)
 end
 
 function Panels.JobMaster()
+	if GameConfig.WeaponArts then
+		return TalentsUI.Open() -- remake R3: no classes to pick; the Job Master shows Talents + Field Mastery
+	end
 	UI.FullPref.Job = true -- always full screen: no shrink button, only the X (owner)
 	local win = UI.Window("Job", "Job Master", UDim2.fromOffset(1180, 620), T.Green, "🎓", { fullscreen = true })
 	if win.maxBtn then
@@ -4838,5 +4842,7 @@ function Panels.Toggle(name)
 	end
 end
 Panels.Blacksmith = Panels.Refine
+Panels.Talents = TalentsUI.Open
+Panels.TalentPick = TalentsUI.Pick
 
 return Panels

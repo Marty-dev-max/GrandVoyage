@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local GameConfig = require(Shared.Config.GameConfig)
 local Classes = require(Shared.Config.Classes).Classes
+local MasteryCfg = require(Shared.Config.Mastery)
 local ItemDB = require(Shared.Modules.ItemDB)
 local Formulas = require(Shared.Modules.Formulas)
 local Net = require(Shared.Modules.Net)
@@ -196,6 +197,9 @@ local function setup()
 		p.equipment[def.slot] = entry.uid
 		R.PlayerService.Recompute(player)
 		R.WeaponService.RefreshOutfit(player)
+		if def.slot == "weapon" then
+			R.PlayerService.FollowWeapon(player) -- remake R3 Weapon Arts
+		end
 		return true
 	end)
 
@@ -206,6 +210,9 @@ local function setup()
 		end
 		R.PlayerService.Recompute(player)
 		R.WeaponService.RefreshOutfit(player)
+		if data.slot == "weapon" then
+			R.PlayerService.FollowWeapon(player) -- remake R3: bare hands = Brawler arts
+		end
 		return true
 	end)
 
@@ -238,7 +245,12 @@ local function setup()
 			end
 		end
 		-- v0.25.77 Sea Cook Hearty Meal: a feast buff makes food and drinks heal more (buff stat foodHeal)
-		local foodK = 1 + (R.CombatService.GetBuffs(player).foodHeal or 0)
+		-- remake R3: Cook Mastery perks / talents (d.foodMult) add to it, and eating trains Cook Mastery
+		local dd = R.PlayerService.Derived(player)
+		local foodK = 1 + (R.CombatService.GetBuffs(player).foodHeal or 0) + (dd and dd.foodMult or 0)
+		if (def.heal or def.healSp) and not def.shipRepair then
+			R.MasteryService.Add(player, "Cook", MasteryCfg.Gain.FoodUse)
+		end
 		if def.heal then
 			hum.Health = math.min(hum.MaxHealth, hum.Health + hum.MaxHealth * def.heal * foodK)
 		end

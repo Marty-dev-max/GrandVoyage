@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local ClassesCfg = require(Shared.Config.Classes)
 local DamageTypes = require(Shared.Config.DamageTypes)
+local MasteryCfg = require(Shared.Config.Mastery)
 local Reach = require(ReplicatedStorage.Shared.Modules.Reach)
 local Formulas = require(Shared.Modules.Formulas)
 local Net = require(Shared.Modules.Net)
@@ -392,7 +393,7 @@ local function hitTarget(attacker, target, mult, magic, opts)
 	local spell = magic == true -- magic weapons: never miss, half DEF, no crits (fruit hits play like blows)
 	if target.kind == "ship" then
 		-- hulls shrug off most of a blow (they have ship HP); crits still count
-		local dmg = atk * mult * SHIP_HIT * (math.random() * 100 < crit and 1.5 or 1)
+		local dmg = atk * mult * SHIP_HIT * (math.random() * 100 < crit and 1.5 or 1) * (1 + (d.shipHitMult or 0)) -- R3 Hull Breaker
 		R.ShipService.DamageShip(target.ship, math.max(1, math.floor(dmg)), nil, attacker)
 		return
 	end
@@ -416,6 +417,14 @@ local function hitTarget(attacker, target, mult, magic, opts)
 		local dtype = opts.dtype or (magic == "fruit" and "Element") or DamageTypes.OfWeapon(weaponType(attacker))
 		local typeK, match = DamageTypes.Mult(dtype, mob.def.id)
 		bonus *= typeK * R.OriginService.DamageMult(R.PlayerService.Profile(attacker)) -- remake R2 Origin (Relic Seeker)
+		-- remake R3 talents: damage-type cards, Last Stand under 30% HP
+		bonus *= 1 + ((d.dmgType and d.dmgType[dtype]) or 0)
+		if (d.lastStand or 0) > 0 then
+			local ahum = R.PlayerService.Humanoid(attacker)
+			if ahum and ahum.Health < ahum.MaxHealth * 0.3 then
+				bonus *= 1 + d.lastStand
+			end
+		end
 		local mdef = opts.ignoreDef and 0 or (spell and mob.def.def * 0.5 or mob.def.def)
 		local dmg, isCrit = Formulas.Damage(atk, mdef, mult * bonus, spell and 0 or crit)
 		if opts.split and not mob.def.isBoss then
@@ -437,6 +446,8 @@ local function hitTarget(attacker, target, mult, magic, opts)
 		end
 		if opts.dot and not mob.dead then
 			applyDot(attacker, mob, opts.dot[1], math.floor(dmg * opts.dot[2]), opts.dot[3])
+		elseif (d.burnKick or 0) > 0 and not mob.dead and weaponType(attacker) == "Shoes" and math.random() < d.burnKick then
+			applyDot(attacker, mob, "burn", math.max(1, math.floor(dmg * 0.15)), 3) -- R3 talent Ember Kick
 		end
 		if opts.stun and not mob.dead and not mob.def.isBoss then
 			-- v0.25.77 dazed (Smoke Pellet): frozen in place for opts.stun seconds
@@ -550,11 +561,20 @@ local function inRadiusTargets(attacker, pos, radius)
 	return list
 end
 
-function Combat.HealPlayer(player, amount)
+-- healer (remake R3, optional): their heal perks / talents count (d.healMult) and the HP really restored trains their
+-- Doctor Mastery (healing yourself counts Gain.SelfHealK)
+function Combat.HealPlayer(player, amount, healer)
 	local hum = R.PlayerService.Humanoid(player)
 	local root = R.PlayerService.Root(player)
 	if hum and hum.Health > 0 then
+		local hd = healer and R.PlayerService.Derived(healer)
+		amount *= 1 + (hd and hd.healMult or 0)
+		local before = hum.Health
 		hum.Health = math.min(hum.MaxHealth, hum.Health + amount)
+		if healer and hum.Health > before then
+			local G = MasteryCfg.Gain
+			R.MasteryService.Add(healer, "Doctor", (hum.Health - before) * G.HealPerHp * (healer == player and G.SelfHealK or 1))
+		end
 		if root then
 			Net.FX("Heal", { pos = root.Position + Vector3.new(0, 3, 0), amount = math.floor(amount) }, root.Position, 200)
 		end
@@ -1340,12 +1360,12 @@ local function setup()
 				end)
 			end
 		elseif kind == "Heal" then
-			Combat.HealPlayer(player, (skill.power or 50) * (1 + 0.25 * (lv - 1)) + d.matk * 0.5)
+			Combat.HealPlayer(player, (skill.power or 50) * (1 + 0.25 * (lv - 1)) + d.matk * 0.5, player)
 		elseif kind == "PartyHeal" then
 			fxData.radius = skill.radius
 			local amount = (skill.power or 100) * (1 + 0.2 * (lv - 1)) + d.matk * 1.2
 			for _, m in ipairs(partyInRadius(player, skill.radius or 30)) do
-				Combat.HealPlayer(m, amount)
+				Combat.HealPlayer(m, amount, player)
 			end
 		elseif kind == "Buff" or kind == "PartyBuff" then
 			local stats = {}
@@ -1354,6 +1374,9 @@ local function setup()
 				stats[k] = v * scale
 			end
 			local targets = kind == "PartyBuff" and partyInRadius(player, skill.radius or 30) or { player }
+			if skill.buff.foodHeal then
+				R.MasteryService.Add(player, "Cook", MasteryCfg.Gain.Feast) -- remake R3: a feast trains Cook Mastery
+			end
 			if skill.syringe then
 				-- v0.25.77 Adrenaline Shot: a syringe flies into every crewmate it reaches (FX)
 				fxData.allies = {}

@@ -6,6 +6,8 @@ local FruitsCfg = require(Shared.Config.Fruits)
 local TokiCfg = require(Shared.Config.Toki)
 local PetsCfg = require(Shared.Config.Pets)
 local LooksCfg = require(Shared.Config.Looks)
+local MasteryCfg = require(Shared.Config.Mastery)
+local TalentsCfg = require(Shared.Config.Talents)
 local ItemDB = require(Shared.Modules.ItemDB)
 
 local F = {}
@@ -233,6 +235,13 @@ function F.Compute(profile, buffs)
 	for stat, v in pairs(F.RaceStats(profile)) do
 		b[stat] = (b[stat] or 0) + v
 	end
+	-- remake R3: Field Mastery perks + Talent cards (Config/Mastery, Config/Talents)
+	for k, v in pairs(MasteryCfg.Bonus(profile)) do
+		b[k] = (b[k] or 0) + v
+	end
+	for k, v in pairs(TalentsCfg.Bonus(profile)) do
+		b[k] = (b[k] or 0) + v
+	end
 	-- Toki (v0.25.70): Conqueror = every attribute; Armament / Observation = their two
 	for stat, v in pairs(F.TokiStats(profile)) do
 		local k = stat
@@ -309,10 +318,25 @@ function F.Compute(profile, buffs)
 	d.crit = 1 + WPN * 0.25 + MAR * 0.15 + (b.crit or 0) + (buffs.crit or 0)
 	local aspd = (b.aspd or 0) + (buffs.aspd or 0)
 	d.attackInterval = math.max(0.35, 1.5 * (1 - MAR * 0.005 - WPN * 0.0015) / (1 + aspd))
-	d.moveSpeed = math.min(24, 17 + END * 0.04) * herSpeed
+	d.moveSpeed = math.min(24, 17 + END * 0.04) * herSpeed * (1 + (b.speedPct or 0))
 	-- Endurance: the Stamina bar (Controllers/Stamina reads the player attributes MaxStamina / StaminaRegen)
-	d.maxStamina = math.floor(GameConfig.Stamina.Max + END * SC.StaminaPerEnd)
-	d.staminaRegen = GameConfig.Stamina.Regen * (1 + END * SC.RegenPerEnd)
+	d.maxStamina = math.floor((GameConfig.Stamina.Max + END * SC.StaminaPerEnd) * (1 + (b.staminaPct or 0)))
+	d.staminaRegen = GameConfig.Stamina.Regen * (1 + END * SC.RegenPerEnd) * (1 + (b.staminaRegenPct or 0))
+	-- remake R3 talents / mastery: guard (GuardService), damage types + specials (CombatService), field work
+	d.blockCut = math.min(0.6, b.blockCut or 0)
+	d.postureCut = math.min(0.6, b.postureCut or 0)
+	d.parryAdd = b.parryAdd or 0
+	d.fallCut = math.min(0.8, b.fallCut or 0)
+	d.dodgeAdd = b.dodgeAdd or 0
+	d.dmgType = { Slash = b.dmgSlash or 0, Blunt = b.dmgBlunt or 0, Pierce = b.dmgPierce or 0, Element = b.dmgElement or 0 }
+	d.lastStand = b.lastStand or 0
+	d.shipHitMult = b.shipHitMult or 0
+	d.burnKick = b.burnKick or 0
+	d.repairMult = b.repairMult or 0
+	d.healMult = b.healMult or 0
+	d.foodMult = b.foodMult or 0
+	d.reviveHp = b.reviveHp or 0
+	d.reloadCut = math.min(0.5, b.reloadCut or 0)
 	d.cannonDamage = (b.cannonDamage or 0) + (cls.passive and cls.passive.cannonDamage or 0)
 	d.shipSpeed = (b.shipSpeed or 0) + (cls.passive and cls.passive.shipSpeed or 0)
 	d.shipHp = b.shipHp or 0

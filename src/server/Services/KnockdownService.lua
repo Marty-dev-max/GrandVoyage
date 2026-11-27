@@ -144,7 +144,10 @@ function KD.Down(player)
 			return
 		end
 		if helper ~= player and KD.IsDowned(player) and R.PlayerService.Humanoid(helper) and R.PlayerService.Humanoid(helper).Health > 0 and not KD.IsDowned(helper) then
-			standUp(player, CFG.ReviveHp)
+			-- remake R3: the reviver's Doctor perks / talents (d.reviveHp) and Doctor Mastery for the revive
+			local hd = R.PlayerService.Derived(helper)
+			standUp(player, math.min(1, CFG.ReviveHp + (hd and hd.reviveHp or 0)))
+			R.MasteryService.Add(helper, "Doctor", require(ReplicatedStorage.Shared.Config.Mastery).Gain.Revive)
 			R.PlayerService.Notify(player, helper.DisplayName .. " revived you!", "good")
 			R.PlayerService.Notify(helper, "You revived " .. player.DisplayName .. "!", "good")
 		end

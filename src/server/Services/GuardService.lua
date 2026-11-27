@@ -59,7 +59,8 @@ end
 
 function GS.OnDash(player)
 	local s = S(player)
-	s.dodgeUntil = os.clock() + GameConfig.Dodge.IFrames + GameConfig.Dodge.Grace
+	local d = R.PlayerService.Derived(player) -- remake R3 talent Ghost Step (d.dodgeAdd)
+	s.dodgeUntil = os.clock() + GameConfig.Dodge.IFrames + GameConfig.Dodge.Grace + (d and d.dodgeAdd or 0)
 	if s.on then
 		s.on = false
 		publish(player, s)
@@ -89,7 +90,8 @@ function GS.Check(player, fromPos, dmg, opts)
 	if to.Magnitude < 0.1 or look.Magnitude < 0.1 or to.Unit:Dot(look.Unit) < G.FrontDot then
 		return dmg -- from the side / behind: the guard does nothing
 	end
-	if s.parryOpen and now - s.t0 <= G.ParryWindow + G.ParryGrace then
+	local d = R.PlayerService.Derived(player) or {} -- remake R3 talents: parryAdd, postureCut, blockCut
+	if s.parryOpen and now - s.t0 <= G.ParryWindow + G.ParryGrace + (d.parryAdd or 0) then
 		s.parryOpen = false -- one parry per press
 		s.posture = math.max(0, s.posture - G.ParryHeal)
 		publish(player, s)
@@ -100,7 +102,7 @@ function GS.Check(player, fromPos, dmg, opts)
 	local hum = R.PlayerService.Humanoid(player)
 	local maxHp = hum and math.max(1, hum.MaxHealth) or 100
 	local k = (opts and opts.boss) and G.PostureBoss or 1
-	s.posture += (G.PostureFlat + dmg / maxHp * 100 * G.PostureK) * k
+	s.posture += (G.PostureFlat + dmg / maxHp * 100 * G.PostureK) * k * (1 - (d.postureCut or 0))
 	s.hitAt = now
 	if s.posture >= G.PostureMax then
 		s.posture = 0
@@ -115,7 +117,7 @@ function GS.Check(player, fromPos, dmg, opts)
 	publish(player, s)
 	fxAt(player, "block")
 	R.QuestService.Event(player, "Guard")
-	return math.max(1, math.floor(dmg * G.BlockMult)), "block"
+	return math.max(1, math.floor(dmg * G.BlockMult * (1 - (d.blockCut or 0)))), "block"
 end
 
 -- a fall of `drop` studs: lethal falls knock down (CombatService.DamagePlayer without a killer), DownAt always does
@@ -130,7 +132,8 @@ local function fallHit(player, drop)
 		return -- caught a wall / ledge (Parkour)
 	end
 	local rolled = s ~= nil and now - (s.rollAt or -99) < PK.RollWindow + 0.25
-	local k = math.min(F.Max, (drop - F.Safe) * F.PerStud) * (rolled and PK.RollMult or 1)
+	local fd = R.PlayerService.Derived(player) -- remake R3 talent Cat Landing (d.fallCut)
+	local k = math.min(F.Max, (drop - F.Safe) * F.PerStud) * (rolled and PK.RollMult or 1) * (1 - (fd and fd.fallCut or 0))
 	local dmg = math.max(1, math.floor(hum.MaxHealth * k))
 	local root = R.PlayerService.Root(player)
 	if root then

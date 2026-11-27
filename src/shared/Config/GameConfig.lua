@@ -4,15 +4,15 @@ return {
 	LogoLines = { "LARPTALES", "VOXEL SEAS" },
 	LogoImage = 133908417032160, -- v0.25.87: pixel logo board floating behind the menu character (tools/gen_logo.py); nil = text logo
 	-- bump on every change: shown bottom-right in game and printed in Output, so you can tell which code is running
-	Version = "0.1.8-remake",
+	Version = "0.1.9-remake",
 	SagaName = "Azure East Saga",
 	-- title menu UPDATE LOG lines (newest first, at most 6: more ran off the top of the screen, v0.25.156)
 	UpdateNotes = {
+		"Talent cards (T): pick 1 of 3 every level. Field Mastery for ship jobs",
+		"No classes: the weapon you hold picks your Weapon Arts (skills + Arts Lv)",
 		"New characters pick an Origin (5) and a starting weapon (6); races give stat points",
 		"Damage types: Slash, Blunt, Pierce, Element. Monsters show weak (+) and resist (-)",
 		"New stats: Vitality, Endurance, Willpower, Weaponry, Martial Arts, Fruit Mastery (300 cap)",
-		"Parkour: climb, wall run, ledge hang, vault, slide, roll",
-		"HP / SP / EXP are slim tubes; hotbar hides when calm",
 		"Hold F to block, tap F just before a hit to parry",
 	},
 	DataStoreName = "GV_Player_r1",
@@ -163,6 +163,8 @@ return {
 	Sprint = { Mult = 1.55, TapWindow = 0.3, Fov = 6 },
 	-- remake (owner): no Auto Battle (the HUD switch is gone, T does nothing); F1 / F2 auto potions stay
 	AutoBattle = false,
+	-- remake R3 (owner: no Job classes): the equipped weapon picks the old class whose skills you use (PlayerService.FollowWeapon)
+	WeaponArts = true,
 	-- remake HUD: the hotbar fades out after this many calm seconds (no fight, no key, no click)
 	HotbarFade = { Calm = 5, Touch = 0.55 },
 	-- ===== Remake R1 core feel (docs/Plan-Movement-Combat-v3.md sec 3-4; Controllers/Stamina + Guard, Services/GuardService) =====

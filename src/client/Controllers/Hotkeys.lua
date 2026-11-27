@@ -16,12 +16,13 @@ Hotkeys.Actions = {
 	{ "Skill1", "Skill 1", "E" }, { "Skill2", "Skill 2", "R" }, { "Skill3", "Skill 3", "V" },
 	{ "Skill4", "Skill 4", "Z" }, { "Skill5", "Skill 5", "X" }, { "Skill6", "Skill 6", "C" },
 	-- v0.25.71 (owner): 1-6 pick the skill SET (Shared/Modules/SkillSets), E R F Z X C cast that set's skills
-	{ "Set1", "Set 1: Class", "One" }, { "Set2", "Set 2: Fruit", "Two" }, { "Set3", "Set 3: Basic", "Three" },
+	{ "Set1", "Set 1: Weapon Arts", "One" }, { "Set2", "Set 2: Fruit", "Two" }, { "Set3", "Set 3: Basic", "Three" },
 	{ "Set4", "Set 4: Armament", "Four" }, { "Set5", "Set 5: Observation", "Five" }, { "Set6", "Set 6: Conqueror", "Six" },
-	{ "Dash", "Dash", "Q" }, { "Auto", "Auto / Manual", "T" }, { "Target", "Nearest target", "Tab" }, { "Race", "Race mode", "Seven" }, { "Sling", "Slingshot Launch (Bounce)", "U" },
+	{ "Dash", "Dash", "Q" }, { "Auto", "Auto / Manual", "F10" }, { "Target", "Nearest target", "Tab" }, { "Race", "Race mode", "Seven" }, { "Sling", "Slingshot Launch (Bounce)", "U" },
 	{ "Inventory", "Bag", "I" }, { "Skills", "Skills", "K" }, { "Quests", "Quests", "J" }, { "Map", "Map", "M" },
 	{ "Pets", "Pets", "N" }, { "PearlShop", "Store", "H" }, { "Stats", "Stats", "Y" }, { "Guild", "Crew", "G" },
 	{ "Party", "Party", "P" }, { "BossBoard", "Bosses", "B" }, { "Settings", "Settings", "O" }, { "MenuHub", "Menu", "L" },
+	{ "Talents", "Talents", "T" }, -- remake R3 (T was Auto Battle, which is off in the remake)
 }
 local DEFAULT = {}
 for _, a in ipairs(Hotkeys.Actions) do

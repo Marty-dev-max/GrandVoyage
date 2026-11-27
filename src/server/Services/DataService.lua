@@ -49,6 +49,9 @@ local function template()
 		jobExp = 0,
 		statPoints = GameConfig.Stats.Start,
 		skillPoints = 1,
+		talents = {}, -- remake R3: Talent card ids (Config/Talents); talentPicks waiting, talentOffer = the 3 on offer
+		talentPicks = 0,
+		mastery = {}, -- remake R3: Field Mastery { [field] = { lv, xp } } (Config/Mastery)
 		stats = { VIT = 0, END = 0, WIL = 0, WPN = 0, MAR = 0, FRU = 0 }, -- remake attributes (Formulas.StatNames) (statsV is set by the load migration)
 		skills = { Bash = 1, FirstAid = 1 },
 		skillBar = { "Bash", "FirstAid" },
@@ -192,6 +195,15 @@ function DataService.Load(player, slot)
 		data.statsV = 2
 		data.stats = { VIT = 0, END = 0, WIL = 0, WPN = 0, MAR = 0, FRU = 0 }
 		data.statPoints = math.min(S.MaxTotal, S.Start + ((data.baseLevel or 1) - 1) * S.PerLevel)
+	end
+	-- remake R3: Talent cards (one pick per base level gained; old saves get the picks of the levels they already have)
+	-- + Field Mastery. talentsV is not in the template (reconcile would add it and skip this).
+	if data.talentsV ~= 1 then
+		data.talentsV = 1
+		data.talents = type(data.talents) == "table" and data.talents or {}
+		data.talentPicks = math.max(0, ((data.baseLevel or 1) - 1) - #data.talents)
+		data.talentOffer = nil
+		data.mastery = type(data.mastery) == "table" and data.mastery or {}
 	end
 	-- v0.25.148 (owner): crew starts at 0: the old unnamed deckhands are gone, only recruited sailors count
 	if not data.crewV2 then

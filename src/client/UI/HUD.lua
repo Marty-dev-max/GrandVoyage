@@ -607,6 +607,7 @@ local MENU = {
 	{ "🐾", "Pets", T.Green:Lerp(T.Ocean, 0.3), "N", "Pets", main = true, fx = { icons = { "paw" }, color = hex("D8FFE0") } },
 	{ "🛍️", "PearlShop", hex("846030"), "H", "Store", main = true, bg = { hex("846030"), hex("513648") }, fx = { icons = { "gem", "coin" }, color = hex("FFE297"), star = 0.2 } },
 	{ "📊", "Stats", T.Purple, "Y", "Stats", main = true, fx = { plus = true, star = 0.9, color = hex("7DFF8E") } },
+	{ "card", "Talents", hex("7A4BC8"), "T", "Talents", main = true, bg = { hex("7A4BC8"), hex("3A1F6B") }, fx = { color = hex("E8C8FF"), star = 0.7 } }, -- remake R3 Talent cards + Field Mastery
 	{ "ship", "SummonShip", T.OceanDark, nil, "Ships", fx = { bubble = true, color = hex("B8F0FF"), star = 0.15 } }, -- calls / stores the ship (editing = Shipwright NPC)
 	{ "🏴", "Guild", hex("A44C64"), "G", "Crew", bg = { hex("A44C64"), hex("58293F") }, stripes = hex("FFC6A8"), fx = { icons = { "flag" }, faction = true, color = hex("FFC6A8") } },
 	{ "👥", "Party", T.Green, "P", "Party", fx = { plus = true, star = 0.9, color = hex("C8FFC8") } },
@@ -1438,7 +1439,7 @@ local function refresh()
 	-- unspent points show as red badges on the Stats / Skills tiles (the long "+ POINTS" button is gone)
 	pointsBtn.Parent.Visible = false
 	local _ = pts
-	for panel, n in pairs({ Stats = player:GetAttribute("StatPoints") or 0, Skills = player:GetAttribute("SkillPoints") or 0 }) do
+	for panel, n in pairs({ Stats = player:GetAttribute("StatPoints") or 0, Skills = player:GetAttribute("SkillPoints") or 0, Talents = player:GetAttribute("TalentPicks") or 0 }) do
 		local badge = HUD.badges and HUD.badges[panel]
 		if badge then
 			badge.Visible = n > 0
@@ -1716,7 +1717,11 @@ function HUD.Layout()
 		menuFrame.Position = UDim2.new(1, -16, 0, 116)
 	else
 		menuScale.Scale = 0.8
-		menuFrame.Size = UDim2.fromOffset(8 * 62 + 7 * 6, 62)
+		local tiles = 1 -- the MENU hub tile + every main tile (remake R3 added Talents)
+		for _, it in ipairs(MENU) do
+			tiles += it.main and 1 or 0
+		end
+		menuFrame.Size = UDim2.fromOffset(tiles * 62 + (tiles - 1) * 6, 62)
 		menuFrame.Position = UDim2.new(1, -16, 0, 62)
 	end
 	if grid then

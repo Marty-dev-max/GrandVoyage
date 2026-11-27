@@ -120,6 +120,63 @@ function PS.BarRemoveIf(p, drop)
 	end
 	trimBar(p.skillBar)
 end
+
+-- remake R3 WEAPON ARTS (no Job classes): the weapon in your hands picks which old class's skills and Job level you
+-- use. Each class owns one weapon type (Config/Classes weapons[1]); bare hands = Brawler. Progress stays per class
+-- (classProgress), so going back to a weapon resumes its arts. No Job Master, no cost, no level gate.
+local WEAPON_CLASS = {}
+for id, c in pairs(Classes) do
+	if c.tier == 1 then
+		for _, w in ipairs(c.weapons) do
+			WEAPON_CLASS[w] = id
+		end
+	end
+end
+WEAPON_CLASS.Fists = "Brawler"
+
+function PS.ArtsOf(p)
+	local entry = p.equipment and p.equipment.weapon and Formulas.FindItem(p, p.equipment.weapon)
+	local def = entry and ItemDB.ForEntry(entry)
+	return WEAPON_CLASS[def and def.weaponType or "Fists"] or "Brawler"
+end
+
+function PS.FollowWeapon(player, quiet)
+	local p = PS.Profile(player)
+	if not p then
+		return
+	end
+	local target = PS.ArtsOf(p)
+	if target == p.class or not Classes[target] then
+		return
+	end
+	p.classProgress = p.classProgress or {}
+	local oldClass = p.class
+	p.classProgress[oldClass] = { jobLevel = p.jobLevel, jobExp = p.jobExp }
+	local saved = p.classProgress[target]
+	p.class = target
+	p.jobLevel = saved and saved.jobLevel or 1
+	p.jobExp = saved and saved.jobExp or 0
+	if not saved then
+		p.skillPoints += 1 -- the first skill point of a new weapon's arts
+	end
+	-- each arts keeps its own bar (same as the old class switch)
+	p.classBars = p.classBars or {}
+	p.classBars[oldClass] = table.clone(p.skillBar)
+	local bar = {}
+	for i, id in ipairs(p.classBars[target] or p.skillBar) do
+		bar[i] = (id ~= "" and usableSkill(p, id)) and id or ""
+	end
+	p.skillBar = trimBar(bar)
+	for _, sk in ipairs(Classes[target].skills) do
+		if (p.skills[sk.id] or 0) > 0 then
+			PS.BarAdd(p, sk.id)
+		end
+	end
+	PS.Recompute(player)
+	if not quiet then
+		PS.Notify(player, "Weapon Arts: " .. Classes[target].name .. " (Arts Lv." .. p.jobLevel .. ")", "info")
+	end
+end
 local derived = {}
 local dirty = {}
 
@@ -205,6 +262,10 @@ function PS.Recompute(player)
 	player:SetAttribute("StaminaRegen", d.staminaRegen)
 	player:SetAttribute("SP", math.min(sp, d.maxSp))
 	PS.MarkDirty(player)
+	-- remake R3: a Talent pick waiting for a card to unlock gets its offer once the stats / mastery qualify
+	if (profile.talentPicks or 0) > 0 and not profile.talentOffer and R.TalentService then
+		task.defer(R.TalentService.Refresh, player)
+	end
 	return d
 end
 
@@ -355,6 +416,7 @@ function PS.GiveExp(player, base, job, pos, src)
 		end
 	end
 	local leveled = false
+	local levelBefore = p.baseLevel
 	if p.baseLevel < GameConfig.MaxBaseLevel then
 		p.baseExp += base
 		while p.baseLevel < GameConfig.MaxBaseLevel and p.baseExp >= Formulas.BaseExpToNext(p.baseLevel) do
@@ -369,6 +431,7 @@ function PS.GiveExp(player, base, job, pos, src)
 	end
 	if leveled then
 		task.defer(PS.AutoStats, player)
+		task.defer(R.TalentService.OnLevelUp, player, p.baseLevel - levelBefore) -- remake R3: one Talent pick per level
 	end
 	local jobLeveled = false
 	local cap = jobCap(p)
@@ -539,6 +602,7 @@ local function enterGame(player, slot)
 	player:SetAttribute("Heritage", p.heritage)
 	player:SetAttribute("HeritageMode", p.heritageMode)
 	player:SetAttribute("Origin", p.origin)
+	PS.FollowWeapon(player, true) -- remake R3: the weapon in hand picks the Weapon Arts
 	PS.SetAttributes(player)
 	R.GuildService.OnPlayerJoin(player)
 	player.CharacterAdded:Connect(function(char)
@@ -983,6 +1047,10 @@ local function setupHandlers()
 	-- Switch class at a Job Master. Progress is saved per class, so switching back resumes where you left off.
 	-- First switch: needs Job Lv.10 and is free. Later switches cost Base Lv x ClassSwitchCostPerLevel Doubloons.
 	Net.Handle("ChangeJob", function(player, data)
+		-- remake R3: no Job classes. The weapon you hold picks your Weapon Arts (PS.FollowWeapon); the old switch is off.
+		if GameConfig.WeaponArts then
+			return false, "No classes any more: equip a weapon to use its arts"
+		end
 		local p = PS.Profile(player)
 		local target = Classes[data.class]
 		if not target or target.tier ~= 1 then

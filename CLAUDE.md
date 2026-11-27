@@ -1383,6 +1383,24 @@ The owner tests in Studio and sends screenshots; previews of new art are rendere
    server value), KnockdownService gives the revived player buff "Adrenaline" { def = 0.5 } 8 s. Checked in Play:
    green / yellow / miss repairs, the ship-card button, BASIC V / Z, Mist heal (Admin `shiphurt` N holes your own ship
    for repair tests); Emergency Repair cooldown = State.cooldowns (button + hotbar share it). Revive untested (2 players).
+   0.1.17-remake = Plan-Mastery-v2 M5 (Navigator part 1). `Shared/Modules/Wind` (W.Angle(x, z, t) turns once per
+   Period 1800 s + a slow sway by place, `W.Cos(fwd, x, z, t)`, `W.SailK(cos, reader)`: With 1.15 / Beam 0.95 /
+   Against 0.6, Wind Reader bonus on top when cos > ReaderMin) and `Shared/Modules/Currents` (C.Lanes = an outbound +
+   a return lane, Side 160 either side of the line between each pair of neighbouring Islands.List entries, 12 lanes;
+   `C.At(x, z)` -> dir, k 0..1: k = 1 - (off/HalfWidth)^2, eased over the first/last 120 studs; Boost 0.25, Drift 5).
+   ShipService stepShip (player ships only, NPC ships unaffected): maxSpeed = ShipStats.Speed(stats, wind x SailK, ...)
+   x (1 + Boost x curAlong), vel += curDir x Drift x curK; attrs SailK / Current (along -1..1) / CurrentK. ShipStats.Speed
+   saturates, so the wind angle moves top speed less than SailK does (48 vs 59). Wind Reader (Navigator 10) = bonus
+   windReader 0.15 (Formulas d.windReader) instead of a flat shipSpeed, + sees currents: Sailing zone chip "RIDING /
+   AGAINST A CURRENT" (CurrentK > 0.15) + `currentStreaks` (white parts in workspace.GVCurrentStreaks drifting with
+   the flow, 14-54 studs out). Helm XP + Gain.CurrentPerSec while curAlong > 0.4. WIND cell: % = Wind x SailK
+   (green >= 1.02, red < 0.8) + `WindArrow` (0.1.18: 22 px outlined pixel arrow right of the %, up = the bow).
+   Admin `field` "Field:Lv[:xp]". Testing sailing from execute_luau: VehicleSeat.SteerFloat writes get overwritten;
+   steer with a Heartbeat loop firing `Net.Get("ShipInput"):FireServer(throttle, steer)` (steer = clamp(-bow:Cross(to).Y
+   x 3, -1, 1)), keep each execute_luau under ~40 s (longer ones time out), and keep the ship clear of piers: a ship
+   pushed into one pitched 64 deg bow-up, the helm went under water and the Split-fruit tester drowned. A slow Studio
+   once took 22 s to rebuild the map and the server hit "Script timeout" in the Start loop (services after it missing,
+   requests "unknown action"): Stop + Play again.
 1. Wait for the owner's verdict on v0.10.3 (hills/flowers/grass); fix what they point at.
 2. Voxel art pass: monsters DONE v0.11.0 (voxel_monsters.py; AssetService sizes = shape base x style.scale,
    MonsterService.RefreshModels swaps placeholder island mobs). Pets + fruits DONE v0.11.1 (voxel_pets.py).

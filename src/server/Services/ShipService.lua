@@ -1879,7 +1879,12 @@ local function stepShip(ship, dt, now)
 				-- a little inward outside the Orbit ring, a little outward inside it (so a ship under sail rides the ring)
 				local bias = 0.35 * math.clamp((toC.Magnitude - Weather.Whirl.Orbit) / Weather.Whirl.Orbit, -1, 1)
 				local flow = (wFlow + u * bias).Unit
-				local rate = Weather.Whirl.FlowTurn * ship.whirlK * (ship.steer ~= 0 and Weather.Whirl.SteerHold or 1)
+				-- 0.1.23: the current turns the bow at least as fast as the ship goes round (speed / distance), so a
+				-- ship under sail stays on the ring and gathers sling; steering lets go (SteerHold) = off on the tangent
+				local need = (math.abs(ship.speed) + (ship.sling or 0) + Weather.Whirl.Swirl * (1 + Weather.Whirl.SwirlIn))
+					/ math.max(toC.Magnitude, Weather.Whirl.Orbit * 0.5)
+				local rate = math.max(Weather.Whirl.FlowTurn, need * 1.15) * ship.whirlK
+					* (ship.steer ~= 0 and Weather.Whirl.SteerHold or 1)
 				ship.yaw += math.clamp(wrapAngle(math.atan2(-flow.X, -flow.Z) - ship.yaw), -rate * dt, rate * dt)
 			end
 		end

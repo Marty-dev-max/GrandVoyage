@@ -1899,6 +1899,16 @@ RunService.RenderStepped:Connect(function()
 	if tip.Visible and not (tipOwner and tipOwner.Visible and tipOwner:IsDescendantOf(game)) then
 		tip.Visible = false
 	end
+	-- a HUD tip (menu tile) stayed over the window its click opened (remake HUD row): HUD tips go when a window opens
+	if tip.Visible and next(openWindows) ~= nil then
+		local a = tipOwner
+		while a and not (a:IsA("Frame") and a.Name:sub(1, 4) == "Win_") do
+			a = a.Parent
+		end
+		if not a then
+			tip.Visible = false
+		end
+	end
 	if tip.Visible then
 		local m = UserInputService:GetMouseLocation()
 		tip.Position = UDim2.fromOffset(m.X / rootScale.Scale + 18, m.Y / rootScale.Scale - 10)

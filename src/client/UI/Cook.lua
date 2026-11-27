@@ -40,10 +40,14 @@ local function clear(frame)
 	end
 end
 
+local busy = false -- a cook is running (module-wide: E on the fire again must not rebuild the window mid-cook)
+
 function Cook.Open()
+	if busy and UI.IsOpen("Cook") then
+		return
+	end
 	local win = UI.Window("Cook", "Cooking", UDim2.fromOffset(980, 620), COLOR, "meat_m")
 	local body = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Parent = win.body })
-	local busy = false
 	local render
 
 	local function cook(recipe)
@@ -65,7 +69,7 @@ function Cook.Open()
 			UI.Toast(fin.msg, fin.ok and "good" or "bad")
 		end
 		task.delay(0.4, function()
-			if UI.IsOpen("Cook") then
+			if body.Parent then
 				render()
 			end
 		end)
@@ -144,21 +148,20 @@ function Cook.Open()
 	render()
 	-- the bag changed (bought, looted, cooked): redraw the counts, at most every half second
 	local pending = false
-	local conn
-	conn = State.Changed:Connect(function(kind)
-		if not UI.IsOpen("Cook") then
-			conn:Disconnect()
-			return
-		end
+	local conn = State.Changed:Connect(function(kind)
 		if kind == "profile" and not pending and not busy then
 			pending = true
 			task.delay(0.5, function()
 				pending = false
-				if UI.IsOpen("Cook") and not busy then
+				if body.Parent and not busy then
 					render()
 				end
 			end)
 		end
+	end)
+	-- this window's own frame goes away (closed, or replaced by a new Cook window): stop listening
+	win.frame.Destroying:Connect(function()
+		conn:Disconnect()
 	end)
 end
 

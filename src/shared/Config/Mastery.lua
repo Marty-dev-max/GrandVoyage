@@ -67,7 +67,7 @@ M.Timing = {
 	GreenMax = 0.22, -- ... and at Lv Max
 	Yellow = 0.12, -- extra width on each side of the green
 	Timeout = 6, -- no press = plain result
-	Lag = 0.4, -- the client's stop time may be this much older than the server's clock
+	Lag = 0.9, -- the client's stop time may be this much older than the server's clock (ping + frame; a sanity check, not anti-cheat)
 }
 
 function M.GreenWidth(level)

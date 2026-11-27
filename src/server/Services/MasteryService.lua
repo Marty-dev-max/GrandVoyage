@@ -85,8 +85,9 @@ end
 
 -- ===== Timing Bar (Mastery v2 M1): one press, green = 3, yellow = 2, else 1 =====
 -- The server places the zones and keeps the start time; the client sends how long it ran before the press. That time
--- may be up to Timing.Lag older than the server's own clock (ping) but never newer, so a late press can't be
--- re-timed into the green.
+-- may be up to Timing.Lag older than the server's own clock (ping) but never newer: a press sent long after the bar
+-- ended can't be passed off as an early one. It is only a sanity check (the client knows the zones, so a cheater
+-- could always claim green); keep Lag wide so players with high ping are not judged late.
 local timings = {} -- [player] = { token, t0, green = {a, b}, yellow = {a, b}, field, data }
 
 function MS.TimingStart(player, field, data)

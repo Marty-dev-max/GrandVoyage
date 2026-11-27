@@ -710,7 +710,8 @@ function H.Arcs(design)
 			hx, hz = 0, 0 -- open rails / canvas overhead / flag strings: the guns shoot through
 		end
 		local a = math.rad(it.r or 0)
-		boxes[i] = { x = it.x, z = it.z, y0 = it.y, y1 = it.y + size.Y, hx = hx, hz = hz, c = math.cos(a), s = math.sin(a) }
+		boxes[i] = { x = it.x, z = it.z, y0 = it.y, y1 = it.y + size.Y, hx = hx, hz = hz, c = math.cos(a), s = math.sin(a),
+			bow = def.jib or def.spar or def.figurehead } -- a bow chaser shoots past these
 	end
 	local out = {}
 	for i, it in ipairs(list) do
@@ -751,7 +752,7 @@ function H.Arcs(design)
 						end
 						inside = nowInside
 						for j, bx in ipairs(boxes) do
-							if j ~= i and bx.y0 < yM + 0.3 and bx.y1 > yM - 0.2 then
+							if j ~= i and not (chaser and bx.bow) and bx.y0 < yM + 0.3 and bx.y1 > yM - 0.2 then
 								local ox, oz = px - bx.x, -(pz - bx.z)
 								local lx = ox * bx.c - oz * bx.s
 								local lz = ox * bx.s + oz * bx.c

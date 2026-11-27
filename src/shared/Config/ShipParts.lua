@@ -98,9 +98,9 @@ part("KegRack", { name = "Powder Keg Rack", category = "Weapon", weight = 30, hp
 -- Cabins / decoration
 part("CrewCabin", { name = "Crew Cabin", category = "Utility", weight = 45, hp = 160, size = Vector3.new(2, 2, 2),
 	crew = 4, color = Color3.fromRGB(180, 120, 80), cost = { beli = 2000, Wood = 10 } })
-part("RamHead", { name = "Ram Figurehead", category = "Utility", weight = 15, hp = 60, max = 1,
+part("RamHead", { name = "Ram Figurehead", category = "Utility", weight = 15, hp = 60, max = 1, figurehead = true,
 	speedBonus = 0.05, color = Color3.fromRGB(255, 255, 240), cost = { beli = 3000, Wood = 5 } })
-part("LionHead", { name = "Lion Figurehead", category = "Utility", weight = 25, hp = 120, max = 1,
+part("LionHead", { name = "Lion Figurehead", category = "Utility", weight = 25, hp = 120, max = 1, figurehead = true,
 	speedBonus = 0.08, color = Color3.fromRGB(255, 200, 60), cost = { beli = 20000, TreasureWood = 1 } })
 part("Barrel", { name = "Barrel", category = "Utility", weight = 6, hp = 20,
 	color = Color3.fromRGB(160, 108, 64), cost = { beli = 60, Wood = 1 } })

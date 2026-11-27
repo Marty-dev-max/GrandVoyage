@@ -324,13 +324,13 @@ function GW.Start()
 		elseif data.cmd == "pearls" then
 			R.PearlService.Credit(player, 1000, "dev")
 		elseif data.cmd == "field" then -- remake: Field Job Mastery level for tests, value "Gunner:50"
-			local field, lv = tostring(data.value or ""):match("^(%a+):(%d+)$")
+			local field, lv, xp = tostring(data.value or ""):match("^(%a+):(%d+):?(%d*)$") -- optional ":xp" (restore after tests)
 			local p = R.DataService.Get(player)
 			if not field or not p or not table.find({ "Shipwright", "Navigator", "Cook", "Doctor", "Gunner" }, field) then
 				return false, "use Field:Level, e.g. Gunner:50"
 			end
 			p.mastery = p.mastery or {}
-			p.mastery[field] = { lv = math.clamp(tonumber(lv), 1, 50), xp = 0 }
+			p.mastery[field] = { lv = math.clamp(tonumber(lv), 1, 50), xp = tonumber(xp) or 0 }
 			R.PlayerService.Recompute(player)
 			R.PlayerService.MarkDirty(player)
 		elseif data.cmd == "shiphurt" then -- remake M4: hole your own ship for repair tests (value = damage, adds water)

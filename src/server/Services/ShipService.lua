@@ -1737,7 +1737,8 @@ function Ship.Start()
 			return nil, "Round Shot loaded (Chain / Bomb need Gunner Mastery Lv." .. def.lv .. ")"
 		end
 		if R.InventoryService.Count(player, "Gunpowder") < (def.powder or 0) then
-			return nil, "Out of Gunpowder: fired Round Shot"
+			ship.shot = "Round" -- back to round shot until Z picks the special one again
+			return nil, "Out of Gunpowder: Round Shot loaded"
 		end
 		return def
 	end
@@ -1806,7 +1807,8 @@ function Ship.Start()
 			ship.activeReload = nil
 		end
 		setAttrs(ship)
-		return { ok = true, msg = note or (broadside and "FULL BROADSIDE!" or nil) }
+		local msg = broadside and ("FULL BROADSIDE!" .. (note and ("  " .. note) or "")) or note
+		return { ok = true, msg = msg }
 	end
 
 	Net.Handle("FireCannons", function(player, data)

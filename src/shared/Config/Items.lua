@@ -334,7 +334,7 @@ end
 
 -- General store stock
 local Shop = {
-	"MeatOnBone", "RoastShank", "BigFeast", "TangerineJuice", "SeaGrog", "CaptainsKeg", "Bandage", "PatchPlanks", "RepairKit", "RawMeat", "FreshFish", "Tangerine", "Spice", "SeaBait", "SteelOre", "Wood", "SailCloth",
+	"MeatOnBone", "RoastShank", "BigFeast", "TangerineJuice", "SeaGrog", "CaptainsKeg", "Bandage", "PatchPlanks", "RepairKit", "RawMeat", "FreshFish", "Tangerine", "Spice", "Gunpowder", "SeaBait", "SteelOre", "Wood", "SailCloth",
 	"SailorVest", "Bandana", "CompassCharm", "SeastoneBracer", "BeardDark", "BeardBrown", "ClownWig",
 	"Ammo_Musket",
 	"Knuckles_Plain", "Sword_Plain", "Slingshot_Plain", "Shoes_Plain", "StormBaton_Plain", "MedKit_Plain", "Hammer_Plain",

@@ -77,7 +77,8 @@ local zoneInfo = {
 -- v0.25.113 (owner: the panel hid behind the character card, too much small text): a compact card ABOVE the character
 -- card: name + HP, four big readouts (speed / wind / sails / guns), the zone chip, the reload bar, four buttons
 local function buildHud()
-	local f = New("Frame", { Name = "ShipHUD", AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 16, 1, -192), Size = UDim2.fromOffset(340, 262), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = Color3.new(1, 1, 1), Visible = false, Parent = UI.Root })
+	-- (remake: x 62 keeps it right of the HP / SP / EXP tubes bottom-left)
+	local f = New("Frame", { Name = "ShipHUD", AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 62, 1, -192), Size = UDim2.fromOffset(340, 262), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = Color3.new(1, 1, 1), Visible = false, Parent = UI.Root })
 	UI.Corner(f, 14)
 	New("UIGradient", { Color = ColorSequence.new(T.PanelTop, T.PanelDeep), Rotation = 90, Parent = f })
 	UI.Stroke(f, T.Edge, 3)
@@ -166,7 +167,7 @@ end
 -- v0.25.155 (#21): the TEST SAIL panel above the ship card: wind and time of day to try, then back to the builder
 local testHud
 local function buildTestHud()
-	local f = New("Frame", { Name = "TestSailHUD", AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 16, 1, -502), Size = UDim2.fromOffset(340, 132), BackgroundColor3 = Color3.new(1, 1, 1), Visible = false, Parent = UI.Root })
+	local f = New("Frame", { Name = "TestSailHUD", AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 62, 1, -502), Size = UDim2.fromOffset(340, 132), BackgroundColor3 = Color3.new(1, 1, 1), Visible = false, Parent = UI.Root })
 	UI.Corner(f, 12)
 	New("UIGradient", { Color = ColorSequence.new(T.PanelTop, T.PanelDeep), Rotation = 90, Parent = f })
 	UI.Stroke(f, T.Edge, 3)

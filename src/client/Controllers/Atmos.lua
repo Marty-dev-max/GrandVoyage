@@ -68,6 +68,17 @@ function Atmos.SetCalm(on)
 	calm = on
 end
 
+-- Mastery v2 M6 (Controllers/Weather): 0 = clear .. 1 = in a storm's eye: dark grey air, dim light, a lightning flash
+-- adds a short bright pulse (Atmos.Flash)
+local stormK, flashK = 0, 0
+local STORM = { atm = Color3.fromRGB(70, 78, 92), dens = 0.5, haze = 2.2, amb = Color3.fromRGB(70, 76, 92), bright = 0.6 }
+function Atmos.SetStorm(k)
+	stormK = math.clamp(k or 0, 0, 1)
+end
+function Atmos.Flash(k)
+	flashK = math.max(flashK, k or 1)
+end
+
 local function lerp(a, b, k)
 	if typeof(a) == "Color3" then
 		return a:Lerp(b, k)
@@ -280,6 +291,19 @@ function Atmos.Start()
 			atm.Density = lerp(L.dens, CALM.dens, calmK)
 			atm.Haze = lerp(L.haze, CALM.haze, calmK)
 			atm.Glare = L.glare
+		end
+		if stormK > 0.01 or flashK > 0.01 then
+			local s = stormK * 0.85
+			Lighting.Brightness = lerp(Lighting.Brightness, STORM.bright, s) + flashK * 3
+			Lighting.Ambient = Lighting.Ambient:Lerp(STORM.amb, s):Lerp(Color3.new(1, 1, 1), flashK * 0.6)
+			Lighting.OutdoorAmbient = Lighting.OutdoorAmbient:Lerp(STORM.amb, s):Lerp(Color3.new(1, 1, 1), flashK * 0.6)
+			if atm then
+				atm.Color = atm.Color:Lerp(STORM.atm, s)
+				atm.Density = lerp(atm.Density, STORM.dens, s)
+				atm.Haze = lerp(atm.Haze, STORM.haze, s)
+				atm.Glare = lerp(atm.Glare, 0, s)
+			end
+			flashK *= 0.45 -- a flash dies within a few 0.1 s steps
 		end
 		if atm and uwK > 0.01 then
 			atm.Color = atm.Color:Lerp(UW.atm, uwK)

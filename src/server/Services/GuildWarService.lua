@@ -340,6 +340,14 @@ function GW.Start()
 			end
 			local dmg = math.clamp(math.floor(tonumber(data.value) or 300), 1, math.max(1, math.floor(ship.hp) - 1))
 			R.ShipService.DamageShip(ship, dmg)
+		elseif data.cmd == "storm" then -- remake M6: "storm" / "whirl" at your ship, "clear" = remove the test ones
+			local what = tostring(data.value or "storm")
+			if what ~= "storm" and what ~= "whirl" and what ~= "clear" then
+				return false, "storm | whirl | clear"
+			end
+			if not R.ShipService.AdminWeather(player, what) then
+				return false, "no ship / character"
+			end
 		elseif data.cmd == "crew" then -- remake: deckhand count for ship tests (re-summon the ship after)
 			local p = R.DataService.Get(player)
 			if p then

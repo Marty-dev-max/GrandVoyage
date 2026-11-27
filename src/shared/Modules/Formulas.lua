@@ -343,6 +343,7 @@ function F.Compute(profile, buffs)
 	d.shipSpeed = (b.shipSpeed or 0) + (cls.passive and cls.passive.shipSpeed or 0)
 	d.shipHp = b.shipHp or 0
 	d.windReader = b.windReader or 0 -- Mastery v2 M5: Navigator Wind Reader (ShipService + Shared/Modules/Wind)
+	d.weatherCut = b.weatherCut or 0 -- Mastery v2 M6: Master Helmsman, share of storm / whirlpool hull damage taken off
 	d.expPct = b.expPct or 0
 	d.beliPct = b.beliPct or 0
 	d.dmgVsBoss = b.dmgVsBoss or 0

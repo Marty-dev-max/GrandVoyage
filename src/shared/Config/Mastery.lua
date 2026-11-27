@@ -27,8 +27,8 @@ M.Fields = {
 		how = "Sail a ship from the helm (moving). Riding a sea current with the flow trains faster",
 		perks = {
 			{ lv = 10, name = "Wind Reader", text = "Up to +15% speed running with the wind, and you see sea currents round your ship", bonus = { windReader = 0.15 } },
-			{ lv = 30, name = "Storm Sense", text = "See storms, whirlpools and sea currents on the map", soon = true },
-			{ lv = 50, name = "Master Helmsman", text = "Weather hurts your ship 50% less, sharp turns", soon = true },
+			{ lv = 30, name = "Storm Sense", text = "Warned of storms and whirlpools before you reach them; storms, whirlpools and sea currents on the map" },
+			{ lv = 50, name = "Master Helmsman", text = "Weather hurts your ship 50% less + Hard Turn (skill: swing 90 degrees at once, breaks free of a whirlpool)", bonus = { weatherCut = 0.5 } },
 		},
 	},
 	Cook = {
@@ -109,6 +109,9 @@ M.Gain = {
 	HelmPerSec = 1, -- Navigator: per second sailing at the helm (MinSpeed studs/s or faster)
 	HelmMinSpeed = 6,
 	CurrentPerSec = 1, -- Navigator: extra per second at the helm while riding a current with the flow (M5)
+	StormPerSec = 2, -- Navigator: extra per second at the helm inside a storm (M6)
+	StormSurvive = 25, -- ... sailing out of a storm you spent 20+ s in
+	WhirlEscape = 20, -- ... breaking out of a whirlpool's pull after being deep in it
 	FoodUse = 2, -- Cook: eating one food / drink item (Mastery v2: cooking is the main way)
 	Feast = 14, -- Cook: a party food buff (Hearty Meal)
 	HealPerHp = 0.1, -- Doctor: per HP healed on others
@@ -138,6 +141,9 @@ M.Skills = {
 		cd = 150, power = 0.45, plug = true, maxLevel = 1, fx = "Repair", desc = "Patch 45% of the ship you stand on and plug every leak." },
 	{ id = "MiracleMist", name = "Miracle Mist", mastery = "Doctor", lv = 50, kind = "PartyHeal", sp = 30, cd = 90,
 		radius = 35, pct = 0.4, cleanse = true, maxLevel = 1, fx = "Heal", desc = "A healing mist: your party within 35 studs gets 40% of their HP back." },
+	-- M6: cast at the helm (ship card button, or the Basic set off the helm keys); ShipService.HardTurn
+	{ id = "HardTurn", name = "Hard Turn", mastery = "Navigator", lv = 50, kind = "ShipTurn", sp = 10, cd = 25,
+		maxLevel = 1, fx = "None", desc = "At the helm: swing the ship 90 degrees toward the side you steer (A / D). With no rudder inside a storm or whirlpool it turns you away from the middle, and breaks free of whirlpool pull for 4 s." },
 }
 for _, s in ipairs(M.Skills) do
 	s.class = "Mastery"

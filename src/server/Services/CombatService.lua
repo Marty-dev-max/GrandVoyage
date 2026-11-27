@@ -1443,6 +1443,12 @@ local function setup()
 			if not R.ShipService.RepairNearby(player, skill.power * (1 + 0.2 * (lv - 1)), skill.plug) then
 				return false, "You must be on a ship"
 			end
+		elseif kind == "ShipTurn" then -- Mastery v2 M6 Hard Turn (Navigator 50)
+			local okT, why = R.ShipService.HardTurn(player)
+			if not okT then
+				return false, why
+			end
+			fxData = nil -- ShipHardTurn FX instead
 		end
 
 		player:SetAttribute("SP", sp - skill.sp)
@@ -1452,7 +1458,7 @@ local function setup()
 			R.FruitService.OnCast(player)
 		end
 		lastAttack[player] = now
-		if not skill.fruit and not skill.toki and not skill.mastery and kind ~= "ShipBuff" and kind ~= "ShipRepair" then
+		if not skill.fruit and not skill.toki and not skill.mastery and kind ~= "ShipBuff" and kind ~= "ShipRepair" and kind ~= "ShipTurn" then
 			R.WeaponService.Draw(player, weaponType(player))
 		end
 		if fxData then

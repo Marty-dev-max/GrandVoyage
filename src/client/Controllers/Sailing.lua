@@ -25,6 +25,9 @@ local ClassesCfg = require(Shared.Config.Classes) -- remake M4: the Emergency Re
 local WindM = require(Shared.Modules.Wind) -- Mastery v2 M5: wind direction (same math as the server)
 local Currents = require(Shared.Modules.Currents) -- Mastery v2 M5: sea currents
 local Waves = require(Shared.Modules.Waves)
+local WeatherM = require(Shared.Modules.Weather) -- Mastery v2 M6: storms + whirlpools (shared math)
+local WeatherCtl = require(script.Parent.Weather) -- ... and the live list the client draws
+local WEATHER_WARN = 700 -- Storm Sense (Navigator Lv 30) warns of weather within this many studs of its edge
 
 local Sailing = {}
 local Gunner = MasteryCfg.Gunner
@@ -38,6 +41,7 @@ local function gunnerLv()
 end
 -- remake M4: Emergency Repair (Shipwright Lv 30) also has a button on the ship card (its skill key is taken at the helm)
 local EMERGENCY = ClassesCfg.SkillById.EmergencyRepair
+local HARDTURN = ClassesCfg.SkillById.HardTurn -- Mastery v2 M6 (Navigator Lv 50), same idea
 -- its cooldown lives in State.cooldowns (shared with the hotbar slot, Combat)
 local player = Players.LocalPlayer
 local T = UI.Theme
@@ -183,15 +187,25 @@ local function buildHud()
 	broadH.LayoutOrder = 2
 	local row4 = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 36), LayoutOrder = 9, Visible = false, Parent = f })
 	UI.List(row4, Enum.FillDirection.Horizontal, 4)
-	local repairB = UI.Button(row4, "EMERGENCY REPAIR", T.Green, UDim2.fromOffset(320, 34), function()
-		local res = Net.Request("CastSkill", { skillId = EMERGENCY.id })
+	-- the Mastery skills whose hotbar keys are taken at the helm get a button here (cooldown shared via State.cooldowns)
+	local function castFromCard(skill)
+		local res = Net.Request("CastSkill", { skillId = skill.id })
 		if res.ok then
-			State.cooldowns[EMERGENCY.id] = os.clock() + ((res.data and res.data.cd) or EMERGENCY.cd)
+			State.cooldowns[skill.id] = os.clock() + ((res.data and res.data.cd) or skill.cd)
 		elseif res.msg and not res.throttled then
 			UI.Toast(res.msg, "bad")
 		end
+	end
+	local repairB, repairH = UI.Button(row4, "EMERGENCY REPAIR", T.Green, UDim2.fromOffset(320, 34), function()
+		castFromCard(EMERGENCY)
 	end)
-	hud = { frame = f, windArrow = windArrow, row4 = row4, repairB = repairB, name = name, hp = hp, zone = zone, zoneText = zoneText, speedT = speedT, windT = windT, sailT = sailT, gunT = gunT, reload = reload,
+	repairH.LayoutOrder = 1
+	-- M6 Hard Turn (Navigator Lv 50): hold A or D while you press it
+	local turnB, turnH = UI.Button(row4, "HARD TURN", T.Purple, UDim2.fromOffset(156, 34), function()
+		castFromCard(HARDTURN)
+	end)
+	turnH.LayoutOrder = 2
+	hud = { frame = f, windArrow = windArrow, row4 = row4, repairB = repairB, repairH = repairH, turnB = turnB, turnH = turnH, name = name, hp = hp, zone = zone, zoneText = zoneText, speedT = speedT, windT = windT, sailT = sailT, gunT = gunT, reload = reload,
 		specialB = specialB, specialH = specialH, kegB = kegB, kegH = kegH, lightB = lightB, zones = zones,
 		row3 = row3, shotB = shotB, shotH = shotH, broadB = broadB, broadH = broadH }
 end
@@ -370,6 +384,29 @@ local function updateHud(ship)
 		hud.zoneText.Text = along >= 0 and ("🌊 RIDING A CURRENT  •  +" .. pct .. "% speed") or ("🌊 AGAINST A CURRENT  •  -" .. pct .. "% speed")
 		hud.zone.BackgroundColor3 = along >= 0 and T.Green or T.OceanDark
 	end
+	-- Mastery v2 M6: weather wins the chip: whirlpool > storm > Storm Sense warning (Navigator Lv 30) > current
+	local wk, sk = ship:GetAttribute("Whirl") or 0, ship:GetAttribute("Storm") or 0
+	if wk > 0 then
+		hud.zoneText.Text = "🌀 WHIRLPOOL!  •  full sail away from the middle"
+		hud.zone.BackgroundColor3 = T.Red
+	elseif sk > 0.05 then
+		hud.zoneText.Text = "⛈ IN A STORM  •  the hull is taking damage"
+		hud.zone.BackgroundColor3 = T.Purple
+	elseif masteryLv("Navigator") >= 30 then
+		local p = ship:GetPivot().Position
+		local best, bestD = nil, WEATHER_WARN
+		for _, e in ipairs(WeatherCtl.List()) do
+			local d = WeatherM.Flat(p.X, p.Z, e.x, e.z) - e.r
+			if d < bestD then
+				best, bestD = e, d
+			end
+		end
+		if best then
+			local dir = WeatherM.Compass(best.x - p.X, best.z - p.Z)
+			hud.zoneText.Text = (best.kind == "S" and "⛈ STORM " or "🌀 WHIRLPOOL ") .. math.max(0, math.floor(bestD)) .. "m " .. dir .. "  •  steer clear"
+			hud.zone.BackgroundColor3 = T.Orange
+		end
+	end
 	hud.sailT.Text = sailLevel < 0 and "BACK" or (sailLevel == 0 and "OFF" or sailText())
 	hud.gunT.Text = (ship:GetAttribute("Manned") or 0) .. "/" .. (ship:GetAttribute("Cannons") or 0)
 	local now = workspace:GetServerTimeNow()
@@ -404,10 +441,21 @@ local function updateHud(ship)
 	end
 	-- Shipwright tool (Lv 30)
 	local repairOn = EMERGENCY ~= nil and masteryLv("Shipwright") >= EMERGENCY.lv
-	hud.row4.Visible = repairOn
+	local turnOn = HARDTURN ~= nil and masteryLv("Navigator") >= HARDTURN.lv -- M6 (Navigator Lv 50)
+	hud.row4.Visible = repairOn or turnOn
+	hud.repairH.Visible = repairOn
+	hud.turnH.Visible = turnOn
 	if repairOn then
 		local wait = (State.cooldowns[EMERGENCY.id] or 0) - os.clock()
-		hud.repairB.Text = wait > 0 and string.format("EMERGENCY REPAIR %ds", math.ceil(wait)) or "EMERGENCY REPAIR"
+		-- both buttons share the row: the repair one gets shorter text then
+		local label = turnOn and "REPAIR" or "EMERGENCY REPAIR"
+		hud.repairB.Text = wait > 0 and string.format("%s %ds", label, math.ceil(wait)) or label
+		hud.repairH.Size = UDim2.fromOffset(turnOn and 160 or 320, 34)
+	end
+	if turnOn then
+		local wait = (State.cooldowns[HARDTURN.id] or 0) - os.clock()
+		hud.turnB.Text = wait > 0 and string.format("HARD TURN %ds", math.ceil(wait)) or "HARD TURN"
+		hud.turnH.Size = UDim2.fromOffset(repairOn and 156 or 320, 34)
 	end
 	if broadOn then
 		local wait = (player:GetAttribute("BroadsideReady") or 0) - now

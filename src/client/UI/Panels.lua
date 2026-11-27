@@ -2588,6 +2588,71 @@ function Panels.FastTravel()
 			end, nil, "Travel", "Cancel")
 		end)
 	end
+	-- Mastery v2 M6 Storm Sense (Navigator Lv 30): sea currents (arrow dashes along each lane), storms and open
+	-- whirlpools on the chart; storms move, so their markers follow the live list while the window is open.
+	-- Everything is placed in SCALE (the full-screen window's UIScale would scale pixel offsets twice); only the
+	-- frame's height/width ratio is read from AbsoluteSize (mapPos stretches z differently from x), and the current
+	-- dashes are redrawn when it changes. pcall: the Lune UI harness has no AbsoluteSize.
+	local navLv = (p.mastery and p.mastery.Navigator and p.mastery.Navigator.lv) or 1
+	if navLv >= 30 then
+		pcall(function()
+			local Currents = require(game:GetService("ReplicatedStorage").Shared.Modules.Currents)
+			local WeatherCtl = require(script.Parent.Parent.Controllers.Weather)
+			local layer = New("Frame", { Name = "StormSense", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 3, Parent = sea })
+			local laneLayer = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 3, Parent = layer })
+			local function aspect()
+				local s = sea.AbsoluteSize
+				return (s.X > 1 and s.Y > 1) and s.Y / s.X or 0.45
+			end
+			local function sc(x, z)
+				local sx, sy = mapPos(x, z)
+				return Vector2.new(sx, sy)
+			end
+			local function drawLanes()
+				laneLayer:ClearAllChildren()
+				local asp = aspect()
+				for _, lane in ipairs(Currents.Lanes) do
+					local a, b = sc(lane.from.X, lane.from.Z), sc(lane.to.X, lane.to.Z)
+					local col = lane.out and Color3.fromRGB(200, 250, 255) or Color3.fromRGB(150, 220, 200)
+					local n = 6
+					for i = 0, n - 1 do -- dashes with a little head, pointing with the flow
+						local p1, p2 = a:Lerp(b, (i + 0.15) / n), a:Lerp(b, (i + 0.75) / n)
+						local dx, dy = p2.X - p1.X, (p2.Y - p1.Y) * asp -- in "width" units
+						local dash = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale((p1.X + p2.X) / 2, (p1.Y + p2.Y) / 2), Size = UDim2.new(math.sqrt(dx * dx + dy * dy), 0, 0, 3),
+							Rotation = math.deg(math.atan2(dy, dx)), BackgroundColor3 = col, BackgroundTransparency = 0.25, BorderSizePixel = 0, ZIndex = 3, Parent = laneLayer })
+						New("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.fromScale(1, 0.5), Size = UDim2.fromOffset(5, 7), BackgroundColor3 = col, BorderSizePixel = 0, ZIndex = 3, Parent = dash })
+					end
+				end
+			end
+			drawLanes()
+			sea:GetPropertyChangedSignal("AbsoluteSize"):Connect(drawLanes)
+			local marks = {}
+			local function refresh()
+				for _, m in ipairs(marks) do
+					m:Destroy()
+				end
+				marks = {}
+				for _, e in ipairs(WeatherCtl.List()) do
+					local c = sc(e.x, e.z)
+					local rw = math.max(0.012, sc(e.x + e.r, e.z).X - c.X) -- radius in width units (x scale)
+					local m = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(c.X, c.Y), Size = UDim2.fromScale(rw * 2, rw * 2), BackgroundTransparency = e.kind == "S" and 0.45 or 0.3,
+						BackgroundColor3 = e.kind == "S" and Color3.fromRGB(70, 70, 96) or Color3.fromRGB(14, 50, 92), ZIndex = 4, Parent = layer })
+					New("UIAspectRatioConstraint", { AspectRatio = 1, DominantAxis = Enum.DominantAxis.Width, Parent = m })
+					m:SetAttribute("PxKeep", true)
+					UI.Corner(m, 999)
+					UI.Text(m, e.kind == "S" and "⛈" or "🌀", 18, T.Text, "Bold", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(28, 28), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 5 })
+					table.insert(marks, m)
+				end
+			end
+			refresh()
+			task.spawn(function()
+				while layer.Parent do
+					task.wait(1)
+					pcall(refresh)
+				end
+			end)
+		end)
+	end
 	-- v0.25.148 (owner: should look like a stone wall): dark mortar + rows of red stone blocks with offset joints,
 	-- shades from the hash, a lit top edge, the name on a dark plaque
 	local rl = New("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(1 / (n + 1), -10, 1, 0), BackgroundColor3 = Color3.fromRGB(70, 26, 22), ClipsDescendants = true, Parent = strip })

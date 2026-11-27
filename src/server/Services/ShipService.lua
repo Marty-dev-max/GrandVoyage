@@ -15,6 +15,7 @@ local ShipHull = require(Shared.Modules.ShipHull)
 local SeaZones = require(Shared.Modules.SeaZones)
 local Wind = require(Shared.Modules.Wind) -- Mastery v2 M5: wind direction
 local Currents = require(Shared.Modules.Currents) -- Mastery v2 M5: sea currents
+local Weather = require(Shared.Modules.Weather) -- Mastery v2 M6: storms + whirlpools
 local Net = require(Shared.Modules.Net)
 local Recruits = require(Shared.Config.Recruits)
 local MasteryCfg = require(Shared.Config.Mastery)
@@ -221,6 +222,9 @@ local function setAttrs(ship)
 		m:SetAttribute("SailK", math.floor((ship.sailK or 1) * 100 + 0.5) / 100)
 		m:SetAttribute("Current", math.floor((ship.curAlong or 0) * 100 + 0.5) / 100)
 		m:SetAttribute("CurrentK", math.floor((ship.curK or 0) * 100 + 0.5) / 100)
+		-- Mastery v2 M6: storm strength and whirlpool pull under the hull (0..1)
+		m:SetAttribute("Storm", math.floor((ship.stormK or 0) * 100 + 0.5) / 100)
+		m:SetAttribute("Whirl", math.floor((ship.whirlK or 0) * 100 + 0.5) / 100)
 		local a = ship.activeReload
 		m:SetAttribute("ReloadStart", a and a.start or 0)
 		m:SetAttribute("ReloadDur", a and a.dur or 0)
@@ -874,6 +878,36 @@ local function helmShip(player)
 	return nil
 end
 
+-- Mastery v2 M6 Hard Turn (Navigator Lv 50 skill): swing HARD_TURN_ANGLE toward the side you steer (A / D held);
+-- with no rudder in a whirlpool / storm it turns you away from its middle. Breaks free of whirlpool pull for a moment.
+local HARD_TURN_RATE, HARD_TURN_FREE, HARD_TURN_ANGLE = 2.6, 4, math.rad(90) -- rad/s while turning, s free of pull
+function Ship.HardTurn(player)
+	local ship = helmShip(player)
+	if not ship then
+		return false, "Take the helm of your ship first"
+	end
+	local now = os.clock()
+	local yaw
+	if math.abs(ship.steer or 0) > 0.1 then
+		yaw = ship.yaw - math.sign(ship.steer) * HARD_TURN_ANGLE
+	else
+		local c = ship.whirl or ship.storm
+		if not c then
+			return false, "Hold A or D to pick the side"
+		end
+		local away = Vector3.new(ship.root.Position.X - c.x, 0, ship.root.Position.Z - c.z)
+		if away.Magnitude < 1 then
+			away = Vector3.new(-math.sin(ship.yaw), 0, -math.cos(ship.yaw))
+		end
+		yaw = math.atan2(-away.X, -away.Z) -- fwd = (-sin yaw, -cos yaw)
+	end
+	ship.hardTurn = { yaw = yaw, untilT = now + 1.4 }
+	ship.whirlFree = now + HARD_TURN_FREE
+	ship.speed = math.max(ship.speed, (ship.maxSpeed or 0) * 0.7) -- the turn keeps way on
+	Net.FX("ShipHardTurn", { pos = ship.root.Position, ship = ship.model }, ship.root.Position, 500)
+	return true
+end
+
 -- powder kegs (#30): float where they were dropped, arm after KEG_ARM s, blow up under a hostile hull
 local KEG_DAMAGE, KEG_RADIUS, KEG_LIFE, KEG_ARM, KEG_MAX_OUT, KEG_REFILL = 180, 16, 90, 2, 6, 20
 local kegs = {}
@@ -950,7 +984,197 @@ local function kegStep(now)
 end
 
 -- once a second: water in the hull hurts it (bilge pumps cut that, #32), fire pots burn (#29), the keg rack refills
+-- ===== Mastery v2 M6: weather (Shared/Modules/Weather) =====
+-- storms drift across the windy sea, whirlpools open and close at fixed spots; the list goes to every client as the
+-- workspace attribute "Weather" once a second. Admin `storm` adds test ones at a player's ship (`extra`).
+local weatherList = {} -- what stepShip / slowTick read (W.At)
+local storms = {} -- [slot] = { x, z, r, vx, vz, born, life } or { nextAt }
+local whirls = {} -- [spot index] = { open, untilT }
+local extra = {} -- admin test weather: { kind, x, z, r, vx, vz, untilT, born, life }
+local weatherId = 0 -- every storm / test whirlpool gets a new id (clients key their clouds by it)
+local function rnd(range)
+	return range[1] + math.random() * (range[2] - range[1])
+end
+
+local function stormStart(now)
+	-- a point in the windy sea, clear of every island
+	for _ = 1, 12 do
+		local x = Weather.MinX + math.random() * (Weather.MaxX - Weather.MinX)
+		local z = (math.random() * 2 - 1) * Weather.HalfZ
+		local ok = true
+		for _, isl in ipairs(Islands.List) do
+			if type(isl) == "table" and isl.x and Weather.Flat(x, z, isl.x, isl.z or 0) < (isl.radius or 0) + Weather.Storm.ClearIsland + 240 then
+				ok = false
+				break
+			end
+		end
+		if ok then
+			local a = math.random() * math.pi * 2
+			local sp = rnd(Weather.Storm.Speed)
+			weatherId += 1
+			return { id = weatherId, x = x, z = z, r = rnd(Weather.Storm.Radius), vx = math.cos(a) * sp, vz = math.sin(a) * sp, born = now, life = rnd(Weather.Storm.Life) }
+		end
+	end
+	return nil
+end
+
+local function stormFade(s, now)
+	local age = now - s.born
+	local f = Weather.Storm.Fade
+	return math.clamp(math.min(age / f, (s.life - age) / f), 0, 1)
+end
+
+-- once a second from the slow loop
+local function weatherTick(now)
+	local list = {}
+	for i = 1, Weather.Storm.Count do
+		local s = storms[i]
+		if not s then
+			-- first start: spread them out in time so they don't all come and go together
+			storms[i] = { nextAt = now + (i - 1) * 40 }
+			s = storms[i]
+		end
+		if s.nextAt then
+			if now >= s.nextAt then
+				storms[i] = stormStart(now) or { nextAt = now + 10 }
+			end
+		elseif now - s.born >= s.life then
+			storms[i] = { nextAt = now + rnd(Weather.Storm.Gap) }
+		else
+			s.x += s.vx
+			s.z += s.vz
+			-- stay in the windy sea: turn back at the edges
+			if (s.x < Weather.MinX and s.vx < 0) or (s.x > Weather.MaxX and s.vx > 0) then
+				s.vx = -s.vx
+			end
+			if math.abs(s.z) > Weather.HalfZ and math.sign(s.z) == math.sign(s.vz) then
+				s.vz = -s.vz
+			end
+			s.k = stormFade(s, now)
+			table.insert(list, { kind = "S", id = s.id, x = s.x, z = s.z, r = s.r, vx = s.vx, vz = s.vz, k = s.k })
+		end
+	end
+	for i, spot in ipairs(Weather.Spots) do
+		local w = whirls[i]
+		if not w then
+			w = { open = math.random() < 0.5, untilT = now + math.random(20, 200) }
+			whirls[i] = w
+		end
+		if now >= w.untilT then
+			w.open = not w.open
+			w.untilT = now + rnd(w.open and Weather.Whirl.On or Weather.Whirl.Off)
+		end
+		if w.open then
+			table.insert(list, { kind = "W", id = 1000 + i, x = spot.x, z = spot.z, r = Weather.Whirl.Radius })
+		end
+	end
+	for i = #extra, 1, -1 do
+		local e = extra[i]
+		if now >= e.untilT then
+			table.remove(extra, i)
+		else
+			if e.kind == "S" then
+				e.x += e.vx
+				e.z += e.vz
+				e.k = stormFade(e, now)
+				table.insert(list, { kind = "S", id = e.id, x = e.x, z = e.z, r = e.r, vx = e.vx, vz = e.vz, k = e.k })
+			else
+				table.insert(list, { kind = "W", id = e.id, x = e.x, z = e.z, r = e.r })
+			end
+		end
+	end
+	weatherList = list
+	workspace:SetAttribute("Weather", Weather.Encode(list))
+end
+
+-- Admin `storm` (tests): "storm" / "whirl" right where the player's ship is, "clear" removes the test ones
+function Ship.AdminWeather(player, what)
+	if what == "clear" then
+		extra = {}
+		return true
+	end
+	local ship = Ship.GetShipOf(player)
+	local root = ship and ship.root or R.PlayerService.Root(player)
+	if not root then
+		return false
+	end
+	local p = root.Position
+	local now = os.clock()
+	if what == "whirl" then
+		-- just off the bow so the ship sails into its pull
+		local bow = ship and Vector3.new(-math.sin(ship.yaw), 0, -math.cos(ship.yaw)) or Vector3.new(0, 0, -1)
+		local c = p + bow * 40
+		weatherId += 1
+		table.insert(extra, { kind = "W", id = weatherId, x = c.X, z = c.Z, r = Weather.Whirl.Radius, untilT = now + 240 })
+	else
+		-- a storm that starts at full strength right over you and drifts slowly
+		weatherId += 1
+		table.insert(extra, { kind = "S", id = weatherId, x = p.X, z = p.Z, r = 180, vx = 2, vz = 1, born = now - Weather.Storm.Fade, life = 300 + Weather.Storm.Fade, untilT = now + 300 })
+	end
+	return true
+end
+
+-- the helmsman (the owner at the helm), for weather XP
+local function helmsman(ship)
+	local hum = ship.owner and R.PlayerService.Humanoid(ship.owner)
+	return hum and ship.seat and ship.seat.Occupant == hum and ship.owner or nil
+end
+
+-- damage / XP once a second (slowTick); the forces are in stepShip
+local function weatherShip(ship)
+	if ship.npc or ship.test or ship.sinking or not ship.owner then
+		return
+	end
+	local pos = ship.root.Position
+	local sk, _, _, wh, wd = Weather.At(pos.X, pos.Z, weatherList)
+	local d = R.PlayerService.Derived(ship.owner)
+	local cut = math.clamp(d and d.weatherCut or 0, 0, 0.9)
+	local dmg = 0
+	local G = MasteryCfg.Gain
+	local helm = helmsman(ship)
+	if sk > 0.05 then
+		dmg += ship.maxHp * Weather.Storm.DmgPerSec * sk
+		if sk >= 0.4 and math.random() < Weather.Storm.Strike.Chance then
+			-- lightning: a random spot on deck, extra damage + planks fly
+			local off = Vector3.new(math.random(-8, 8), 0, math.random(-8, 8))
+			local at = pos + off + Vector3.new(0, 6, 0)
+			dmg += ship.maxHp * Weather.Storm.Strike.Dmg
+			Net.FX("Lightning", { pos = at }, at, 1200)
+			Ship.Smash(ship, at, 2)
+		end
+		toast(ship.owner, "⛈ Storm! The hull is taking a beating: sail out of it", "bad", "storm")
+		ship.stormTime = (ship.stormTime or 0) + 1
+	elseif (ship.stormTime or 0) > 0 then
+		if ship.stormTime >= 20 and helm then
+			R.MasteryService.Add(helm, "Navigator", G.StormSurvive)
+			toast(helm, "Weathered the storm!", "good", "stormout")
+		end
+		ship.stormTime = 0
+	end
+	if wh then
+		if wd < Weather.Whirl.Core then
+			dmg += ship.maxHp * Weather.Whirl.CoreDmg
+			toast(ship.owner, "🌀 The whirlpool is grinding the hull!", "bad", "whirl")
+		elseif wd < wh.r * Weather.Whirl.EscapeFrom then
+			toast(ship.owner, "🌀 Whirlpool! Full sail away from the middle", "bad", "whirl")
+		end
+		if wd < wh.r * Weather.Whirl.EscapeFrom then
+			ship.whirlDeep = true
+		end
+	elseif ship.whirlDeep then
+		ship.whirlDeep = false
+		if helm then
+			R.MasteryService.Add(helm, "Navigator", G.WhirlEscape)
+			toast(helm, "Escaped the whirlpool!", "good", "whirlout")
+		end
+	end
+	if dmg >= 1 then
+		Ship.DamageShip(ship, math.floor(dmg * (1 - cut)), nil, nil)
+	end
+end
+
 local function slowTick(ship, now)
+	weatherShip(ship)
 	local f = ship.flood or 0
 	if f < 0.5 then
 		ship.flood = 0
@@ -1589,6 +1813,15 @@ local function stepShip(ship, dt, now)
 		-- adds more when running with it. The helmsman's perk counts (the owner steers).
 		local cos = Wind.Cos(bow, pos.X, pos.Z, workspace:GetServerTimeNow())
 		local d = ship.owner and R.PlayerService.Derived(ship.owner)
+		-- Mastery v2 M6: a storm blows harder but in gusts; whirlpool pull is added to the velocity below
+		local sk, storm, wk, wh = 0, nil, 0, nil
+		if not ship.test then
+			sk, storm, wk, wh = Weather.At(pos.X, pos.Z, weatherList)
+		end
+		ship.stormK, ship.storm, ship.whirlK, ship.whirl = sk, storm, wk, wh
+		if sk > 0 then
+			wind *= 1 + ((Weather.Storm.WindK - 1) + 0.3 * math.sin(now * 1.7 + ship.id)) * sk
+		end
 		ship.windCos = cos
 		ship.sailK = Wind.SailK(cos, d and d.windReader or 0)
 		maxSpeed = ShipStats.Speed(ship.stats, wind * ship.sailK, buff)
@@ -1619,11 +1852,38 @@ local function stepShip(ship, dt, now)
 		ship.speed = math.max(targetSpeed, ship.speed - accel * dt)
 	end
 	local turnRate = ship.npc and 0.45 or ship.stats.turnRate
-	ship.yaw -= ship.steer * turnRate * dt * math.clamp(0.35 + math.abs(ship.speed) / 40, 0.35, 1)
+	local ht = ship.hardTurn
+	if ht and now < ht.untilT then
+		-- Mastery v2 M6 Hard Turn (Navigator Lv 50): swing to the new heading fast, whatever the rudder says
+		local diff = wrapAngle(ht.yaw - ship.yaw)
+		ship.yaw += math.clamp(diff, -HARD_TURN_RATE * dt, HARD_TURN_RATE * dt)
+	else
+		ship.hardTurn = nil
+		ship.yaw -= ship.steer * turnRate * dt * math.clamp(0.35 + math.abs(ship.speed) / 40, 0.35, 1)
+	end
 	local fwd = Vector3.new(-math.sin(ship.yaw), 0, -math.cos(ship.yaw))
 	local vel = fwd * ship.speed
 	if not ship.npc and ship.curDir and (ship.curK or 0) > 0 then
 		vel += ship.curDir * Currents.Drift * ship.curK -- Mastery v2 M5: a current carries the hull along
+	end
+	if not ship.npc then
+		-- Mastery v2 M6: a storm spins ships round its eye; a whirlpool pulls them in and round (not right after a
+		-- Hard Turn: that breaks free for HARD_TURN_FREE seconds)
+		local st = ship.storm
+		if st and (ship.stormK or 0) > 0 then
+			local off = Vector3.new(pos.X - st.x, 0, pos.Z - st.z)
+			if off.Magnitude > 1 then
+				vel += Vector3.new(-off.Z, 0, off.X).Unit * Weather.Storm.Shove * ship.stormK
+			end
+		end
+		local wh = ship.whirl
+		if wh and (ship.whirlK or 0) > 0 and now >= (ship.whirlFree or 0) then
+			local toC = Vector3.new(wh.x - pos.X, 0, wh.z - pos.Z)
+			if toC.Magnitude > 1 then
+				local u = toC.Unit
+				vel += u * Weather.Whirl.Pull * ship.whirlK + Vector3.new(-u.Z, 0, u.X) * Weather.Whirl.Swirl * ship.whirlK
+			end
+		end
 	end
 	-- World bounds
 	local W = GameConfig.World
@@ -2041,6 +2301,10 @@ function Ship.Start()
 			end
 			if acc >= 1 then
 				acc = 0
+				local okW, errW = pcall(weatherTick, now) -- Mastery v2 M6: move storms, open / close whirlpools
+				if not okW then
+					warn("[ShipService] weather:", errW)
+				end
 				for _, ship in pairs(ships) do
 					if not ship.sinking then
 						local okT, errT = pcall(slowTick, ship, now)

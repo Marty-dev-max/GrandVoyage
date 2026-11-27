@@ -410,7 +410,7 @@ local function startSlide(r, h)
 	end
 	local speed = math.max(v.Magnitude, base * GameConfig.Sprint.Mult) * P.SlideBoost
 	mode = "slide"
-	d = { t = 0, dir = dir, v0 = speed, v1 = base * 0.55 }
+	d = { t = 0, dir = dir, v0 = speed, v1 = base * 0.9 }
 	att = Instance.new("Attachment")
 	att.Name = "ParkourAtt"
 	att.Parent = r
@@ -455,7 +455,9 @@ function Parkour.TryRoll()
 		return false
 	end
 	refreshFilter(c)
-	if not cast(r.Position, -Y * (rootH(h, r) + P.RollNear)) then
+	-- the ground must be close: RollNear studs, or RollLead seconds away at this fall speed (fast falls = longer reach)
+	local near = math.max(P.RollNear, -r.AssemblyLinearVelocity.Y * P.RollLead)
+	if not cast(r.Position, -Y * (rootH(h, r) + near)) then
 		return false
 	end
 	rollAt = os.clock()
@@ -660,7 +662,7 @@ function Parkour.Start()
 		elseif mode == "slide" then
 			d.t += dt
 			local k = math.clamp(d.t / P.SlideTime, 0, 1)
-			local speed = d.v0 + (d.v1 - d.v0) * (k ^ 0.8)
+			local speed = d.v0 + (d.v1 - d.v0) * (k * k) -- keeps the burst, then bleeds off
 			if jump then
 				stopSlide(h)
 				r.AssemblyLinearVelocity = d.dir * speed * P.SlideJump + Y * math.max(r.AssemblyLinearVelocity.Y, 0)

@@ -81,6 +81,7 @@ end
 local SEGMENTS = 13
 local RING_SIZE = 148
 local ring -- { frame, scale, base = {segs}, job = {segs}, shown = {base, job}, target = {base, job}, hold, jobColor }
+local vitals -- remake HUD: { frame, hp, sp, exp, badge, lvl } (buildVitals)
 
 local function buildRing(parent, pos)
 	local frame = New("Frame", { Size = UDim2.fromOffset(RING_SIZE, RING_SIZE), Position = pos, BackgroundTransparency = 1, ZIndex = 3, Parent = parent })
@@ -187,6 +188,16 @@ end
 
 -- point (in UI space, before the root UIScale) of the ring's current fill tip for a half
 local function ringTip(half)
+	if vitals then
+		-- remake HUD: EXP orbs fly into the top of the EXP tube's fill
+		local ok, p = pcall(function()
+			local f = vitals.exp.fill
+			return (f.AbsolutePosition + Vector2.new(f.AbsoluteSize.X / 2, 0)) / UI.GetScale()
+		end)
+		if ok and p then
+			return p
+		end
+	end
 	local i = math.clamp(math.floor(ring.target[half] * SEGMENTS) + 1, 1, SEGMENTS)
 	local seg = ring.segs[half][i]
 	local o = ring.frame.Position
@@ -208,6 +219,9 @@ local function updateRing(dt)
 		end
 		ring.shown[half] = cur
 		paintHalf(half, cur, half == "base" and T.Green or ring.jobColor)
+	end
+	if vitals then
+		vitals.exp.fill.Size = UDim2.fromScale(1, ring.shown.base) -- already eased here
 	end
 end
 
@@ -256,7 +270,7 @@ function HUD.ExpGain(d)
 	local now = os.clock()
 	local groups = {
 		{ half = "base", n = orbCount(d.base or 0), color = T.Green, label = "+" .. UI.Format(d.base or 0) .. " EXP" },
-		{ half = "job", n = orbCount(d.job or 0), color = ring.jobColor, label = "+" .. UI.Format(d.job or 0) .. " JOB" },
+		{ half = "job", n = vitals and 0 or orbCount(d.job or 0), color = ring.jobColor, label = "+" .. UI.Format(d.job or 0) .. " JOB" },
 	}
 	for gi, g in ipairs(groups) do
 		local to = ringTip(g.half)
@@ -296,10 +310,10 @@ local function updateOrbs()
 					it.o:Destroy()
 					table.remove(orbs, i)
 					ring.hold = 0
-					UI.Bounce(ring.frame)
+					UI.Bounce(vitals and vitals.badge or ring.frame)
 					Audio.Play("Coin", { pitch = it.half == "base" and 0.95 or 1.08, volume = 0.22 })
 					if it.last then
-						floatLabel(it.label, it.color, it.p2 + Vector2.new(it.half == "base" and -150 or 18, it.half == "base" and -10 or 10))
+						floatLabel(it.label, it.color, it.p2 + Vector2.new(vitals and 16 or (it.half == "base" and -150 or 18), it.half == "base" and -10 or 10))
 					end
 					continue
 				end
@@ -312,6 +326,86 @@ end
 local SkillLook = require(script.Parent.SkillLook)
 local AmmoCfg = require(Shared.Config.Ammo)
 local skillIconId, skillColor = SkillLook.IconId, SkillLook.Color
+
+-- ===== remake HUD (owner, 27 Nov 2026): VITALS = slim vertical tubes bottom-left instead of the character card =====
+-- "turn the left bars into vertical tubes ... no numbers / text if possible, keep it clean": HP (wide), SP, EXP
+-- (thin) rising from a small level badge. No portrait, no ring, no labels; the numbers live in the tooltip.
+-- Each tube has the same :Set(ratio, text) / :SetColor(c) shape as UI.Bar, so refresh() feeds it unchanged.
+local VIT_H, VIT_W = 168, 52 -- tube height, cluster width
+
+local function tube(parent, color, w, x, name)
+	local back = New("Frame", { Name = name, AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, x, 1, 0), Size = UDim2.new(0, w, 1, 0), BackgroundColor3 = Color3.fromRGB(14, 12, 28), BackgroundTransparency = 0.2, BorderSizePixel = 0, ZIndex = 4, Parent = parent })
+	UI.Stroke(back, T.Edge, 2)
+	-- the red chunk that stays behind a hit and drains after a beat (same juice as UI.Bar)
+	local chunk = New("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.fromScale(1, 0), BackgroundColor3 = Color3.fromRGB(236, 72, 72), BorderSizePixel = 0, ZIndex = 5, Parent = back })
+	local fill = New("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.fromScale(1, 0), BackgroundColor3 = color, BorderSizePixel = 0, ZIndex = 6, Parent = back })
+	local shine = New("Frame", { Position = UDim2.fromOffset(1, 0), Size = UDim2.new(0, math.max(2, math.floor(w / 4)), 1, 0), BackgroundColor3 = color:Lerp(Color3.new(1, 1, 1), 0.5), BorderSizePixel = 0, ZIndex = 7, Parent = fill })
+	local top = New("Frame", { Size = UDim2.new(1, 0, 0, 2), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.25, BorderSizePixel = 0, ZIndex = 7, Parent = fill })
+	-- pixel cells: faint dark ticks every 10%
+	for i = 1, 9 do
+		New("Frame", { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.fromScale(0, i / 10), Size = UDim2.new(1, 0, 0, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.55, BorderSizePixel = 0, ZIndex = 8, Parent = back })
+	end
+	local t = { back = back, fill = fill, ratio = -1, color = color, text = "", token = 0 }
+	function t:Set(r, text)
+		r = math.clamp(r or 0, 0, 1)
+		self.text = text or ""
+		if math.abs(r - self.ratio) < 0.002 then
+			return
+		end
+		local first = self.ratio < 0
+		local down = not first and r < self.ratio
+		self.ratio = r
+		self.token += 1
+		local my = self.token
+		if first then
+			fill.Size = UDim2.fromScale(1, r)
+			chunk.Size = UDim2.fromScale(1, r)
+		elseif down then
+			UI.Tween(fill, 0.08, { Size = UDim2.fromScale(1, r) })
+			task.delay(0.45, function()
+				if self.token == my then
+					UI.Tween(chunk, 0.35, { Size = UDim2.fromScale(1, r) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+				end
+			end)
+		else
+			chunk.Size = UDim2.fromScale(1, r)
+			UI.Tween(fill, 0.25, { Size = UDim2.fromScale(1, r) })
+		end
+		top.Visible = r > 0.01 and r < 0.995
+	end
+	function t:SetColor(c)
+		if c ~= self.color then
+			self.color = c
+			fill.BackgroundColor3 = c
+			shine.BackgroundColor3 = c:Lerp(Color3.new(1, 1, 1), 0.5)
+		end
+	end
+	return t
+end
+
+local function buildVitals()
+	local frame = New("Frame", { Name = "Vitals", AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 16, 1, -14), Size = UDim2.fromOffset(VIT_W, VIT_H + 40), BackgroundTransparency = 1, ZIndex = 3, Parent = UI.Root })
+	local tubes = New("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0), Size = UDim2.fromOffset(16 + 5 + 12 + 5 + 6, VIT_H), BackgroundTransparency = 1, ZIndex = 3, Parent = frame })
+	vitals = { frame = frame }
+	vitals.hp = tube(tubes, T.Green, 16, 0, "HP")
+	vitals.sp = tube(tubes, T.Blue, 12, 21, "SP")
+	vitals.exp = tube(tubes, T.Gold, 6, 38, "EXP")
+	vitals.exp:Set(0)
+	-- level badge under the tubes (the tubes rise out of it)
+	local badge = New("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, 0), Size = UDim2.fromOffset(VIT_W, 34), BackgroundColor3 = Color3.new(1, 1, 1), ZIndex = 8, Parent = frame })
+	UI.Corner(badge, 6)
+	UI.Gradient(badge, T.Gold:Lerp(Color3.new(1, 1, 1), 0.45), T.Orange, 90)
+	UI.Stroke(badge, T.Edge, 3)
+	vitals.badge = badge
+	vitals.lvl = UI.Text(badge, "1", 20, Color3.new(1, 1, 1), "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 9 })
+	New("UIStroke", { Color = T.Edge, Thickness = 2, Parent = vitals.lvl })
+	UI.Tooltip(frame, function()
+		local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+		return string.format("<b>Lv.%d</b>\n<font color=\"#5BE37A\">HP %s</font>\n<font color=\"#6FB6FF\">SP %s</font>\n<font color=\"#FFD35A\">EXP %.1f%%</font>",
+			player:GetAttribute("Level") or 1, vitals.hp.text ~= "" and vitals.hp.text or (hum and UI.Format(hum.Health) or "-"), vitals.sp.text, ring and ring.target.base * 100 or 0), T.Green
+	end)
+	return vitals
+end
 
 local function buildStatus()
 	-- the card sits behind the ring; the ring overlaps its left edge
@@ -359,6 +453,16 @@ local function buildStatus()
 	HUD.boostRow.ChildAdded:Connect(fitCard)
 	HUD.boostRow.ChildRemoved:Connect(fitCard)
 	fitCard()
+	-- remake HUD: the vertical vitals replace the card + ring on screen (both stay built, hidden: refresh, the EXP
+	-- orbs and the level readout keep working through bars / ring)
+	buildVitals()
+	card.Visible = false
+	ring.frame.Visible = false
+	bars.hp, bars.sp = vitals.hp, vitals.sp
+	ring.lvl = vitals.lvl
+	HUD.boostRow.Parent = UI.Root
+	HUD.boostRow.AnchorPoint = Vector2.new(0, 1)
+	HUD.boostRow.Size = UDim2.fromOffset(300, 20)
 	buffRow = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(170, 158), Size = UDim2.fromOffset(300, 30), Parent = UI.Root })
 	-- v0.24.8 (owner): the party sits right under the player card as one horizontal strip (above the quest tracker):
 	-- member chips with name + HP while in a party, else a PARTY button that opens the Party window
@@ -778,7 +882,9 @@ HUD.TintPellet = tintPellet
 HUD.AmmoCount = ammoCount
 
 local function buildSkillBar()
-	local bar = New("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -12), Size = UDim2.fromOffset(900, 2 * (SLOT + 4) + 8), BackgroundTransparency = 1, Parent = UI.Root })
+	-- remake HUD: a CanvasGroup so the whole bar can fade when calm (GroupTransparency); 24 px of head room keeps
+	-- the hover "jump" of the top row inside the group (a CanvasGroup clips what pokes out)
+	local bar = New("CanvasGroup", { Name = "Hotbar", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -12), Size = UDim2.fromOffset(1100, 2 * (SLOT + 4) + 8 + 24), BackgroundTransparency = 1, Parent = UI.Root })
 	HUD.hotbar = bar
 	local vlist = UI.List(bar, Enum.FillDirection.Vertical, 6, Enum.HorizontalAlignment.Center)
 	vlist.VerticalAlignment = Enum.VerticalAlignment.Bottom
@@ -1004,6 +1110,16 @@ local function buildSkillBar()
 		return "<b>Auto Battle settings</b>\nSearch range and when to eat", T.Green
 	end)
 	New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(40, SLOT), LayoutOrder = 221, Parent = second })
+	if GameConfig.AutoBattle == false then
+		-- remake (owner): no Auto Battle, so no AUTO / MANUAL switch or its gear (and no spacers above them)
+		autoBtn.Parent.Visible = false
+		gh.Visible = false
+		for _, ch in ipairs(second:GetChildren()) do
+			if ch:IsA("Frame") and (ch.LayoutOrder == 220 or ch.LayoutOrder == 221) then
+				ch.Visible = false
+			end
+		end
+	end
 
 	-- ammo (slingshot classes): the loaded bullet, tap to pick another kind
 	local ammoHolder = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(SLOT, SLOT + 4), LayoutOrder = 210, Visible = false, Parent = main })
@@ -1531,28 +1647,45 @@ function HUD.Layout()
 	if okW and absW and absW > 0 then
 		rowW = absW / sc
 	end
-	local bottomCard = not compact and not UI.IsMobile and canvas.X >= 536 + rowW + 24
+	-- remake HUD: PC = vitals tubes bottom-left, hotbar centered (shifted right only when the screen is too narrow);
+	-- phones / small windows = vitals top-left (the thumbstick is bottom-left), quest + party right of them
+	local bottomCard = not compact and not UI.IsMobile
 	HUD.bottomCard = bottomCard
+	statusCard.Visible = false
+	ring.frame.Visible = false
+	local vh = VIT_H + 40
+	local vf = vitals and vitals.frame
 	if bottomCard then
-		statusCard.AnchorPoint = Vector2.new(0, 1)
-		statusCard.Position = UDim2.new(0, 60, 1, -14)
-		statusCard.Size = UDim2.fromOffset(460, HUD.cardH or 106)
-		ring.frame.Position = UDim2.new(0, 14, 1, -166)
+		if vf then
+			vf.AnchorPoint = Vector2.new(0, 1)
+			vf.Position = UDim2.new(0, 16, 1, -14)
+		end
 		buffRow.AnchorPoint = Vector2.new(0, 1)
-		buffRow.Position = UDim2.new(0, 170, 1, -146)
+		buffRow.Position = UDim2.new(0, 16, 1, -(14 + vh + 10))
+		HUD.boostRow.AnchorPoint = Vector2.new(0, 1)
+		HUD.boostRow.Position = UDim2.new(0, 16, 1, -(14 + vh + 46))
 		if HUD.hotbar then
-			-- v0.25.30 (owner: the card and the hotbar overlapped): the bar starts right after the card
-			HUD.hotbar.AnchorPoint = Vector2.new(0, 1)
-			HUD.hotbar.Position = UDim2.new(0, 536, 1, -12)
-			HUD.hotbar:FindFirstChildOfClass("UIListLayout").HorizontalAlignment = Enum.HorizontalAlignment.Left
+			local left = 16 + VIT_W + 20
+			local list = HUD.hotbar:FindFirstChildOfClass("UIListLayout")
+			if canvas.X / 2 - rowW / 2 >= left then
+				HUD.hotbar.AnchorPoint = Vector2.new(0.5, 1)
+				HUD.hotbar.Position = UDim2.new(0.5, 0, 1, -12)
+				list.HorizontalAlignment = Enum.HorizontalAlignment.Center
+			else
+				HUD.hotbar.AnchorPoint = Vector2.new(0, 1)
+				HUD.hotbar.Position = UDim2.new(0, left, 1, -12)
+				list.HorizontalAlignment = Enum.HorizontalAlignment.Left
+			end
 		end
 	else
-		statusCard.AnchorPoint = Vector2.zero
-		ring.frame.Position = UDim2.fromOffset(14, topY)
-		statusCard.Position = UDim2.fromOffset(60, topY + 12)
-		statusCard.Size = UDim2.fromOffset(compact and 370 or 440, HUD.cardH or 106)
+		if vf then
+			vf.AnchorPoint = Vector2.zero
+			vf.Position = UDim2.fromOffset(16, topY)
+		end
 		buffRow.AnchorPoint = Vector2.zero
-		buffRow.Position = UDim2.fromOffset(compact and 356 or 426, topY + 176)
+		buffRow.Position = UDim2.fromOffset(16 + VIT_W + 12, topY + 92)
+		HUD.boostRow.AnchorPoint = Vector2.zero
+		HUD.boostRow.Position = UDim2.fromOffset(16 + VIT_W + 12, topY + 128)
 		if HUD.hotbar then
 			HUD.hotbar.AnchorPoint = Vector2.new(0.5, 1)
 			HUD.hotbar.Position = UDim2.new(0.5, 0, 1, -12)
@@ -1560,7 +1693,7 @@ function HUD.Layout()
 		end
 	end
 	if HUD.partyBar then
-		HUD.partyBar.Position = UDim2.fromOffset(16, topY + 176)
+		HUD.partyBar.Position = UDim2.fromOffset(bottomCard and 16 or 16 + VIT_W + 12, topY + 48)
 		HUD.partyBar.Size = UDim2.fromOffset(HUD.partyWidth or 130, 36)
 	end
 	-- target frame: narrower on small screens so it clears the status card
@@ -1597,8 +1730,8 @@ function HUD.Layout()
 	end
 	-- quest tracker sits under the player card
 	if HUD.questFrame then
-		HUD.questFrame.Position = UDim2.fromOffset(16, bottomCard and topY + 8 or topY + 222)
-		HUD.questFrame.Size = UDim2.fromOffset(compact and 300 or 330, HUD.questFrame.Size.Y.Offset)
+		HUD.questFrame.Position = UDim2.fromOffset(bottomCard and 16 or 16 + VIT_W + 12, topY + 8)
+		HUD.questFrame.Size = UDim2.fromOffset(compact and 280 or 320, HUD.questFrame.Size.Y.Offset)
 	end
 	-- loot feed: bottom-left on PC; on touch screens the thumbstick lives there, so stack it under the tracker
 	local list = lootFeed:FindFirstChildOfClass("UIListLayout")
@@ -1610,7 +1743,7 @@ function HUD.Layout()
 		end
 	else
 		lootFeed.AnchorPoint = Vector2.new(0, 1)
-		lootFeed.Position = bottomCard and UDim2.new(0, 16, 1, -190) or UDim2.new(0, 16, 1, -24)
+		lootFeed.Position = bottomCard and UDim2.new(0, 16, 1, -(14 + VIT_H + 40 + 84)) or UDim2.new(0, 16, 1, -24)
 		if list then
 			list.VerticalAlignment = Enum.VerticalAlignment.Bottom
 		end
@@ -1636,6 +1769,51 @@ function HUD.Start()
 	buildTarget()
 	buildLoot()
 	HUD.Layout()
+	-- remake HUD (owner): the hotbar fades away after HotbarFade.Calm quiet seconds and comes back on a fight
+	-- (State.lastCombat), a click, any non-movement key, the pointer near the bottom, blocking or low HP.
+	-- Touch screens only fade it part way (their thumbs need to find the buttons).
+	local fadeCfg = GameConfig.HotbarFade or { Calm = 5, Touch = 0.55 }
+	local MOVE_KEYS = {
+		[Enum.KeyCode.W] = true, [Enum.KeyCode.A] = true, [Enum.KeyCode.S] = true, [Enum.KeyCode.D] = true,
+		[Enum.KeyCode.Up] = true, [Enum.KeyCode.Down] = true, [Enum.KeyCode.Left] = true, [Enum.KeyCode.Right] = true,
+		[Enum.KeyCode.Space] = true, [Enum.KeyCode.LeftShift] = true, [Enum.KeyCode.RightShift] = true,
+	}
+	local lastActive = os.clock()
+	HUD.WakeHotbar = function()
+		lastActive = os.clock()
+	end
+	UserInputService.InputBegan:Connect(function(io)
+		local t = io.UserInputType
+		if t == Enum.UserInputType.MouseButton1 or (t == Enum.UserInputType.Keyboard and not MOVE_KEYS[io.KeyCode]) or (t.Name:sub(1, 7) == "Gamepad" and io.KeyCode ~= Enum.KeyCode.Thumbstick1 and io.KeyCode ~= Enum.KeyCode.Thumbstick2) then
+			lastActive = os.clock()
+		end
+	end)
+	local fade = 0
+	RunService.RenderStepped:Connect(function(dt)
+		local bar = HUD.hotbar
+		if not bar or not bar:IsA("CanvasGroup") then
+			return
+		end
+		local now = os.clock()
+		local awake = now - math.max(lastActive, State.lastCombat or -99) < fadeCfg.Calm or State.blocking
+		if not awake and not UI.IsMobile then
+			local ok, near = pcall(function()
+				local cam = workspace.CurrentCamera
+				return UserInputService:GetMouseLocation().Y > cam.ViewportSize.Y - 190 * UI.GetScale()
+			end)
+			awake = ok and near
+		end
+		if not awake then
+			local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+			awake = hum ~= nil and hum.Health < hum.MaxHealth * 0.35
+		end
+		local goal = awake and 0 or (UI.IsMobile and fadeCfg.Touch or 1)
+		-- quick to come back, slow to leave
+		fade = goal < fade and math.max(goal, fade - dt * 8) or math.min(goal, fade + dt * 1.6)
+		if math.abs(bar.GroupTransparency - fade) > 0.001 then
+			bar.GroupTransparency = fade
+		end
+	end)
 	-- the hotbar's width is only known after it rendered once (the bottom card needs it): lay out again then,
 	-- and whenever it changes (slots added, ammo button)
 	pcall(function()

@@ -24,7 +24,7 @@ local New = UI.New
 local tracker, tTitle, tChapter, tGoal, tCount, tBar, tHint, tDist, skipBtn, tChevron
 -- collapsed by default: chapter, title, goal and progress only (the screen stays clean); tap to expand the hint
 local expanded = false
-local COLLAPSED_H, EXPANDED_H = 82, 118
+local COLLAPSED_H, EXPANDED_H = 36, 36 -- remake HUD: one line (goal + count + distance), click = Quests window
 local dialog, dName, dText, dNext, dChip, dTag
 local data -- last "Quest" push
 
@@ -110,8 +110,7 @@ local function buildTracker()
 	skipBtn.Position = UDim2.new(1, -8, 1, 4)
 	UI.Tactile(tracker)
 	tracker.Activated:Connect(function()
-		expanded = not expanded
-		Quest.ApplyExpanded()
+		require(script.Parent.Panels).Open("Quests", { tab = "Story" })
 	end)
 	-- expanded mode: replay the NPC's lines
 	local rb, replay = UI.Button(tracker, "💬 Replay", T.Ocean, UDim2.fromOffset(96, 24), function()
@@ -125,6 +124,35 @@ local function buildTracker()
 	replay.AnchorPoint = Vector2.new(0, 0)
 	replay.Position = UDim2.new(0, 8, 1, 4)
 	Quest.replayBtn = replay
+	-- remake HUD (owner: "smaller quest tracker"): ONE short line. Chapter, title, progress bar, hint, fold and
+	-- expand controls are hidden; the goal sits left, the count + distance right; a click opens the Quests window.
+	UI.Corner(tracker, 8)
+	accent.Visible = false
+	tChapter.Visible = false
+	tTitle.Visible = false
+	tBar.Parent.Visible = false
+	tChevron.Visible = false
+	chip.Size = UDim2.fromOffset(24, 24)
+	chip.Position = UDim2.fromOffset(6, 6)
+	tGoal.Position = UDim2.fromOffset(36, 0)
+	tGoal.Size = UDim2.new(1, -166, 1, 0)
+	tGoal.TextSize = 14
+	tGoal.RichText = true
+	tCount.Size = UDim2.fromOffset(44, 36)
+	tCount.TextSize = 14
+	tCount.TextYAlignment = Enum.TextYAlignment.Center
+	tDist.Position = UDim2.new(1, -8, 0, 0)
+	tDist.Size = UDim2.fromOffset(70, 36)
+	tDist.TextSize = 12
+	tDist.TextYAlignment = Enum.TextYAlignment.Center
+	tCount.Position = UDim2.new(1, -80, 0, 0)
+	UI.Tooltip(tracker, function()
+		local step = data and Quests.ById[data.id or ""]
+		if not step then
+			return nil
+		end
+		return "<b>" .. step.title .. "</b>\n" .. (step.hint or "") .. "\nClick to open Quests", T.Gold
+	end)
 	HUD.questFrame = tracker
 	-- v0.25.21 (owner): fold the tracker (and the hunt card) away into a small quest-scroll button, like the reference
 	local fold, foldHolder = UI.Button(tracker, "◀", T.PanelDeep, UDim2.fromOffset(26, 34), function()
@@ -135,6 +163,7 @@ local function buildTracker()
 	foldHolder.Position = UDim2.new(1, 4, 0, 0)
 	fold.TextScaled = false
 	fold.TextSize = 14
+	foldHolder.Visible = false -- remake HUD: no fold, the line is small already
 	local open = New("ImageButton", { Name = "QuestOpen", BackgroundTransparency = 1, Image = UI.IconId("scroll") or "", Size = UDim2.fromOffset(52, 52), Visible = false, Parent = UI.Root })
 	UI.Tactile(open)
 	open.Activated:Connect(function()
@@ -174,7 +203,7 @@ function refreshTracker()
 		local lvl = Monsters[step.goal.target].level or 1
 		text = text .. ' <font color="#' .. Rarity.LevelColor(player:GetAttribute("Level") or 1, lvl):ToHex() .. '">Lv.' .. lvl .. "</font>"
 	end
-	tGoal.Text = "☐ " .. text
+	tGoal.Text = text
 	tCount.Text = count
 	UI.Tween(tBar, 0.25, { Size = UDim2.fromScale(ratio, 1) })
 	tHint.Text = step.hint or ""
@@ -624,7 +653,7 @@ function Quest.Start()
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 		if root and State.questTarget and tracker.Visible then
 			local d = (Vector2.new(State.questTarget.X, State.questTarget.Z) - Vector2.new(root.Position.X, root.Position.Z)).Magnitude
-			tDist.Text = d < 25 and "here!" or (UI.Format(math.floor(d)) .. " m >")
+			tDist.Text = d < 25 and "here!" or (UI.Format(math.floor(d)) .. "m")
 		else
 			tDist.Text = ""
 		end

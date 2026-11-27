@@ -872,6 +872,12 @@ local function findNearestMob(center, radius, exclude)
 end
 
 function Combat.SetAuto(on)
+	if on and GameConfig.AutoBattle == false then
+		on = false -- remake (owner): no Auto Battle, you fight yourself
+		if not State.auto then
+			return
+		end
+	end
 	State.auto = on
 	local r = root()
 	anchor = on and r and r.Position or nil

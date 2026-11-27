@@ -90,6 +90,7 @@ function GS.Check(player, fromPos, dmg, opts)
 		s.posture = math.max(0, s.posture - G.ParryHeal)
 		publish(player, s)
 		fxAt(player, "parry")
+		R.QuestService.Event(player, "Guard")
 		return nil, "parry"
 	end
 	local hum = R.PlayerService.Humanoid(player)
@@ -109,6 +110,7 @@ function GS.Check(player, fromPos, dmg, opts)
 	end
 	publish(player, s)
 	fxAt(player, "block")
+	R.QuestService.Event(player, "Guard")
 	return math.max(1, math.floor(dmg * G.BlockMult)), "block"
 end
 

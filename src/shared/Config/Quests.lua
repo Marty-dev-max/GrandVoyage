@@ -4,7 +4,8 @@
 --   Talk     target = NPC role on the step's island ("Guide", "JobMaster", "Shipwright", "Tavern", "Blacksmith", ...)
 --   Kill     target = monster id (nil = any monster), count
 --   Skill    use any skill, count
---   Auto     switch Auto Battle on
+--   Auto     switch Auto Battle on (unused in the remake)
+--   Guard    block or parry a monster hit
 --   Stat     spend stat points, count
 --   Equip    equip any item
 --   Refine   attempt a refine at the Blacksmith
@@ -45,7 +46,7 @@ Q.Main = {
 	},
 	{
 		id = "T02", island = "Daybreak", title = "Monkey Business",
-		dialog = { "Forest Monkeys raided my camp and ran off with the supplies. They're in the grove just north of the fire.", "Walk up to a monkey and click to punch it (hold to keep swinging). The white ring is your reach. Auto Battle (T) will hunt for you later." },
+		dialog = { "Forest Monkeys raided my camp and ran off with the supplies. They're in the grove just north of the fire.", "Walk up to a monkey and click to punch it (hold to keep swinging). Hold F to block their swipes." },
 		goal = { kind = "Kill", target = "ForestMonkey", count = 5 }, text = "Defeat Forest Monkeys",
 		hint = "Walk close, then click or tap the attack button. Hold to keep swinging.",
 		at = { spawn = "ForestMonkey" }, reward = { beli = 150, exp = 60, job = 40, items = { { "MeatOnBone", 5 } } },
@@ -58,17 +59,17 @@ Q.Main = {
 		at = { spawn = "ForestMonkey" }, reward = { beli = 100, exp = 40, job = 40 },
 	},
 	{
-		id = "T04", island = "Daybreak", title = "Let the Sea Do the Work",
-		dialog = { "A good sailor knows when to let the tide carry him. Switch on Auto Battle with T, or the big AUTO button.", "You'll fight everything inside the blue ring, use ticked skills and eat when you're hurt." },
-		goal = { kind = "Auto" }, text = "Turn on Auto Battle",
-		hint = "Press T or tap AUTO.",
+		id = "T04", island = "Daybreak", title = "Guard Up",
+		dialog = { "Tigers hit hard. Hold F to raise your guard and take the blows on your arms.", "Tap F just before a hit lands and you parry it: the beast is left dazed. Your guard cracks if you hold it too long." },
+		goal = { kind = "Guard", count = 3 }, text = "Block or parry hits",
+		hint = "Face the monster and hold F (or the BLOCK button). Tap F right before it strikes to parry.",
 		at = { spawn = "JungleTiger" }, reward = { beli = 100, exp = 30, job = 20 },
 	},
 	{
 		id = "T05", island = "Daybreak", title = "Stripes in the Grass",
-		dialog = { "Jungle Tigers prowl the den south of camp, down by the old stones. Bigger than monkeys, so let Auto Battle and your skills share the work." },
+		dialog = { "Jungle Tigers prowl the den south of camp, down by the old stones. Bigger than monkeys, so keep your guard up and use your skills." },
 		goal = { kind = "Kill", target = "JungleTiger", count = 6 }, text = "Defeat Jungle Tigers",
-		hint = "Follow the path south of the camp to the Tiger Den. Stand near the tigers with Auto Battle on.",
+		hint = "Follow the path south of the camp to the Tiger Den. Block their swipes, then hit back.",
 		at = { spawn = "JungleTiger" }, reward = { beli = 200, exp = 120, job = 80, items = { { "Bandana", 1 } } },
 	},
 	{

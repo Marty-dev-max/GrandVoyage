@@ -3785,6 +3785,31 @@ function Panels.Quests(args)
 			-- Story: chapters by island
 			local q = State.quest
 			local cur = q and q.step or 1
+			-- remake HUD: the tracker is one line now, so the current step's details + Replay / Skip tutorial live here
+			local now = q and QuestsCfg.ById[q.id or ""]
+			if now then
+				local nc = UI.Card(body, UDim2.new(1, -12, 0, 118), T.Gold:Lerp(T.Panel, 0.72))
+				nc.LayoutOrder = -1
+				UI.Text(nc, "NOW: " .. now.title, 20, T.Gold, "Display", { Position = UDim2.fromOffset(16, 8), Size = UDim2.new(1, -32, 0, 24), TextWrapped = false })
+				UI.Text(nc, now.text or "", 16, T.Text, "Bold", { Position = UDim2.fromOffset(16, 36), Size = UDim2.new(1, -330, 0, 20) })
+				UI.Text(nc, now.hint or "", 14, T.TextSoft, "Semi", { Position = UDim2.fromOffset(16, 60), Size = UDim2.new(1, -330, 0, 50), TextWrapped = true, TextYAlignment = Enum.TextYAlignment.Top })
+				local _, rh = UI.Button(nc, "Replay talk", T.Ocean, UDim2.fromOffset(140, 40), function()
+					UI.CloseWindow("Quests")
+					require(script.Parent.Quest).Dialog(QuestsCfg.Guide[now.island] or "Guide", now.dialog)
+				end)
+				rh.AnchorPoint = Vector2.new(1, 0.5)
+				rh.Position = UDim2.new(1, q.tutorial and -170 or -16, 0.5, 0)
+				if q.tutorial then
+					local _, sh = UI.Button(nc, "Skip tutorial", T.Grey, UDim2.fromOffset(140, 40), function()
+						UI.Confirm("Skip the Daybreak tutorial? You keep everything you have, but miss its rewards.", function()
+							task.spawn(Net.Request, "QuestSkipTutorial")
+							UI.CloseWindow("Quests")
+						end, nil, "Skip", "Keep playing")
+					end)
+					sh.AnchorPoint = Vector2.new(1, 0.5)
+					sh.Position = UDim2.new(1, -16, 0.5, 0)
+				end
+			end
 			UI.Section(body, "📖", "Azure East Saga", T.Gold, math.min(cur - 1, #QuestsCfg.Main) .. " / " .. #QuestsCfg.Main .. " steps")
 			local chapters, orderIds = {}, {}
 			for i, s in ipairs(QuestsCfg.Main) do

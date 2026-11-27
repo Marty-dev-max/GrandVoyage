@@ -4,16 +4,16 @@ return {
 	LogoLines = { "LARPTALES", "VOXEL SEAS" },
 	LogoImage = 133908417032160, -- v0.25.87: pixel logo board floating behind the menu character (tools/gen_logo.py); nil = text logo
 	-- bump on every change: shown bottom-right in game and printed in Output, so you can tell which code is running
-	Version = "0.1.2-remake",
+	Version = "0.1.3-remake",
 	SagaName = "Azure East Saga",
 	-- title menu UPDATE LOG lines (newest first, at most 6: more ran off the top of the screen, v0.25.156)
 	UpdateNotes = {
+		"HP / SP / EXP are slim tubes; hotbar hides when calm",
+		"No Auto Battle: you fight yourself",
 		"Cleaner screen: menu is one row of icons, fewer buttons",
 		"Hold F to block, tap F just before a hit to parry",
 		"Stamina for dash and sprint; dash dodges hits",
 		"REMAKE test build: new saves, nothing carries over",
-		"Figureheads always sit in the middle of the bow",
-		"Carved block figureheads: paint and stretch them",
 	},
 	DataStoreName = "GV_Player_r1",
 	GuildStoreName = "GV_Guild_r1",
@@ -161,6 +161,10 @@ return {
 	Dash = { Cooldown = 1.0, Speed = 120, Duration = 0.14 }, -- v0.25.26: faster, shorter burst; remake R1: 1 s cooldown, stamina (Stamina.Dash) is the real limit
 	-- v0.25.89 (owner): double-tap W to run (Controllers/Sprint): WalkSpeed = BaseSpeed x Mult while W stays held
 	Sprint = { Mult = 1.55, TapWindow = 0.3, Fov = 6 },
+	-- remake (owner): no Auto Battle (the HUD switch is gone, T does nothing); F1 / F2 auto potions stay
+	AutoBattle = false,
+	-- remake HUD: the hotbar fades out after this many calm seconds (no fight, no key, no click)
+	HotbarFade = { Calm = 5, Touch = 0.55 },
 	-- ===== Remake R1 core feel (docs/Plan-Movement-Combat-v3.md sec 3-4; Controllers/Stamina + Guard, Services/GuardService) =====
 	-- Stamina (client-side, movement only): dash, sprint, climbing / wall running later. Empty = no dash, sprint stops.
 	Stamina = { Max = 100, Regen = 30, RegenDelay = 0.8, Dash = 22, SprintPerSec = 8 },

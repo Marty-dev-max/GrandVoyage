@@ -1149,6 +1149,8 @@ saved anywhere: what matters from them is written into these docs + CLAUDE.md ve
     steady lean > PORT_HEEL 0.15 (guns there cannot fire). Settings `shipEasy` (Interface toggle) = level hull.
     v0.25.156: title menu = DataService.PrefetchSlots on PlayerAdded (slot keys + account read in parallel, the first
     MenuSlots takes it, menuCache edits win); Menu shows no character until MenuSlots answers (was the default look).
+    UPDATE LOG keeps at most 6 lines (17 ran off the top of the title screen). Aim lines need Manned > 0 (a new save
+    with no crew sees no aim at all). Checked in Play: range tag "65 / 230", own character on the title screen.
   * Store (`Config/Store`, `StoreService`): Benefits + Boosts, Gems or Robux, for me / gift; Robux ids are 0 until the
     owner creates the products. Starter skill = Heavy Attack (`heavy = true`, `AnimClips.HeavyFor`).
 

@@ -636,8 +636,8 @@ function H.Sanitize(raw, faction)
 			local rule = H.ScaleRule(def.id)
 			local m = it.m == true
 			local x = num(it.x, -H.MaxBeam / 2 - 12, H.MaxBeam / 2 + 12, 0.25, 0)
-			if def.conform then
-				x = 0 -- #11: superstructures stay symmetric
+			if def.conform or def.figurehead then
+				x = 0 -- #11: superstructures stay symmetric (figureheads too, v0.25.159)
 			end
 			if math.abs(x) < 0.5 then
 				m = false

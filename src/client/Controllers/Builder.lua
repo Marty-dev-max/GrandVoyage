@@ -450,7 +450,7 @@ local function newItem(spot, wallR)
 		-- superstructures follow the hull: always on the centre line, never mirrored
 		return { id = pick, x = 0, y = spot.Y, z = spot.Z, r = 0, sx = 1, sy = 1, sz = 1 }
 	end
-	local x = spot.X
+	local x = def.figurehead and 0 or spot.X -- v0.25.159: figureheads sit on the stem, never off to one side
 	local m = mirror and math.abs(x) >= 0.5 and not def.max
 	-- cannons off the centre line face outward by themselves (R still turns them); wall parts face out of their wall
 	local base = wallR or ((def.cannon and math.abs(x) >= 0.5) and (x > 0 and 270 or 90) or 0)
@@ -1578,7 +1578,7 @@ local function updateItemDrag(screenPos)
 	local spot, _, wallR = surfaceSpot(screenPos, drag.idx, it.id)
 	if spot then
 		local x, r = spot.X, wallR or it.r
-		if Parts[it.id].conform then
+		if Parts[it.id].conform or Parts[it.id].figurehead then
 			x = 0
 		elseif selMirror then
 			-- dragging the mirror copy: the original follows on the other side

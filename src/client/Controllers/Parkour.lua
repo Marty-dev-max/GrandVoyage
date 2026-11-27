@@ -85,6 +85,16 @@ local function flat(v)
 	return v.Magnitude > 1e-3 and v.Unit or nil
 end
 
+-- the stick / WASD as (sideways, forward) in -1..1, whatever way the camera faces (on a wall W = up, S = down)
+local function stickInput(md)
+	local cam = workspace.CurrentCamera
+	local look = cam and flat(cam.CFrame.LookVector)
+	if not look or md.Magnitude < 0.05 then
+		return 0, 0
+	end
+	return md:Dot(look:Cross(Y)), md:Dot(look)
+end
+
 local function rootH(h, r)
 	return h.HipHeight + r.Size.Y / 2
 end
@@ -338,9 +348,11 @@ local function tryVault(r, h, dir)
 	end
 	mode = "vault"
 	local p2 = Vector3.new(far.X, g.Position.Y + rh, far.Z)
-	local mid = Vector3.new(low.Position.X, topY + rh * 0.55 + 0.6, low.Position.Z) + fwd * (edgeK * 0.5)
+	-- the curve peaks at (p0 + 2 p1 + p2) / 4: put p1 so the ROOT tops out at topY + 0.75 rh (tucked feet clear the top)
+	local peakY = topY + rh * 0.75 + 0.4
+	local mid = Vector3.new(low.Position.X, 2 * peakY - (p0.Y + p2.Y) / 2, low.Position.Z) + fwd * (edgeK * 0.5)
 	local speed = math.max(flat(r.AssemblyLinearVelocity) and Vector3.new(r.AssemblyLinearVelocity.X, 0, r.AssemblyLinearVelocity.Z).Magnitude or 0, h.WalkSpeed)
-	d = { t = 0, p0 = p0, p1 = mid + Y * 1.2, p2 = p2, dur = P.VaultTime, dir = fwd, speed = speed }
+	d = { t = 0, p0 = p0, p1 = mid, p2 = p2, dur = P.VaultTime, dir = fwd, speed = speed }
 	attach(r, h)
 	lv.MaxForce = 0
 	face(r, fwd)
@@ -399,7 +411,7 @@ function Parkour.TryRoll()
 	if not h or not r or grounded(h) or mode then
 		return false
 	end
-	if r.AssemblyLinearVelocity.Y > -P.RollFall * 0.6 then
+	if r.AssemblyLinearVelocity.Y > -P.RollFall * 0.8 then
 		return false
 	end
 	refreshFilter(c)
@@ -477,8 +489,11 @@ function Parkour.Start()
 		local onGround = grounded(h)
 
 		-- landing bookkeeping (roll)
-		if onGround and not mode then
+		if mode then
+			fall.minV = 0 -- a climb / vault / wall run is not a fall
+		elseif onGround then
 			if fall.minV < -P.RollFall and now - rollAt < P.RollWindow then
+				rollAt = -99 -- one roll per arm
 				local dir = flat(md) or flat(r.CFrame.LookVector)
 				Anim.Play(h, "Parkour_Roll", { fade = 0.04 })
 				if dir then
@@ -486,7 +501,7 @@ function Parkour.Start()
 				end
 			end
 			fall.minV, fall.rollArmed = 0, false
-		elseif not onGround then
+		else
 			fall.minV = math.min(fall.minV, r.AssemblyLinearVelocity.Y)
 		end
 
@@ -520,8 +535,7 @@ function Parkour.Start()
 				end
 			end
 			local right = (-n):Cross(Y).Unit
-			local up = md:Dot(-n)
-			local side = md:Dot(right)
+			local side, up = stickInput(md)
 			if up < -0.3 and cast(r.Position, -Y * (rootH(h, r) + 0.4)) then
 				stop("land") -- climbed back down to the floor
 				return
@@ -540,7 +554,7 @@ function Parkour.Start()
 				stop("fall")
 				return
 			end
-			local up = md:Dot(-n)
+			local _, up = stickInput(md)
 			if jump or up > 0.5 then
 				startMantle(r, h, d.edge, n, d.topY)
 				return
@@ -640,7 +654,7 @@ function Parkour.Start()
 		local hspeed = Vector3.new(vel.X, 0, vel.Z).Magnitude
 		local look = flat(md) or flat(r.CFrame.LookVector)
 		-- running fast into a landing: roll by itself
-		if not fall.rollArmed and vel.Y < -P.RollFall and hspeed > (player:GetAttribute("BaseSpeed") or 16) * 1.35 then
+		if not fall.rollArmed and vel.Y < -P.RollAuto and hspeed > (player:GetAttribute("BaseSpeed") or 16) * 1.35 then
 			Parkour.TryRoll()
 		end
 		if jump and look then

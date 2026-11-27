@@ -194,7 +194,7 @@ return {
 		HangPerSec = 4, MantleTime = 0.38,
 		VaultMin = 1.3, VaultMax = 4.8, VaultTime = 0.4, VaultDepth = 6, VaultReach = 3.2,
 		SlideCost = 12, SlideTime = 0.8, SlideBoost = 1.3, SlideJump = 1.15,
-		RollWindow = 0.8, RollMult = 0.35, RollDownMult = 1.6, RollNear = 18, RollFall = 40,
+		RollWindow = 0.8, RollMult = 0.35, RollDownMult = 1.6, RollNear = 18, RollFall = 75, RollAuto = 90, -- RollFall: landing speed (studs/s) that counts as a fall (a plain jump lands at ~56); RollAuto: running fast rolls by itself above it
 		GrabGrace = 0.6, -- the server skips a fall that ends on a wall grab (checked: a wall within GrabWall studs)
 		GrabWall = 4.5,
 	},

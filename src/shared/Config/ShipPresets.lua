@@ -10,7 +10,7 @@ P.MAT_BELI = 150 -- Doubloons per unit of SailCloth / IronIngot / Gunpowder / ..
 -- v0.25.152 (owner: free-form building like the Shipshaper clip): presets are v2 designs (Modules/ShipHull):
 -- a node hull + free items in studs (x across, y = item bottom above the main deck, z from the stern; m = mirrored)
 local function new(name, nodes, hull, paint)
-	local d = { v = 2, name = name, hull = { nodes = {}, bow = hull.bow, stern = hull.stern, wall = hull.wall }, items = {}, paint = table.clone(ShipHull.DefaultPaint) }
+	local d = { v = 2, name = name, hull = { nodes = {}, bow = hull.bow, stern = hull.stern, wall = hull.wall, material = hull.material }, items = {}, paint = table.clone(ShipHull.DefaultPaint) }
 	for _, nd in ipairs(nodes) do
 		table.insert(d.hull.nodes, { z = nd[1], w = nd[2], d = nd[3], s = nd[4] })
 	end
@@ -19,7 +19,9 @@ local function new(name, nodes, hull, paint)
 	end
 	function d.add(id, x, y, z, r, opts)
 		opts = opts or {}
-		table.insert(d.items, { id = id, x = x, y = y, z = z, r = r or 0, sx = opts.sx or opts.s or 1, sy = opts.sy or opts.s or 1, sz = opts.sz or opts.s or 1, m = opts.m })
+		-- R5: masts default to ShipHull.SailWidth (sail a bit wider than the hull)
+		local sx = opts.sx or opts.s or (ShipHull.IsMast(id) and ShipHull.SailWidth) or 1
+		table.insert(d.items, { id = id, x = x, y = y, z = z, r = r or 0, sx = sx, sy = opts.sy or opts.s or 1, sz = opts.sz or opts.s or 1, m = opts.m })
 	end
 	return d
 end
@@ -30,10 +32,14 @@ local function finish(d)
 	return d
 end
 
--- Dinghy: one mast, a helm aft, an oar bench, two light guns (port + starboard), low rails (ref: small open rowboat)
+-- Dinghy: one mast, an oar bench, two light guns (port + starboard), low rails (ref: small open rowboat)
+-- R5 (owner, 28 Nov): the hull is the one the owner shaped on their own Little Dinghy (8 points, pine, plain bow), and
+-- there is NO wheel: the captain sits on the oar bench and rows (ShipHull.RowStation seats them there)
 local function dinghy(name)
-	local d = new(name or "Dinghy", { { 0, 4.5, 4, "F" }, { 11, 5.5, 4.5, "U" }, { 26, 1.5, 3, "V" } }, { bow = 3, stern = 1, wall = 1.5 })
-	d.add("Helm", 0, 0, 3)
+	local d = new(name or "Dinghy", {
+		{ 0, 4.5, 4, "F" }, { 11, 5.5, 4.5, "U" }, { 15, 5.5, 4.5, "U" }, { 17, 4.5, 4.5, "U" },
+		{ 20, 4, 4.5, "U" }, { 22, 3, 4, "U" }, { 24, 2.5, 3.5, "U" }, { 26, 1.5, 3, "V" },
+	}, { bow = 0, stern = 1, wall = 1.5, material = "Pine" })
 	d.add("SmallMast", 0, 0, 12)
 	d.add("OarBench", 0, 0, 17)
 	d.add("LightCannon", 2.5, 0, 8, 270, { m = true })

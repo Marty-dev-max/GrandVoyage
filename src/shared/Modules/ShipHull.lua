@@ -53,6 +53,13 @@ H.SailFalloff = 0.85
 H.OarFalloff = 0.9
 -- cannons: the bore (sx) and barrel (sz) scale range 0.7..1.6
 H.CannonScale = { min = 0.7, max = 1.6 }
+-- R5 (owner: masts looked narrow, they tuned their own to x1.25): a new mast (Builder) and the preset masts start at
+-- this width scale so the sail reads a bit wider than the hull. Saved ships keep whatever sx they have.
+H.SailWidth = 1.25
+function H.IsMast(id)
+	local def = ShipParts[id]
+	return def ~= nil and def.thrust ~= nil and not def.jib
+end
 -- groups for the weight breakdown (#20)
 H.Groups = { "Hull", "Guns", "Sails", "Cabins", "Other" }
 
@@ -903,8 +910,10 @@ function H.Compute(design)
 	r.rudderK = rudderK
 	r.lengthTurn = clamp(40 / math.max(ph.length, 10), 0.6, 1.3) * (r.rudder > 0 and rudderK or 0.25)
 	r.phys = ph
-	if r.helm < 1 then
-		r.problem = "Needs a helm (Core parts)"
+	-- R5 (owner): a small boat may have no wheel at all: the rower on the oar bench steers it (H.Build seats them)
+	r.rowHelm = r.helm == 0 and #oars > 0
+	if r.helm < 1 and not r.rowHelm then
+		r.problem = "Needs a helm or an oar bench (Core / Sail parts)"
 	elseif r.rudder < 1 then
 		r.problem = "Needs a rudder at the stern (Core parts)"
 	elseif #sails == 0 and #oars == 0 then
@@ -1264,7 +1273,82 @@ function H.Build(design, originCf, colorFn, buildPart)
 	end
 	local paint = H.PaintOf(design, colorFn)
 	model:SetAttribute("SailColor", paint.sail:ToHex())
+	local okRow, errRow = pcall(H.RowStation, design, originCf, model)
+	if not okRow then
+		warn("[ShipHull] oar bench:", errRow)
+	end
 	return model
+end
+
+-- R5 (owner, ref photo of a rowing dinghy): every oar bench gets a pair of oars resting in oarlocks on the gunwales,
+-- handles crossed over the boat behind the bench, blades lifted out of the water toward the bow. Bench main part
+-- carries attachments OarlockL / OarlockR (they scale with the ship); the resting oars are model "Oars" in the bench
+-- (parts OarL / OarR = shafts, BladeL / BladeR). Controllers/Rowing hides them while someone rows and draws a pair in
+-- the rower's hands, pivoting in the same oarlocks. A ship without a Helm is steered from its first oar bench: a
+-- VehicleSeat named HelmSeat goes there, so everything that looks for the helm seat (ShipService, Sailing, Combat)
+-- works unchanged.
+local OAR_WOOD, OAR_BLADE, OARLOCK = Color3.fromRGB(205, 140, 80), Color3.fromRGB(150, 82, 44), Color3.fromRGB(70, 66, 62)
+function H.RowStation(design, originCf, model)
+	local hasHelm = false
+	for _, it in ipairs(design.items or {}) do
+		if it.id == "Helm" then
+			hasHelm = true
+		end
+	end
+	local hw = topHalfWidth(H.Slices(design.hull))
+	local wall = design.hull.wall or 1.5
+	local seated = hasHelm
+	for _, m in ipairs(model:GetChildren()) do
+		local main = m:IsA("Model") and m.Name == "OarBench" and m.PrimaryPart
+		if main then
+			local z = originCf:PointToObjectSpace(main.Position).Z
+			local benchTop = originCf:PointToObjectSpace(main.Position).Y + main.Size.Y / 2
+			-- the oarlocks sit a little toward the bow from the bench: the rower faces the bow and pushes the handles
+			local lockZ = z - 1.6
+			local half = math.max(1.5, hw(-lockZ) - 0.3)
+			local lockY = wall + 0.9
+			local oars = Instance.new("Model")
+			oars.Name = "Oars"
+			oars.Parent = m
+			for side, tag in pairs({ [-1] = "L", [1] = "R" }) do
+				local lock = Vector3.new(side * half, lockY, lockZ)
+				local at = Instance.new("Attachment")
+				at.Name = "Oarlock" .. tag
+				at.Parent = main -- parent first: WorldPosition on a loose attachment is just its Position
+				at.WorldPosition = (originCf * CFrame.new(lock)).Position
+				-- the oarlock: a post with a ring on the gunwale
+				mk(m, Vector3.new(0.35, 0.9, 0.35), OARLOCK, originCf * CFrame.new(lock - Vector3.new(0, 0.45, 0)), Enum.Material.Metal, "Oarlock")
+				-- the resting oar: handle low on the far side behind the bench, through the oarlock, blade up toward the bow
+				local handle = Vector3.new(-side * 1.1, math.min(benchTop, wall) - 0.9, z + 1.6)
+				local dir = (lock - handle).Unit
+				dir = (dir + Vector3.new(0, 0, -0.35)).Unit -- swing the blade a little forward
+				local inboard = (lock - handle).Magnitude
+				local len = inboard + math.max(4, half * 1.6)
+				local mid = handle + dir * len / 2
+				local cf = originCf * CFrame.lookAt(mid, mid + dir)
+				local shaft = mk(oars, Vector3.new(0.28, 0.28, len), OAR_WOOD, cf, Enum.Material.Wood, "Oar" .. tag)
+				shaft.CanCollide = false
+				shaft.CanQuery = false
+				local blade = mk(oars, Vector3.new(0.75, 0.16, 1.7), OAR_BLADE, cf * CFrame.new(0, 0, -len / 2 + 0.85), Enum.Material.WoodPlanks, "Blade" .. tag)
+				blade.CanCollide = false
+				blade.CanQuery = false
+			end
+			if not seated then
+				seated = true
+				local seat = Instance.new("VehicleSeat")
+				seat.Name = "HelmSeat"
+				seat.MaxSpeed = 0
+				seat.Torque = 0
+				seat.HeadsUpDisplay = false
+				seat.Size = Vector3.new(2, 0.4, 2)
+				seat.Transparency = 1
+				seat.CFrame = originCf.Rotation + (originCf * CFrame.new(0, benchTop + 0.2, z)).Position
+				seat.Anchored = true
+				seat.Parent = m
+				model:SetAttribute("RowHelm", true)
+			end
+		end
+	end
 end
 
 -- ===== making designs =====

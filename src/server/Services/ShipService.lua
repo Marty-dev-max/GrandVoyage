@@ -1475,7 +1475,7 @@ function addRecruits(ship, list) -- (forward-declared above Ship.Launch)
 			elseif (ShipParts[child.Name] and ShipParts[child.Name].cannon) then
 				local look = main.CFrame.LookVector
 				table.insert(posts.Gunner, { pos = main.Position - Vector3.new(look.X, 0, look.Z).Unit * 3.2, face = look, y = main.Position.Y - G * SCALE / 2 })
-			elseif child.Name == "OarBench" then
+			elseif child.Name == "OarBench" and not child:FindFirstChild("HelmSeat") then -- R5: the captain rows that one
 				table.insert(posts.Rower, { pos = main.Position, face = root.CFrame.LookVector, y = main.Position.Y - G * SCALE / 2 })
 			end
 		end

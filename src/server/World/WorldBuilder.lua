@@ -709,6 +709,11 @@ local function placeIsland(f, cx, S, yaw, dz)
 	for m in pairs(keep) do
 		local cf, size = m:GetBoundingBox()
 		local foot = cf.Position - Vector3.new(0, size.Y / 2, 0)
+		local hrp = m:FindFirstChild("HumanoidRootPart")
+		if hrp and hrp:IsA("BasePart") then
+			-- NPC (ModelFactory.NPC: root 2.6 above the feet); its box also holds a glow disc sunk into the ground
+			foot = hrp.Position - Vector3.new(0, 2.6, 0)
+		end
 		local to = T * sp(foot)
 		shift[m] = { rot = T.Rotation, from = foot, to = to }
 		local M = CFrame.new(to) * T.Rotation * CFrame.new(-foot)

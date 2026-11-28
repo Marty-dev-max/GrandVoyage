@@ -298,6 +298,32 @@ C.SwimIdle = { rig = "R15", loop = true, priority = "Action", length = 1.6, keys
 	{ t = 0, pose = tread(1) }, { t = 0.8, pose = tread(-1) }, { t = 1.6, pose = tread(1) },
 } }
 
+-- R5 rowing (owner ref: a rowing dinghy): seated on the oar bench, facing the bow, the rower PUSHES the oars:
+-- t 0 = catch (hands pulled in at the chest, leaning back, blades forward in the water), t 0.88 = finish (arms out,
+-- leaning forward), then the recovery back. Controllers/Rowing reads this track's phase to move the oars (blade in
+-- the water from 0.1 to 0.55 of the loop), so keep the length 1.6 and the finish at 0.55 x 1.6.
+local function rowPose(k) -- k 0 = catch, 1 = finish
+	local lerp = function(a, b)
+		return a + (b - a) * k
+	end
+	return {
+		RightUpperArm = { lerp(30, 78), 0, lerp(16, 8) }, LeftUpperArm = { lerp(30, 78), 0, lerp(-16, -8) },
+		RightLowerArm = { lerp(100, 14), 0, 0 }, LeftLowerArm = { lerp(100, 14), 0, 0 },
+		UpperTorso = { lerp(8, -18), 0, 0 }, Head = { lerp(-6, 12), 0, 0 },
+	}
+end
+C.Row = { rig = "R15", loop = true, priority = "Action", length = 1.6, keys = {
+	{ t = 0, pose = rowPose(0) },
+	{ t = 0.88, pose = rowPose(1) },
+	{ t = 1.6, pose = rowPose(0) },
+} }
+-- holding the oars still (boat not moving): hands in front at the chest, a slow breath
+C.RowIdle = { rig = "R15", loop = true, priority = "Action", length = 2.4, keys = {
+	{ t = 0, pose = rowPose(0.25) },
+	{ t = 1.2, pose = with(rowPose(0.25), { UpperTorso = { 2, 0, 0 } }) },
+	{ t = 2.4, pose = rowPose(0.25) },
+} }
+
 -- flight (v0.25.17, owner: flying looked stiff or borrowed the swim stroke). Flight.lua tilts the whole body forward
 -- with speed, so these only pose limbs: Fly = glide (arms swept back, chin up, legs fluttering), FlyIdle = hover.
 local function glide(k)

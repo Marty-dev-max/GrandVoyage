@@ -454,7 +454,8 @@ local function newItem(spot, wallR)
 	local m = mirror and math.abs(x) >= 0.5 and not def.max
 	-- cannons off the centre line face outward by themselves (R still turns them); wall parts face out of their wall
 	local base = wallR or ((def.cannon and math.abs(x) >= 0.5) and (x > 0 and 270 or 90) or 0)
-	return { id = pick, x = x, y = spot.Y, z = spot.Z, r = (base + (wallR and 0 or rot)) % 360, sx = 1, sy = 1, sz = 1, m = m or nil }
+	local sx = ShipHull.IsMast(pick) and ShipHull.SailWidth or 1 -- R5: new masts start a bit wider than the hull
+	return { id = pick, x = x, y = spot.Y, z = spot.Z, r = (base + (wallR and 0 or rot)) % 360, sx = sx, sy = 1, sz = 1, m = m or nil }
 end
 
 local function showGhost(spot, wallR)
@@ -467,9 +468,9 @@ local function showGhost(spot, wallR)
 	ghostKey = key
 	local g = Instance.new("Model")
 	g.Name = "GVBuildGhost"
-	local list = { { id = it.id, x = it.x, y = it.y, z = it.z, r = it.r, sx = 1, sy = 1, sz = 1, src = 0 } }
+	local list = { { id = it.id, x = it.x, y = it.y, z = it.z, r = it.r, sx = it.sx, sy = 1, sz = 1, src = 0 } }
 	if it.m then
-		table.insert(list, { id = it.id, x = -it.x, y = it.y, z = it.z, r = (360 - it.r) % 360, sx = 1, sy = 1, sz = 1, src = 0, mirror = true })
+		table.insert(list, { id = it.id, x = -it.x, y = it.y, z = it.z, r = (360 - it.r) % 360, sx = it.sx, sy = 1, sz = 1, src = 0, mirror = true })
 	end
 	for _, e in ipairs(list) do
 		local ok, m = pcall(ShipHull.BuildItem, e, shipCf(), colorFn(), ShipModel.BuildPart, work)

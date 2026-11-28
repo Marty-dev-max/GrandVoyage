@@ -200,11 +200,7 @@ function SM.BuildPart(p, cf, colorOverride)
 		nest.CanCollide = false
 	elseif p.id == "OarBench" then
 		main = mk(model, "Part", Vector3.new(G, G * 0.3, G * 0.5), color, cf * CFrame.new(0, -G / 2 + G * 0.3, 0), Enum.Material.Wood)
-		for _, side in ipairs({ -1, 1 }) do
-			local oar = mk(model, "Part", Vector3.new(G * 1.6, 0.25, 0.25), Color3.fromRGB(200, 150, 90), cf * CFrame.new(side * G * 0.9, -G * 0.2, 0) * CFrame.Angles(0, 0, side * 0.35), Enum.Material.Wood)
-			oar.Name = "Oar"
-			oar.CanCollide = false
-		end
+		-- R5 (owner ref photo): the oars rest in oarlocks on the gunwales, built by ShipHull.RowStation (it knows the hull)
 	elseif def.cannon then
 		-- v0.25.153: barrel look from the kind (bore / len) x the builder's bore (sx) and barrel (sz) scaling
 		local c = def.cannon

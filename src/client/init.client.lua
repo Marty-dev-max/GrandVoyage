@@ -59,6 +59,8 @@ local BossIntro = require(script.Controllers.BossIntro)
 local PowerBoard = require(script.Controllers.PowerBoard)
 local SailCloth = require(script.Controllers.SailCloth)
 local WeatherCtl = require(script.Controllers.Weather) -- Mastery v2 M6: storms + whirlpools
+local Rowing = require(script.Controllers.Rowing) -- R5: oars in the rower's hands
+local Wake = require(script.Controllers.Wake) -- R5: foam wake behind every ship
 
 pcall(function()
 	StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Health, false)
@@ -428,7 +430,7 @@ end)
 for _, c in ipairs({
 	{ "Sailing", Sailing }, { "Builder", Builder }, { "VFX", VFX }, { "Readability", Readability }, { "Swim", Swim },
 	{ "Pets", PetsCtl }, { "Titles", Titles }, { "Ocean", Ocean }, { "VoxelSea", VoxelSea }, { "Atmos", Atmos }, { "GrassField", GrassField },
-	{ "CreatureAnim", CreatureAnim }, { "CharAnim", CharAnim }, { "Interact", Interact }, { "ChartsView", ChartsView }, { "ShipBars", ShipBars }, { "Underwater", Underwater }, { "SerpentBody", SerpentBody }, { "Heritage", Heritage }, { "Flight", Flight }, { "Crosshair", Crosshair }, { "HeritageAnim", HeritageAnim }, { "QuestPath", QuestPath }, { "WorldCull", WorldCull }, { "FruitFX", FruitFX }, { "Footsteps", Footsteps }, { "ShiftLock", ShiftLock }, { "FruitAlert", FruitAlert }, { "NpcLife", NpcLife }, { "RecruitLife", RecruitLife }, { "Slingshot", Slingshot }, { "TokiFX", TokiFX }, { "Sprint", Sprint }, { "Stamina", Stamina }, { "Guard", Guard }, { "HurtEdge", HurtEdge }, { "Parkour", Parkour }, { "IslandEnter", IslandEnter }, { "NpcZones", NpcZones }, { "BossIntro", BossIntro }, { "PowerBoard", PowerBoard }, { "SailCloth", SailCloth }, { "Weather", WeatherCtl },
+	{ "CreatureAnim", CreatureAnim }, { "CharAnim", CharAnim }, { "Interact", Interact }, { "ChartsView", ChartsView }, { "ShipBars", ShipBars }, { "Underwater", Underwater }, { "SerpentBody", SerpentBody }, { "Heritage", Heritage }, { "Flight", Flight }, { "Crosshair", Crosshair }, { "HeritageAnim", HeritageAnim }, { "QuestPath", QuestPath }, { "WorldCull", WorldCull }, { "FruitFX", FruitFX }, { "Footsteps", Footsteps }, { "ShiftLock", ShiftLock }, { "FruitAlert", FruitAlert }, { "NpcLife", NpcLife }, { "RecruitLife", RecruitLife }, { "Slingshot", Slingshot }, { "TokiFX", TokiFX }, { "Sprint", Sprint }, { "Stamina", Stamina }, { "Guard", Guard }, { "HurtEdge", HurtEdge }, { "Parkour", Parkour }, { "IslandEnter", IslandEnter }, { "NpcZones", NpcZones }, { "BossIntro", BossIntro }, { "PowerBoard", PowerBoard }, { "SailCloth", SailCloth }, { "Weather", WeatherCtl }, { "Rowing", Rowing }, { "Wake", Wake },
 }) do
 	task.spawn(start, c[1], c[2])
 end

@@ -1432,6 +1432,27 @@ The owner tests in Studio and sends screenshots; previews of new art are rendere
    steering = off on the tangent), own speed x (1 - Grip 0.55 x whirlK), `sling` is STORED while riding the flow
    (along > 0.5) and added only once the bow leaves it. Pulling a ship into the dead middle sank the test ship twice
    (core grind): keep tests short and away from the eye.
+   R5 0.1.24-remake (owner: x1.5): `GameConfig.WorldScale` 1.5. Islands keep RAW numbers (Islands.WithRaw) and are
+   built raw then scaled around their center (WorldBuilder buildIslandRaw/placeIsland; people-size things = Kit.Human /
+   HumanAt keep their size: NPCs, chests, barrels, crates, lamps, benches, stalls; an NPC's foot = HRP - 2.6, its glow
+   disc made the bounding box too low). Sea bounds, Currents, Weather storm/whirl numbers x S. ShipService buildShip
+   scales the built model x SCALE about the waterline (scaleShipModel: attachments/joints/sizes scale, ATTRIBUTES do
+   not), speed / accel / reverse / turn / cannon range x SCALE. WORLD_VERSION 48.
+   R5 0.1.25-remake (owner ref photo: a rowing dinghy): `ShipHull.RowStation` (end of H.Build) puts oarlocks
+   (attachments OarlockL/R on the bench part: parent BEFORE setting WorldPosition) + metal posts on the gunwales and a
+   resting pair (model "Oars": OarL/OarR shafts, BladeL/BladeR) crossed behind every OarBench; a design without a Helm
+   gets a VehicleSeat "HelmSeat" on its first bench (model attr RowHelm), so ShipService/Sailing/Combat work unchanged
+   (Compute `rowHelm`, ShipStats valid = helm or rowHelm; addRecruits skips that bench). `Controllers/Rowing` (all
+   clients): an occupied bench seat hides the resting oars (LocalTransparencyModifier) and draws a held pair: handle at
+   the hand, pivoting in the oarlock, the handle height SOLVED so the blade tip reaches the water (ship scale made a
+   plain hand line end 5 studs above it), blade in = hands moving toward the bow (seat space), feathered flat on the
+   way back. CharAnim plays `Row` (speed 0.7..1.5 by the ship's Speed attr) / `RowIdle` (AnimClips, NOT uploaded:
+   Studio only) while `Rowing.BenchOf(hum)`. ShipPresets Dinghy = the owner's tuned hull, no Helm (Sloop/Galleon keep
+   theirs); `ShipHull.SailWidth` 1.25 = default sx for masts (`IsMast`) in presets + Builder newItem. ShipModel's
+   OarBench = bench only. `Controllers/Wake`: every ship within 520 studs: V foam slabs from the stern quarters
+   (drift out, grow, fade), churn behind, bow spray > 22 studs/s; one pool of 320 parts (BulkMoveTo), on the Waves
+   surface when VoxelSea.On. Test a design without saving: client invoke BuildEnter { slot } near a Plot, then TestSail
+   { design = ShipPresets.Starter(...) }; a Scriptable camera bound with BindToRenderStep for close shots.
 1. Wait for the owner's verdict on v0.10.3 (hills/flowers/grass); fix what they point at.
 2. Voxel art pass: monsters DONE v0.11.0 (voxel_monsters.py; AssetService sizes = shape base x style.scale,
    MonsterService.RefreshModels swaps placeholder island mobs). Pets + fruits DONE v0.11.1 (voxel_pets.py).

@@ -53,7 +53,7 @@ function S.Compute(design, crew, bonus)
 		r.speedBonus += bonus.shipSpeed or 0
 		r.turnRate = cfg.BaseTurnRate * 300 / (300 + r.weight * 0.25) * r.lengthTurn
 		r.cannonsManned = math.min(#r.cannons, r.crew)
-		r.valid = r.helm == 1 and r.thrust + r.oars > 0 and not r.problem
+		r.valid = (r.helm == 1 or r.rowHelm == true) and r.thrust + r.oars > 0 and not r.problem
 		return r
 	end
 	local r = {

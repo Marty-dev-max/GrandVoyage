@@ -181,8 +181,23 @@ function CharAnim.Start()
 		local Flight = require(script.Parent.Flight)
 		local root = char and char:FindFirstChild("HumanoidRootPart")
 		local v = root and root.AssemblyLinearVelocity or Vector3.zero
+		-- R5: rowing on an oar bench seat (Controllers/Rowing draws the oars in the hands)
+		local bench = hum and hum.Health > 0 and require(script.Parent.Rowing).BenchOf(hum)
+		local rowSpeed = 1
+		if bench then
+			local ship = bench
+			while ship and ship:GetAttribute("Speed") == nil do
+				ship = ship.Parent
+			end
+			local sp = ship and ship:GetAttribute("Speed") or 0
+			want = math.abs(sp) > 2 and "Row" or "RowIdle"
+			rowSpeed = math.clamp(0.7 + math.abs(sp) / 90, 0.7, 1.5)
+			local tr = want == "Row" and Anim.Track(hum, "Row")
+			if tr and tr.IsPlaying then
+				tr:AdjustSpeed(rowSpeed)
+			end
 		-- flight wins over swimming (skimming the sea used to leave the swim stroke playing in the air)
-		if hum and hum.Health > 0 and Flight.IsFlying() then
+		elseif hum and hum.Health > 0 and Flight.IsFlying() then
 			want = v.Magnitude > 6 and "Fly" or "FlyIdle"
 		elseif hum and hum.Health > 0 and Swim.IsSwimming() then
 			want = Vector3.new(v.X, 0, v.Z).Magnitude > 2 and "Swim" or "SwimIdle"
@@ -190,13 +205,13 @@ function CharAnim.Start()
 		-- safety net (v0.25.27): neither flying nor swimming = no fly / swim clip may still be running
 		if not want and hum and os.clock() > sweepAt then
 			sweepAt = os.clock() + 0.5
-			for _, n in ipairs({ "Fly", "FlyIdle", "Swim", "SwimIdle" }) do
+			for _, n in ipairs({ "Fly", "FlyIdle", "Swim", "SwimIdle", "Row", "RowIdle" }) do
 				Anim.Stop(hum, n, 0.2)
 			end
 		end
 		if want ~= swimClip then
 			if hum then -- all of them: a quick Fly <-> FlyIdle flip could leave one running
-				for _, n in ipairs({ "Fly", "FlyIdle", "Swim", "SwimIdle" }) do
+				for _, n in ipairs({ "Fly", "FlyIdle", "Swim", "SwimIdle", "Row", "RowIdle" }) do
 					if n ~= want then
 						Anim.Stop(hum, n, 0.3)
 					end
@@ -204,7 +219,7 @@ function CharAnim.Start()
 			end
 			swimClip = want
 			if want then
-				play(want, { fade = 0.3 })
+				play(want, { fade = 0.3, speed = want == "Row" and rowSpeed or nil })
 			end
 		end
 	end)

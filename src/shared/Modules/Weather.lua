@@ -12,6 +12,7 @@
 local Shared = script.Parent.Parent
 local Islands = require(Shared.Config.Islands)
 local GameConfig = require(Shared.Config.GameConfig)
+local WorldShape = require(Shared.Modules.WorldShape)
 
 local W = {}
 
@@ -73,10 +74,11 @@ do
 	end
 end
 
--- the sea weather lives in: east of the first island, short of the Red Line, inside the windy lane
-W.MinX = -300
-W.MaxX = Islands.RedLine.x - Islands.RedLine.thickness / 2 - 400
-W.HalfZ = GameConfig.Lane.HalfWidth - 150
+-- the sea weather lives in: the Azure East's open water, clear of the walls and north of the Doldrums (W1)
+W.MinX = WorldShape.West + 800
+W.MaxX = WorldShape.East - 800
+W.MinZ = WorldShape.North + 800
+W.MaxZ = WorldShape.BeltN - 700
 
 -- fixed whirlpool spots
 W.Spots = {}

@@ -140,16 +140,16 @@ Q.Main = {
 	},
 	{
 		id = "T12", island = "Daybreak", title = "The Serpent at the Gate",
-		dialog = { "Hold fast! A Bay Serpent lurks in the water right outside our harbor. Nothing sails past it to the open sea.", "Sail east past the red buoys and it will rise to meet you. Fight it from your deck: punch it when it comes close, fire your cannons, and watch the water: red lines show where it lunges and spits.", "It will chew planks off your hull, so keep your eye on your ship's health. Beat it and this old compass is yours." },
+		dialog = { "Hold fast! A Bay Serpent lurks in the water right outside our harbor. Nothing sails past it to the open sea.", "Sail south of the island and it will rise to meet you. Fight it from your deck: punch it when it comes close, fire your cannons, and watch the water: red lines show where it lunges and spits.", "It will chew planks off your hull, so keep your eye on your ship's health. Beat it and this old compass is yours." },
 		goal = { kind = "Kill", target = "BaySerpent", count = 1 }, text = "Defeat the Bay Serpent",
-		hint = "Sail east of the harbor past the red buoys: it rises when you come near. Bring friends if it is too strong.",
+		hint = "Sail out south of Daybreak: it rises when you come near. Bring friends if it is too strong.",
 		at = { boss = "Daybreak" }, reward = { beli = 600, exp = 500, job = 250, items = { { "SeaCompass", 1 }, { "MeatOnBone", 5 } } },
 	},
 	{
 		id = "T13", island = "Daybreak", title = "Next Port: Conch Bay",
-		dialog = { "Sail east, follow the yellow dots and stay in the windy lane. The dark, still water at the edges is the Doldrums: no wind, and Leviathans." },
+		dialog = { "Sail west and follow the yellow dots. Keep north of the dark, still water far to the south: that is the Doldrums, no wind and Leviathans." },
 		goal = { kind = "Reach", target = "ConchBay" }, text = "Reach Conch Bay",
-		hint = "Follow the dotted line east. Dock with E near the pier.",
+		hint = "Follow the dotted line west. Dock with E near the pier.",
 		at = { island = "ConchBay" }, reward = { beli = 800, exp = 400, job = 200 },
 	},
 
@@ -188,13 +188,13 @@ Q.Main = {
 	},
 	{
 		id = "C06", island = "ConchBay", title = "Riflemen on the Wall",
-		dialog = { "Last job: the riflemen on the south wall are getting trigger-happy." },
+		dialog = { "Last job: the riflemen on the garrison wall are getting trigger-happy." },
 		goal = { kind = "Kill", target = "MarineRifleman", count = 10 }, text = "Defeat Marine Riflemen",
 		at = { spawn = "MarineRifleman" }, reward = { beli = 1200, exp = 2200, job = 1100 },
 	},
 	{
 		id = "C07", island = "ConchBay", title = "Circus Lights",
-		dialog = { "Word is a circus gang took over Marmalade Town to the east. Go see what's happening." },
+		dialog = { "Word is a circus gang took over Marmalade Town to the south-west. Go see what's happening." },
 		goal = { kind = "Reach", target = "Marmalade" }, text = "Reach Marmalade Town",
 		at = { island = "Marmalade" }, reward = { beli = 2000, exp = 2500, job = 1200 },
 	},
@@ -233,7 +233,7 @@ Q.Main = {
 	},
 	{
 		id = "M06", island = "Marmalade", title = "Up the Slope",
-		dialog = { "Thank you, sailor! Further east there's a quiet village on a hill. Too quiet, some say." },
+		dialog = { "Thank you, sailor! North-west of here there's a quiet village on a hill. Too quiet, some say." },
 		goal = { kind = "Reach", target = "Honeyslope" }, text = "Reach Honeyslope Village",
 		at = { island = "Honeyslope" }, reward = { beli = 3000, exp = 9000, job = 4500 },
 	},
@@ -259,7 +259,7 @@ Q.Main = {
 	},
 	{
 		id = "H04", island = "Honeyslope", title = "Sharp Claws",
-		dialog = { "The claw-cats guard the north cliffs. Be careful." },
+		dialog = { "The claw-cats guard the cliffs behind the manor. Be careful." },
 		goal = { kind = "Kill", target = "ClawCat", count = 8 }, text = "Defeat Claw Cats",
 		at = { spawn = "ClawCat" }, reward = { beli = 4000, exp = 20000, job = 10000, items = { { "TidecoreShard", 2 } } },
 	},
@@ -371,7 +371,7 @@ Q.Main = {
 -- tutorial: meet your Origin's NPC, clear the island's own troublemakers, report, then make your way to Daybreak.
 -- Saved as quest.pro = { origin, i } (OriginService.Apply starts it); the Castaway has none.
 local SAIL_HINT = "Call your ship at a dock (MENU > Ships), then row or sail toward the arrow. Or fly with the Courier Gull Post (100 Doubloons)."
-local SAIL_LINES = { "Daybreak lies east. Call your ship at a dock and follow the arrow, or let the Courier Gull Post fly you over." }
+local SAIL_LINES = { "Daybreak lies west. Call your ship at a dock and follow the arrow, or let the Courier Gull Post fly you over." }
 Q.Prologue = {
 	MarineCadet = {
 		{
@@ -383,14 +383,14 @@ Q.Prologue = {
 		},
 		{
 			id = "PM2", island = "BastionRock", title = "Thieves in the Stores",
-			dialog = { "Instructor Halyard. Gull Thieves keep raiding our supply sheds on the west shore. Shameful, on an academy island.", "Clear them out, cadet. Hold F to block their clubs, then hit back." },
+			dialog = { "Instructor Halyard. Gull Thieves keep raiding our supply sheds on the far shore. Shameful, on an academy island.", "Clear them out, cadet. Hold F to block their clubs, then hit back." },
 			goal = { kind = "Kill", target = "GullThief", count = 5 }, text = "Defeat Gull Thieves",
-			hint = "The supply sheds are west of the drill yard. Click to attack, hold F to block.",
+			hint = "The supply sheds are past the drill yard. Click to attack, hold F to block.",
 			at = { spawn = "GullThief" }, reward = { beli = 150, exp = 60, job = 40, items = { { "MeatOnBone", 3 } } },
 		},
 		{
 			id = "PM3", island = "BastionRock", title = "Your First Posting",
-			dialog = { "Not bad for a greenhorn. Your posting is Daybreak Island, east of here. Old Rowan there trains every new sailor in these waters.", "Your dinghy waits at the dock. Off you go, and make the academy proud." },
+			dialog = { "Not bad for a greenhorn. Your posting is Daybreak Island, just west of here. Old Rowan there trains every new sailor in these waters.", "Your dinghy waits at the dock. Off you go, and make the academy proud." },
 			goal = { kind = "Talk", target = "Guide" }, text = "Report to Instructor Halyard",
 			hint = "Instructor Halyard stands beside the Registrar in front of the academy.",
 			at = { npc = "Guide" }, reward = { beli = 100, exp = 30, job = 20 },
@@ -415,7 +415,7 @@ Q.Prologue = {
 			id = "PB2", island = "SmugglersHollow", title = "Rats on the Wharf",
 			dialog = { "Old Gaff. You want work? Dock Rats cut purses all along the wharf and the bar is losing customers.", "Thin them out and I'll pay. Watch their blades: hold F to block." },
 			goal = { kind = "Kill", target = "DockRat", count = 5 }, text = "Defeat Dock Rats",
-			hint = "The Dock Rats loiter on the east side of the wharf town. Click to attack, hold F to block.",
+			hint = "The Dock Rats loiter at the far end of the wharf town. Click to attack, hold F to block.",
 			at = { spawn = "DockRat" }, reward = { beli = 150, exp = 60, job = 40, items = { { "MeatOnBone", 3 } } },
 		},
 		{
@@ -445,7 +445,7 @@ Q.Prologue = {
 			id = "PO2", island = "ShackleReef", title = "The Jailers Still Walk",
 			dialog = { "The Hulk Jailers lived through the wreck and they still count heads. They come for us at night.", "Push them back to their hulk. They hit hard: hold F to block, and tap it right before a blow to parry." },
 			goal = { kind = "Kill", target = "HulkJailer", count = 5 }, text = "Defeat Hulk Jailers",
-			hint = "The jailers guard the wrecked hulk on the north-west shore. Click to attack, hold F to block.",
+			hint = "The jailers guard the wrecked hulk on the rocky shore. Click to attack, hold F to block.",
 			at = { spawn = "HulkJailer" }, reward = { beli = 150, exp = 60, job = 40, items = { { "MeatOnBone", 3 } } },
 		},
 		{
@@ -473,9 +473,9 @@ Q.Prologue = {
 		},
 		{
 			id = "PR2", island = "InkwellIsle", title = "Torn Pages",
-			dialog = { "Sage Quill. The missing pages were torn out by Tomb Robbers, the ones digging in the old ruins east of the hill.", "Get them back. They fight dirty: hold F to block." },
+			dialog = { "Sage Quill. The missing pages were torn out by Tomb Robbers, the ones digging in the old ruins beyond the library hill.", "Get them back. They fight dirty: hold F to block." },
 			goal = { kind = "Kill", target = "TombRobber", count = 5 }, text = "Defeat Tomb Robbers",
-			hint = "The ruins are east of the library hill. Click to attack, hold F to block.",
+			hint = "The ruins are beyond the library hill. Click to attack, hold F to block.",
 			at = { spawn = "TombRobber" }, reward = { beli = 150, exp = 60, job = 40, items = { { "MeatOnBone", 3 } } },
 		},
 		{

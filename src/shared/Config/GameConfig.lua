@@ -4,16 +4,16 @@ local GameConfig = {
 	LogoLines = { "LARPTALES", "VOXEL SEAS" },
 	LogoImage = 133908417032160, -- v0.25.87: pixel logo board floating behind the menu character (tools/gen_logo.py); nil = text logo
 	-- bump on every change: shown bottom-right in game and printed in Output, so you can tell which code is running
-	Version = "0.1.29-remake",
+	Version = "0.1.30-remake",
 	SagaName = "Azure East Saga",
 	-- title menu UPDATE LOG lines (newest first, at most 6: more ran off the top of the screen, v0.25.156)
 	UpdateNotes = {
+		"NEW WORLD MAP: the Azure East is one corner of a much bigger world, walled in by the Crimson Wall, with Backflow Peak to the south-west",
 		"TRADERS on every home island swap monster loot for supplies, Steel Ore, a Sea Egg or the gang boss's own hat",
 		"GANG BOSSES on every home island (Lv 5): Squall, Nibbs, Grimbolt and Old Mott drop a hat or charm of their own",
 		"PROLOGUES: every home island has its own opening story that leads you to Daybreak",
 		"HOME ISLANDS: Marine Cadets, Bounty Hunters, Outlaws and Relic Seekers each start on an island of their own",
 		"ROW YOUR DINGHY: no wheel, sit on the oar bench and row. Every ship leaves a foam wake",
-		"STORMS + WHIRLPOOLS at sea: they batter the hull. Navigators see them coming (Lv 30) and Hard Turn out (Lv 50)",
 	},
 	DataStoreName = "GV_Player_r1",
 	GuildStoreName = "GV_Guild_r1",
@@ -36,15 +36,9 @@ local GameConfig = {
 
 	-- ===== Sea / sailing lane =====
 	SeaLevel = 0,
+	-- W1 (owner, 28 Nov 2026): where the sea, the walls and the Doldrums are = Shared/Modules/WorldShape
 	Lane = {
-		HalfWidth = 2000, -- |Z| <= this = full wind (v0.25.11: wide sea, islands spread north/south)
-		EdgeWidth = 160, -- edge zone, wind fades (warning)
-		-- |Z| > HalfWidth + EdgeWidth = Doldrums (no wind + Leviathans)
-	},
-	World = {
-		MinX = -1400,
-		MaxX = 13400,
-		HalfZ = 3800,
+		EdgeWidth = 160, -- edge zone north of the Doldrums, wind fades (warning)
 	},
 	-- v0.25.14 (owner): lethal monster hits knock you down; monsters execute, allies interrupt or revive
 	-- v0.25.25 (owner): downed = ragdoll; HP creeps back and you get up at StandAt (RecoverSeconds from 1 HP)
@@ -235,11 +229,7 @@ local GameConfig = {
 GameConfig.WorldScale = 1.5
 do
 	local S = GameConfig.WorldScale
-	GameConfig.Lane.HalfWidth *= S
 	GameConfig.Lane.EdgeWidth *= S
-	GameConfig.World.MinX *= S
-	GameConfig.World.MaxX *= S
-	GameConfig.World.HalfZ *= S
 end
 
 return GameConfig

@@ -2511,11 +2511,14 @@ end
 function Panels.FastTravel()
 	local win = UI.Window("Map", Islands.SeaName, UDim2.fromOffset(1000, 480), T.Ocean, "🗺️", { fullscreen = true })
 	-- the sea strip sits in the middle of the window (full screen used to leave it stuck to the top)
-	-- v0.25.11: islands drawn where they are (x east, -z north), Doldrums bands top and bottom
+	-- W1 (owner refs: a chart of only the first sea): the Azure East as it lies in the world: the Crimson Wall down the
+	-- west (left) side, the Doldrums and the Grand Current along the bottom, Backflow Peak in the bottom-left corner.
+	-- Islands are drawn where they are (x east, -z north).
 	local strip = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), AnchorPoint = Vector2.new(0, 0), Position = UDim2.new(0, 0, 0, 0), Size = UDim2.new(1, 0, 1, -70), Parent = win.body })
-	local minX, maxX = -500, Islands.RedLine.x
-	-- R5: the Origin home islands lie west of Daybreak, close together: they get small tiles of their own in a
-	-- staggered column at the west edge (north to south like the sea), the route islands start right of it
+	local WALL_W = 0.1 -- the wall column (scale of the strip width)
+	local BAND = 42 -- the Doldrums band and the Grand Current band at the bottom (px each)
+	-- R5: the Origin home islands lie east of Daybreak (W1), close together: they get small tiles of their own in a
+	-- staggered column at the east edge (north to south like the sea), the route islands end left of it
 	local ORIGIN_AT = {}
 	do
 		local list = {}
@@ -2529,7 +2532,7 @@ function Panels.FastTravel()
 		end)
 		for i, isl in ipairs(list) do
 			local k = #list > 1 and (i - 1) / (#list - 1) or 0.5
-			ORIGIN_AT[isl.id] = Vector2.new(i % 2 == 1 and 0.1 or 0.03, k) -- zigzag: the strip is too short for one column
+			ORIGIN_AT[isl.id] = Vector2.new(i % 2 == 1 and 0.9 or 0.965, k) -- zigzag: the strip is too short for one column
 		end
 	end
 	-- v0.25.110 (owner: tiles ran into each other and the Doldrums bands): islands live in an inner sea frame that keeps
@@ -2538,9 +2541,12 @@ function Panels.FastTravel()
 	for _, isl in ipairs(Islands.Route) do
 		maxZ = math.max(maxZ, math.abs(isl.z or 0))
 	end
-	local x0 = next(ORIGIN_AT) and 0.19 or 0.05
+	-- x: Backflow Peak's mouth just right of the wall column, Daybreak (x 0) at 0.8, the origin column right of it
+	local WS = require(game:GetService("ReplicatedStorage").Shared.Modules.WorldShape)
+	local x1 = next(ORIGIN_AT) and 0.8 or 0.92
+	local left = WS.Mouth.X - 400
 	local function mapPos(x, z)
-		return math.clamp(x0 + (x - minX) / (maxX - minX) * (0.88 - x0), 0.04, 0.88), 0.5 + math.clamp(z / maxZ, -1, 1) * 0.5
+		return math.clamp(WALL_W + 0.06 + (x - left) / (0 - left) * (x1 - WALL_W - 0.06), WALL_W + 0.02, 0.97), 0.5 + math.clamp(z / maxZ, -1, 1) * 0.5
 	end
 	UI.Corner(strip, 16)
 	-- v0.25.148 (owner: should read as sea water): deep-to-shallow blue + pixel wave crests scattered on a fixed hash
@@ -2561,16 +2567,19 @@ function Panels.FastTravel()
 			New("Frame", { BackgroundColor3 = Color3.fromRGB(12, 70, 130), BackgroundTransparency = 0.6, BorderSizePixel = 0, Position = UDim2.fromOffset(2, 6), Size = UDim2.fromOffset(14, 3), Parent = wave })
 		end
 	end
-	for _, top in ipairs({ true, false }) do
-		local calm = New("Frame", { BackgroundColor3 = Color3.fromRGB(18, 58, 86), Size = UDim2.new(1, 0, 0, 42), Position = top and UDim2.new() or UDim2.new(0, 0, 1, -42), Parent = strip })
-		UI.Corner(calm, 16)
-		for k = 1, 14 do -- still, dark water: a few faint flat ripples
-			New("Frame", { BackgroundColor3 = Color3.fromRGB(70, 120, 150), BackgroundTransparency = 0.7, BorderSizePixel = 0, Position = UDim2.new(hash(k, top and 5 or 6) * 0.95, 0, 0.2 + hash(k, 7) * 0.6, 0), Size = UDim2.fromOffset(16, 2), Parent = calm })
+	-- the bottom: the Doldrums (still, dark water), then the Grand Current band past it (locked for now)
+	do
+		local calm = New("Frame", { BackgroundColor3 = Color3.fromRGB(18, 58, 86), Size = UDim2.new(1, 0, 0, BAND), Position = UDim2.new(0, 0, 1, -2 * BAND), Parent = strip })
+		for k = 1, 14 do -- a few faint flat ripples
+			New("Frame", { BackgroundColor3 = Color3.fromRGB(70, 120, 150), BackgroundTransparency = 0.7, BorderSizePixel = 0, Position = UDim2.new(WALL_W + hash(k, 6) * (0.95 - WALL_W), 0, 0.2 + hash(k, 7) * 0.6, 0), Size = UDim2.fromOffset(16, 2), Parent = calm })
 		end
-		UI.Text(calm, "☠  " .. string.upper(Islands.CalmName) .. "  •  no wind, Leviathans", 16, Color3.fromRGB(190, 230, 240), "Bold", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center })
+		UI.Text(calm, "☠  " .. string.upper(Islands.CalmName) .. "  •  no wind, Leviathans", 16, Color3.fromRGB(190, 230, 240), "Bold", { Position = UDim2.fromScale(WALL_W, 0), Size = UDim2.fromScale(1 - WALL_W, 1), TextXAlignment = Enum.TextXAlignment.Center })
+		local band = New("Frame", { BackgroundColor3 = Color3.fromRGB(26, 70, 140), Size = UDim2.new(1, 0, 0, BAND), Position = UDim2.new(0, 0, 1, -BAND), Parent = strip })
+		UI.Gradient(band, Color3.fromRGB(40, 96, 176), Color3.fromRGB(20, 52, 112), 90)
+		UI.Text(band, "🌊  " .. string.upper(Islands.RedLine.nextSea) .. "  •  only through " .. Islands.RedLine.peakName .. "  (next update)", 16, Color3.fromRGB(220, 230, 255), "Bold", { Position = UDim2.fromScale(WALL_W, 0), Size = UDim2.fromScale(1 - WALL_W, 1), TextXAlignment = Enum.TextXAlignment.Center })
 	end
 	local TW, TH = 110, 96
-	local sea = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 42 + TH / 2 + 4), Size = UDim2.new(1, 0, 1, -(84 + TH + 44)), Parent = strip })
+	local sea = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, TH / 2 + 8), Size = UDim2.new(1, 0, 1, -(TH + 8 + 2 * BAND + 40)), Parent = strip })
 	local p = State.profile
 	local n = #Islands.List
 	for _, isl in ipairs(Islands.List) do
@@ -2689,7 +2698,8 @@ function Panels.FastTravel()
 	end
 	-- v0.25.148 (owner: should look like a stone wall): dark mortar + rows of red stone blocks with offset joints,
 	-- shades from the hash, a lit top edge, the name on a dark plaque
-	local rl = New("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(1 / (n + 1), -10, 1, 0), BackgroundColor3 = Color3.fromRGB(70, 26, 22), ClipsDescendants = true, Parent = strip })
+	-- W1: the wall runs down the WEST (left) side and Backflow Peak rises where it meets the bands at the bottom
+	local rl = New("Frame", { AnchorPoint = Vector2.new(0, 0), Position = UDim2.new(0, 0, 0, 0), Size = UDim2.new(WALL_W, 0, 1, 0), BackgroundColor3 = Color3.fromRGB(70, 26, 22), ClipsDescendants = true, Parent = strip })
 	UI.Stroke(rl, T.Edge, 3)
 	local ROWS, PER = 16, 3
 	for r = 0, ROWS - 1 do
@@ -2705,10 +2715,22 @@ function Panels.FastTravel()
 			end
 		end
 	end
-	local plaque = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.new(1, -12, 0, 104), BackgroundColor3 = Color3.fromRGB(30, 16, 16), BackgroundTransparency = 0.15, ZIndex = 5, Parent = rl })
+	local plaque = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.4, 0), Size = UDim2.new(1, -12, 0, 104), BackgroundColor3 = Color3.fromRGB(30, 16, 16), BackgroundTransparency = 0.15, ZIndex = 5, Parent = rl })
 	UI.Stroke(plaque, Color3.fromRGB(120, 60, 40), 2)
-	UI.Text(plaque, string.upper(Islands.RedLine.name) .. "\n⛰\nLv." .. GameConfig.GrandLineLevel, 18, T.Text, "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 6 })
-	UI.Text(win.body, "Islands lie north and south of the route east: pick a heading, steer around sea stacks and stop at sandbars and wrecks. Stay in the windy sea: the Doldrums at the edges have no wind and Leviathans. Past the last island, " .. Islands.RedLine.peakName .. " leads to the " .. Islands.RedLine.nextSea .. " (next update).", 16, T.TextSoft, "Semi", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 0, 1, 0), Size = UDim2.new(1, 0, 0, 64), TextXAlignment = Enum.TextXAlignment.Center })
+	UI.Text(plaque, string.upper(Islands.RedLine.name), 16, T.Text, "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 6 })
+	do
+		local pk = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 0, 1, 0), Size = UDim2.new(WALL_W + 0.07, 0, 0, 2 * BAND + 64), ZIndex = 7, Parent = strip })
+		for i = 0, 3 do -- stepped mound: each tier narrower, a grass lip on the top one, the reverse falls down its face
+			local w = 1 - i * 0.22
+			local tier = New("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 0, 1, -i * 22), Size = UDim2.new(w, 0, 0, 24), BackgroundColor3 = Color3.fromRGB(120, 92, 70):Lerp(Color3.fromRGB(168, 138, 104), i / 3), BorderSizePixel = 0, ZIndex = 7 + i, Parent = pk })
+			New("Frame", { BackgroundColor3 = i == 3 and Color3.fromRGB(96, 170, 80) or Color3.fromRGB(190, 160, 124), BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 4), ZIndex = 7 + i, Parent = tier })
+		end
+		New("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.62, 0, 1, 0), Size = UDim2.new(0, 10, 1, -10), BackgroundColor3 = Color3.fromRGB(140, 210, 250), BorderSizePixel = 0, ZIndex = 12, Parent = pk })
+		local tag = New("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 6, 1, -(2 * BAND + 70)), Size = UDim2.new(WALL_W + 0.07, -12, 0, 40), BackgroundColor3 = Color3.fromRGB(30, 16, 16), BackgroundTransparency = 0.15, ZIndex = 13, Parent = strip })
+		UI.Stroke(tag, Color3.fromRGB(120, 60, 40), 2)
+		UI.Text(tag, "⛰ " .. string.upper(Islands.RedLine.peakName) .. "\nLv." .. GameConfig.GrandLineLevel, 13, T.Text, "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 14 })
+	end
+	UI.Text(win.body, "The route runs west from Daybreak: pick a heading, steer around sea stacks and stop at sandbars and wrecks. Keep north of the Doldrums (no wind, Leviathans). Past the last island, " .. Islands.RedLine.peakName .. " in the south-west corner leads to the " .. Islands.RedLine.nextSea .. " (next update).", 16, T.TextSoft, "Semi", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 0, 1, 0), Size = UDim2.new(1, 0, 0, 64), TextXAlignment = Enum.TextXAlignment.Center })
 end
 Panels.Map = Panels.FastTravel
 

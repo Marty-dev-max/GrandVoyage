@@ -9,6 +9,8 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local Islands = require(Shared.Config.Islands)
+local SeaZones = require(Shared.Modules.SeaZones)
+local WorldShape = require(Shared.Modules.WorldShape)
 local Monsters = require(Shared.Config.Monsters)
 local ClassesCfg = require(Shared.Config.Classes)
 local Rarity = require(Shared.Modules.Rarity)
@@ -193,22 +195,21 @@ local compass, compassMarks, navLabel, arrowHolder
 local markerPool = {}
 local arrows = {}
 
-local function nextIsland(fromX)
+-- W1: the route zigzags west across the Azure East, so "ahead" = later on the route (SeaZones.Segment), not a bigger x.
+-- The first locked island ahead wins, else the next one; nil past the last island (then the compass shows the Peak).
+local function nextIsland(pos)
 	local p = State.profile
-	local best
-	-- R5: west of Daybreak (an Origin island) the way on is Daybreak itself
-	local start = Islands.Route[1]
-	if fromX < start.x - start.radius then
-		return start
+	local Route = Islands.Route
+	-- R5: near an Origin home island the way on is Daybreak itself
+	local near = SeaZones.NearestIsland(pos)
+	if near and near.origin then
+		return Route[1]
 	end
-	for _, isl in ipairs(Islands.Route) do
-		if isl.x > fromX + 150 then
-			if not best then
-				best = isl
-			end
-			if p and not p.unlocked[isl.id] then
-				return isl
-			end
+	local first = SeaZones.Segment(pos) + 1 -- on stretch i (island i -> i + 1), island i + 1 is ahead
+	local best = Route[first]
+	for i = first, #Route do
+		if p and not p.unlocked[Route[i].id] then
+			return Route[i]
 		end
 	end
 	return best
@@ -333,17 +334,19 @@ local function updateNav()
 	local heading = math.atan2(look.X, -look.Z) -- 0 = north (-Z)
 	local pos = root.Position
 	local marks = {}
-	-- cardinal letters (east = toward the Crimson Wall)
+	-- cardinal letters (W1: west = where the route heads, toward the Crimson Wall and Backflow Peak)
 	for _, c in ipairs({ { "N", 0 }, { "E", math.pi / 2 }, { "S", math.pi }, { "W", -math.pi / 2 } }) do
-		table.insert(marks, { text = c[1], color = c[1] == "E" and T.Gold or T.TextSoft, angle = c[2] })
+		table.insert(marks, { text = c[1], color = c[1] == "W" and T.Gold or T.TextSoft, angle = c[2] })
 	end
 	local targets = {}
-	local nxt = nextIsland(pos.X)
+	local nxt = nextIsland(pos)
 	if nxt then
-		local tp = Vector3.new(nxt.x - nxt.radius - 60, 0, 0)
+		local c = Vector3.new(nxt.x, 0, nxt.z or 0)
+		local away = Vector3.new(pos.X - c.X, 0, pos.Z - c.Z)
+		local tp = away.Magnitude > 1 and c + away.Unit * (nxt.radius + 60) or c
 		table.insert(targets, { pos = tp, text = "🏝", color = T.Gold, label = nxt.name })
 	else
-		table.insert(targets, { pos = Vector3.new(Islands.RedLine.x, 0, 0), text = "⛰", color = T.Purple, label = Islands.RedLine.name })
+		table.insert(targets, { pos = Vector3.new(WorldShape.Mouth.X, 0, WorldShape.Mouth.Y), text = "⛰", color = T.Purple, label = Islands.RedLine.peakName })
 	end
 	if State.questTarget then
 		table.insert(targets, 1, { pos = State.questTarget, text = "📜", color = T.Green, label = State.questLabel })
@@ -438,7 +441,10 @@ local function updateNav()
 	local count = 0
 	if showNav then
 		local from = ship.PrimaryPart.Position
-		local to = Vector3.new(nxt.x - nxt.radius - 60, 0, 0)
+		-- W1: the island's edge toward the ship (islands no longer all lie east of you)
+		local c = Vector3.new(nxt.x, 0, nxt.z or 0)
+		local away = Vector3.new(from.X - c.X, 0, from.Z - c.Z)
+		local to = away.Magnitude > 1 and c + away.Unit * (nxt.radius + 60) or c
 		local dir = Vector3.new(to.X - from.X, 0, to.Z - from.Z)
 		local dist = dir.Magnitude
 		navLabel.Text = "🏝 " .. nxt.name .. "  •  " .. UI.Format(dist) .. " m  •  Lv." .. nxt.levels[1] .. "+"

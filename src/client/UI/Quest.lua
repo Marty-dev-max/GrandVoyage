@@ -57,7 +57,25 @@ local function targetOf(step)
 	elseif at.island then
 		local dest = Islands.ById[at.island]
 		if dest then
-			return Vector3.new(dest.x - dest.radius + 20, 8, dest.z or 0) -- the west dock you arrive at
+			-- W1: islands face every way now: the dock of that island nearest to you, else its edge toward you
+			local char = player.Character
+			local root = char and char:FindFirstChild("HumanoidRootPart")
+			local me = root and root.Position or Vector3.zero
+			local best, bestD
+			for _, m in ipairs(CollectionService:GetTagged("Dock")) do
+				if m:IsA("BasePart") and m:GetAttribute("Island") == dest.id then
+					local d = (m.Position - me).Magnitude
+					if not bestD or d < bestD then
+						best, bestD = m.Position, d
+					end
+				end
+			end
+			if best then
+				return Vector3.new(best.X, 8, best.Z)
+			end
+			local c = Vector3.new(dest.x, 8, dest.z or 0)
+			local away = Vector3.new(me.X - c.X, 0, me.Z - c.Z)
+			return away.Magnitude > 1 and c + away.Unit * (dest.radius - 20) or c
 		end
 	end
 	return nil

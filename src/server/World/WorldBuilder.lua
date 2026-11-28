@@ -1,6 +1,7 @@
 -- WorldBuilder: builds the Azure East procedurally in a bright low-poly cartoon style.
--- Islands sit in a straight line; the sea between them is the sailing lane, the far edges are the
--- Doldrums, and the Crimson Wall closes the route at the end.
+-- W1 (owner, 28 Nov 2026, docs/Plan-WorldMap.md): the Azure East is the north-east quarter of the world
+-- (Shared/Modules/WorldShape): the Crimson Wall on its west, world-edge walls north and east, the Doldrums along its
+-- south side, the Grand Current band past them, Backflow Peak in the south-west corner where the wall crosses the band.
 --
 -- To bake the map for hand-editing in Studio, run in the Command Bar:
 --   require(game.ServerScriptService.Server.World.WorldBuilder).Build()
@@ -18,6 +19,7 @@ local Monsters = require(Shared.Config.Monsters)
 local Kit = require(script.Parent.Kit)
 local Layouts = require(script.Parent.IslandLayouts)
 local Daybreak = require(script.Parent.Daybreak)
+local WS = require(Shared.Modules.WorldShape)
 
 local WB = {}
 local R
@@ -829,8 +831,10 @@ local function buildIslets(world)
 	local prev = Kit.parent
 	Kit.parent = f
 	local rand = Random.new(25011)
-	local lane = GameConfig.Lane
 	local function clear(x, z)
+		if WS.WallDist(x, z) < 500 then
+			return false
+		end
 		for _, isl in ipairs(IslandsCfg.List) do
 			local bx, bz = isl.x, isl.z or 0
 			if (Vector2.new(x - bx, z - bz)).Magnitude < isl.radius + 280 then
@@ -852,8 +856,8 @@ local function buildIslets(world)
 	end
 	local function spot()
 		for _ = 1, 40 do
-			local x = rand:NextNumber(500, IslandsCfg.RedLine.x - 700)
-			local z = rand:NextNumber(-(lane.HalfWidth - 200), lane.HalfWidth - 200)
+			local x = rand:NextNumber(WS.West + 500, WS.East - 500) -- W1: anywhere in the Azure East
+			local z = rand:NextNumber(WS.North + 500, WS.BeltN - 400)
 			if clear(x, z) then
 				return Vector3.new(x, 0, z)
 			end
@@ -909,44 +913,44 @@ end
 
 local function buildOcean(world)
 	local f = folderOf("Ocean", world)
-	local W = GameConfig.World
 	local lane = GameConfig.Lane
 	local tile = 2048
-	local calmStart = lane.HalfWidth + lane.EdgeWidth
-	local x = W.MinX
-	while x < W.MaxX + 600 do
-		local cx = x + tile / 2
-		-- Sailing lane: clear turquoise; Doldrums beyond: dark, glassy water. Tiled in z too (parts max 2048).
+	-- W1: water over the Azure East, the Doldrums and the Grand Current band south of it (WorldShape draw box).
+	-- Windy sea: clear turquoise; Doldrums: dark, glassy water. Tiled in x and z (parts max 2048).
+	local x0, x1 = WS.DrawMinX, WS.DrawMaxX
+	local x = x0
+	while x < x1 - 1 do
+		local w = math.min(tile, x1 - x)
+		local cx = x + w / 2
 		local function strip(z0, z1, color, name, y, refl, transp)
 			local z = z0
 			while z < z1 - 1 do
 				local d = math.min(tile, z1 - z)
-				local p = P(Vector3.new(tile, 2, d), color, CFrame.new(cx, y, z + d / 2), { parent = f, material = Enum.Material.Glass, transparency = transp, collide = false, shadow = false, name = name })
+				local p = P(Vector3.new(w, 2, d), color, CFrame.new(cx, y, z + d / 2), { parent = f, material = Enum.Material.Glass, transparency = transp, collide = false, shadow = false, name = name })
 				p.Reflectance = refl
 				z += d
 			end
 		end
-		strip(-calmStart, calmStart, Color3.fromRGB(40, 175, 230), "Water", -1, 0, 0.25)
-		for _, sz in ipairs({ -1, 1 }) do
-			local far = W.HalfZ + 400
-			if sz < 0 then
-				strip(-far, -calmStart, Color3.fromRGB(20, 110, 140), "CalmWater", -1.05, 0.25, 0.15)
-			else
-				strip(calmStart, far, Color3.fromRGB(20, 110, 140), "CalmWater", -1.05, 0.25, 0.15)
-			end
-			-- Foam line marking the Doldrums edge
-			P(Vector3.new(tile, 0.3, 6), Color3.fromRGB(240, 250, 255), CFrame.new(cx, 0.1, sz * calmStart), { parent = f, material = Enum.Material.Neon, transparency = 0.35, collide = false, shadow = false, name = "CalmEdge" })
-			P(Vector3.new(tile, 0.3, 3), Color3.fromRGB(255, 255, 255), CFrame.new(cx, 0.1, sz * lane.HalfWidth), { parent = f, material = Enum.Material.SmoothPlastic, transparency = 0.6, collide = false, shadow = false })
+		local farS = WS.DrawMaxZ + 400
+		strip(WS.DrawMinZ, WS.BeltN, Color3.fromRGB(40, 175, 230), "Water", -1, 0, 0.25)
+		strip(WS.BeltN, WS.BandN, Color3.fromRGB(20, 110, 140), "CalmWater", -1.05, 0.25, 0.15)
+		strip(WS.BandN, WS.BandS, Color3.fromRGB(30, 140, 210), "Water", -1, 0, 0.25) -- the Grand Current (locked)
+		strip(WS.BandS, WS.BeltS, Color3.fromRGB(20, 110, 140), "CalmWater", -1.05, 0.25, 0.15)
+		strip(WS.BeltS, farS, Color3.fromRGB(40, 175, 230), "Water", -1, 0, 0.25)
+		-- Foam lines marking the Doldrums edges, and a faint line where the wind starts to fade
+		for _, z in ipairs({ WS.BeltN, WS.BandN, WS.BandS, WS.BeltS }) do
+			P(Vector3.new(w, 0.3, 6), Color3.fromRGB(240, 250, 255), CFrame.new(cx, 0.1, z), { parent = f, material = Enum.Material.Neon, transparency = 0.35, collide = false, shadow = false, name = "CalmEdge" })
 		end
+		P(Vector3.new(w, 0.3, 3), Color3.fromRGB(255, 255, 255), CFrame.new(cx, 0.1, WS.BeltN - lane.EdgeWidth), { parent = f, material = Enum.Material.SmoothPlastic, transparency = 0.6, collide = false, shadow = false })
 		-- Sea floor
-		strip(-(W.HalfZ + 400), W.HalfZ + 400, Color3.fromRGB(230, 210, 150), "SeaFloor", -46, 0, 0)
-		x += tile
+		strip(WS.DrawMinZ, farS, Color3.fromRGB(230, 210, 150), "SeaFloor", -46, 0, 0)
+		x += w
 	end
-	-- Warning buoys along the Doldrums edge
-	local bx = W.MinX
-	while bx < IslandsCfg.RedLine.x - 300 do
-		for _, sz in ipairs({ -1, 1 }) do
-			local pos = Vector3.new(bx, 0, sz * (lane.HalfWidth + lane.EdgeWidth * 0.5))
+	-- Warning buoys along the Doldrums edge (south side of the Azure East)
+	local bx = WS.West + 200
+	while bx < WS.East - 200 do
+		local pos = Vector3.new(bx, 0, WS.BeltN - lane.EdgeWidth * 0.5)
+		if WS.WallDist(pos.X, pos.Z) > 300 then
 			Cyl(5, 5, Color3.fromRGB(255, 200, 40), pos + Vector3.new(0, 1, 0), { parent = f })
 			Ball(2.5, Color3.fromRGB(255, 70, 50), pos + Vector3.new(0, 5, 0), { parent = f, material = Enum.Material.Neon })
 		end
@@ -959,17 +963,18 @@ end
 -- Kept out of the "Ocean" folder: the swim code raycasts it as the bottom.
 local function buildSeaFloor(world)
 	local f = folderOf("SeaFloor", world)
-	local W = GameConfig.World
 	local y = GameConfig.Swim.SeaFloorY
 	local tile = 2000
-	local x = W.MinX
-	while x < W.MaxX + 600 do
-		local z = -W.HalfZ
-		while z < W.HalfZ do
-			P(Vector3.new(tile, 4, tile), Color3.fromRGB(46, 92, 104), CFrame.new(x + tile / 2, y - 2, z + tile / 2), { parent = f, material = M.Sand, shadow = false, name = "Floor" })
-			z += tile
+	local x = WS.DrawMinX -- W1: under the whole drawn sea (WorldShape)
+	while x < WS.DrawMaxX - 1 do
+		local w = math.min(tile, WS.DrawMaxX - x)
+		local z = WS.DrawMinZ
+		while z < WS.DrawMaxZ - 1 do
+			local d = math.min(tile, WS.DrawMaxZ - z)
+			P(Vector3.new(w, 4, d), Color3.fromRGB(46, 92, 104), CFrame.new(x + w / 2, y - 2, z + d / 2), { parent = f, material = M.Sand, shadow = false, name = "Floor" })
+			z += d
 		end
-		x += tile
+		x += w
 	end
 	local rand = Random.new(46046)
 	local coral = { Color3.fromRGB(255, 120, 140), Color3.fromRGB(255, 170, 90), Color3.fromRGB(190, 120, 255), Color3.fromRGB(255, 230, 120) }
@@ -1003,58 +1008,132 @@ local function buildSeaFloor(world)
 	end
 end
 
+-- W1 (owner, 28 Nov 2026, docs/Plan-WorldMap.md): the Crimson Wall runs north-south through the middle of the world
+-- (the Azure East's west side), world-edge walls close its north and east sides, and Backflow Peak rises where the wall
+-- crosses the Grand Current band (the sea's south-west corner): a stepped red mountain with a canal of water flowing UP
+-- its north-east face from the Azure East. Own Random (built last, but never touch Kit's shared stream).
+-- Every big block is cut into <= 2000-stud pieces (Roblox caps a part at 2048).
 local function buildRedLine(world)
 	local f = folderOf("RedLine", world)
 	local rl = IslandsCfg.RedLine
-	local W = GameConfig.World
+	local rand = Random.new(51051)
 	local red = Color3.fromRGB(215, 95, 70)
-	local half = rl.canalWidth / 2
-	local wallLen = W.HalfZ + 600 - half
-	local x0 = rl.x - rl.thickness / 2
-	for _, sz in ipairs({ -1, 1 }) do
-		local zc = sz * (half + wallLen / 2)
-		P(Vector3.new(rl.thickness, rl.height, wallLen), red, CFrame.new(rl.x, rl.height / 2 - 40, zc), { parent = f, material = Enum.Material.Rock })
-		-- Stepped rock strata for depth
-		for i = 1, 7 do
-			P(Vector3.new(rl.thickness + 18, 22, wallLen), red:Lerp(Color3.fromRGB(255, 170, 120), (i % 2) * 0.45), CFrame.new(rl.x, i * 175, zc), { parent = f, material = Enum.Material.Rock })
+	local dark = Color3.fromRGB(150, 60, 45)
+	local H = rl.height
+	local function slab(x0, x1, z0, z1, y0, y1, color, mat)
+		local x = x0
+		while x < x1 - 0.5 do
+			local w = math.min(2000, x1 - x)
+			local z = z0
+			while z < z1 - 0.5 do
+				local d = math.min(2000, z1 - z)
+				P(Vector3.new(w, y1 - y0, d), color, CFrame.new(x + w / 2, (y0 + y1) / 2, z + d / 2), { parent = f, material = mat or M.Rock })
+				z += d
+			end
+			x += w
 		end
-		-- Jagged sea-facing cliff pillars (-> stylized red cliff meshes, facing the sea)
-		for i = 1, 26 do
-			local z = sz * (half + 40 + rng:NextNumber(0, math.min(wallLen - 80, 2400)))
-			local h = rng:NextNumber(120, 700)
-			local center = Vector3.new(x0 - 10, h / 2 - 20, z)
-			local pillar = P(Vector3.new(rng:NextNumber(60, 160), h, rng:NextNumber(30, 70)), red:Lerp(Color3.fromRGB(150, 60, 45), rng:NextNumber(0, 0.5)), CFrame.lookAt(center, center - Vector3.xAxis), { parent = f, material = Enum.Material.Rock })
+	end
+	-- a wall block: rock body, strata bands a little proud of the faces, grass on top
+	local function wall(x0, x1, z0, z1, top)
+		top = top or H
+		slab(x0, x1, z0, z1, -40, top, red)
+		for i = 1, math.floor(top / 175) do
+			slab(x0 - 9, x1 + 9, z0 - 9, z1 + 9, i * 175 - 11, i * 175 + 11, red:Lerp(Color3.fromRGB(255, 170, 120), (i % 2) * 0.45))
+		end
+		slab(x0 - 15, x1 + 15, z0 - 15, z1 + 15, top - 10, top + 30, Color3.fromRGB(110, 190, 90), M.Grass)
+	end
+	-- jagged cliff pillars on a sea-facing face (dressed with the red cliff meshes): from a to b along the face,
+	-- `out` = the unit normal pointing into the sea
+	local function cliffFace(a, b, out)
+		local len = (b - a).Magnitude
+		local along = (b - a).Unit
+		local s = rand:NextNumber(0, 120)
+		while s < len do
+			local p = a + along * s
+			local h = rand:NextNumber(120, 700)
+			local center = Vector3.new(p.X, h / 2 - 20, p.Y) + Vector3.new(out.X, 0, out.Y) * 10
+			local pillar = P(Vector3.new(rand:NextNumber(60, 160), h, rand:NextNumber(30, 70)), red:Lerp(dark, rand:NextNumber(0, 0.5)),
+				CFrame.lookAt(center, center + Vector3.new(out.X, 0, out.Y)), { parent = f, material = M.Rock })
 			pillar:SetAttribute("Kind", "CliffRed")
 			CollectionService:AddTag(pillar, "EnvPart")
+			s += rand:NextNumber(220, 320)
 		end
-		-- red cliff face over the lower wall near the canal (where players actually look)
-		local zz = half + 6
-		while zz < half + 1500 do
-			local w = rng:NextNumber(60, 95)
-			local y = -30
-			while y < 400 do
-				local hh = rng:NextNumber(55, 85)
-				local center = Vector3.new(x0 - 4 - rng:NextNumber(0, 8), y + hh / 2, sz * (zz + w / 2))
-				local slab = P(Vector3.new(w * 1.15, hh * 1.08, 34), red:Lerp(Color3.fromRGB(150, 60, 45), rng:NextNumber(0, 0.4)), CFrame.lookAt(center, center - Vector3.xAxis), { parent = f, material = Enum.Material.Rock, collide = false })
-				slab:SetAttribute("Kind", "CliffRed")
-				CollectionService:AddTag(slab, "EnvPart")
-				y += hh
-			end
-			zz += w
-		end
-		P(Vector3.new(rl.thickness + 30, 40, wallLen), Color3.fromRGB(110, 190, 90), CFrame.new(rl.x, rl.height - 30, zc), { parent = f, material = Enum.Material.Grass })
 	end
-	-- Backflow Peak: a canal of water flowing UP the wall
-	local rise, run = rl.height - 20, rl.thickness
-	local len = math.sqrt(rise * rise + run * run)
-	local ang = math.atan2(rise, run)
-	local mid = Vector3.new(x0 + run / 2, rise / 2 - 6, 0)
-	local rampCf = CFrame.new(mid) * CFrame.Angles(0, 0, ang)
-	P(Vector3.new(len, 20, rl.canalWidth + 40), Color3.fromRGB(170, 80, 60), rampCf * CFrame.new(0, -14, 0), { parent = f, material = Enum.Material.Rock })
-	local water = P(Vector3.new(len, 3, rl.canalWidth), Color3.fromRGB(110, 215, 255), rampCf, { parent = f, material = Enum.Material.Glass, transparency = 0.15, collide = false, name = "ReverseWater" })
+	local pk, wh, e = WS.Peak, WS.WallHalf, WS.Edge
+	local southEnd = WS.DrawMaxZ + 600
+	-- the middle wall, north and south of the mountain; it steps down into the mountain's shoulders
+	local gap = 1300
+	wall(pk.X - wh, pk.X + wh, WS.North - e, pk.Y - WS.MountR)
+	for k, top in ipairs({ H * 0.85, H * 0.7, H * 0.55 }) do
+		local span = (WS.MountR - gap) / 3
+		wall(pk.X - wh, pk.X + wh, pk.Y - WS.MountR + (k - 1) * span, pk.Y - WS.MountR + k * span, top)
+		wall(pk.X - wh, pk.X + wh, pk.Y + WS.MountR - k * span, pk.Y + WS.MountR - (k - 1) * span, top)
+	end
+	wall(pk.X - wh, pk.X + wh, pk.Y + WS.MountR, southEnd)
+	-- the world edges: north (across the top of the Azure East) and east
+	wall(pk.X - wh, WS.East + e, WS.North - e, WS.North)
+	wall(WS.East, WS.East + e, WS.North, southEnd)
+	cliffFace(Vector2.new(WS.West, WS.North), Vector2.new(WS.West, pk.Y - WS.MountR), Vector2.new(1, 0))
+	cliffFace(Vector2.new(WS.West, WS.North), Vector2.new(WS.East, WS.North), Vector2.new(0, 1))
+	cliffFace(Vector2.new(WS.East, WS.North), Vector2.new(WS.East, WS.BandN), Vector2.new(-1, 0))
+
+	-- Backflow Peak: stepped tiers, each a disc of plank-like strips. The canal climbs from the Mouth (sea level, out at
+	-- MountR + 100) to the summit (radius 300) along MouthDir; every tier stays under the canal's line.
+	local dir = WS.MouthDir
+	local r0, r1 = WS.MountR + 100, 300
+	local climb = H - 20
+	local function canalDist(y) -- horizontal distance from the Peak of the canal at height y
+		return r0 - (r0 - r1) * y / climb
+	end
+	local function disc(r, y0, y1, color)
+		local strip = 160
+		local z = -r
+		while z < r - 1 do
+			local zc = z + strip / 2
+			local half = math.sqrt(math.max(0, r * r - zc * zc))
+			if half > 20 then
+				slab(pk.X - half, pk.X + half, pk.Y + z, pk.Y + z + strip, y0, y1, color)
+			end
+			z += strip
+		end
+	end
+	disc(WS.MountR, -40, 30, dark) -- the rocky foot ships bump into
+	local tiers = 7
+	local prev = 30
+	for k = 1, tiers do
+		local top = climb * k / tiers - 40
+		local r = math.max(120, canalDist(top) - 260)
+		disc(r, prev, top, red:Lerp(Color3.fromRGB(255, 170, 120), (k % 2) * 0.35))
+		prev = top
+	end
+	disc(260, prev, climb + 40, Color3.fromRGB(110, 190, 90))
+	-- the canal: water flowing UP the north-east face
+	local a3 = Vector3.new(WS.Mouth.X, -6, WS.Mouth.Y)
+	local top2 = pk + dir * r1
+	local b3 = Vector3.new(top2.X, climb, top2.Y)
+	local len = (b3 - a3).Magnitude
+	local rampCf = CFrame.lookAt((a3 + b3) / 2, b3)
+	P(Vector3.new(rl.canalWidth + 40, 20, len), Color3.fromRGB(170, 80, 60), rampCf * CFrame.new(0, -14, 0), { parent = f, material = M.Rock })
+	-- an embankment of rock under the canal (the tiers step back under its line)
+	local N = 14
+	local flatDir = Vector3.new(b3.X - a3.X, 0, b3.Z - a3.Z)
+	local run = flatDir.Magnitude
+	flatDir = flatDir.Unit
+	for i = 0, N - 1 do
+		local t = (i + 0.5) / N
+		local under = a3.Y + (b3.Y - a3.Y) * (i / N) - 24 -- the lower end of this piece of the slope
+		if under > 0 then
+			local c = a3 + flatDir * (run * t)
+			P(Vector3.new(rl.canalWidth + 40, under + 40, run / N + 2), red:Lerp(dark, 0.3), CFrame.lookAt(Vector3.new(c.X, (under - 40) / 2, c.Z), Vector3.new(c.X, (under - 40) / 2, c.Z) + flatDir), { parent = f, material = M.Rock })
+		end
+	end
+	for _, sx in ipairs({ -1, 1 }) do
+		P(Vector3.new(20, 60, len), dark, rampCf * CFrame.new(sx * (rl.canalWidth / 2 + 10), 20, 0), { parent = f, material = M.Rock })
+	end
+	local water = P(Vector3.new(rl.canalWidth, 3, len), Color3.fromRGB(110, 215, 255), rampCf, { parent = f, material = M.Glass, transparency = 0.15, collide = false, name = "ReverseWater" })
 	CollectionService:AddTag(water, "ReverseWater")
 	for i = 0, 9 do
-		local foam = P(Vector3.new(14, 3.4, rl.canalWidth - 8), Color3.fromRGB(240, 252, 255), rampCf * CFrame.new(-len / 2 + (i + 0.5) * len / 10, 0.4, 0), { parent = f, material = Enum.Material.Neon, transparency = 0.45, collide = false, shadow = false, name = "Foam" })
+		local foamPart = P(Vector3.new(rl.canalWidth - 8, 3.4, 14), Color3.fromRGB(240, 252, 255), rampCf * CFrame.new(0, 0.4, len / 2 - (i + 0.5) * len / 10), { parent = f, material = M.Neon, transparency = 0.45, collide = false, shadow = false, name = "Foam" })
 		local pe = Instance.new("ParticleEmitter")
 		pe.Texture = "rbxasset://textures/particles/smoke_main.dds"
 		pe.Color = ColorSequence.new(Color3.fromRGB(230, 250, 255))
@@ -1065,22 +1144,29 @@ local function buildRedLine(world)
 		pe.Speed = NumberRange.new(40, 70)
 		pe.EmissionDirection = Enum.NormalId.Top
 		pe.Acceleration = Vector3.new(0, 60, 0)
-		pe.Parent = foam
+		pe.Parent = foamPart
 	end
-	-- Whirlpool at the foot of the climb
-	Cyl(1, rl.canalWidth * 2.2, Color3.fromRGB(170, 235, 255), Vector3.new(x0 - 80, 0.3, 0), { parent = f, material = Enum.Material.Neon, transparency = 0.55, collide = false, shadow = false })
-	-- Entrance arch (huge, visible from afar)
-	local gx = x0 + rl.gateOffsetX
-	for _, sz in ipairs({ -1, 1 }) do
-		P(Vector3.new(22, 150, 22), Color3.fromRGB(250, 240, 220), CFrame.new(gx, 75, sz * (half + 24)), { parent = f, material = Enum.Material.Marble })
-		Ball(30, Color3.fromRGB(255, 210, 80), Vector3.new(gx, 160, sz * (half + 24)), { parent = f, material = Enum.Material.SmoothPlastic })
+	-- whirlpool at the foot of the climb, then the entrance arch facing the sea (visible from afar)
+	local out3 = Vector3.new(dir.X, 0, dir.Y)
+	local side3 = Vector3.new(-dir.Y, 0, dir.X)
+	local mouth3 = Vector3.new(WS.Mouth.X, 0, WS.Mouth.Y)
+	Cyl(1, rl.canalWidth * 2.2, Color3.fromRGB(170, 235, 255), mouth3 + out3 * 80 + Vector3.new(0, 0.3, 0), { parent = f, material = M.Neon, transparency = 0.55, collide = false, shadow = false })
+	local gate = mouth3 + out3 * 160
+	local half = rl.canalWidth / 2
+	for _, s in ipairs({ -1, 1 }) do
+		local post = gate + side3 * s * (half + 24)
+		P(Vector3.new(22, 150, 22), Color3.fromRGB(250, 240, 220), CFrame.new(post + Vector3.new(0, 75, 0)), { parent = f, material = M.Marble })
+		Ball(30, Color3.fromRGB(255, 210, 80), post + Vector3.new(0, 160, 0), { parent = f, material = M.SmoothPlastic })
 	end
-	P(Vector3.new(24, 26, rl.canalWidth + 80), Color3.fromRGB(250, 240, 220), CFrame.new(gx, 150, 0), { parent = f, material = Enum.Material.Marble })
-	local s = sign(string.upper(IslandsCfg.RedLine.peakName) .. "  •  " .. string.upper(IslandsCfg.RedLine.nextSea) .. "  (Lv." .. GameConfig.GrandLineLevel .. ")", CFrame.new(gx - 12.5, 150, 0) * CFrame.Angles(0, math.pi / 2, 0), Vector2.new(rl.canalWidth + 60, 20), Color3.fromRGB(255, 230, 120), Color3.fromRGB(150, 40, 40))
+	local lintelCf = CFrame.fromMatrix(gate + Vector3.new(0, 150, 0), side3, Vector3.yAxis)
+	P(Vector3.new(rl.canalWidth + 80, 26, 24), Color3.fromRGB(250, 240, 220), lintelCf, { parent = f, material = M.Marble })
+	local signPos = gate + out3 * 12.5 + Vector3.new(0, 150, 0)
+	local s = sign(string.upper(rl.peakName) .. "  •  " .. string.upper(rl.nextSea) .. "  (Lv." .. GameConfig.GrandLineLevel .. ")", CFrame.lookAt(signPos, signPos + out3), Vector2.new(rl.canalWidth + 60, 20), Color3.fromRGB(255, 230, 120), Color3.fromRGB(150, 40, 40))
 	s.Parent = f
-	-- Clouds on the summit
+	-- clouds around the summit
 	for _ = 1, 18 do
-		Ball(rng:NextNumber(80, 160), Color3.new(1, 1, 1), Vector3.new(rl.x + rng:NextNumber(-300, 300), rl.height + rng:NextNumber(-60, 80), rng:NextNumber(-1600, 1600)), { parent = f, collide = false, transparency = 0.1, shadow = false })
+		local a, r = rand:NextNumber(0, math.pi * 2), rand:NextNumber(0, 900)
+		Ball(rand:NextNumber(80, 160), Color3.new(1, 1, 1), Vector3.new(pk.X + math.cos(a) * r, H + rand:NextNumber(-60, 80), pk.Y + math.sin(a) * r), { parent = f, collide = false, transparency = 0.1, shadow = false })
 	end
 end
 
@@ -1122,7 +1208,7 @@ end
 -- away and rebuilt from code at server start (so the owner's published place updates through Rojo too).
 -- Hand-built content made in Studio goes in workspace.Handmade (never touched by rebuilds). Kit props placed there
 -- (tagged EnvProp/EnvPart) are dressed with the stylized meshes like the generated ones.
-WB.WORLD_VERSION = 50 -- v50 (0.1.28-remake): a Trader NPC on each Origin home island; v49 (0.1.26-remake, R5): four Origin home islands west of Daybreak (World/OriginIslands); v48 (0.1.24-remake, R5): islands built x GameConfig.WorldScale (1.5) around their center, people-size props keep their size; v47 (0.1.10-remake): no Job Master NPC (spots stay reserved); v46 (v0.25.150): no shipyard platform, the slips float (boardwalk only); v45 (v0.25.149): Courier Gull Post at every harbor, Marine Registrar by the Conch Bay stairs; v44 (v0.25.148): roof ridges sit on the stepped roof (no floating beam); v43 (v0.25.147): voxel stadium big top + the Confetti Crew occupying Marmalade; v42 (v0.25.146): Big Top for Captain Confetti, Epilogue execution platform; v41 (v0.25.143): a look of their own for every island quest giver; v40 (v0.25.142): one Tavern Keeper on Daybreak (inside the tavern); v39 (v0.25.141): tavern awning above the doorway; v38 (v0.25.140): enterable Daybreak tavern / smithy / store with their NPC inside; v37 (v0.25.134): organic voxel island outlines (IslandShape); v36 v36 (v0.25.133): Epilogue Town hand-laid; v35 v35 (v0.25.132): Mikan Isles hand-laid; v34 (v0.25.131): Barracuda Bistro hand-laid (World/Barracuda); v33 (v0.25.130): Honeyslope hand-laid (World/Honeyslope); v32 (v0.25.129): the Brig (jail cell) at the Conch Bay garrison; v31 (v0.25.120): Power board is a map piece in front of the west house; v30 (v0.25.119): Bounty Board moved to the west street house; v29 (v0.25.118): Job Master walk-in ring + new look; v28 (v0.25.115): DeFlicker stacks faces within 0.035 (grass under the plaza paving); v27 (v0.25.113): no Bay Serpent buoys/sign, wooden shipyard plots, voxel barrels/crates/chests; v26 (v0.25.112): DeFlicker pass, hill caps one step apart per lobe; v25 (v0.25.109): no island name signs at the docks; v24 (v0.25.108): Marine Registrar in Conch Bay, no Guild Registrar; v23 (v0.25.107): Tavern Keeper beside the Shipwright; v22 (v0.25.27): shipyards snap to the island side nearest the next island; v21 (v0.25.25): shipyards face the next island, circus ship offshore; v20 (v0.25.24): Marmalade Town hand-laid (World/Marmalade); v19 (v0.25.23): Conch Bay street spawns keep their houses; v18 (v0.25.22): Conch Bay terraced (quay, two terraces, garrison plateau, tapered towers); v17 (v0.25.21): islands turned to face the previous one, Conch Bay stairs; v16 (v0.25.20): Daybreak spawn by Rowan, Conch Bay hand-laid (World/ConchBay); v15 (v0.25.11): islands spread north/south, wider sea, islets; v14 (v0.25.6): Daybreak spawn by the campfire; v13: voxel NPCs; v12: Voxelize pass
+WB.WORLD_VERSION = 51 -- v51 (0.1.30-remake, W1): the world is four seas around a cross: the Azure East is its north-east quarter (islands moved, walls on three sides, Backflow Peak in the south-west corner); v50 (0.1.29-remake): a Trader NPC on each Origin home island; v49 (0.1.26-remake, R5): four Origin home islands west of Daybreak (World/OriginIslands); v48 (0.1.24-remake, R5): islands built x GameConfig.WorldScale (1.5) around their center, people-size props keep their size; v47 (0.1.10-remake): no Job Master NPC (spots stay reserved); v46 (v0.25.150): no shipyard platform, the slips float (boardwalk only); v45 (v0.25.149): Courier Gull Post at every harbor, Marine Registrar by the Conch Bay stairs; v44 (v0.25.148): roof ridges sit on the stepped roof (no floating beam); v43 (v0.25.147): voxel stadium big top + the Confetti Crew occupying Marmalade; v42 (v0.25.146): Big Top for Captain Confetti, Epilogue execution platform; v41 (v0.25.143): a look of their own for every island quest giver; v40 (v0.25.142): one Tavern Keeper on Daybreak (inside the tavern); v39 (v0.25.141): tavern awning above the doorway; v38 (v0.25.140): enterable Daybreak tavern / smithy / store with their NPC inside; v37 (v0.25.134): organic voxel island outlines (IslandShape); v36 v36 (v0.25.133): Epilogue Town hand-laid; v35 v35 (v0.25.132): Mikan Isles hand-laid; v34 (v0.25.131): Barracuda Bistro hand-laid (World/Barracuda); v33 (v0.25.130): Honeyslope hand-laid (World/Honeyslope); v32 (v0.25.129): the Brig (jail cell) at the Conch Bay garrison; v31 (v0.25.120): Power board is a map piece in front of the west house; v30 (v0.25.119): Bounty Board moved to the west street house; v29 (v0.25.118): Job Master walk-in ring + new look; v28 (v0.25.115): DeFlicker stacks faces within 0.035 (grass under the plaza paving); v27 (v0.25.113): no Bay Serpent buoys/sign, wooden shipyard plots, voxel barrels/crates/chests; v26 (v0.25.112): DeFlicker pass, hill caps one step apart per lobe; v25 (v0.25.109): no island name signs at the docks; v24 (v0.25.108): Marine Registrar in Conch Bay, no Guild Registrar; v23 (v0.25.107): Tavern Keeper beside the Shipwright; v22 (v0.25.27): shipyards snap to the island side nearest the next island; v21 (v0.25.25): shipyards face the next island, circus ship offshore; v20 (v0.25.24): Marmalade Town hand-laid (World/Marmalade); v19 (v0.25.23): Conch Bay street spawns keep their houses; v18 (v0.25.22): Conch Bay terraced (quay, two terraces, garrison plateau, tapered towers); v17 (v0.25.21): islands turned to face the previous one, Conch Bay stairs; v16 (v0.25.20): Daybreak spawn by Rowan, Conch Bay hand-laid (World/ConchBay); v15 (v0.25.11): islands spread north/south, wider sea, islets; v14 (v0.25.6): Daybreak spawn by the campfire; v13: voxel NPCs; v12: Voxelize pass
 
 -- Old copies of the map can hide anywhere in Workspace: a renamed or regrouped World, an island dragged into
 -- Handmade, single NPCs / chests / docks pasted from an old bake. They draw on top of the new islands and register

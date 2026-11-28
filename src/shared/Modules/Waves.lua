@@ -8,7 +8,7 @@ local Islands = require(ReplicatedStorage.Shared.Config.Islands)
 local W = {}
 
 W.Amp = 3 -- max crest height above sea level in open water (studs); troughs go as deep (v0.25.145: was 1.5, owner: too flat)
-local CALM_Z = GameConfig.Lane.HalfWidth + GameConfig.Lane.EdgeWidth
+local WorldShape = require(ReplicatedStorage.Shared.Modules.WorldShape)
 local CALM = 0.25 -- Doldrums: glassy water
 local SHORE = 60 -- waves die down over this many studs before an island's edge
 local SHORE_MIN = 0.2
@@ -27,7 +27,8 @@ end
 
 -- 0..1 amplitude factor at a spot (calm belt + near islands)
 function W.Damp(x, z)
-	local a = math.abs(z) > CALM_Z and CALM or 1
+	-- W1: the Doldrums are the two belts either side of the Grand Current band
+	local a = ((z > WorldShape.BeltN and z < WorldShape.BandN) or (z > WorldShape.BandS and z < WorldShape.BeltS)) and CALM or 1
 	for _, isl in ipairs(Islands.List) do
 		if type(isl) == "table" and isl.x and isl.radius then
 			local dx, dz = x - isl.x, z - (isl.z or 0)

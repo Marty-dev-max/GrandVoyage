@@ -82,8 +82,9 @@ end
 
 -- ===== HUD =====
 local zoneInfo = {
-	Lane = { text = "🌬️ SAILING LANE  •  strong wind", color = T.Ocean },
-	Edge = { text = "⚠️ LANE EDGE  •  wind fading", color = T.Orange },
+	Lane = { text = "🌬️ OPEN SEA  •  strong wind", color = T.Ocean },
+	Edge = { text = "⚠️ NEAR THE " .. string.upper(Islands.CalmName) .. "  •  wind fading", color = T.Orange },
+	GrandCurrent = { text = "🌊 " .. string.upper(Islands.RedLine.nextSea), color = T.Purple },
 	CalmBelt = { text = "☠️ " .. string.upper(Islands.CalmName) .. "  •  NO WIND! LEVIATHANS!", color = T.Red },
 	RedLine = { text = "⛰️ " .. string.upper(Islands.RedLine.name), color = T.Purple },
 }
@@ -962,7 +963,7 @@ function Sailing.Start()
 			creak:Destroy()
 			creak = nil
 		end
-		-- wind: white streaks blowing east toward the Crimson Wall, only where there is wind
+		-- wind: wisps along the wind direction, only where there is wind
 		fxAcc += dt
 		local cam = workspace.CurrentCamera
 		local focus = cam.Focus.Position
@@ -984,7 +985,8 @@ function Sailing.Start()
 			fxAcc = 0
 			-- soft curved wind wisps (Atmos), a few at a time
 			local count = math.floor(wind * 1.4 * (Settings.Knob("wind") or 1) + 0.5)
-			Atmos.Wind(Vector3.new(focus.X, 0, focus.Z), Vector3.new(1, 0, -focus.Z / 4000).Unit, 0.6 + wind, count)
+			-- W1: the wisps blow with the real wind (Shared/Modules/Wind), not toward a fixed wall
+			Atmos.Wind(Vector3.new(focus.X, 0, focus.Z), WindM.Dir(focus.X, focus.Z, workspace:GetServerTimeNow()), 0.6 + wind, count)
 		end
 		audioAcc += dt
 		if audioAcc > 1 then

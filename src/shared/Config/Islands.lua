@@ -1,6 +1,8 @@
--- Islands of the Azure East (v0.25.11, owner): spread north and south of the route east to the Crimson Wall, so
--- sailing means picking a heading, not a straight line. x still grows with the level (SeaZones.Segment relies on it);
--- z = north/south offset. The world code builds each island at z 0 and moves it (WorldBuilder.buildIsland).
+-- Islands of the Azure East. W1 (owner, 28 Nov 2026, docs/Plan-WorldMap.md): the Azure East is the north-east quarter
+-- of a world shaped like four seas around a cross (Shared/Modules/WorldShape). Daybreak lies by the east edge, the route
+-- zigzags west and south-west to Epilogue near Backflow Peak in the middle of the world. x / z are RAW (x WorldScale
+-- below), -z = north. The world code builds each island at z 0 and moves it (WorldBuilder.buildIsland). The route order
+-- is the list order (Islands.Route), never x: SeaZones.Segment measures along the route.
 -- Names are original (inspired by classic pirate-adventure islands, not copied).
 -- spawns: offset from island center (X,Z), radius, monster, count
 local Islands = {
@@ -31,14 +33,14 @@ local Islands = {
 		-- the Bay Serpent guards the way out, at sea in front of the harbor on the route to Conch Bay. v0.23.0 (owner):
 		-- no arena; it lies under the water there and rises to fight ships that sail within wakeRadius.
 		-- A story fight (quest T12), so it comes back quickly.
-		boss = { id = "BaySerpent", offset = Vector2.new(700, 0), respawn = 3 * 60, atSea = true, sea = true, wakeRadius = 150 },
+		boss = { id = "BaySerpent", offset = Vector2.new(0, 760), respawn = 3 * 60, atSea = true, sea = true, wakeRadius = 150 },
 	},
 	{
 		id = "ConchBay",
 		name = "Conch Bay",
 		subtitle = "Garrison Harbor",
 		layout = "ConchBay", -- v0.25.20: hand-laid in World/ConchBay.lua (owner concept art)
-		x = 2100, z = 800,
+		x = -1470, z = -1200,
 		radius = 255,
 		levels = { 10, 20 },
 		palette = { sand = Color3.fromRGB(250, 232, 184), grass = Color3.fromRGB(148, 206, 108), dirt = Color3.fromRGB(150, 112, 80), accent = Color3.fromRGB(62, 124, 224), wall = Color3.fromRGB(236, 230, 214) },
@@ -60,7 +62,7 @@ local Islands = {
 		id = "Marmalade",
 		name = "Marmalade Town",
 		subtitle = "Town of Empty Streets",
-		x = 3900, z = -750,
+		x = -2930, z = 400,
 		radius = 250,
 		levels = { 20, 30 },
 		palette = { sand = Color3.fromRGB(255, 222, 162), grass = Color3.fromRGB(176, 212, 98), dirt = Color3.fromRGB(170, 112, 70), accent = Color3.fromRGB(255, 140, 36), wall = Color3.fromRGB(255, 238, 210) },
@@ -82,7 +84,7 @@ local Islands = {
 		id = "Honeyslope",
 		name = "Honeyslope Village",
 		subtitle = "Village of the Long Slope",
-		x = 5300, z = 1350,
+		x = -4400, z = -1330,
 		radius = 260,
 		levels = { 30, 40 },
 		palette = { sand = Color3.fromRGB(245, 226, 176), grass = Color3.fromRGB(108, 200, 118), dirt = Color3.fromRGB(150, 110, 78), accent = Color3.fromRGB(150, 92, 200), wall = Color3.fromRGB(250, 244, 230) },
@@ -100,7 +102,7 @@ local Islands = {
 		id = "Barracuda",
 		name = "Barracuda Bistro",
 		subtitle = "The Floating Restaurant",
-		x = 6800, z = -1250,
+		x = -5870, z = 530,
 		radius = 160, -- v0.25.131: 195 left the raft mostly empty deck
 		levels = { 40, 50 },
 		palette = { sand = Color3.fromRGB(200, 150, 100), grass = Color3.fromRGB(226, 196, 148), dirt = Color3.fromRGB(150, 100, 64), accent = Color3.fromRGB(236, 78, 66), wall = Color3.fromRGB(255, 246, 232) },
@@ -119,7 +121,7 @@ local Islands = {
 		id = "Mikan",
 		name = "Mikan Isles",
 		subtitle = "Tangerine Groves & Sawtooth Park",
-		x = 8500, z = 1150,
+		x = -7330, z = -1070,
 		radius = 270,
 		levels = { 50, 60 },
 		palette = { sand = Color3.fromRGB(250, 226, 170), grass = Color3.fromRGB(118, 200, 88), dirt = Color3.fromRGB(150, 104, 68), accent = Color3.fromRGB(255, 166, 28), wall = Color3.fromRGB(250, 240, 220) },
@@ -138,7 +140,7 @@ local Islands = {
 		id = "Epilogue",
 		name = "Epilogue Town",
 		subtitle = "Town of Beginnings and Endings",
-		x = 10300, z = -300,
+		x = -8600, z = 1070,
 		radius = 310,
 		levels = { 60, 70 },
 		palette = { sand = Color3.fromRGB(235, 222, 192), grass = Color3.fromRGB(138, 190, 118), dirt = Color3.fromRGB(140, 110, 84), accent = Color3.fromRGB(196, 62, 58), wall = Color3.fromRGB(240, 230, 210) },
@@ -154,7 +156,7 @@ local Islands = {
 		boss = { id = "MistCommodore", offset = Vector2.new(0, -215), respawn = 60 * 60 },
 	},
 	-- ===== R5 (owner, 28 Nov 2026): ORIGIN home islands =====
-	-- Small Lv 1-5 islands west of Daybreak, one per Origin (Config/Origins `island`): a new character starts on its
+	-- Small Lv 1-5 islands east of Daybreak (W1: by the east edge), one per Origin (Config/Origins `island`): a new character starts on its
 	-- Origin's island, learns the ropes there and sails (or rides the current) to Daybreak. They are NOT on the story
 	-- route: `origin` marks them, Islands.Route leaves them out (sea segments, NPC ships, whirlpools, the route
 	-- currents), each one faces Daybreak and gets its own current toward it. Hand-laid in World/OriginIslands.lua.
@@ -165,7 +167,7 @@ local Islands = {
 		name = "Bastion Rock",
 		subtitle = "Cadet Academy",
 		layout = "BastionRock",
-		x = -720, z = -820,
+		x = 720, z = -820,
 		radius = 150,
 		levels = { 1, 5 },
 		palette = { sand = Color3.fromRGB(236, 226, 200), grass = Color3.fromRGB(120, 196, 104), dirt = Color3.fromRGB(150, 130, 110), accent = Color3.fromRGB(62, 110, 210), wall = Color3.fromRGB(236, 234, 228) },
@@ -183,7 +185,7 @@ local Islands = {
 		name = "Smuggler's Hollow",
 		subtitle = "Hunters' Den",
 		layout = "SmugglersHollow",
-		x = -1000, z = -300,
+		x = 1000, z = -300,
 		radius = 150,
 		levels = { 1, 5 },
 		palette = { sand = Color3.fromRGB(220, 200, 160), grass = Color3.fromRGB(128, 170, 92), dirt = Color3.fromRGB(120, 96, 76), accent = Color3.fromRGB(220, 160, 60), wall = Color3.fromRGB(196, 170, 136) },
@@ -201,7 +203,7 @@ local Islands = {
 		name = "Shackle Reef",
 		subtitle = "Wreck of the Prison Hulk",
 		layout = "ShackleReef",
-		x = -1000, z = 300,
+		x = 1000, z = 300,
 		radius = 150,
 		levels = { 1, 5 },
 		palette = { sand = Color3.fromRGB(246, 230, 180), grass = Color3.fromRGB(110, 190, 96), dirt = Color3.fromRGB(150, 110, 76), accent = Color3.fromRGB(200, 70, 60), wall = Color3.fromRGB(200, 186, 160) },
@@ -219,7 +221,7 @@ local Islands = {
 		name = "Inkwell Isle",
 		subtitle = "Scholars' Library",
 		layout = "InkwellIsle",
-		x = -720, z = 820,
+		x = 720, z = 820,
 		radius = 150,
 		levels = { 1, 5 },
 		palette = { sand = Color3.fromRGB(240, 228, 196), grass = Color3.fromRGB(116, 200, 110), dirt = Color3.fromRGB(140, 116, 90), accent = Color3.fromRGB(150, 100, 200), wall = Color3.fromRGB(240, 232, 214) },
@@ -233,12 +235,11 @@ local Islands = {
 	},
 }
 
--- The Crimson Wall and Backflow Peak (gateway to the Grand Current, next update)
+-- The Crimson Wall and Backflow Peak (gateway to the Grand Current, next update). Where they stand: WorldShape.
 local RedLine = {
 	name = "Crimson Wall",
 	peakName = "Backflow Peak",
 	nextSea = "Grand Current",
-	x = 12600,
 	thickness = 400,
 	height = 1400,
 	canalWidth = 220,
@@ -247,9 +248,9 @@ local RedLine = {
 
 -- Guild War sea forts (between islands)
 local Forts = {
-	{ id = "FortWest", name = "Fort Driftwood", x = 3000, z = 120 },
-	{ id = "FortMid", name = "Fort Tidebreak", x = 6100, z = 60 },
-	{ id = "FortEast", name = "Fort Gullwatch", x = 9300, z = 500 },
+	{ id = "FortWest", name = "Fort Driftwood", x = -1870, z = -100 }, -- W1: off the Conch Bay - Marmalade crossing
+	{ id = "FortMid", name = "Fort Tidebreak", x = -4780, z = -120 }, -- Honeyslope - Barracuda
+	{ id = "FortEast", name = "Fort Gullwatch", x = -7580, z = 230 }, -- Mikan - Epilogue
 }
 
 -- R5 (remake): the world is GameConfig.WorldScale x bigger. Island positions, sizes and every offset below grow by it at
@@ -287,7 +288,6 @@ for _, isl in ipairs(Islands) do
 	isl.townRadius = isl.townRadius and isl.townRadius * S
 	isl.town = isl.town and isl.town * S
 end
-RedLine.x *= S
 for _, f in ipairs(Forts) do
 	f.x *= S
 	f.z *= S

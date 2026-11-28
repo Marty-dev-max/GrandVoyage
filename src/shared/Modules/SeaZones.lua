@@ -1,36 +1,50 @@
--- SeaZones: which sea zone a position is in (Lane / Edge / Doldrums)
+-- SeaZones: which sea zone a position is in (Lane / Edge / CalmBelt = the Doldrums / RedLine = by a wall)
+-- W1 (owner, 28 Nov 2026): the Azure East is the north-east quarter of the world (Shared/Modules/WorldShape): walls on
+-- its west, north and east sides, the Doldrums along its south side, then the Grand Current band (locked).
 local Shared = script.Parent.Parent
 local GameConfig = require(Shared.Config.GameConfig)
 local Islands = require(Shared.Config.Islands)
+local G = require(Shared.Modules.WorldShape)
 
 local Z = {}
 local lane = GameConfig.Lane
 
 -- Returns zoneName, windFactor(0..1)
 function Z.Get(pos)
-	local az = math.abs(pos.Z)
-	if pos.X > Islands.RedLine.x - Islands.RedLine.thickness / 2 - 40 then
+	local x, z = pos.X, pos.Z
+	if G.WallDist(x, z) < 400 then
 		return "RedLine", 0.6
 	end
-	if az <= lane.HalfWidth then
-		return "Lane", 1
-	elseif az <= lane.HalfWidth + lane.EdgeWidth then
-		local t = (az - lane.HalfWidth) / lane.EdgeWidth
-		return "Edge", 1 - t * 0.75
-	else
+	if z >= G.BandN then
+		return "GrandCurrent", 1
+	end
+	if z >= G.BeltN then
 		return "CalmBelt", GameConfig.CalmBelt.WindFactor
 	end
+	if z >= G.BeltN - lane.EdgeWidth then
+		local t = (z - (G.BeltN - lane.EdgeWidth)) / lane.EdgeWidth
+		return "Edge", 1 - t * 0.75
+	end
+	return "Lane", 1
 end
 
--- segment = index of the last island passed (used for NPC ship tiers)
-function Z.Segment(x)
-	local seg = 1
-	for i, island in ipairs(Islands.Route) do -- R5: Origin islands are off the route
-		if x >= island.x then
-			seg = i
+-- segment = the stretch of the route a position is on: i = between route island i and i + 1 (the last one runs from
+-- the last island to the Backflow Peak canal). Used for NPC ship tiers and crew levels.
+-- Accepts a Vector3 (or an x and z).
+function Z.Segment(p, z)
+	if typeof(p) == "Vector3" then
+		p, z = p.X, p.Z
+	end
+	local q = Vector2.new(p, z or 0)
+	local pts = G.RoutePoints()
+	local best, bestD = 1, math.huge
+	for i = 1, #pts - 1 do
+		local d = G.SegDist(q, pts[i], pts[i + 1])
+		if d <= bestD then -- a tie (standing on island i) counts as the stretch leaving it
+			best, bestD = i, d
 		end
 	end
-	return seg
+	return best
 end
 
 function Z.NearestIsland(pos)

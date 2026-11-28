@@ -1491,6 +1491,26 @@ The owner tests in Studio and sends screenshots; previews of new art are rendere
    name, WORLD_VERSION 50), client panelForRole Trader -> `Panels.Trader(args.island)`, server InventoryService
    "IslandTrade" { island, i } (NearNPC "Trader" of THAT island, Inv.CanPay/Pay, bag room check). Admin `give`
    "ItemId:qty" (negative removes). Rojo can lag behind: check the synced source in Edit before trusting a Play test.
+   W1 0.1.30-remake (owner refs: a world of four seas around a cross; docs/Plan-WorldMap.md): `Shared/Modules/WorldShape`
+   = the world's geometry in WORLD studs (already x WorldScale): Peak (Backflow Peak, the cross) (-15600, 6200),
+   WallHalf 300, Edge 500, MountR 2600; sea 1 (Azure East = the north-east quarter) West -15300 (the Crimson Wall face),
+   East 2400, North -3800, BeltN 3900 (Doldrums), BandN 4700..BandS 7700 (Grand Current band, locked), BeltS 8500;
+   Mouth = the canal foot at Peak + dir(-60 deg) x (MountR + 100); WallDist / InSea1 / ClampSea1 / RoutePoints (route
+   islands + Mouth) / SegDist. GameConfig.World + Lane.HalfWidth + RedLine.x are GONE (Lane = { EdgeWidth } only).
+   Islands: Daybreak stays at (0,0), the route zigzags WEST (raw x -1470 .. -8600, z +-1330), origins EAST (x 720 / 1000),
+   BaySerpent offset (0, 760) south. The route order is Islands.Route LIST order, never x: `SeaZones.Segment(pos)` =
+   nearest stretch (i -> i + 1, the last one to the Mouth); takes a Vector3 or x, z. Zones: RedLine (WallDist < 400),
+   GrandCurrent (z >= BandN), CalmBelt, Edge, Lane. ShipService: segmentPoint(seg) (SPREAD 1000 off the line, ClampSea1,
+   clear of islands + sea bosses) for NPC spawns / waypoints; stepShip `block(n)` removes only the velocity INTO a wall
+   (west, north, east, the mountain, the band with a toast); the Peak toast within 420 of the Mouth. Weather MinX/MaxX/
+   MinZ/MaxZ (HalfZ gone); Waves.Damp calm inside both belts. WorldBuilder buildRedLine (own Random 51051): walls chunked
+   <= 2000 (middle wall steps down into the mountain's shoulders, north + east edge walls, CliffRed pillars on the 3 sea
+   faces), the mountain = foot disc + 7 tiers kept under the canal line + grass cap, canal ramp + embankment +
+   ReverseWater + foam, arch + sign facing the sea; ocean / sea floor tile the WorldShape draw box. Compass + nav dots +
+   the quest arrival arrow aim at the island edge / nearest Dock toward you (Readability.nextIsland by Segment).
+   Map window (Panels.FastTravel) = a sea-1 chart: wall column left (WALL_W 0.1), Doldrums + Grand Current bands at the
+   bottom, Backflow Peak mound bottom-left, x from Mouth - 400 to Daybreak at 0.8, origins zigzag on the right.
+   WORLD_VERSION 51. Quest texts with directions updated. NOT tested in Play (Studio MCP was offline).
 1. Wait for the owner's verdict on v0.10.3 (hills/flowers/grass); fix what they point at.
 2. Voxel art pass: monsters DONE v0.11.0 (voxel_monsters.py; AssetService sizes = shape base x style.scale,
    MonsterService.RefreshModels swaps placeholder island mobs). Pets + fruits DONE v0.11.1 (voxel_pets.py).

@@ -16,6 +16,7 @@ local SeaZones = require(Shared.Modules.SeaZones)
 local Wind = require(Shared.Modules.Wind) -- Mastery v2 M5: wind direction
 local Currents = require(Shared.Modules.Currents) -- Mastery v2 M5: sea currents
 local Weather = require(Shared.Modules.Weather) -- Mastery v2 M6: storms + whirlpools
+local WorldShape = require(Shared.Modules.WorldShape) -- W1: walls, the Doldrums, Backflow Peak
 local Net = require(Shared.Modules.Net)
 local Recruits = require(Shared.Config.Recruits)
 local MasteryCfg = require(Shared.Config.Mastery)
@@ -1042,7 +1043,7 @@ local function stormStart(now)
 	-- a point in the windy sea, clear of every island
 	for _ = 1, 12 do
 		local x = Weather.MinX + math.random() * (Weather.MaxX - Weather.MinX)
-		local z = (math.random() * 2 - 1) * Weather.HalfZ
+		local z = Weather.MinZ + math.random() * (Weather.MaxZ - Weather.MinZ)
 		local ok = true
 		for _, isl in ipairs(Islands.List) do
 			if type(isl) == "table" and isl.x and Weather.Flat(x, z, isl.x, isl.z or 0) < (isl.radius or 0) + Weather.Storm.ClearIsland + 240 then
@@ -1089,7 +1090,7 @@ local function weatherTick(now)
 			if (s.x < Weather.MinX and s.vx < 0) or (s.x > Weather.MaxX and s.vx > 0) then
 				s.vx = -s.vx
 			end
-			if math.abs(s.z) > Weather.HalfZ and math.sign(s.z) == math.sign(s.vz) then
+			if (s.z < Weather.MinZ and s.vz < 0) or (s.z > Weather.MaxZ and s.vz > 0) then
 				s.vz = -s.vz
 			end
 			s.k = stormFade(s, now)
@@ -1348,7 +1349,7 @@ end
 local Monsters = require(Shared.Config.Monsters)
 local Waves = require(Shared.Modules.Waves)
 local function crewDef(shipDef, pos)
-	local isl = Islands.Route[SeaZones.Segment(pos.X)] or Islands.Route[1]
+	local isl = Islands.Route[SeaZones.Segment(pos)] or Islands.Route[1]
 	local level = isl.levels[2] + ((shipDef.tier or 1) - 1) * 5
 	local best
 	for _, m in pairs(Monsters) do
@@ -1587,16 +1588,37 @@ local function pickTier(weights)
 	return 1
 end
 
-local function segmentBounds(seg)
-	local a = Islands.Route[seg]
-	local b = Islands.Route[seg + 1]
-	local x1 = a.x + a.radius + 160
-	local x2 = b and (b.x - b.radius - 160) or (Islands.RedLine.x - 500)
-	-- v0.25.8 (owner): keep NPC ships clear of a sea boss's waters (Bay Serpent off Daybreak got crowded)
-	if a.boss and a.boss.sea and a.boss.offset then
-		x1 = math.max(x1, a.x + a.boss.offset.X + 380)
+-- W1 (owner: the sea is the north-east quarter of the world, the route zigzags west): a stretch of the route = from
+-- route island `seg` to the next one (the last stretch ends at the Backflow Peak canal). NPC ships spawn and wander
+-- up to SPREAD studs either side of that line, clear of islands, walls, the Doldrums and a sea boss's waters
+-- (v0.25.8: the Bay Serpent's spot got crowded).
+local SPREAD = 1000
+local function segmentEnds(seg)
+	local pts = WorldShape.RoutePoints()
+	seg = math.clamp(seg or 1, 1, #pts - 1)
+	return pts[seg], pts[seg + 1]
+end
+
+local function segmentPoint(seg)
+	local a, b = segmentEnds(seg)
+	local isl = Islands.Route[seg]
+	local dir = (b - a).Magnitude > 1 and (b - a).Unit or Vector2.new(1, 0)
+	local side = Vector2.new(-dir.Y, dir.X)
+	for _ = 1, 12 do
+		local p = a:Lerp(b, 0.15 + math.random() * 0.7) + side * ((math.random() * 2 - 1) * SPREAD)
+		local x, z = WorldShape.ClampSea1(p.X, p.Y, 300)
+		local q = Vector3.new(x, 0, z)
+		local near, d = SeaZones.NearestIsland(q)
+		local ok = not (near and d < near.radius + 200)
+		if ok and isl and isl.boss and isl.boss.sea and isl.boss.offset then
+			ok = (Vector2.new(x, z) - (a + isl.boss.offset)).Magnitude > 520
+		end
+		if ok then
+			return q
+		end
 	end
-	return x1, math.max(x1 + 80, x2)
+	local m = (a + b) / 2
+	return Vector3.new(m.X, 0, m.Y)
 end
 
 local function npcSpawner()
@@ -1609,20 +1631,18 @@ local function npcSpawner()
 			end
 		end
 		for seg = 1, #Islands.Route do
-			local x1, x2 = segmentBounds(seg)
-			local cx = (x1 + x2) / 2
+			local a, b = segmentEnds(seg)
 			local near = false
 			for _, pl in ipairs(Players:GetPlayers()) do
 				local root = R.PlayerService.Root(pl)
-				if root and math.abs(root.Position.X - cx) < 2600 then
+				if root and WorldShape.SegDist(Vector2.new(root.Position.X, root.Position.Z), a, b) < 2600 then
 					near = true
 				end
 			end
 			if near and (counts[seg] or 0) < NPCShips.MaxPerSegment then
 				local tier = pickTier(NPCShips.SegmentTierWeights[seg] or { 1 })
 				local faction = math.random() < 0.5 and "Marine" or "Pirate"
-				local pos = Vector3.new(x1 + math.random() * (x2 - x1), 0, (math.random() * 2 - 1) * (GameConfig.Lane.HalfWidth - 120))
-				spawnNPC(faction .. tier, pos, seg)
+				spawnNPC(faction .. tier, segmentPoint(seg), seg)
 			end
 		end
 	end
@@ -1685,14 +1705,17 @@ local function npcThink(ship, now)
 		end
 	else
 		if not ship.waypoint or flat(ship.waypoint, pos) < 60 then
-			local x1, x2 = segmentBounds(ship.segment or SeaZones.Segment(pos.X))
-			ship.waypoint = Vector3.new(x1 + math.random() * (x2 - x1), 0, (math.random() * 2 - 1) * (GameConfig.Lane.HalfWidth - 140))
+			ship.waypoint = segmentPoint(ship.segment or SeaZones.Segment(pos))
 		end
 		desired = Vector3.new(ship.waypoint.X - pos.X, 0, ship.waypoint.Z - pos.Z).Unit
 	end
-	-- Avoid the Doldrums edge and islands
-	if math.abs(pos.Z) > GameConfig.Lane.HalfWidth - 70 then
-		desired = (desired + Vector3.new(0, 0, -math.sign(pos.Z) * 2)).Unit
+	-- Avoid the Doldrums, the walls and islands
+	if pos.Z > WorldShape.BeltN - 260 then
+		desired = (desired + Vector3.new(0, 0, -2)).Unit
+	end
+	if WorldShape.WallDist(pos.X, pos.Z) < 300 then
+		local cx, cz = WorldShape.ClampSea1(pos.X, pos.Z, 700)
+		desired = (desired + Vector3.new(cx - pos.X, 0, cz - pos.Z).Unit * 2).Unit
 	end
 	local island, idist = SeaZones.NearestIsland(pos)
 	if island and idist < island.radius + 90 then
@@ -1986,13 +2009,36 @@ local function stepShip(ship, dt, now)
 			end
 		end
 	end
-	-- World bounds
-	local W = GameConfig.World
-	if (pos.X < W.MinX and vel.X < 0) or (pos.X > W.MaxX and vel.X > 0) then
-		vel = Vector3.new(0, 0, vel.Z)
+	-- World bounds (W1): the Crimson Wall on the west, the world-edge walls north and east, Backflow Peak in the south-west
+	-- corner and the Grand Current band past the Doldrums (only through Backflow Peak). Only the speed INTO a wall is
+	-- taken away, so a ship can still slide along it.
+	local GS = WorldShape
+	local function block(n)
+		local into = -vel:Dot(n)
+		if into > 0 then
+			vel += n * into
+		end
 	end
-	if math.abs(pos.Z) > W.HalfZ and math.sign(vel.Z) == math.sign(pos.Z) then
-		vel = Vector3.new(vel.X, 0, 0)
+	if pos.X < GS.West + 90 then
+		block(Vector3.xAxis)
+	end
+	if pos.X > GS.East - 90 then
+		block(-Vector3.xAxis)
+	end
+	if pos.Z < GS.North + 90 then
+		block(Vector3.zAxis)
+	end
+	local toPeak = Vector2.new(pos.X, pos.Z) - GS.Peak
+	local atPeak = toPeak.Magnitude < GS.MountR + 90
+	if atPeak then
+		block(Vector3.new(toPeak.Unit.X, 0, toPeak.Unit.Y))
+	end
+	local atBand = pos.Z > GS.BandN - 60
+	if atBand then
+		block(-Vector3.zAxis)
+		if ship.owner then
+			toast(ship.owner, "Leviathans guard the " .. Islands.RedLine.nextSea .. ": the only way in is up " .. Islands.RedLine.peakName .. " (south-west corner)", "bad", "band")
+		end
 	end
 	-- v0.25.155 (#21): a test sail stays within TEST_RADIUS of where it was launched
 	if ship.test and ship.testFrom then
@@ -2003,10 +2049,8 @@ local function stepShip(ship, dt, now)
 			toast(ship.owner, "Test area edge: turn back (or press BACK TO SHIPYARD)", "info", "testedge")
 		end
 	end
-	-- Red Line / Reverse Mountain
-	local rl = Islands.RedLine
-	if pos.X > rl.x - rl.thickness / 2 - 90 and vel.X > 0 then
-		vel = Vector3.new(-6, 0, vel.Z)
+	-- Backflow Peak: the canal mouth at the mountain's north-east foot (W1); the climb opens with the Grand Current
+	if (Vector2.new(pos.X, pos.Z) - GS.Mouth).Magnitude < 420 then
 		ship.speed = math.min(ship.speed, 5)
 		if ship.owner then
 			local lvl = ship.owner:GetAttribute("Level") or 1

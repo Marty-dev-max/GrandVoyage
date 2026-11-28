@@ -564,6 +564,46 @@ local function setup()
 		offers[player] = nil
 		return true
 	end, 0.2)
+
+	-- R5 0.1.28: home-island Traders swap the island's monster material for goods (Config/IslandTrades)
+	local IslandTrades = require(ReplicatedStorage.Shared.Config.IslandTrades)
+	Net.Handle("IslandTrade", function(player, data)
+		if type(data) ~= "table" or type(data.island) ~= "string" then
+			return false
+		end
+		local trader = IslandTrades.ByIsland[data.island]
+		local t = trader and trader.trades[math.floor(tonumber(data.i) or 0)]
+		if not t then
+			return false
+		end
+		local near, npc = R.WorldBuilder.NearNPC(player, "Trader")
+		if not near or npc.island ~= data.island then
+			return false, "Stand near " .. trader.name
+		end
+		local ok, msg = Inv.CanPay(player, t.give)
+		if not ok then
+			return false, msg
+		end
+		local get = t.get
+		if get.item then
+			local def = ItemDB.Get(get.item)
+			local p = profile(player)
+			local need = (ItemDB.IsStackable(def) and Inv.Count(player, get.item) > 0) and 0 or (ItemDB.IsStackable(def) and 1 or get.qty)
+			if #p.inventory + need > GameConfig.InventorySlots then
+				return false, "Inventory full"
+			end
+		end
+		if not Inv.Pay(player, t.give) then
+			return false, "Missing materials"
+		end
+		if get.item then
+			Inv.AddItem(player, get.item, get.qty or 1)
+			local def = ItemDB.Get(get.item)
+			return true, "Traded for " .. def.name .. ((get.qty or 1) > 1 and (" x" .. get.qty) or "")
+		end
+		R.PlayerService.AddBeli(player, get.beli)
+		return true, "Traded for " .. get.beli .. " Doubloons"
+	end, 0.3)
 	game:GetService("Players").PlayerRemoving:Connect(function(pl)
 		offers[pl] = nil
 	end)

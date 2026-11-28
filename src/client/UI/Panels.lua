@@ -2931,6 +2931,77 @@ function Panels.Marine()
 	end)
 end
 
+-- ===================== HOME-ISLAND TRADER (R5 0.1.28, Config/IslandTrades) =====================
+local IslandTrades = require(Shared.Config.IslandTrades)
+function Panels.Trader(args)
+	local island = args and args.island
+	local tr = island and IslandTrades.ByIsland[island]
+	if not tr then
+		return
+	end
+	local mat = ItemDB.Get(tr.material)
+	local win = UI.Window("Trader", tr.name, UDim2.fromOffset(640, 560), T.Green, "🔁")
+	local body = win.body
+	local scroll
+	local function render()
+		local keep = scroll and scroll.CanvasPosition
+		clear(body)
+		UI.List(body, nil, 8)
+		UI.Text(body, tr.line, 15, T.TextSoft, "Semi", { Size = UDim2.new(1, 0, 0, 44), LayoutOrder = 1 })
+		UI.Text(body, "You have: " .. ownedCount(tr.material) .. "x " .. mat.name .. "   •   " .. COIN .. " " .. UI.Format(State.profile and State.profile.beli or 0), 16, T.Gold, "Bold",
+			{ Size = UDim2.new(1, 0, 0, 22), LayoutOrder = 2 })
+		scroll = UI.Scroll(body, UDim2.new(1, 0, 1, -84))
+		scroll.LayoutOrder = 3
+		UI.List(scroll, nil, 6)
+		for i, t in ipairs(tr.trades) do
+			local row = New("Frame", { BackgroundColor3 = T.PanelDeep, Size = UDim2.new(1, -12, 0, 92), LayoutOrder = i, Parent = scroll })
+			UI.Corner(row, 8)
+			local get = t.get
+			local def = get.item and ItemDB.Get(get.item)
+			if def then
+				local tile = itemTile(row, { uid = "trade" .. i, id = def.id, qty = get.qty or 1 }, function() end)
+				if tile then
+					tile.Position = UDim2.fromOffset(4, 4)
+				end
+			else
+				UI.Text(row, COIN, 40, T.Gold, "Display", { Position = UDim2.fromOffset(4, 4), Size = UDim2.fromOffset(84, 84), TextXAlignment = Enum.TextXAlignment.Center })
+			end
+			local title = def and (def.name .. ((get.qty or 1) > 1 and (" x" .. get.qty) or "")) or (UI.Format(get.beli) .. " Doubloons")
+			local nm = UI.Text(row, title, 18, T.Text, "Display", { Position = UDim2.fromOffset(100, 10), Size = UDim2.new(1, -250, 0, 24), TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd })
+			if def then
+				UI.RarityText(nm, def.rarity)
+			end
+			-- what it costs: each part green when you have enough, red when not
+			local parts, ok = {}, true
+			for k, n in pairs(t.give) do
+				if k ~= "beli" then
+					local have = ownedCount(k)
+					local d = ItemDB.Get(k)
+					ok = ok and have >= n
+					table.insert(parts, UI.Colored(n .. "x " .. (d and d.name or k) .. " (" .. have .. ")", have >= n and T.Green or T.Red))
+				end
+			end
+			if t.give.beli then
+				local enough = (State.profile and State.profile.beli or 0) >= t.give.beli
+				ok = ok and enough
+				table.insert(parts, UI.Colored(COIN .. " " .. UI.Format(t.give.beli), enough and T.Green or T.Red))
+			end
+			local cost = UI.Text(row, table.concat(parts, "   +   "), 14, T.TextSoft, "Semi", { Position = UDim2.fromOffset(100, 40), Size = UDim2.new(1, -250, 0, 44), RichText = true })
+			cost.TextYAlignment = Enum.TextYAlignment.Top
+			local _, h = UI.Button(row, "TRADE", ok and T.Green or T.Red, UDim2.fromOffset(130, 48), function()
+				req("IslandTrade", { island = island, i = i }, "Purchase")
+			end)
+			h.AnchorPoint = Vector2.new(1, 0.5)
+			h.Position = UDim2.new(1, -10, 0.5, 0)
+		end
+		if keep then
+			scroll.CanvasPosition = keep
+		end
+	end
+	render()
+	onProfile(win, render)
+end
+
 -- ===================== DUNGEON =====================
 function Panels.Dungeon(args)
 	local d = Dungeons[args and args.dungeonId or "CircusTent"]

@@ -319,6 +319,27 @@ local NPC_LOOK = {
 		mouth = "Grin", mark = "Scar", hair1 = "3A2418", shirt1 = "E8E0CC", shirt2 = "A89878", pants1 = "6A6458",
 		shoes1 = "D6A478", shoes2 = "D6A478", skin = "D6A478",
 	},
+	-- R5 0.1.28 home-island Traders (Config/IslandTrades)
+	["Quartermaster Bell"] = {
+		shirt = "Sailor Stripes", pants = "Long Pants", shoes = "Boots", hat = "marine", hair = "Short", eyes = "Calm",
+		mouth = "Small Smile", hair1 = "A0522D", shirt1 = "F0F0FA", shirt2 = "3C5AAA", pants1 = "3C5AAA", shoes1 = "1C1A22",
+		shoes2 = "1C1A22", skin = "F6D0AA",
+	},
+	["Fence Marlo"] = {
+		shirt = "Open Jacket", pants = "Baggy", shoes = "Buckle Boots", hat = "tophat", hair = "Swept", eyes = "Sharp",
+		mouth = "Smirk", mark = "Stubble", hair1 = "1C1A22", shirt1 = "3A2A4A", shirt2 = "C8A070", pants1 = "2A2430",
+		shoes1 = "1C1A18", shoes2 = "E8B84A", skin = "D6A478",
+	},
+	["Tinker Rook"] = {
+		shirt = "Belted Tunic", pants = "Cargo", shoes = "Boots", hat = "headscarf", hair = "Messy", eyes = "Tired",
+		mouth = "Grin", mark = "Scar", hair1 = "5A3A20", shirt1 = "8A6A4A", shirt2 = "4A3A2A", pants1 = "4A4038",
+		shoes1 = "2A1E18", shoes2 = "2A1E18", skin = "C8946A",
+	},
+	["Curator Wren"] = {
+		shirt = "Belted Tunic", pants = "Long Pants", shoes = "Slippers", hat = "none", hair = "Bun", eyes = "Calm",
+		mouth = "Small Smile", hair1 = "6A3A2A", shirt1 = "2E6A5A", shirt2 = "E8D8A8", pants1 = "2A3A3A", shoes1 = "2A1E18",
+		shoes2 = "2A1E18", skin = "EABE96",
+	},
 	["Sage Quill"] = {
 		shirt = "Belted Tunic", pants = "Wide Hakama", shoes = "Slippers", hat = "none", hair = "Long Straight", eyes = "Calm",
 		mouth = "Small Smile", hair1 = "F0F0F4", shirt1 = "6E46A0", shirt2 = "E8D8A8", pants1 = "3C2A5A", shoes1 = "2A1E30",

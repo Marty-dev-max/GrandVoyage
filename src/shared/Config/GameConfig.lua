@@ -4,15 +4,15 @@ local GameConfig = {
 	LogoLines = { "LARPTALES", "VOXEL SEAS" },
 	LogoImage = 133908417032160, -- v0.25.87: pixel logo board floating behind the menu character (tools/gen_logo.py); nil = text logo
 	-- bump on every change: shown bottom-right in game and printed in Output, so you can tell which code is running
-	Version = "0.1.28-remake",
+	Version = "0.1.29-remake",
 	SagaName = "Azure East Saga",
 	-- title menu UPDATE LOG lines (newest first, at most 6: more ran off the top of the screen, v0.25.156)
 	UpdateNotes = {
+		"TRADERS on every home island swap monster loot for supplies, Steel Ore, a Sea Egg or the gang boss's own hat",
 		"GANG BOSSES on every home island (Lv 5): Squall, Nibbs, Grimbolt and Old Mott drop a hat or charm of their own",
 		"PROLOGUES: every home island has its own opening story that leads you to Daybreak",
 		"HOME ISLANDS: Marine Cadets, Bounty Hunters, Outlaws and Relic Seekers each start on an island of their own",
 		"ROW YOUR DINGHY: no wheel, sit on the oar bench and row. Every ship leaves a foam wake",
-		"THE WORLD IS BIGGER: islands, the open sea and every ship are 1.5x the size",
 		"STORMS + WHIRLPOOLS at sea: they batter the hull. Navigators see them coming (Lv 30) and Hard Turn out (Lv 50)",
 	},
 	DataStoreName = "GV_Player_r1",

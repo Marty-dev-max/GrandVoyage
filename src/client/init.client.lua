@@ -77,6 +77,7 @@ local panelForRole = {
 	JobMaster = "JobMaster",
 	Guild = "Guild",
 	Marine = "Marine",
+	Trader = "Trader", -- R5 0.1.28 home-island Traders
 	Dungeon = "Dungeon",
 	Stall = "Stall",
 	StallSetup = "StallSetup",

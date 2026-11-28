@@ -9,6 +9,7 @@ local GameConfig = require(Shared.Config.GameConfig)
 local Islands = require(Shared.Config.Islands)
 local Net = require(Shared.Modules.Net)
 local Formulas = require(Shared.Modules.Formulas)
+local ItemDB = require(Shared.Modules.ItemDB)
 
 local GW = {}
 local R
@@ -280,6 +281,18 @@ function GW.Start()
 			for _, id in ipairs({ "IronIngot", "Gunpowder", "Wood", "SailCloth", "SteelOre", "TidecoreShard", "PureTidecore", "TreasureWood" }) do
 				R.InventoryService.AddItem(player, id, 50)
 			end
+		elseif data.cmd == "give" then -- remake R5 tests: "ItemId:qty" (negative qty takes them away)
+			local id, n = tostring(data.value or ""):match("^(%w+):?(%-?%d*)$")
+			n = tonumber(n) or 1
+			if not id or not ItemDB.Get(id) then
+				return false, "use ItemId:qty"
+			end
+			if n > 0 then
+				R.InventoryService.AddItem(player, id, math.min(n, 999))
+			else
+				R.InventoryService.RemoveItem(player, id, math.min(-n, R.InventoryService.Count(player, id)))
+			end
+			return true
 		elseif data.cmd == "weapons" then -- v0.25.105: every famed blade + green class weapon (Index / Evolve tests)
 			local ItemDB = require(Shared.Modules.ItemDB)
 			local list = table.clone(ItemDB.Greens)

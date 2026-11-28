@@ -154,6 +154,14 @@ local function guide(ctx, api, x, z, face, extra)
 	api.npc(ctx, "Guide", Quests.Guide[ctx.island.id] or "Guide", Color3.fromRGB(255, 200, 90), nil, x, z, e, face)
 end
 
+-- R5 0.1.28: the island's Trader (Config/IslandTrades) swaps its monster material for goods
+local function trader(ctx, api, x, z, face)
+	local t = require(ReplicatedStorage.Shared.Config.IslandTrades).ByIsland[ctx.island.id]
+	if t then
+		api.npc(ctx, "Trader", t.name, Color3.fromRGB(120, 210, 160), nil, x, z, { SubTitle = "🔁 Trades" }, face)
+	end
+end
+
 -- ===================================================================================================================
 -- Bastion Rock (Marine Cadet): plateau + academy, drill yard in front, supply sheds west
 local function bastionRock(ctx, api)
@@ -197,6 +205,7 @@ local function bastionRock(ctx, api)
 	-- people: the Marine Registrar (Marine Cadets start in front of him) and the instructor
 	api.npc(ctx, "Marine", "Marine Registrar", Color3.fromRGB(70, 110, 200), "marine", -12, 64, { SubTitle = "Join the Marines" }, v(-12, 100))
 	guide(ctx, api, 14, 64, v(14, 100))
+	trader(ctx, api, 26, 84, v(0, 84))
 	path(ctx, { v(0, 132), v(0, 96), v(0, 58) }, 8, Color3.fromRGB(196, 176, 140), M.Cobblestone)
 	path(ctx, { v(-24, 40), v(-50, 60), v(-66, 86) }, 6)
 	jetty(ctx)
@@ -250,6 +259,7 @@ local function smugglersHollow(ctx, api)
 	ctx.reserve(30, 28, 10)
 	api.npc(ctx, "BossBoard", "Bounty Board", Color3.fromRGB(255, 220, 120), nil, 22, 42, { SubTitle = "Bosses & Bounties" }, v(10, 80))
 	guide(ctx, api, -4, 60, v(0, 100))
+	trader(ctx, api, -24, 102, v(0, 102))
 	-- market stalls + lamps along the wharf street
 	Kit.Stall(CFrame.lookAt(ctx.at(-14, 84), ctx.at(0, 84)), Color3.fromRGB(200, 150, 60))
 	Kit.Stall(CFrame.lookAt(ctx.at(14, 90), ctx.at(0, 90)), Color3.fromRGB(150, 70, 60))
@@ -322,6 +332,7 @@ local function shackleReef(ctx, api)
 	Kit.Flag(ctx.at(-22, 44), Color3.fromRGB(30, 30, 34), 12, true)
 	Kit.Junk(ctx.at(30, 52), 5)
 	guide(ctx, api, 6, 58, v(6, 100))
+	trader(ctx, api, 26, 76, v(0, 76))
 	path(ctx, { v(0, 134), v(4, 96), v(6, 66) }, 7, Color3.fromRGB(236, 214, 160), M.Sand)
 	path(ctx, { v(-6, 34), v(-30, 0), v(-44, -36) }, 6, Color3.fromRGB(236, 214, 160), M.Sand)
 	jetty(ctx)
@@ -372,6 +383,7 @@ local function inkwellIsle(ctx, api)
 		end
 	end
 	guide(ctx, api, 14, 70, v(14, 110))
+	trader(ctx, api, -18, 88, v(0, 88))
 	path(ctx, { v(0, 134), v(0, 96), v(0, 30) }, 8, Color3.fromRGB(196, 186, 166), M.Cobblestone)
 	path(ctx, { v(14, 20), v(44, -10), v(58, -34) }, 6)
 	jetty(ctx)

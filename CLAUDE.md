@@ -1486,6 +1486,11 @@ The owner tests in Studio and sends screenshots; previews of new art are rendere
    wearables GullFeatherCap / TinCrown / WardenKeyRing / DustGoggles (Config/Accessories, Rare 8%, hand-drawn acc_ icons in
    gen_pixel_icons.py because gen_acc_icons needs lune). Monsters def `summon` = the helper miniSpecial calls (default
    CircusLion). A head piece sits around y 0.55-0.9 on the voxel head (a cap at 0.5 left the hair poking out).
+   R5 0.1.29-remake: `Config/IslandTrades` ByIsland[id] = { name, material, line, trades = {{ give = { [id] = n, beli },
+   get = { item, qty } | { beli } }} } -> NPC role "Trader" on each Origin island (OriginIslands `trader()`, NPC_LOOK per
+   name, WORLD_VERSION 50), client panelForRole Trader -> `Panels.Trader(args.island)`, server InventoryService
+   "IslandTrade" { island, i } (NearNPC "Trader" of THAT island, Inv.CanPay/Pay, bag room check). Admin `give`
+   "ItemId:qty" (negative removes). Rojo can lag behind: check the synced source in Edit before trusting a Play test.
 1. Wait for the owner's verdict on v0.10.3 (hills/flowers/grass); fix what they point at.
 2. Voxel art pass: monsters DONE v0.11.0 (voxel_monsters.py; AssetService sizes = shape base x style.scale,
    MonsterService.RefreshModels swaps placeholder island mobs). Pets + fruits DONE v0.11.1 (voxel_pets.py).

@@ -878,7 +878,7 @@ local function miniSpecial(mob)
 		return
 	end
 	if kind == "summon" then
-		-- whistles up to 2 lions from the cages (they never respawn)
+		-- whistles up to 2 helpers (def.summon, default lions from the cages; they never respawn)
 		mob.helpers = mob.helpers or {}
 		for i = #mob.helpers, 1, -1 do
 			if mob.helpers[i].dead then
@@ -889,7 +889,7 @@ local function miniSpecial(mob)
 			Net.FX("MobAlert", { model = mob.model }, mob.root.Position, 250)
 			local a = math.random() * math.pi * 2
 			local p = mob.root.Position + Vector3.new(math.cos(a) * 8, 0, math.sin(a) * 8)
-			local helper = MS.Spawn("CircusLion", groundAt(p.X, p.Z), { noRespawn = true, hpMult = 0.5 })
+			local helper = MS.Spawn(mob.def.summon or "CircusLion", groundAt(p.X, p.Z), { noRespawn = true, hpMult = 0.5 })
 			if helper then
 				helper.target = mob.target
 				table.insert(mob.helpers, helper)

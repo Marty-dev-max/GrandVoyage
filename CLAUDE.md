@@ -1479,6 +1479,13 @@ The owner tests in Studio and sends screenshots; previews of new art are rendere
    the Quest push carries `lines` (Replay talk) + `pro = { i, n }` (tracker chapter "PROLOGUE"). Skip tutorial clears pro.
    Admin `prologue` "<OriginId>" | "talk" | "kill" | "off" (Studio tests on the current character; pro.keep restores
    the main step's progress).
+   R5 0.1.28-remake: home-island drops: materials GullFeather / CutPurse / RustyShackle / RelicShard (Items mats, pixel
+   icons gull_feather / cut_purse / rusty_shackle / relic_shard, UIKit ITEM_ICON, IconVoxels). Mini bosses (Islands `minis`,
+   raw local offsets) GullBoss "Squall the Gull Boss" (summon), WharfKing "Wharf King Nibbs" (charge), HulkWarden
+   "Warden Grimbolt" (slam; at (-30,-60): beside the hulk is water), TombDigger "Old Mott the Digger" (summon), Lv 5,
+   wearables GullFeatherCap / TinCrown / WardenKeyRing / DustGoggles (Config/Accessories, Rare 8%, hand-drawn acc_ icons in
+   gen_pixel_icons.py because gen_acc_icons needs lune). Monsters def `summon` = the helper miniSpecial calls (default
+   CircusLion). A head piece sits around y 0.55-0.9 on the voxel head (a cap at 0.5 left the hair poking out).
 1. Wait for the owner's verdict on v0.10.3 (hills/flowers/grass); fix what they point at.
 2. Voxel art pass: monsters DONE v0.11.0 (voxel_monsters.py; AssetService sizes = shape base x style.scale,
    MonsterService.RefreshModels swaps placeholder island mobs). Pets + fruits DONE v0.11.1 (voxel_pets.py).

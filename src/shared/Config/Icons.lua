@@ -186,4 +186,13 @@ return {
 	shard_pure = "rbxassetid://140209349568637",
 	badge = "rbxassetid://131220570425607",
 	musket_ball = "rbxassetid://92810275221058", -- v0.25.112
+	-- R5 0.1.28: home-island materials + mini boss pieces (gen_pixel_icons.py, uploaded through Studio MCP)
+	gull_feather = "rbxassetid://78564508437215",
+	cut_purse = "rbxassetid://134397271914378",
+	rusty_shackle = "rbxassetid://111131768864480",
+	relic_shard = "rbxassetid://118070361595751",
+	acc_GullFeatherCap = "rbxassetid://104771240252995",
+	acc_TinCrown = "rbxassetid://74461098111535",
+	acc_WardenKeyRing = "rbxassetid://101315208915658",
+	acc_DustGoggles = "rbxassetid://127226195725739",
 }

@@ -203,6 +203,11 @@ add("CapeCrimson", { name = "Admiral's Crimson Cape", kind = "Accessory", slot =
 add("CapeSlate", { name = "Mist Cape", kind = "Accessory", slot = "accessory", WIL = 5, VIT = 5, reqLevel = 58, slots = 1, price = 150000, rarity = "Legendary" })
 add("ChiefFurMantle", { name = "Chief's Fur Mantle", desc = "Worn by Bandit Chief Ragmaw.", kind = "Accessory", slot = "accessory", WPN = 3, VIT = 2, reqLevel = 10, slots = 1, price = 4000, rarity = "Rare" })
 add("PamperedShades", { name = "Pampered Shades", desc = "Ensign Velour never takes them off.", kind = "Headgear", slot = "headgear", def = 2, WPN = 3, WIL = 3, reqLevel = 15, slots = 1, price = 8000, refinable = true, rarity = "Rare" })
+-- R5 0.1.28: the home-island mini bosses' pieces (Lv 5, Rare so the drop plays the item reveal)
+add("GullFeatherCap", { name = "Gull Feather Cap", desc = "Squall's cap. The feather is stolen too.", kind = "Headgear", slot = "headgear", def = 2, END = 2, reqLevel = 3, slots = 1, price = 1200, refinable = true, rarity = "Rare" })
+add("TinCrown", { name = "Tin Crown", desc = "Nibbs hammered it out of a ship's lantern and crowned himself.", kind = "Headgear", slot = "headgear", def = 1, WPN = 2, WIL = 1, reqLevel = 3, slots = 1, price = 1200, refinable = true, rarity = "Rare" })
+add("WardenKeyRing", { name = "Warden's Key Ring", desc = "Every cell key of the prison hulk. They still jingle.", kind = "Accessory", slot = "accessory", VIT = 2, END = 1, reqLevel = 3, slots = 1, price = 1200, rarity = "Rare" })
+add("DustGoggles", { name = "Dust Goggles", desc = "Old Mott's digging goggles, scratched from forty years of ruins.", kind = "Headgear", slot = "headgear", def = 1, WIL = 2, WPN = 1, reqLevel = 3, slots = 1, price = 1200, refinable = true, rarity = "Rare" })
 add("TamerWhip", { name = "Tamer's Coiled Whip", desc = "Beast Tamer Bristle's whip, coiled at the hip.", kind = "Accessory", slot = "accessory", END = 4, WPN = 2, reqLevel = 25, slots = 1, price = 20000, rarity = "Rare" })
 add("BeardDark", { name = "Bandit Beard", kind = "Accessory", slot = "accessory", WPN = 2, reqLevel = 8, slots = 0, price = 1200, rarity = "Uncommon" })
 add("BeardBrown", { name = "Sea Dog Beard", kind = "Accessory", slot = "accessory", VIT = 3, reqLevel = 20, slots = 1, price = 6000, rarity = "Uncommon" })
@@ -245,6 +250,11 @@ local mats = {
 	{ "SharkfolkFin", "Sharkfolk Fin", 200, "Uncommon" },
 	{ "WantedPoster", "Wanted Poster", 300, "Uncommon" },
 	{ "TreasureMap", "Treasure Map", 3000, "Rare" },
+	-- R5 0.1.28: home-island monster materials
+	{ "GullFeather", "Gull Feather", 10, "Common", "The Gull Thieves stick them in their caps." },
+	{ "CutPurse", "Cut Purse", 45, "Common", "Somebody's coins, lifted on the wharf. Sell it." },
+	{ "RustyShackle", "Rusty Shackle", 14, "Common", "From the wrecked prison hulk." },
+	{ "RelicShard", "Relic Shard", 20, "Common", "Carved stone from the Inkwell ruins. Scholars pay for these." },
 }
 for _, m in ipairs(mats) do
 	add(m[1], { name = m[2], kind = "Material", price = m[3], stack = true, rarity = m[4], desc = m[5] })

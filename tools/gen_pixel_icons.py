@@ -1314,6 +1314,96 @@ ICONS.update(WEAPON_GRADE_ICONS)
 ICONS.update({'musket_ball': musket_ball, 'acc_SailorVest': sailor_vest, 'wood_gold': logs_gold, 'shard_pure': crystal_pure, 'badge': marine_badge})
 
 
+# ---------- R5 0.1.28: home-island materials + the mini bosses' pieces (hand-drawn, no lune for gen_acc_icons) ----------
+def gull_feather(s):
+    vane, tip, quill = (245, 245, 240), (110, 116, 128), (200, 190, 160)
+    s.poly([(9, 27), (11, 18), (16, 9), (23, 4), (25, 6), (22, 14), (16, 22), (11, 27)], vane)
+    s.poly([(20, 6), (23, 4), (25, 6), (23, 11), (20, 10)], tip)
+    s.line([(7, 29), (12, 22), (23, 5)], quill, 1, False)
+    for k in (0, 1, 2):
+        s.line([(14 + k * 3, 19 - k * 4), (18 + k * 3, 19 - k * 4)], lerp(vane, DARK, 0.18), 1, True)
+
+
+def cut_purse(s):
+    leather, dark, gold = (150, 96, 56), (100, 62, 36), (250, 205, 70)
+    s.oval(16, 20, 10, 8, leather)
+    s.poly([(10, 12), (22, 12), (19, 15), (13, 15)], dark)
+    s.rect(12, 9, 20, 12, leather)
+    s.line([(11, 11), (21, 11)], (60, 36, 20), 1, False)
+    s.line([(21, 11), (26, 6)], (60, 36, 20), 1, False)
+    s.oval(24, 25, 3, 2, gold)
+    s.oval(27, 22, 2, 2, gold)
+    s.px(23, 24, WHITE, True)
+
+
+def rusty_shackle(s):
+    iron, rust = (110, 104, 100), (176, 92, 52)
+    s.arc(11, 14, 7, 0, 360, iron, 3, False)
+    s.arc(22, 21, 7, 0, 360, iron, 3, False)
+    s.rect(14, 16, 19, 19, lerp(iron, rust, 0.4))
+    s.px(6, 12, rust, True)
+    s.px(16, 9, rust, True)
+    s.px(26, 25, rust, True)
+    s.px(18, 26, rust, True)
+
+
+def relic_shard(s):
+    stone, dark, glyph = (176, 168, 150), (128, 120, 104), (110, 200, 220)
+    s.poly([(6, 24), (9, 10), (17, 4), (25, 9), (27, 22), (18, 28)], stone)
+    s.poly([(18, 28), (27, 22), (25, 9), (21, 18)], dark)
+    s.line([(12, 12), (12, 20), (16, 20)], glyph, 1, True)
+    s.line([(15, 10), (19, 14), (15, 18)], glyph, 1, True)
+    s.px(21, 12, glyph, True)
+
+
+def acc_gull_cap(s):
+    cap, brim, band, feather = (74, 84, 104), (56, 64, 80), (200, 60, 50), (245, 245, 240)
+    s.poly([(7, 22), (8, 14), (12, 9), (20, 9), (24, 14), (25, 22)], cap)
+    s.rect(6, 20, 26, 23, band)
+    s.poly([(4, 24), (28, 24), (24, 27), (8, 27)], brim)
+    s.poly([(22, 18), (25, 8), (29, 2), (30, 4), (27, 12), (24, 19)], feather)
+    s.poly([(28, 3), (29, 2), (30, 4), (29, 6)], (110, 116, 128))
+
+
+def acc_tin_crown(s):
+    tin, hi, gem = (190, 196, 206), (230, 234, 240), (210, 40, 50)
+    s.rect(5, 18, 27, 26, tin)
+    for x in (5, 14, 23):
+        s.poly([(x, 18), (x + 2, 9), (x + 4, 18)], tin)
+    s.poly([(13, 18), (16, 6), (19, 18)], tin)
+    s.line([(6, 20), (26, 20)], hi, 1, True)
+    s.oval(16, 22, 2, 2, gem)
+    s.px(15, 21, WHITE, True)
+    s.px(9, 24, (150, 156, 166), True)
+    s.px(23, 23, (150, 156, 166), True)
+
+
+def acc_key_ring(s):
+    iron, brass = (80, 80, 90), (220, 176, 80)
+    s.arc(16, 11, 7, 0, 360, iron, 2, False)
+    for x, h in ((9, 25), (16, 28), (23, 24)):
+        s.rect(x - 1, 15, x + 1, h, brass)
+        s.rect(x - 1, h - 3, x + 3, h - 2, brass)
+        s.oval(x, 15, 2, 2, brass)
+
+
+def acc_dust_goggles(s):
+    strap, frame, lens = (92, 64, 40), (70, 60, 50), (240, 180, 70)
+    s.rect(2, 14, 30, 18, strap)
+    s.oval(10, 16, 7, 6, frame)
+    s.oval(22, 16, 7, 6, frame)
+    s.oval(10, 16, 4, 4, lens)
+    s.oval(22, 16, 4, 4, lens)
+    s.px(8, 14, WHITE, True)
+    s.px(20, 14, WHITE, True)
+    s.px(12, 18, (200, 150, 60), True)
+
+
+ICONS.update({'gull_feather': gull_feather, 'cut_purse': cut_purse, 'rusty_shackle': rusty_shackle, 'relic_shard': relic_shard,
+              'acc_GullFeatherCap': acc_gull_cap, 'acc_TinCrown': acc_tin_crown, 'acc_WardenKeyRing': acc_key_ring,
+              'acc_DustGoggles': acc_dust_goggles})
+
+
 def render(name):
     spr = Spr()
     ICONS[name](spr)

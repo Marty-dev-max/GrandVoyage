@@ -175,6 +175,7 @@ local Islands = {
 			{ offset = Vector2.new(-82, 58), radius = 18, monster = "GullThief", count = 5, area = "Supply Sheds" },
 			{ offset = Vector2.new(-92, -46), radius = 16, monster = "ForestMonkey", count = 4, area = "Cliff Pines" },
 		},
+		minis = { { offset = Vector2.new(-88, 80), radius = 4, monster = "GullBoss" } }, -- between the raided sheds
 	},
 	{
 		id = "SmugglersHollow",
@@ -192,6 +193,7 @@ local Islands = {
 			{ offset = Vector2.new(70, 52), radius = 18, monster = "DockRat", count = 5, area = "Back Wharf" },
 			{ offset = Vector2.new(-84, 34), radius = 16, monster = "ForestMonkey", count = 4, area = "Scrub" },
 		},
+		minis = { { offset = Vector2.new(92, 70), radius = 4, monster = "WharfKing" } }, -- the far end of the back wharf
 	},
 	{
 		id = "ShackleReef",
@@ -209,6 +211,7 @@ local Islands = {
 			{ offset = Vector2.new(-58, -66), radius = 18, monster = "HulkJailer", count = 5, area = "The Wreck" },
 			{ offset = Vector2.new(84, -36), radius = 16, monster = "ForestMonkey", count = 4, area = "Palm Grove" },
 		},
+		minis = { { offset = Vector2.new(-30, -60), radius = 4, monster = "HulkWarden" } }, -- on the sand in front of the hulk (beside it = water)
 	},
 	{
 		id = "InkwellIsle",
@@ -226,6 +229,7 @@ local Islands = {
 			{ offset = Vector2.new(76, -58), radius = 20, monster = "TombRobber", count = 5, area = "Old Ruins" },
 			{ offset = Vector2.new(-86, -30), radius = 16, monster = "ForestMonkey", count = 4, area = "Ink Woods" },
 		},
+		minis = { { offset = Vector2.new(76, -58), radius = 4, monster = "TombDigger" } }, -- in the middle of the dig
 	},
 }
 

@@ -654,6 +654,7 @@ local ITEM_ICON = {
 	CrabShell = "crabshell", MonkeyFur = "monkeyfur", TigerPelt = "tigerpelt", BoarTusk = "boartusk", ClownPaint = "clownpaint",
 	CatClaw = "catclaw", ArmorRivet = "rivet", SharkfolkFin = "sharkfin", IronIngot = "ingot", Gunpowder = "gunpowder",
 	LeviathanScale = "scale", SeaCompass = "compass", SeastoneBracer = "charm", SeastoneShackle = "charm",
+	GullFeather = "gull_feather", CutPurse = "cut_purse", RustyShackle = "rusty_shackle", RelicShard = "relic_shard", -- R5 0.1.28
 }
 local WEAPON_ICON = { Sword = "sword", Knuckles = "knuckles", Slingshot = "slingshot", Shoes = "boots", StormBaton = "staff", MedKit = "medkit", Hammer = "hammer" }
 local KIND_ICON = { Armor = "armor", Headgear = "hat", Accessory = "charm", Card = "card", Egg = "egg", Consumable = "potion", Material = "ore" }

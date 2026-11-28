@@ -30,6 +30,18 @@ ById.TombRobber = look({ hair = "Messy", eyes = "Sharp", mouth = "Flat", mark = 
 	hair1 = "4A3020", shirt1 = "B09060", shirt2 = "6A5030", pants1 = "6A5A40", skin = "EABE96", eyes1 = "3A6A40", eyes2 = "1A3020",
 	acc = { "SunHat" }, held = "HeldClub", attack = "Hammer_Smash" })
 -- mini bosses (v0.25.148): bigger by Config/Monsters style.scale
+ById.GullBoss = look({ hair = "Shaggy Long", eyes = "Crazed", mouth = "Grin", mark = "Stubble", shirt = "Belted Tunic", pants = "Rolled Cuffs", shoes = "Wraps",
+	hair1 = "8A6A44", shirt1 = "6A7A50", shirt2 = "4A3A24", pants1 = "4A3E30", skin = "E0AC80", eyes1 = "C08A20", eyes2 = "5A3A08",
+	acc = { "GullFeatherCap", "BeardBrown" }, held = "HeldClub", attack = "Hammer_Smash" })
+ById.WharfKing = look({ hair = "Short", eyes = "Beady", mouth = "Fang", mark = "Whiskers", shirt = "Open Jacket", pants = "Shorts", shoes = "Wraps",
+	hair1 = "3A3430", shirt1 = "6A2A3A", shirt2 = "E0D8C8", pants1 = "4A4A56", skin = "D6A478", eyes1 = "A07030", eyes2 = "402810",
+	acc = { "TinCrown" }, held = "HeldCutlass", attack = "Sword_Slash" })
+ById.HulkWarden = look({ hair = "Bald", eyes = "Stern", mouth = "Scowl", mark = "Scar", shirt = "Belted Tunic", pants = "Long Pants", shoes = "Boots",
+	shirt1 = "3A3A44", shirt2 = "8A6A30", pants1 = "2A2624", shoes1 = "161412", skin = "B8845A", eyes1 = "A02020", eyes2 = "400808",
+	acc = { "BeardGrey", "WardenKeyRing" }, held = "HeldClub", attack = "Hammer_Smash" })
+ById.TombDigger = look({ hair = "Messy", eyes = "Sharp", mouth = "Flat", mark = "Stubble", shirt = "Open Vest", pants = "Cargo", shoes = "Boots",
+	hair1 = "D8D4CC", shirt1 = "8A7050", shirt2 = "5A4630", pants1 = "5A4E3A", skin = "E0B08A", eyes1 = "3A6A40", eyes2 = "1A3020",
+	acc = { "DustGoggles", "BeardGrey" }, held = "HeldClub", attack = "Hammer_Smash" })
 ById.BanditChief = look({ hair = "Shaggy Long", eyes = "Thug", mouth = "Grin", mark = "Scar", shirt = "Open Vest", pants = "Baggy", shoes = "Boots",
 	hair1 = "2A1E18", shirt1 = "5A3C28", shirt2 = "8A6A48", pants1 = "3A2E24", shoes1 = "3A2A1E", skin = "C8946A", eyes1 = "C05020", eyes2 = "601C08",
 	acc = { "Bandana", "BeardDark", "ChiefFurMantle" }, held = "HeldCutlass", attack = "Sword_Slash" })

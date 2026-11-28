@@ -46,16 +46,35 @@ mob("BanditChief", { name = "Bandit Chief Ragmaw", level = 10, hp = 1300, atk = 
 -- R5 Origin home islands (Lv 1-5, World/OriginIslands): one humanoid of their own per island, next to the Forest Monkeys
 mob("GullThief", { name = "Gull Thief", level = 2, hp = 90, atk = 11, def = 3, exp = 18, jobExp = 12, beli = { 8, 16 },
 	style = { shape = "humanoid", color = Color3.fromRGB(150, 120, 90), scale = 1 }, -- raids the Bastion Rock supply sheds
-	drops = { { "Bandana", 0.03, 1, 1 }, { "RawMeat", 0.2, 1, 1 }, { "Sword_Plain", 0.01, 1, 1 } } })
+	drops = { { "GullFeather", 0.5, 1, 2 }, { "Bandana", 0.03, 1, 1 }, { "RawMeat", 0.2, 1, 1 }, { "Sword_Plain", 0.01, 1, 1 } } })
 mob("DockRat", { name = "Dock Rat", level = 2, hp = 90, atk = 11, def = 3, exp = 18, jobExp = 12, beli = { 8, 16 },
 	style = { shape = "humanoid", color = Color3.fromRGB(120, 110, 100), scale = 1 }, -- wharf cutpurse of Smuggler's Hollow
-	drops = { { "FreshFish", 0.3, 1, 1 }, { "Bandana", 0.03, 1, 1 }, { "Spice", 0.1, 1, 1 } } })
+	drops = { { "CutPurse", 0.35, 1, 1 }, { "FreshFish", 0.3, 1, 1 }, { "Bandana", 0.03, 1, 1 }, { "Spice", 0.1, 1, 1 } } })
 mob("HulkJailer", { name = "Hulk Jailer", level = 3, hp = 120, atk = 14, def = 4, exp = 25, jobExp = 17, beli = { 10, 20 },
 	style = { shape = "humanoid", color = Color3.fromRGB(90, 90, 100), scale = 1.05 }, aggro = true, aggroRadius = 10, -- still guards the wrecked prison
-	drops = { { "SteelOre", 0.05, 1, 1 }, { "RawMeat", 0.2, 1, 1 } } })
+	drops = { { "RustyShackle", 0.5, 1, 2 }, { "SteelOre", 0.05, 1, 1 }, { "RawMeat", 0.2, 1, 1 } } })
 mob("TombRobber", { name = "Tomb Robber", level = 3, hp = 120, atk = 14, def = 4, exp = 25, jobExp = 17, beli = { 10, 20 },
 	style = { shape = "humanoid", color = Color3.fromRGB(150, 130, 100), scale = 1 }, -- digs in the Inkwell ruins
-	drops = { { "CompassCharm", 0.01, 1, 1 }, { "Bandana", 0.03, 1, 1 }, { "Tangerine", 0.15, 1, 1 } } })
+	drops = { { "RelicShard", 0.45, 1, 2 }, { "CompassCharm", 0.01, 1, 1 }, { "Bandana", 0.03, 1, 1 }, { "Tangerine", 0.15, 1, 1 } } })
+-- R5 0.1.28: one mini boss per home island (Islands `minis`), the leader of that island's gang. Lv 5, so a fresh
+-- character can take them after the prologue; their own wearable drops at 8% (Rare: plays the item reveal).
+-- `summon` = which helper they whistle up (MonsterService miniSpecial, default CircusLion).
+mob("GullBoss", { name = "Squall the Gull Boss", level = 5, hp = 650, atk = 21, def = 6, exp = 170, jobExp = 110, beli = { 80, 160 },
+	style = { shape = "humanoid", color = Color3.fromRGB(150, 120, 90), scale = 1.3 }, aggro = true, aggroRadius = 12, mini = "summon", summon = "GullThief",
+	respawn = 6 * 60, cardChance = 0.02,
+	drops = { { "GullFeather", 1, 2, 3 }, { "GullFeatherCap", 0.08, 1, 1 }, { "MeatOnBone", 0.3, 1, 1 } } })
+mob("WharfKing", { name = "Wharf King Nibbs", level = 5, hp = 650, atk = 21, def = 6, exp = 170, jobExp = 110, beli = { 100, 200 },
+	style = { shape = "humanoid", color = Color3.fromRGB(120, 110, 100), scale = 1.3 }, aggro = true, aggroRadius = 12, mini = "charge",
+	respawn = 6 * 60, cardChance = 0.02,
+	drops = { { "CutPurse", 1, 2, 3 }, { "TinCrown", 0.08, 1, 1 }, { "MeatOnBone", 0.3, 1, 1 } } })
+mob("HulkWarden", { name = "Warden Grimbolt", level = 5, hp = 750, atk = 22, def = 8, exp = 170, jobExp = 110, beli = { 80, 160 },
+	style = { shape = "humanoid", color = Color3.fromRGB(90, 90, 100), scale = 1.4 }, aggro = true, aggroRadius = 12, mini = "slam",
+	respawn = 6 * 60, cardChance = 0.02,
+	drops = { { "RustyShackle", 1, 2, 3 }, { "WardenKeyRing", 0.08, 1, 1 }, { "MeatOnBone", 0.3, 1, 1 } } })
+mob("TombDigger", { name = "Old Mott the Digger", level = 5, hp = 650, atk = 21, def = 6, exp = 170, jobExp = 110, beli = { 80, 160 },
+	style = { shape = "humanoid", color = Color3.fromRGB(150, 130, 100), scale = 1.3 }, aggro = true, aggroRadius = 12, mini = "summon", summon = "TombRobber",
+	respawn = 6 * 60, cardChance = 0.02,
+	drops = { { "RelicShard", 1, 2, 3 }, { "DustGoggles", 0.08, 1, 1 }, { "MeatOnBone", 0.3, 1, 1 } } })
 
 -- Conch Bay (10-20)
 mob("MarineRecruit", { name = "Rogue Marine Recruit", level = 12, hp = 520, atk = 42, def = 14, exp = 120, jobExp = 80, beli = { 40, 80 },
@@ -193,15 +212,15 @@ mob("FortCore", { name = "Giant Signal Conch", level = 80, hp = 60000, atk = 0, 
 --   INT = tactics: stuns / crowd control on hit
 --   (v0.25.38: PHY is gone; its two gunners keep their long range below: Rifleman = DEX, Armored Gunner = STR)
 local TYPE_OF = {
-	STR = { "HulkJailer", "BanditChief", "ArmoredGunner", "WildBoar", "MountainBandit", "CircusLion", "ArmadaRaider", "SharkfolkBrawler", "AxeCaptain", "ArmadaAdmiral", "Leviathan" },
-	AGI = { "DockRat", "SpoiledEnsign", "MarineRecruit", "NightCatPirate", "SawfolkRaider", "MarineElite", "BountyHunter", "SilentClaw", "SawtoothOverlord", "ClawCat" },
-	DEX = { "GullThief", "BeastTamer", "MarineRifleman", "ForestMonkey", "JungleTiger", "GuardWolf", "CircusAcrobat", "StarvedPirate", "BaySerpent", "DepthsWarden" },
-	INT = { "TombRobber", "ClownGrunt", "HypnoThug", "MistSoldier", "CaptainConfetti", "RingMaster", "MistCommodore", "OctofolkBrute" },
+	STR = { "HulkJailer", "HulkWarden", "BanditChief", "ArmoredGunner", "WildBoar", "MountainBandit", "CircusLion", "ArmadaRaider", "SharkfolkBrawler", "AxeCaptain", "ArmadaAdmiral", "Leviathan" },
+	AGI = { "DockRat", "WharfKing", "SpoiledEnsign", "MarineRecruit", "NightCatPirate", "SawfolkRaider", "MarineElite", "BountyHunter", "SilentClaw", "SawtoothOverlord", "ClawCat" },
+	DEX = { "GullThief", "GullBoss", "BeastTamer", "MarineRifleman", "ForestMonkey", "JungleTiger", "GuardWolf", "CircusAcrobat", "StarvedPirate", "BaySerpent", "DepthsWarden" },
+	INT = { "TombRobber", "TombDigger", "ClownGrunt", "HypnoThug", "MistSoldier", "CaptainConfetti", "RingMaster", "MistCommodore", "OctofolkBrute" },
 }
 -- stars: 1 = plain animals, 2 = regular fighters, 3 = elites, 4 = bosses, 5 = the strongest bosses
 local STARS = {
 	ForestMonkey = 1, JungleTiger = 1, WildBoar = 1, GuardWolf = 1, CircusLion = 1,
-	BanditChief = 3, SpoiledEnsign = 3, BeastTamer = 3,
+	BanditChief = 3, SpoiledEnsign = 3, BeastTamer = 3, GullBoss = 3, WharfKing = 3, HulkWarden = 3, TombDigger = 3,
 	ClawCat = 3, ArmoredGunner = 3, OctofolkBrute = 3, MarineElite = 3, MistSoldier = 3, BountyHunter = 3,
 	MistCommodore = 5, DepthsWarden = 5, Leviathan = 5,
 }

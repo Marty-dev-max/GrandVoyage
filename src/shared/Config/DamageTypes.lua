@@ -39,6 +39,10 @@ T.Of = {
 	DockRat = { "Slash", "Blunt" }, -- quick with his own blade
 	HulkJailer = { "Blunt", "Slash" }, -- thick leather jerkin
 	TombRobber = { "Slash", "Pierce" }, -- padded coat
+	GullBoss = { "Pierce", "Blunt" }, -- quick on his feet, slow to get up
+	WharfKing = { "Slash", "Pierce" }, -- parries blades, wide open to a shot
+	HulkWarden = { "Blunt", "Element" }, -- iron-studded coat, hates the heat
+	TombDigger = { "Pierce", "Slash" }, -- hides behind his shovel, old coat tears
 	-- Conch Bay
 	MarineRecruit = { "Slash", "Blunt" },
 	GuardWolf = { "Blunt", "Slash" },

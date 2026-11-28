@@ -2715,7 +2715,7 @@ function Panels.FastTravel()
 			end
 		end
 	end
-	local plaque = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.4, 0), Size = UDim2.new(1, -12, 0, 104), BackgroundColor3 = Color3.fromRGB(30, 16, 16), BackgroundTransparency = 0.15, ZIndex = 5, Parent = rl })
+	local plaque = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.22, 0), Size = UDim2.new(1, -12, 0, 60), BackgroundColor3 = Color3.fromRGB(30, 16, 16), BackgroundTransparency = 0.15, ZIndex = 5, Parent = rl })
 	UI.Stroke(plaque, Color3.fromRGB(120, 60, 40), 2)
 	UI.Text(plaque, string.upper(Islands.RedLine.name), 16, T.Text, "Display", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 6 })
 	do

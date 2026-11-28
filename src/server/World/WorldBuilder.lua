@@ -1252,6 +1252,11 @@ function WB.RemoveStaleMaps(keep)
 				mark(d.Parent, "old island " .. tostring(d:GetAttribute("IslandBanner") or d:GetAttribute("Island")))
 			elseif d.Name == "Ocean" and (d:IsA("Model") or d:IsA("Folder")) and d:FindFirstChild("Water") then
 				mark(d, "old ocean")
+			elseif (d:IsA("Model") or d:IsA("Folder")) and (d.Name == "RedLine" or d.Name == "Forts" or d.Name == "Islets" or d.Name == "SeaFloor")
+				and (d:FindFirstChild("Foam") or d:FindFirstChild("ReverseWater") or d:FindFirstChild("Floor")) then
+				-- W1: whole-sea pieces of an old map left loose in the workspace (the main-era Crimson Wall + forts sat
+				-- at the workspace root, out at x 12800)
+				mark(d, "old " .. d.Name)
 			end
 			for _, tag in ipairs(MARKER_TAGS) do
 				if d:HasTag(tag) then

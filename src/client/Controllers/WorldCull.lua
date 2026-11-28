@@ -23,7 +23,9 @@ WC.Stats = { hidden = 0 }
 -- (trees, bushes, boulders, cliff slabs, decor props were all kept before, so far islands stayed mostly visible)
 local SCENERY = { EnvProp = true, EnvPart = true } -- (Decor stays: Settings hides/restores it per preset)
 -- big models spread over the whole sea are cut into square chunks that hide one by one
-local CHUNKED = { "Forts", "Islets", "RedLine", "SeaFloor" }
+-- W1: not "RedLine": the walls + Backflow Peak are the world's edge (seen from far) and their parts are up to 2000
+-- studs long, so a chunk by part centre hid a wall whose face was right next to you
+local CHUNKED = { "Forts", "Islets", "SeaFloor" }
 local CHUNK = 600
 
 -- v0.25.135 (owner: far islands should still show faintly): while an island's scenery is culled, a light stand-in

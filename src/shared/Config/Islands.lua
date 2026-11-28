@@ -241,7 +241,8 @@ local RedLine = {
 	peakName = "Backflow Peak",
 	nextSea = "Grand Current",
 	thickness = 400,
-	height = 1400,
+	height = 2000, -- the wall (W1 v2: towering, owner refs)
+	peakHeight = 2600, -- Backflow Peak's summit
 	canalWidth = 220,
 	gateOffsetX = -160,
 }

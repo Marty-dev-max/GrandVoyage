@@ -1510,7 +1510,23 @@ The owner tests in Studio and sends screenshots; previews of new art are rendere
    the quest arrival arrow aim at the island edge / nearest Dock toward you (Readability.nextIsland by Segment).
    Map window (Panels.FastTravel) = a sea-1 chart: wall column left (WALL_W 0.1), Doldrums + Grand Current bands at the
    bottom, Backflow Peak mound bottom-left, x from Mouth - 400 to Daybreak at 0.8, origins zigzag on the right.
-   WORLD_VERSION 51. Quest texts with directions updated. NOT tested in Play (Studio MCP was offline).
+   WORLD_VERSION 51. Quest texts with directions updated. Checked in Play (0.1.31 session): zones, segments, NPC
+   ships, map window, ship sliding along the west wall at x West + 90.
+   0.1.31-remake (owner refs: towering red cliffs of columnar rock with cloud bands, a canyon the water climbs):
+   WorldBuilder buildRedLine v2 runs AFTER Voxelize + DeFlicker (pcall; ~6300 plain blocks, nothing coplanar).
+   RedLine height 2000, peakHeight 2600. `face(a, b, out)` = row of rock columns (w 40-110, jut 16-80, wandering
+   skyline + rare notches, stacked DRUMS 140-380 tall each with its own depth/shade + a dark jutting LEDGE at 60% of
+   the joints: one long block per column read as sticks, fallen blocks at the foot) on the west / north / east faces
+   (wall bodies behind = plain BODY + grass top). Palette is warm orange-red ON PURPOSE: the sea Atmosphere (haze 1)
+   turns far reds purple and darker reds got worse (tested at 1400 studs). `puff(c, along3, l)` = voxel cloud (a flat
+   belly block + 6-10 heaped blocks, bigger in the middle; thin slabs read as planks) used by
+   `cloudBand` (2 heights per face) + rings round the mountain + a summit cap. Backflow Peak = a CELL 120 heightfield on
+   a grid turned along MouthDir (u toward the Mouth, v across): heightAt(r) = sheer foot (0.42 PEAK within 14% of R)
+   + long rise; cells |iv| <= 1 = the canyon, cut to just under the water ramp (waterY from the Mouth to CLIMB = 0.7
+   PEAK at r1 300, flat over the summit pass). The old CliffRed pillars are gone. WorldCull never culls RedLine;
+   WB.RemoveStaleMaps also removes loose RedLine / Forts / Islets / SeaFloor models (main-era wall sat at the
+   workspace root). WORLD_VERSION 52. Shots: night until server phase 0..0.7 (Atmos.Clock); the Dev Time of Day
+   buttons are client-only (execute_luau's copy of Atmos does nothing).
 1. Wait for the owner's verdict on v0.10.3 (hills/flowers/grass); fix what they point at.
 2. Voxel art pass: monsters DONE v0.11.0 (voxel_monsters.py; AssetService sizes = shape base x style.scale,
    MonsterService.RefreshModels swaps placeholder island mobs). Pets + fruits DONE v0.11.1 (voxel_pets.py).

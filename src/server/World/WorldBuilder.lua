@@ -1010,16 +1010,36 @@ end
 
 -- W1 (owner, 28 Nov 2026, docs/Plan-WorldMap.md): the Crimson Wall runs north-south through the middle of the world
 -- (the Azure East's west side), world-edge walls close its north and east sides, and Backflow Peak rises where the wall
--- crosses the Grand Current band (the sea's south-west corner): a stepped red mountain with a canal of water flowing UP
--- its north-east face from the Azure East. Own Random (built last, but never touch Kit's shared stream).
+-- crosses the Grand Current band (the sea's south-west corner). Own Random (never touch Kit's shared stream).
+-- Wall v2 (owner refs: towering red cliffs of columnar rock wrapped in cloud bands, a ship tiny at the foot; the climb
+-- = a narrow canyon of sheer column walls with the water rushing up it): every sea-facing face is a row of stone
+-- columns (each juts out its own amount, stepped tops, 2-4 shaded segments), two cloud bands wrap the faces, and
+-- Backflow Peak is a heightfield of columns on a grid turned along the canal, cut by the canyon the water climbs.
+-- Built AFTER Voxelize / DeFlicker (WB.Build runs Voxelize on this model alone): nothing here overlaps coplanar.
 -- Every big block is cut into <= 2000-stud pieces (Roblox caps a part at 2048).
 local function buildRedLine(world)
 	local f = folderOf("RedLine", world)
 	local rl = IslandsCfg.RedLine
 	local rand = Random.new(51051)
-	local red = Color3.fromRGB(215, 95, 70)
-	local dark = Color3.fromRGB(150, 60, 45)
-	local H = rl.height
+	local H = rl.height -- the wall
+	local PEAK = rl.peakHeight or H * 1.3 -- the mountain's summit
+	-- rock palette: deep red, red, salmon, pale (a column picks one, its segments vary around it)
+	-- warm and bright on purpose: the sea's blue haze turns a far 2000-stud cliff purple, and darker reds got worse;
+	-- these orange-reds read as red / terracotta through it (tested in Play at 1400 studs)
+	local ROCK = { Color3.fromRGB(170, 59, 11), Color3.fromRGB(225, 78, 15), Color3.fromRGB(255, 101, 34), Color3.fromRGB(255, 130, 77) }
+	local BODY = Color3.fromRGB(209, 74, 16)
+	local LEDGE = Color3.fromRGB(110, 36, 18)
+	local function rock(k)
+		local i = math.clamp(k, 0, 0.999) * (#ROCK - 1)
+		local a = math.floor(i)
+		return ROCK[a + 1]:Lerp(ROCK[a + 2], i - a)
+	end
+	local function block(size, cf, color, opts)
+		opts = opts or {}
+		opts.parent = opts.parent or f
+		opts.material = opts.material or M.Rock
+		return P(size, color, cf, opts)
+	end
 	local function slab(x0, x1, z0, z1, y0, y1, color, mat)
 		local x = x0
 		while x < x1 - 0.5 do
@@ -1027,117 +1047,199 @@ local function buildRedLine(world)
 			local z = z0
 			while z < z1 - 0.5 do
 				local d = math.min(2000, z1 - z)
-				P(Vector3.new(w, y1 - y0, d), color, CFrame.new(x + w / 2, (y0 + y1) / 2, z + d / 2), { parent = f, material = mat or M.Rock })
+				block(Vector3.new(w, y1 - y0, d), CFrame.new(x + w / 2, (y0 + y1) / 2, z + d / 2), color, { material = mat })
 				z += d
 			end
 			x += w
 		end
 	end
-	-- a wall block: rock body, strata bands a little proud of the faces, grass on top
+	-- a wall block: rock body with a grass top (its sea faces get columns below)
 	local function wall(x0, x1, z0, z1, top)
 		top = top or H
-		slab(x0, x1, z0, z1, -40, top, red)
-		for i = 1, math.floor(top / 175) do
-			slab(x0 - 9, x1 + 9, z0 - 9, z1 + 9, i * 175 - 11, i * 175 + 11, red:Lerp(Color3.fromRGB(255, 170, 120), (i % 2) * 0.45))
-		end
-		slab(x0 - 15, x1 + 15, z0 - 15, z1 + 15, top - 10, top + 30, Color3.fromRGB(110, 190, 90), M.Grass)
+		slab(x0, x1, z0, z1, -40, top, BODY)
+		slab(x0, x1, z0, z1, top, top + 24, Color3.fromRGB(110, 170, 84), M.Grass)
 	end
-	-- jagged cliff pillars on a sea-facing face (dressed with the red cliff meshes): from a to b along the face,
-	-- `out` = the unit normal pointing into the sea
-	local function cliffFace(a, b, out)
+
+	-- a sea-facing face from a to b (Vector2, world x/z), `out` = unit normal into the sea: a row of columns
+	local function face(a, b, out)
 		local len = (b - a).Magnitude
 		local along = (b - a).Unit
-		local s = rand:NextNumber(0, 120)
-		while s < len do
-			local p = a + along * s
-			local h = rand:NextNumber(120, 700)
-			local center = Vector3.new(p.X, h / 2 - 20, p.Y) + Vector3.new(out.X, 0, out.Y) * 10
-			local pillar = P(Vector3.new(rand:NextNumber(60, 160), h, rand:NextNumber(30, 70)), red:Lerp(dark, rand:NextNumber(0, 0.5)),
-				CFrame.lookAt(center, center + Vector3.new(out.X, 0, out.Y)), { parent = f, material = M.Rock })
-			pillar:SetAttribute("Kind", "CliffRed")
-			CollectionService:AddTag(pillar, "EnvPart")
-			s += rand:NextNumber(220, 320)
+		local out3 = Vector3.new(out.X, 0, out.Y)
+		local along3 = Vector3.new(along.X, 0, along.Y)
+		local s = 0
+		local h = H * 0.9
+		while s < len - 4 do
+			local w = math.min(rand:NextNumber(40, 110), len - s)
+			-- the skyline wanders, with a deep notch now and then
+			h = math.clamp(h + rand:NextNumber(-0.09, 0.09) * H, H * 0.62, H + 70)
+			local top = h
+			if rand:NextNumber() < 0.07 then
+				top = h * rand:NextNumber(0.55, 0.8)
+			end
+			local base = rand:NextNumber()
+			local depth = rand:NextNumber(16, 80)
+			local mid = a + along * (s + w / 2)
+			-- stacked drums (owner v2 review: one long block per column read as sticks): each drum its own depth and
+			-- shade, and most joints get a dark jutting ledge, so the cliff reads as jointed, weathered rock
+			local y0 = -40
+			while y0 < top - 8 do
+				local y1 = math.min(top, y0 + rand:NextNumber(140, 380))
+				if top - y1 < 60 then
+					y1 = top
+				end
+				local d = math.max(10, depth + rand:NextNumber(-26, 26))
+				local c = rock(math.clamp(base + rand:NextNumber(-0.2, 0.2) + (y1 / H) * 0.15, 0, 1))
+				local center = Vector3.new(mid.X, (y0 + y1) / 2, mid.Y) + out3 * (d / 2)
+				block(Vector3.new(w, y1 - y0, d), CFrame.fromMatrix(center, along3, Vector3.yAxis), c)
+				if y1 < top and rand:NextNumber() < 0.6 then
+					local lh = rand:NextNumber(4, 10)
+					local ld = d + rand:NextNumber(6, 16)
+					local lc = Vector3.new(mid.X, y1 - lh / 2, mid.Y) + out3 * (ld / 2)
+					block(Vector3.new(w + 0.6, lh, ld), CFrame.fromMatrix(lc, along3, Vector3.yAxis), LEDGE:Lerp(c, rand:NextNumber(0, 0.35)))
+				end
+				y0 = y1
+			end
+			-- fallen blocks at the foot, half in the surf
+			if rand:NextNumber() < 0.22 then
+				local sz = rand:NextNumber(18, 46)
+				local p = Vector3.new(mid.X, sz * 0.2, mid.Y) + out3 * (depth + sz * rand:NextNumber(0.4, 1.4)) + along3 * rand:NextNumber(-20, 20)
+				block(Vector3.new(sz, sz, sz * rand:NextNumber(0.7, 1.2)), CFrame.fromMatrix(p, along3, Vector3.yAxis) * CFrame.Angles(0, rand:NextNumber(-0.4, 0.4), 0), rock(rand:NextNumber(0, 0.4)))
+			end
+			s += w
 		end
 	end
+
+	-- clouds: voxel puffs = a heaped clump of blocks (wide flat belly, rounder bumps on top, a blue-grey underside),
+	-- long along `along3` (owner v2 review: thin single slabs read as floating planks)
+	local CLOUD = Color3.fromRGB(250, 252, 255)
+	local BELLY = Color3.fromRGB(206, 220, 240)
+	local function puff(c, along3, l)
+		local out3 = along3:Cross(Vector3.yAxis)
+		local opts = function()
+			return { material = M.SmoothPlastic, transparency = rand:NextNumber(0.03, 0.12), collide = false, shadow = false }
+		end
+		-- the belly: one long flat block
+		local bd = rand:NextNumber(160, 260)
+		block(Vector3.new(l, rand:NextNumber(40, 60), bd), CFrame.fromMatrix(c - Vector3.new(0, 30, 0), along3, Vector3.yAxis), BELLY, opts())
+		-- heaps on top, bigger toward the middle
+		for _ = 1, rand:NextInteger(6, 10) do
+			local t = rand:NextNumber(-0.42, 0.42)
+			local k = 1 - math.abs(t) * 1.3
+			local sx = l * rand:NextNumber(0.18, 0.36)
+			local sy = rand:NextNumber(60, 150) * k + 30
+			local sz = bd * rand:NextNumber(0.55, 0.9)
+			local p = c + along3 * (t * l) + Vector3.new(0, sy / 2 - 20 + rand:NextNumber(0, 20), 0) + out3 * rand:NextNumber(-40, 40)
+			block(Vector3.new(sx, sy, sz), CFrame.fromMatrix(p, along3, Vector3.yAxis), CLOUD, opts())
+		end
+	end
+	-- cloud bands hugging a face at one height, gaps between the puffs
+	local function cloudBand(a, b, out, y, off)
+		local len = (b - a).Magnitude
+		local along = (b - a).Unit
+		local out3 = Vector3.new(out.X, 0, out.Y)
+		local along3 = Vector3.new(along.X, 0, along.Y)
+		local s = rand:NextNumber(0, 300)
+		while s < len do
+			local l = math.min(rand:NextNumber(380, 900), len - s)
+			if l > 160 then
+				local mid = a + along * (s + l / 2)
+				puff(Vector3.new(mid.X, y + rand:NextNumber(-70, 70), mid.Y) + out3 * (off + rand:NextNumber(100, 180)), along3, l)
+			end
+			s += l + rand:NextNumber(60, 320)
+		end
+	end
+
 	local pk, wh, e = WS.Peak, WS.WallHalf, WS.Edge
 	local southEnd = WS.DrawMaxZ + 600
-	-- the middle wall, north and south of the mountain; it steps down into the mountain's shoulders
-	local gap = 1300
-	wall(pk.X - wh, pk.X + wh, WS.North - e, pk.Y - WS.MountR)
-	for k, top in ipairs({ H * 0.85, H * 0.7, H * 0.55 }) do
-		local span = (WS.MountR - gap) / 3
-		wall(pk.X - wh, pk.X + wh, pk.Y - WS.MountR + (k - 1) * span, pk.Y - WS.MountR + k * span, top)
-		wall(pk.X - wh, pk.X + wh, pk.Y + WS.MountR - k * span, pk.Y + WS.MountR - (k - 1) * span, top)
-	end
-	wall(pk.X - wh, pk.X + wh, pk.Y + WS.MountR, southEnd)
-	-- the world edges: north (across the top of the Azure East) and east
+	-- the middle wall north and south of the mountain (it runs into the mountain's flanks), the world edges
+	wall(pk.X - wh, pk.X + wh, WS.North - e, pk.Y - WS.MountR * 0.55)
+	wall(pk.X - wh, pk.X + wh, pk.Y + WS.MountR * 0.55, southEnd)
 	wall(pk.X - wh, WS.East + e, WS.North - e, WS.North)
 	wall(WS.East, WS.East + e, WS.North, southEnd)
-	cliffFace(Vector2.new(WS.West, WS.North), Vector2.new(WS.West, pk.Y - WS.MountR), Vector2.new(1, 0))
-	cliffFace(Vector2.new(WS.West, WS.North), Vector2.new(WS.East, WS.North), Vector2.new(0, 1))
-	cliffFace(Vector2.new(WS.East, WS.North), Vector2.new(WS.East, WS.BandN), Vector2.new(-1, 0))
-
-	-- Backflow Peak: stepped tiers, each a disc of plank-like strips. The canal climbs from the Mouth (sea level, out at
-	-- MountR + 100) to the summit (radius 300) along MouthDir; every tier stays under the canal's line.
-	local dir = WS.MouthDir
-	local r0, r1 = WS.MountR + 100, 300
-	local climb = H - 20
-	local function canalDist(y) -- horizontal distance from the Peak of the canal at height y
-		return r0 - (r0 - r1) * y / climb
+	-- the faces the Azure East sees: west (the Crimson Wall), north and east edges
+	local westEnd = pk.Y - math.sqrt(WS.MountR ^ 2 - wh ^ 2) + 40 -- where the wall face meets the mountain
+	local faces = {
+		{ Vector2.new(WS.West, WS.North), Vector2.new(WS.West, westEnd), Vector2.new(1, 0) },
+		{ Vector2.new(WS.West, WS.North), Vector2.new(WS.East, WS.North), Vector2.new(0, 1) },
+		{ Vector2.new(WS.East, WS.North), Vector2.new(WS.East, WS.BeltS), Vector2.new(-1, 0) },
+	}
+	for _, fc in ipairs(faces) do
+		face(fc[1], fc[2], fc[3])
+		cloudBand(fc[1], fc[2], fc[3], H * 0.38, 40)
+		cloudBand(fc[1], fc[2], fc[3], H * 0.7, 10)
 	end
-	local function disc(r, y0, y1, color)
-		local strip = 160
-		local z = -r
-		while z < r - 1 do
-			local zc = z + strip / 2
-			local half = math.sqrt(math.max(0, r * r - zc * zc))
-			if half > 20 then
-				slab(pk.X - half, pk.X + half, pk.Y + z, pk.Y + z + strip, y0, y1, color)
+
+	-- ===== Backflow Peak =====
+	-- a grid of rock columns turned along the canal: u = distance from the Peak toward the Mouth, v = across it.
+	-- Height profile: a sheer cliff right at the foot (the canyon's walls are tall from the first step), then a long
+	-- rise to the summit. The canyon (|v| <= one cell) is cut down to just under the water, which climbs from the
+	-- Mouth (sea level) to the summit pass at CLIMB.
+	local dir = WS.MouthDir
+	local u3 = Vector3.new(dir.X, 0, dir.Y)
+	local v3 = Vector3.new(-dir.Y, 0, dir.X)
+	local CELL = 120
+	local R = WS.MountR
+	local r0, r1 = R + 100, 300 -- the water: from the Mouth (u = r0) to the summit pass (u = r1)
+	local CLIMB = PEAK * 0.7
+	local function waterY(u)
+		return math.clamp((r0 - u) / (r0 - r1), 0, 1) * CLIMB - 6
+	end
+	local function smooth(x)
+		x = math.clamp(x, 0, 1)
+		return x * x * (3 - 2 * x)
+	end
+	local function heightAt(r)
+		local t = 1 - r / R
+		return PEAK * (0.42 * smooth(t / 0.14) + 0.58 * math.max(0, t) ^ 1.6)
+	end
+	local nCells = math.ceil(R / CELL) + 1
+	for iu = -nCells, nCells do
+		for iv = -nCells, nCells do
+			local u, v = iu * CELL, iv * CELL
+			local r = math.sqrt(u * u + v * v) + rand:NextNumber(-50, 50) -- a ragged foot
+			if r < R then
+				local canyon = math.abs(iv) <= 1 and u > -r1
+				local top
+				if canyon then
+					-- the floor under the water: below the lowest water line in this cell (its Mouth-side edge)
+					top = waterY(u + CELL / 2) - 24
+				else
+					top = heightAt(r) * rand:NextNumber(0.9, 1.08) + (math.abs(iv) == 2 and u > 0 and PEAK * 0.04 or 0)
+				end
+				if top > 4 then
+					local base = math.clamp(top / PEAK, 0, 1)
+					local c = canyon and rock(0.05) or rock(math.clamp(base * 0.75 + rand:NextNumber(-0.15, 0.15), 0, 1))
+					local center = pk.X * Vector3.xAxis + pk.Y * Vector3.zAxis + u3 * u + v3 * v
+					local y0 = -40
+					-- tall columns break into two shades (an upper band), like the wall faces
+					if not canyon and top > 400 then
+						local cut = top * rand:NextNumber(0.45, 0.7)
+						block(Vector3.new(CELL, cut - y0, CELL), CFrame.fromMatrix(center + Vector3.new(0, (y0 + cut) / 2, 0), v3, Vector3.yAxis), rock(math.clamp(base * 0.5 + rand:NextNumber(-0.1, 0.1), 0, 1)))
+						y0 = cut
+					end
+					block(Vector3.new(CELL, top - y0, CELL), CFrame.fromMatrix(center + Vector3.new(0, (y0 + top) / 2, 0), v3, Vector3.yAxis), c)
+					if not canyon and base > 0.86 then -- snow-pale caps at the summit
+						block(Vector3.new(CELL, 10, CELL), CFrame.fromMatrix(center + Vector3.new(0, top + 5, 0), v3, Vector3.yAxis), Color3.fromRGB(245, 236, 226))
+					end
+				end
 			end
-			z += strip
 		end
 	end
-	disc(WS.MountR, -40, 30, dark) -- the rocky foot ships bump into
-	local tiers = 7
-	local prev = 30
-	for k = 1, tiers do
-		local top = climb * k / tiers - 40
-		local r = math.max(120, canalDist(top) - 260)
-		disc(r, prev, top, red:Lerp(Color3.fromRGB(255, 170, 120), (k % 2) * 0.35))
-		prev = top
-	end
-	disc(260, prev, climb + 40, Color3.fromRGB(110, 190, 90))
-	-- the canal: water flowing UP the north-east face
-	local a3 = Vector3.new(WS.Mouth.X, -6, WS.Mouth.Y)
+	-- the water rushing UP the canyon: one ramp from the Mouth to the summit pass, then flat over the pass
+	local a3 = Vector3.new(WS.Mouth.X, waterY(r0), WS.Mouth.Y)
 	local top2 = pk + dir * r1
-	local b3 = Vector3.new(top2.X, climb, top2.Y)
+	local b3 = Vector3.new(top2.X, waterY(r1), top2.Y)
 	local len = (b3 - a3).Magnitude
 	local rampCf = CFrame.lookAt((a3 + b3) / 2, b3)
-	P(Vector3.new(rl.canalWidth + 40, 20, len), Color3.fromRGB(170, 80, 60), rampCf * CFrame.new(0, -14, 0), { parent = f, material = M.Rock })
-	-- an embankment of rock under the canal (the tiers step back under its line)
-	local N = 14
-	local flatDir = Vector3.new(b3.X - a3.X, 0, b3.Z - a3.Z)
-	local run = flatDir.Magnitude
-	flatDir = flatDir.Unit
-	for i = 0, N - 1 do
-		local t = (i + 0.5) / N
-		local under = a3.Y + (b3.Y - a3.Y) * (i / N) - 24 -- the lower end of this piece of the slope
-		if under > 0 then
-			local c = a3 + flatDir * (run * t)
-			P(Vector3.new(rl.canalWidth + 40, under + 40, run / N + 2), red:Lerp(dark, 0.3), CFrame.lookAt(Vector3.new(c.X, (under - 40) / 2, c.Z), Vector3.new(c.X, (under - 40) / 2, c.Z) + flatDir), { parent = f, material = M.Rock })
-		end
-	end
-	for _, sx in ipairs({ -1, 1 }) do
-		P(Vector3.new(20, 60, len), dark, rampCf * CFrame.new(sx * (rl.canalWidth / 2 + 10), 20, 0), { parent = f, material = M.Rock })
-	end
-	local water = P(Vector3.new(rl.canalWidth, 3, len), Color3.fromRGB(110, 215, 255), rampCf, { parent = f, material = M.Glass, transparency = 0.15, collide = false, name = "ReverseWater" })
+	local water = block(Vector3.new(rl.canalWidth, 3, len), rampCf, Color3.fromRGB(110, 215, 255), { material = M.Glass, transparency = 0.15, collide = false, name = "ReverseWater" })
 	CollectionService:AddTag(water, "ReverseWater")
-	for i = 0, 9 do
-		local foamPart = P(Vector3.new(rl.canalWidth - 8, 3.4, 14), Color3.fromRGB(240, 252, 255), rampCf * CFrame.new(0, 0.4, len / 2 - (i + 0.5) * len / 10), { parent = f, material = M.Neon, transparency = 0.45, collide = false, shadow = false, name = "Foam" })
+	block(Vector3.new(rl.canalWidth, 3, r1 * 2), CFrame.fromMatrix(Vector3.new(pk.X, waterY(r1), pk.Y), v3, Vector3.yAxis), Color3.fromRGB(110, 215, 255), { material = M.Glass, transparency = 0.15, collide = false, name = "ReverseWater" })
+	for i = 0, 13 do -- white rapids up the ramp
+		local foamPart = block(Vector3.new(rl.canalWidth - 8, 3.4, 18), rampCf * CFrame.new(0, 0.4, len / 2 - (i + 0.5) * len / 14), Color3.fromRGB(240, 252, 255), { material = M.Neon, transparency = 0.45, collide = false, shadow = false, name = "Foam" })
 		local pe = Instance.new("ParticleEmitter")
 		pe.Texture = "rbxasset://textures/particles/smoke_main.dds"
 		pe.Color = ColorSequence.new(Color3.fromRGB(230, 250, 255))
-		pe.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 8), NumberSequenceKeypoint.new(1, 18) })
+		pe.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 10), NumberSequenceKeypoint.new(1, 26) })
 		pe.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.35), NumberSequenceKeypoint.new(1, 1) })
 		pe.Lifetime = NumberRange.new(1.5, 2.5)
 		pe.Rate = 14
@@ -1146,27 +1248,43 @@ local function buildRedLine(world)
 		pe.Acceleration = Vector3.new(0, 60, 0)
 		pe.Parent = foamPart
 	end
-	-- whirlpool at the foot of the climb, then the entrance arch facing the sea (visible from afar)
-	local out3 = Vector3.new(dir.X, 0, dir.Y)
-	local side3 = Vector3.new(-dir.Y, 0, dir.X)
+	-- spray where the sea meets the canyon, then the entrance arch facing the sea (visible from afar)
 	local mouth3 = Vector3.new(WS.Mouth.X, 0, WS.Mouth.Y)
-	Cyl(1, rl.canalWidth * 2.2, Color3.fromRGB(170, 235, 255), mouth3 + out3 * 80 + Vector3.new(0, 0.3, 0), { parent = f, material = M.Neon, transparency = 0.55, collide = false, shadow = false })
-	local gate = mouth3 + out3 * 160
+	block(Vector3.new(rl.canalWidth * 2.2, 1, rl.canalWidth * 1.4), CFrame.fromMatrix(mouth3 + u3 * 80 + Vector3.new(0, 0.3, 0), v3, Vector3.yAxis), Color3.fromRGB(170, 235, 255), { material = M.Neon, transparency = 0.55, collide = false, shadow = false })
+	local gate = mouth3 + u3 * 160
 	local half = rl.canalWidth / 2
 	for _, s in ipairs({ -1, 1 }) do
-		local post = gate + side3 * s * (half + 24)
-		P(Vector3.new(22, 150, 22), Color3.fromRGB(250, 240, 220), CFrame.new(post + Vector3.new(0, 75, 0)), { parent = f, material = M.Marble })
-		Ball(30, Color3.fromRGB(255, 210, 80), post + Vector3.new(0, 160, 0), { parent = f, material = M.SmoothPlastic })
+		local post = gate + v3 * s * (half + 24)
+		block(Vector3.new(26, 170, 26), CFrame.new(post + Vector3.new(0, 85, 0)), Color3.fromRGB(250, 240, 220), { material = M.Marble })
+		block(Vector3.new(36, 36, 36), CFrame.new(post + Vector3.new(0, 188, 0)), Color3.fromRGB(255, 210, 80), { material = M.SmoothPlastic })
 	end
-	local lintelCf = CFrame.fromMatrix(gate + Vector3.new(0, 150, 0), side3, Vector3.yAxis)
-	P(Vector3.new(rl.canalWidth + 80, 26, 24), Color3.fromRGB(250, 240, 220), lintelCf, { parent = f, material = M.Marble })
-	local signPos = gate + out3 * 12.5 + Vector3.new(0, 150, 0)
-	local s = sign(string.upper(rl.peakName) .. "  •  " .. string.upper(rl.nextSea) .. "  (Lv." .. GameConfig.GrandLineLevel .. ")", CFrame.lookAt(signPos, signPos + out3), Vector2.new(rl.canalWidth + 60, 20), Color3.fromRGB(255, 230, 120), Color3.fromRGB(150, 40, 40))
+	block(Vector3.new(rl.canalWidth + 90, 28, 28), CFrame.fromMatrix(gate + Vector3.new(0, 170, 0), v3, Vector3.yAxis), Color3.fromRGB(250, 240, 220), { material = M.Marble })
+	local signPos = gate + u3 * 14.5 + Vector3.new(0, 170, 0)
+	local s = sign(string.upper(rl.peakName) .. "  •  " .. string.upper(rl.nextSea) .. "  (Lv." .. GameConfig.GrandLineLevel .. ")", CFrame.lookAt(signPos, signPos + u3), Vector2.new(rl.canalWidth + 60, 22), Color3.fromRGB(255, 230, 120), Color3.fromRGB(150, 40, 40))
 	s.Parent = f
-	-- clouds around the summit
-	for _ = 1, 18 do
-		local a, r = rand:NextNumber(0, math.pi * 2), rand:NextNumber(0, 900)
-		Ball(rand:NextNumber(80, 160), Color3.new(1, 1, 1), Vector3.new(pk.X + math.cos(a) * r, H + rand:NextNumber(-60, 80), pk.Y + math.sin(a) * r), { parent = f, collide = false, transparency = 0.1, shadow = false })
+	-- cloud rings around the mountain at two heights (just outside its slope there) and a cap over the summit
+	for _, y in ipairs({ PEAK * 0.3, PEAK * 0.55 }) do
+		local r = R
+		while r > 50 and heightAt(r) < y do
+			r -= 40
+		end
+		local ring = 0
+		while ring < math.pi * 2 do
+			local step = rand:NextNumber(0.12, 0.3)
+			local a = ring + step / 2
+			local rr = r + rand:NextNumber(60, 220)
+			local l = rr * step * rand:NextNumber(0.6, 0.95)
+			local p = pk + Vector2.new(math.cos(a), math.sin(a)) * rr
+			local tangent = Vector3.new(-math.sin(a), 0, math.cos(a))
+			if l > 120 then
+				puff(Vector3.new(p.X, y + rand:NextNumber(-60, 60), p.Y), tangent, l)
+			end
+			ring += step + rand:NextNumber(0.05, 0.25)
+		end
+	end
+	for _ = 1, 6 do -- a cap of cloud over the summit
+		local a, r = rand:NextNumber(0, math.pi * 2), rand:NextNumber(0, 600)
+		puff(Vector3.new(pk.X + math.cos(a) * r, PEAK + rand:NextNumber(60, 220), pk.Y + math.sin(a) * r), Vector3.new(math.cos(a + 1.3), 0, math.sin(a + 1.3)), rand:NextNumber(300, 520))
 	end
 end
 
@@ -1208,7 +1326,7 @@ end
 -- away and rebuilt from code at server start (so the owner's published place updates through Rojo too).
 -- Hand-built content made in Studio goes in workspace.Handmade (never touched by rebuilds). Kit props placed there
 -- (tagged EnvProp/EnvPart) are dressed with the stylized meshes like the generated ones.
-WB.WORLD_VERSION = 51 -- v51 (0.1.30-remake, W1): the world is four seas around a cross: the Azure East is its north-east quarter (islands moved, walls on three sides, Backflow Peak in the south-west corner); v50 (0.1.29-remake): a Trader NPC on each Origin home island; v49 (0.1.26-remake, R5): four Origin home islands west of Daybreak (World/OriginIslands); v48 (0.1.24-remake, R5): islands built x GameConfig.WorldScale (1.5) around their center, people-size props keep their size; v47 (0.1.10-remake): no Job Master NPC (spots stay reserved); v46 (v0.25.150): no shipyard platform, the slips float (boardwalk only); v45 (v0.25.149): Courier Gull Post at every harbor, Marine Registrar by the Conch Bay stairs; v44 (v0.25.148): roof ridges sit on the stepped roof (no floating beam); v43 (v0.25.147): voxel stadium big top + the Confetti Crew occupying Marmalade; v42 (v0.25.146): Big Top for Captain Confetti, Epilogue execution platform; v41 (v0.25.143): a look of their own for every island quest giver; v40 (v0.25.142): one Tavern Keeper on Daybreak (inside the tavern); v39 (v0.25.141): tavern awning above the doorway; v38 (v0.25.140): enterable Daybreak tavern / smithy / store with their NPC inside; v37 (v0.25.134): organic voxel island outlines (IslandShape); v36 v36 (v0.25.133): Epilogue Town hand-laid; v35 v35 (v0.25.132): Mikan Isles hand-laid; v34 (v0.25.131): Barracuda Bistro hand-laid (World/Barracuda); v33 (v0.25.130): Honeyslope hand-laid (World/Honeyslope); v32 (v0.25.129): the Brig (jail cell) at the Conch Bay garrison; v31 (v0.25.120): Power board is a map piece in front of the west house; v30 (v0.25.119): Bounty Board moved to the west street house; v29 (v0.25.118): Job Master walk-in ring + new look; v28 (v0.25.115): DeFlicker stacks faces within 0.035 (grass under the plaza paving); v27 (v0.25.113): no Bay Serpent buoys/sign, wooden shipyard plots, voxel barrels/crates/chests; v26 (v0.25.112): DeFlicker pass, hill caps one step apart per lobe; v25 (v0.25.109): no island name signs at the docks; v24 (v0.25.108): Marine Registrar in Conch Bay, no Guild Registrar; v23 (v0.25.107): Tavern Keeper beside the Shipwright; v22 (v0.25.27): shipyards snap to the island side nearest the next island; v21 (v0.25.25): shipyards face the next island, circus ship offshore; v20 (v0.25.24): Marmalade Town hand-laid (World/Marmalade); v19 (v0.25.23): Conch Bay street spawns keep their houses; v18 (v0.25.22): Conch Bay terraced (quay, two terraces, garrison plateau, tapered towers); v17 (v0.25.21): islands turned to face the previous one, Conch Bay stairs; v16 (v0.25.20): Daybreak spawn by Rowan, Conch Bay hand-laid (World/ConchBay); v15 (v0.25.11): islands spread north/south, wider sea, islets; v14 (v0.25.6): Daybreak spawn by the campfire; v13: voxel NPCs; v12: Voxelize pass
+WB.WORLD_VERSION = 52 -- v52 (0.1.31-remake): Crimson Wall v2 = columnar red cliffs + cloud bands, Backflow Peak = a mountain of columns cut by the canyon the water climbs; v51 (0.1.30-remake, W1): the world is four seas around a cross: the Azure East is its north-east quarter (islands moved, walls on three sides, Backflow Peak in the south-west corner); v50 (0.1.29-remake): a Trader NPC on each Origin home island; v49 (0.1.26-remake, R5): four Origin home islands west of Daybreak (World/OriginIslands); v48 (0.1.24-remake, R5): islands built x GameConfig.WorldScale (1.5) around their center, people-size props keep their size; v47 (0.1.10-remake): no Job Master NPC (spots stay reserved); v46 (v0.25.150): no shipyard platform, the slips float (boardwalk only); v45 (v0.25.149): Courier Gull Post at every harbor, Marine Registrar by the Conch Bay stairs; v44 (v0.25.148): roof ridges sit on the stepped roof (no floating beam); v43 (v0.25.147): voxel stadium big top + the Confetti Crew occupying Marmalade; v42 (v0.25.146): Big Top for Captain Confetti, Epilogue execution platform; v41 (v0.25.143): a look of their own for every island quest giver; v40 (v0.25.142): one Tavern Keeper on Daybreak (inside the tavern); v39 (v0.25.141): tavern awning above the doorway; v38 (v0.25.140): enterable Daybreak tavern / smithy / store with their NPC inside; v37 (v0.25.134): organic voxel island outlines (IslandShape); v36 v36 (v0.25.133): Epilogue Town hand-laid; v35 v35 (v0.25.132): Mikan Isles hand-laid; v34 (v0.25.131): Barracuda Bistro hand-laid (World/Barracuda); v33 (v0.25.130): Honeyslope hand-laid (World/Honeyslope); v32 (v0.25.129): the Brig (jail cell) at the Conch Bay garrison; v31 (v0.25.120): Power board is a map piece in front of the west house; v30 (v0.25.119): Bounty Board moved to the west street house; v29 (v0.25.118): Job Master walk-in ring + new look; v28 (v0.25.115): DeFlicker stacks faces within 0.035 (grass under the plaza paving); v27 (v0.25.113): no Bay Serpent buoys/sign, wooden shipyard plots, voxel barrels/crates/chests; v26 (v0.25.112): DeFlicker pass, hill caps one step apart per lobe; v25 (v0.25.109): no island name signs at the docks; v24 (v0.25.108): Marine Registrar in Conch Bay, no Guild Registrar; v23 (v0.25.107): Tavern Keeper beside the Shipwright; v22 (v0.25.27): shipyards snap to the island side nearest the next island; v21 (v0.25.25): shipyards face the next island, circus ship offshore; v20 (v0.25.24): Marmalade Town hand-laid (World/Marmalade); v19 (v0.25.23): Conch Bay street spawns keep their houses; v18 (v0.25.22): Conch Bay terraced (quay, two terraces, garrison plateau, tapered towers); v17 (v0.25.21): islands turned to face the previous one, Conch Bay stairs; v16 (v0.25.20): Daybreak spawn by Rowan, Conch Bay hand-laid (World/ConchBay); v15 (v0.25.11): islands spread north/south, wider sea, islets; v14 (v0.25.6): Daybreak spawn by the campfire; v13: voxel NPCs; v12: Voxelize pass
 
 -- Old copies of the map can hide anywhere in Workspace: a renamed or regrouped World, an island dragged into
 -- Handmade, single NPCs / chests / docks pasted from an old bake. They draw on top of the new islands and register
@@ -1329,7 +1447,6 @@ function WB.Build()
 	end
 	buildForts()
 	buildIslets(world)
-	buildRedLine(world)
 	-- v0.24.0 (owner): everything round or sloped becomes blocks (World/Voxelize)
 	local okVox, voxErr = pcall(require(script.Parent.Voxelize).Run, world)
 	if not okVox then
@@ -1339,6 +1456,11 @@ function WB.Build()
 	local okDf, dfErr = pcall(require(script.Parent.DeFlicker).Run, world)
 	if not okDf then
 		warn("[WorldBuilder] deflicker failed:", dfErr)
+	end
+	-- W1 wall v2: after Voxelize / DeFlicker (thousands of plain blocks they never need to look at)
+	local okRl, rlErr = pcall(buildRedLine, world)
+	if not okRl then
+		warn("[WorldBuilder] Crimson Wall failed:", rlErr)
 	end
 	setupLighting()
 	WB.RemoveStaleMaps(world)

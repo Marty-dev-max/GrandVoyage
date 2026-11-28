@@ -333,6 +333,43 @@ function GW.Start()
 			p.mastery[field] = { lv = math.clamp(tonumber(lv), 1, 50), xp = tonumber(xp) or 0 }
 			R.PlayerService.Recompute(player)
 			R.PlayerService.MarkDirty(player)
+		elseif data.cmd == "prologue" then -- remake R5 tests: "<OriginId>" starts that prologue, "off" ends it,
+			-- "talk" / "kill" do the current step's Talk / Kill goal (main quest step is never touched)
+			local p = R.DataService.Get(player)
+			local v = tostring(data.value or "")
+			local q = p and p.quest
+			if not q then
+				return false, "no quest"
+			end
+			local Quests = require(game:GetService("ReplicatedStorage").Shared.Config.Quests)
+			local s = R.QuestService.StepOf(p)
+			if v == "off" then
+				if q.pro and q.pro.keep then
+					q.progress = q.pro.keep -- the main step's progress from before the test
+				end
+				q.pro = nil
+			elseif v == "talk" then
+				if not (s and s.goal.kind == "Talk") then
+					return false, "not a Talk step"
+				end
+				R.QuestService.OnTalk(player, s.goal.target, s.island)
+				return true
+			elseif v == "kill" then
+				if not (s and s.goal.kind == "Kill") then
+					return false, "not a Kill step"
+				end
+				R.QuestService.Event(player, "Kill", s.goal.target, s.goal.count or 1)
+				return true
+			elseif Quests.Prologue[v] then
+				q.pro = { origin = v, i = 1, keep = q.pro and q.pro.keep or q.progress }
+				q.progress = 0
+			else
+				return false, "use an Origin id, off, talk or kill"
+			end
+			R.PlayerService.MarkDirty(player)
+			R.QuestService.Check(player)
+			R.QuestService.Push(player, true)
+			return true
 		elseif data.cmd == "shiphurt" then -- remake M4: hole your own ship for repair tests (value = damage, adds water)
 			local ship = R.ShipService.GetShipOf(player)
 			if not ship then

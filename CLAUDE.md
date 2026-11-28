@@ -1468,7 +1468,17 @@ The owner tests in Studio and sends screenshots; previews of new art are rendere
    level-1 character to `o.island` (unlocked + lastIsland); older saves stay put. Map (Panels.FastTravel): origin
    islands = 66x58 tiles zigzagged at the west edge (ORIGIN_AT), level in a tooltip, route islands start at x0 0.19.
    Emblems isl_<Id> in tools/gen_island_icons.py (`--only A,B` renders just those; restore island_icons_sheet.png
-   after). Not done yet: per-Origin prologue quests (the tutorial still starts with Rowan on Daybreak). WORLD_VERSION 49.
+   after). WORLD_VERSION 49.
+   R5 0.1.27-remake: Origin PROLOGUES = `Quests.Prologue[originId]` (4 steps: Talk the Origin NPC role -> Kill 5 of the
+   island's mob -> Talk Guide -> goal kind "Arrive" Daybreak; ids PM*/PB*/PO*/PR*, in Quests.ById with s.prologue +
+   s.index). Saved as quest.pro = { origin, i } (OriginService.Apply sets it for a level-1 character moved to its island
+   while quest.step == 1 and progress 0); prologue steps share quest.progress, quest.step stays 1. QuestService proChain /
+   stepOf (QS.StepOf) serve the prologue first; complete() just advances pro.i (no Gems, no chartNext); "Arrive" is a
+   state kind checked by the character's flat distance to the island (radius + 30) on a 2 s loop. Step `speaker` +
+   `originDialog[origin]` (Rowan's T01 greets each Origin): `Quests.DialogFor(step, origin)` / `Quests.SpeakerOf(step)`;
+   the Quest push carries `lines` (Replay talk) + `pro = { i, n }` (tracker chapter "PROLOGUE"). Skip tutorial clears pro.
+   Admin `prologue` "<OriginId>" | "talk" | "kill" | "off" (Studio tests on the current character; pro.keep restores
+   the main step's progress).
 1. Wait for the owner's verdict on v0.10.3 (hills/flowers/grass); fix what they point at.
 2. Voxel art pass: monsters DONE v0.11.0 (voxel_monsters.py; AssetService sizes = shape base x style.scale,
    MonsterService.RefreshModels swaps placeholder island mobs). Pets + fruits DONE v0.11.1 (voxel_pets.py).

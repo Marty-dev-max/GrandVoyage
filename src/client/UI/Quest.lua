@@ -116,7 +116,7 @@ local function buildTracker()
 	local rb, replay = UI.Button(tracker, "💬 Replay", T.Ocean, UDim2.fromOffset(96, 24), function()
 		local step = data and Quests.ById[data.id or ""]
 		if step then
-			Quest.Dialog(Quests.Guide[step.island] or "Guide", step.dialog)
+			Quest.Dialog(data.speaker or Quests.SpeakerOf(step), data.lines or step.dialog)
 		end
 	end)
 	rb.TextScaled = false
@@ -196,7 +196,7 @@ function refreshTracker()
 	end
 	tracker.Visible = not Quest.collapsed
 	local isl = Islands.ById[step.island]
-	tChapter.Text = (data.tutorial and "TUTORIAL" or "MAIN QUEST") .. "  •  " .. string.upper(isl and isl.name or step.island) .. "  •  " .. data.step .. "/" .. data.total
+	tChapter.Text = (data.pro and "PROLOGUE" or data.tutorial and "TUTORIAL" or "MAIN QUEST") .. "  •  " .. string.upper(isl and isl.name or step.island) .. "  •  " .. (data.pro and (data.pro.i .. "/" .. data.pro.n) or (data.step .. "/" .. data.total))
 	tTitle.Text = step.title
 	local text, count, ratio = goalText(step, data.progress or 0)
 	if step.goal.kind == "Kill" and step.goal.target and Monsters[step.goal.target] then
@@ -536,7 +536,7 @@ function Quest.OnQuest(d)
 	refreshTracker()
 	if d.dialog then
 		local step = Quests.ById[d.id or ""]
-		Quest.Dialog(d.speaker or (step and Quests.Guide[step.island]) or "Guide", d.dialog)
+		Quest.Dialog(d.speaker or (step and Quests.SpeakerOf(step)) or "Guide", d.dialog)
 	end
 end
 

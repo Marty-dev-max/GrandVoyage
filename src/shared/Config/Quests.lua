@@ -19,9 +19,12 @@
 --   Level    reach Base Lv.count                                 [checked from player state]
 --   Class    pick a class at the Job Master                      [checked from player state]
 --   Talent   own count Talent cards (remake: replaces the Job Master visit) [checked from player state]
+--   Arrive   stand on island `target` (QuestService checks every 2 s)    [checked from player state]
 --
 -- at (where the quest marker points): { npc = role } | { spawn = monsterId } | { island = id } | { sea = true }
 -- reward: { beli, exp, job, items = { { id, qty } } }
+-- speaker: who says the dialog (default: the island's Guide). originDialog[originId]: lines that replace `dialog`
+-- for players of that Origin (Quests.DialogFor).
 local Q = {}
 
 Q.Guide = {
@@ -46,6 +49,12 @@ Q.Main = {
 	{
 		id = "T01", island = "Daybreak", title = "Ahoy, Greenhorn!",
 		dialog = { "Easy now, you washed up half-drowned. Name's Rowan. Thirty years at sea, and this jungle camp is where I fish strays out of the surf.", "Want to sail the Azure East? Then you'll need muscle, a crew and a ship. Talk to me and we'll get you started." },
+		originDialog = {
+			MarineCadet = { "A cadet from Bastion Rock! Name's Rowan. Your Instructor sent word you'd be coming.", "Before the Marines hand you a ship, they want you blooded. Talk to me and we'll get you started." },
+			BountyHunter = { "Old Gaff sent you, eh? Name's Rowan. That Bandit Chief poster won't collect itself.", "But a hunter needs muscle, a crew and a ship first. Talk to me and we'll get you started." },
+			Outlaw = { "Shackle Reef, you say? Then I never saw you. Name's Rowan, and this camp asks no questions.", "Want to stay free? You'll need muscle, a crew and a ship. Talk to me and we'll get you started." },
+			RelicSeeker = { "Sage Quill's student! Name's Rowan. So the old map points under Daybreak, does it?", "Ruins or not, you'll need muscle, a crew and a ship to go digging. Talk to me and we'll get you started." },
+		},
 		goal = { kind = "Talk", target = "Guide" }, text = "Talk to Rowan",
 		hint = "Walk up to the glowing NPC by the campfire and press E (tap Talk on phones).",
 		at = { npc = "Guide" }, reward = { beli = 100, exp = 20, job = 10 },
@@ -358,6 +367,134 @@ Q.Main = {
 	},
 }
 
+-- R5 (0.1.27): a short prologue on each Origin's home island (World/OriginIslands), played before the Daybreak
+-- tutorial: meet your Origin's NPC, clear the island's own troublemakers, report, then make your way to Daybreak.
+-- Saved as quest.pro = { origin, i } (OriginService.Apply starts it); the Castaway has none.
+local SAIL_HINT = "Call your ship at a dock (MENU > Ships), then row or sail toward the arrow. Or fly with the Courier Gull Post (100 Doubloons)."
+local SAIL_LINES = { "Daybreak lies east. Call your ship at a dock and follow the arrow, or let the Courier Gull Post fly you over." }
+Q.Prologue = {
+	MarineCadet = {
+		{
+			id = "PM1", island = "BastionRock", title = "Last Day at the Academy", speaker = "Marine Registrar",
+			dialog = { "Cadet! Stand up straight. Your papers are signed: as of today you serve the Marines.", "One last duty before your posting: the supply sheds. Instructor Halyard will tell you the rest." },
+			goal = { kind = "Talk", target = "Marine" }, text = "Report to the Marine Registrar",
+			hint = "The Marine Registrar stands in front of the academy. Walk up and press E.",
+			at = { npc = "Marine" }, reward = { beli = 100, exp = 20, job = 10 },
+		},
+		{
+			id = "PM2", island = "BastionRock", title = "Thieves in the Stores",
+			dialog = { "Instructor Halyard. Gull Thieves keep raiding our supply sheds on the west shore. Shameful, on an academy island.", "Clear them out, cadet. Hold F to block their clubs, then hit back." },
+			goal = { kind = "Kill", target = "GullThief", count = 5 }, text = "Defeat Gull Thieves",
+			hint = "The supply sheds are west of the drill yard. Click to attack, hold F to block.",
+			at = { spawn = "GullThief" }, reward = { beli = 150, exp = 60, job = 40, items = { { "MeatOnBone", 3 } } },
+		},
+		{
+			id = "PM3", island = "BastionRock", title = "Your First Posting",
+			dialog = { "Not bad for a greenhorn. Your posting is Daybreak Island, east of here. Old Rowan there trains every new sailor in these waters.", "Your dinghy waits at the dock. Off you go, and make the academy proud." },
+			goal = { kind = "Talk", target = "Guide" }, text = "Report to Instructor Halyard",
+			hint = "Instructor Halyard stands beside the Registrar in front of the academy.",
+			at = { npc = "Guide" }, reward = { beli = 100, exp = 30, job = 20 },
+		},
+		{
+			id = "PM4", island = "BastionRock", title = "Posted to Daybreak",
+			dialog = SAIL_LINES,
+			goal = { kind = "Arrive", target = "Daybreak" }, text = "Reach Daybreak Island",
+			hint = SAIL_HINT,
+			at = { island = "Daybreak" }, reward = { beli = 200, exp = 50, job = 30, items = { { "TangerineJuice", 3 } } },
+		},
+	},
+	BountyHunter = {
+		{
+			id = "PB1", island = "SmugglersHollow", title = "Fresh Paper", speaker = "Bounty Board",
+			dialog = { "WANTED: Ragmaw, Bandit Chief of Daybreak. 200 Doubloons. Last seen on the windmill hill.", "Under it, scrawled in charcoal: 'New in town? Ask Old Gaff on the wharf about small jobs. Small jobs pay rent.'" },
+			goal = { kind = "Talk", target = "BossBoard" }, text = "Read the Bounty Board",
+			hint = "The Bounty Board stands by the wanted wall. Walk up and press E.",
+			at = { npc = "BossBoard" }, reward = { beli = 100, exp = 20, job = 10 },
+		},
+		{
+			id = "PB2", island = "SmugglersHollow", title = "Rats on the Wharf",
+			dialog = { "Old Gaff. You want work? Dock Rats cut purses all along the wharf and the bar is losing customers.", "Thin them out and I'll pay. Watch their blades: hold F to block." },
+			goal = { kind = "Kill", target = "DockRat", count = 5 }, text = "Defeat Dock Rats",
+			hint = "The Dock Rats loiter on the east side of the wharf town. Click to attack, hold F to block.",
+			at = { spawn = "DockRat" }, reward = { beli = 150, exp = 60, job = 40, items = { { "MeatOnBone", 3 } } },
+		},
+		{
+			id = "PB3", island = "SmugglersHollow", title = "Small Jobs Pay Rent",
+			dialog = { "Here's your pay. Now, that Ragmaw poster: you're not ready for him. Not yet.", "Go to Daybreak. Rowan trains every greenhorn in these waters, and Ragmaw's hill is right behind his village." },
+			goal = { kind = "Talk", target = "Guide" }, text = "Collect your pay from Old Gaff",
+			hint = "Old Gaff waits on the wharf street in front of the cave.",
+			at = { npc = "Guide" }, reward = { beli = 100, exp = 30, job = 20 },
+		},
+		{
+			id = "PB4", island = "SmugglersHollow", title = "The Hunt Begins",
+			dialog = SAIL_LINES,
+			goal = { kind = "Arrive", target = "Daybreak" }, text = "Reach Daybreak Island",
+			hint = SAIL_HINT,
+			at = { island = "Daybreak" }, reward = { beli = 200, exp = 50, job = 30, items = { { "TangerineJuice", 3 } } },
+		},
+	},
+	Outlaw = {
+		{
+			id = "PO1", island = "ShackleReef", title = "Out of the Hulk",
+			dialog = { "Another one walked out of that wreck? Ha! Name's Rattle Jack. The storm cracked the hulk open, and half the cells with it.", "Sit by the fire. Then we talk about staying free." },
+			goal = { kind = "Talk", target = "Guide" }, text = "Talk to Rattle Jack",
+			hint = "Rattle Jack sits at the escapees' camp by the fire. Walk up and press E.",
+			at = { npc = "Guide" }, reward = { beli = 100, exp = 20, job = 10 },
+		},
+		{
+			id = "PO2", island = "ShackleReef", title = "The Jailers Still Walk",
+			dialog = { "The Hulk Jailers lived through the wreck and they still count heads. They come for us at night.", "Push them back to their hulk. They hit hard: hold F to block, and tap it right before a blow to parry." },
+			goal = { kind = "Kill", target = "HulkJailer", count = 5 }, text = "Defeat Hulk Jailers",
+			hint = "The jailers guard the wrecked hulk on the north-west shore. Click to attack, hold F to block.",
+			at = { spawn = "HulkJailer" }, reward = { beli = 150, exp = 60, job = 40, items = { { "MeatOnBone", 3 } } },
+		},
+		{
+			id = "PO3", island = "ShackleReef", title = "A Price on Your Head",
+			dialog = { "You did it. But your face is on a poster now, and the Marines will sail by sooner or later.", "Go to Daybreak. Old Rowan there asks no questions, and he'll make a sailor of you." },
+			goal = { kind = "Talk", target = "Guide" }, text = "Report to Rattle Jack",
+			hint = "Back to the camp fire.",
+			at = { npc = "Guide" }, reward = { beli = 100, exp = 30, job = 20 },
+		},
+		{
+			id = "PO4", island = "ShackleReef", title = "Slip Away",
+			dialog = SAIL_LINES,
+			goal = { kind = "Arrive", target = "Daybreak" }, text = "Reach Daybreak Island",
+			hint = SAIL_HINT,
+			at = { island = "Daybreak" }, reward = { beli = 200, exp = 50, job = 30, items = { { "TangerineJuice", 3 } } },
+		},
+	},
+	RelicSeeker = {
+		{
+			id = "PR1", island = "InkwellIsle", title = "Overdue", speaker = "Librarian",
+			dialog = { "Shh! You're the one who borrowed the old sea map? It came back with pages missing.", "Sage Quill is down by the garden path. He'll want to hear about this." },
+			goal = { kind = "Talk", target = "Shop" }, text = "Talk to the Librarian",
+			hint = "The Librarian stands inside the library on the hill. Walk into the ring in front of the counter.",
+			at = { npc = "Shop" }, reward = { beli = 100, exp = 20, job = 10 },
+		},
+		{
+			id = "PR2", island = "InkwellIsle", title = "Torn Pages",
+			dialog = { "Sage Quill. The missing pages were torn out by Tomb Robbers, the ones digging in the old ruins east of the hill.", "Get them back. They fight dirty: hold F to block." },
+			goal = { kind = "Kill", target = "TombRobber", count = 5 }, text = "Defeat Tomb Robbers",
+			hint = "The ruins are east of the library hill. Click to attack, hold F to block.",
+			at = { spawn = "TombRobber" }, reward = { beli = 150, exp = 60, job = 40, items = { { "MeatOnBone", 3 } } },
+		},
+		{
+			id = "PR3", island = "InkwellIsle", title = "Under Daybreak",
+			dialog = { "Look: with the pages back, the map lines up. The ruins lie under Daybreak Island!", "Rowan lives there. He knows every cave on that island. Go, and write to me." },
+			goal = { kind = "Talk", target = "Guide" }, text = "Bring the pages to Sage Quill",
+			hint = "Sage Quill waits by the path below the library.",
+			at = { npc = "Guide" }, reward = { beli = 100, exp = 30, job = 20 },
+		},
+		{
+			id = "PR4", island = "InkwellIsle", title = "Follow the Map",
+			dialog = SAIL_LINES,
+			goal = { kind = "Arrive", target = "Daybreak" }, text = "Reach Daybreak Island",
+			hint = SAIL_HINT,
+			at = { island = "Daybreak" }, reward = { beli = 200, exp = 50, job = 30, items = { { "TangerineJuice", 3 } } },
+		},
+	},
+}
+
 Q.TutorialEnd = 13 -- steps 1..13 are the Daybreak tutorial (skippable)
 -- quest save version: v2 inserted T12 (Bay Serpent) before "Next Port: Conch Bay" (QuestService migrates old saves)
 Q.SaveVersion = 3 -- v2: Bay Serpent step inserted at 12; v3: Boar Hunt inserted at 10
@@ -366,6 +503,22 @@ Q.ById = {}
 for i, s in ipairs(Q.Main) do
 	s.index = i
 	Q.ById[s.id] = s
+end
+for origin, chain in pairs(Q.Prologue) do
+	for i, s in ipairs(chain) do
+		s.index = i
+		s.prologue = origin
+		Q.ById[s.id] = s
+	end
+end
+
+-- the lines a step's speaker says to this player (Origin-specific greetings on Daybreak)
+function Q.DialogFor(step, origin)
+	return step and (step.originDialog and origin and step.originDialog[origin] or step.dialog) or nil
+end
+
+function Q.SpeakerOf(step)
+	return step and (step.speaker or Q.Guide[step.island]) or "Guide"
 end
 
 return Q

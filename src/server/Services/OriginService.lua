@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local Origins = require(Shared.Config.Origins)
 local MonsterLooks = require(Shared.Config.MonsterLooks)
+local Quests = require(Shared.Config.Quests)
 local ItemDB = require(Shared.Modules.ItemDB)
 
 local O = {}
@@ -37,6 +38,13 @@ function O.Apply(d, originId, weaponId)
 		d.unlocked = d.unlocked or {}
 		d.unlocked[o.island] = true
 		d.lastIsland = o.island
+		-- R5 (0.1.27): the Origin's prologue quest on that island runs before the Daybreak tutorial
+		if Quests.Prologue[o.id] then
+			d.quest = type(d.quest) == "table" and d.quest or { step = 1, progress = 0 }
+			if (d.quest.step or 1) == 1 and (d.quest.progress or 0) == 0 then
+				d.quest.pro = { origin = o.id, i = 1 }
+			end
+		end
 	end
 	-- the starting weapon: the starter knuckles become the chosen weapon (an older slot gets it added + equipped)
 	d.inventory = d.inventory or {}

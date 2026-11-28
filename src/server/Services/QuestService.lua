@@ -24,7 +24,7 @@ local ACTION_EVENTS = {
 	RecruitCrew = "Hire",
 	LaunchShip = "Launch",
 }
-local STATE_KINDS = { Reach = true, JobLevel = true, Level = true, Class = true, Talent = true }
+local STATE_KINDS = { Reach = true, JobLevel = true, Level = true, Class = true, Talent = true, Arrive = true }
 
 local function questOf(p)
 	if type(p.quest) ~= "table" then
@@ -47,8 +47,38 @@ local function questOf(p)
 	return q
 end
 
+-- R5 (0.1.27): the Origin prologue (quest.pro = { origin, i }) runs before main step 1; returns the chain + index
+local function proChain(q)
+	local pro = type(q.pro) == "table" and q.pro or nil
+	local chain = pro and Quests.Prologue[pro.origin or ""]
+	if chain and (pro.i or 1) <= #chain then
+		return chain, pro.i or 1
+	end
+	if pro then
+		q.pro = nil -- finished (or an Origin without a prologue)
+	end
+	return nil
+end
+
 local function stepOf(p)
-	return Quests.Main[questOf(p).step]
+	local q = questOf(p)
+	local chain, i = proChain(q)
+	if chain then
+		return chain[i]
+	end
+	return Quests.Main[q.step]
+end
+QS.StepOf = stepOf
+
+-- Arrive goals: the character stands on that island (flat distance from its middle)
+local function onIsland(player, islandId)
+	local isl = Islands.ById[islandId or ""]
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if not (isl and root) then
+		return false
+	end
+	local d = Vector2.new(root.Position.X - isl.x, root.Position.Z - (isl.z or 0)).Magnitude
+	return d <= isl.radius + 30 and root.Position.Y > -5
 end
 
 local function push(player, showDialog)
@@ -57,16 +87,20 @@ local function push(player, showDialog)
 		return
 	end
 	local q = questOf(p)
-	local s = Quests.Main[q.step]
+	local chain, i = proChain(q)
+	local s = stepOf(p)
+	local lines = s and Quests.DialogFor(s, p.origin)
 	Net.Push(player, "Quest", {
 		step = q.step,
 		total = #Quests.Main,
 		progress = q.progress,
 		done = s == nil,
 		id = s and s.id,
-		dialog = showDialog and s and s.dialog or nil,
-		speaker = s and Quests.Guide[s.island] or nil,
+		dialog = showDialog and lines or nil,
+		lines = lines, -- Replay talk (Origin-specific lines)
+		speaker = s and Quests.SpeakerOf(s) or nil,
 		tutorial = q.step <= Quests.TutorialEnd,
+		pro = chain and { i = i, n = #chain } or nil,
 	})
 end
 QS.Push = push
@@ -113,6 +147,22 @@ local function complete(player)
 		return
 	end
 	local q = questOf(p)
+	if s.prologue then
+		-- Origin prologue: next prologue step (no Gems: the main chain pays those)
+		local keep = q.pro.keep -- (Admin "prologue" tests keep the main step's progress here)
+		q.pro.i = (q.pro.i or 1) + 1
+		q.progress = 0
+		proChain(q)
+		if not q.pro and keep then
+			q.progress = keep
+		end
+		R.PlayerService.MarkDirty(player)
+		grant(player, s.reward)
+		Net.Push(player, "QuestComplete", { title = s.title, reward = s.reward })
+		push(player, true)
+		task.defer(QS.Check, player)
+		return
+	end
 	q.step += 1
 	q.progress = 0
 	R.PlayerService.MarkDirty(player)
@@ -175,6 +225,7 @@ function QS.Check(player)
 	end
 	local g = s.goal
 	local done = (g.kind == "Reach" and p.unlocked[g.target])
+		or (g.kind == "Arrive" and onIsland(player, g.target))
 		or (g.kind == "JobLevel" and (p.jobLevel >= g.count or (p.classSwitches or 0) > 0))
 		or (g.kind == "Level" and p.baseLevel >= g.count)
 		or (g.kind == "Class" and (p.classSwitches or 0) > 0)
@@ -208,7 +259,8 @@ function QS.OnTalk(player, role, islandId)
 	end
 	if role == "Guide" then
 		-- remind the player what to do (or point them to the right island)
-		local lines = s.island == islandId and s.dialog or { "Your next job is on " .. s.island .. ". Check the quest tracker on the left!" }
+		local there = Islands.ById[s.island]
+		local lines = s.island == islandId and Quests.DialogFor(s, p.origin) or { "Your next job is on " .. (there and there.name or s.island) .. ". Check the quest tracker on the left!" }
 		Net.Push(player, "QuestDialog", { speaker = Quests.Guide[islandId] or "Guide", lines = lines })
 		return true
 	end
@@ -243,6 +295,19 @@ function QS.Start()
 			end
 		end)
 	end)
+	-- Arrive goals (Origin prologue: reach Daybreak) are checked from the character's position
+	task.spawn(function()
+		while true do
+			task.wait(2)
+			for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
+				local p = R.PlayerService.Profile(player)
+				local s = p and stepOf(p)
+				if s and s.goal.kind == "Arrive" then
+					QS.Check(player)
+				end
+			end
+		end
+	end)
 	Net.Handle("QuestState", function(player)
 		push(player, false)
 		QS.Check(player)
@@ -256,6 +321,7 @@ function QS.Start()
 		end
 		q.step = Quests.TutorialEnd + 1
 		q.progress = 0
+		q.pro = nil -- the Origin prologue goes with it
 		if R.InventoryService.Count(player, "SeaCompass") <= 0 then
 			R.InventoryService.AddItem(player, "SeaCompass", 1)
 		end

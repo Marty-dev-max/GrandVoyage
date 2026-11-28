@@ -25,7 +25,7 @@ end
 -- segment = index of the last island passed (used for NPC ship tiers)
 function Z.Segment(x)
 	local seg = 1
-	for i, island in ipairs(Islands.List) do
+	for i, island in ipairs(Islands.Route) do -- R5: Origin islands are off the route
 		if x >= island.x then
 			seg = i
 		end

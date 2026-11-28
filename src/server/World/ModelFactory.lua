@@ -303,6 +303,27 @@ local NPC_LOOK = {
 	},
 	-- v0.25.143 (owner: every island's quest giver should be someone else, not Rowan's twin). shirt/pants/shoes = Looks
 	-- names, hat = voxelHat kind (overrides the caller's), race/variant = a Heritage body.
+	-- R5 Origin home islands
+	["Instructor Halyard"] = {
+		shirt = "Captain Coat", pants = "Long Pants", shoes = "Tall Boots", hat = "marine", hair = "Buzz",
+		eyes = "Stern", mouth = "Flat", mark = "Scar", hair1 = "8A8A90", shirt1 = "F4F4F4", shirt2 = "2850B4",
+		pants1 = "1C2A5A", pants2 = "F4F4F4", shoes1 = "1C1A22", shoes2 = "1C1A22", skin = "D6A478",
+	},
+	["Old Gaff"] = {
+		shirt = "Open Vest", pants = "Baggy", shoes = "Boots", hat = "bandana", hair = "Shaggy Long", eyes = "Tired",
+		mouth = "Smirk", mark = "Stubble", hair1 = "C8C8C8", shirt1 = "6A4A30", shirt2 = "C8A070", pants1 = "3A3440",
+		shoes1 = "2A1E18", shoes2 = "2A1E18", skin = "C8946A",
+	},
+	["Rattle Jack"] = {
+		shirt = "Bandage Wrap", pants = "Rolled Cuffs", shoes = "Barefoot", hat = "none", hair = "Mullet", eyes = "Sharp",
+		mouth = "Grin", mark = "Scar", hair1 = "3A2418", shirt1 = "E8E0CC", shirt2 = "A89878", pants1 = "6A6458",
+		shoes1 = "D6A478", shoes2 = "D6A478", skin = "D6A478",
+	},
+	["Sage Quill"] = {
+		shirt = "Belted Tunic", pants = "Wide Hakama", shoes = "Slippers", hat = "none", hair = "Long Straight", eyes = "Calm",
+		mouth = "Small Smile", hair1 = "F0F0F4", shirt1 = "6E46A0", shirt2 = "E8D8A8", pants1 = "3C2A5A", shoes1 = "2A1E30",
+		shoes2 = "2A1E30", skin = "F6D0AA",
+	},
 	["Lieutenant Pell"] = {
 		shirt = "Captain Coat", pants = "Long Pants", shoes = "Tall Boots", hat = "marine", hair = "Side Part",
 		eyes = "Determined", mouth = "Flat", hair1 = "243A96", hair2 = "1C1A22", shirt1 = "F4F4F4", shirt2 = "2850B4",

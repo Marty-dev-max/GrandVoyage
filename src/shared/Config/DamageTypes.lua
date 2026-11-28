@@ -34,6 +34,11 @@ T.Of = {
 	MountainBandit = { "Slash", "Blunt" }, -- parries blades with his own cutlass
 	BanditChief = { "Blunt", "Pierce" }, -- big brute in a fur mantle
 	BaySerpent = { "Slash", "Pierce" }, -- scales
+	-- Origin home islands (Lv 1-5)
+	GullThief = { "Pierce", "Slash" }, -- ducks shots, no armor
+	DockRat = { "Slash", "Blunt" }, -- quick with his own blade
+	HulkJailer = { "Blunt", "Slash" }, -- thick leather jerkin
+	TombRobber = { "Slash", "Pierce" }, -- padded coat
 	-- Conch Bay
 	MarineRecruit = { "Slash", "Blunt" },
 	GuardWolf = { "Blunt", "Slash" },

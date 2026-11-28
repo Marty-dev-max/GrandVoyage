@@ -1,7 +1,7 @@
 -- Origins + starting weapons (remake R2, docs/Plan-Remake.md sec 6). Picked once when a character is created
--- (title menu: look -> ORIGIN -> WEAPON), saved as p.origin. Every Origin starts on Daybreak for now, each at its
--- own spot beside an NPC (`npc` role, `npcTitle` to pick one when an island has several); their own home islands
--- come with the world update (R5). Perks are plain numbers read by Origins.Mult (server: PlayerService.GiveExp,
+-- (title menu: look -> ORIGIN -> WEAPON), saved as p.origin. R5 (0.1.26): every Origin but the Castaway starts on a
+-- home island of its own (Config/Islands `origin`, World/OriginIslands), beside an NPC (`npc` role); the Castaway
+-- washes up on Daybreak as before. Perks are plain numbers read by Origins.Mult (server: PlayerService.GiveExp,
 -- MonsterService drops, ChestService, CombatService damage).
 local O = {}
 
@@ -21,11 +21,11 @@ O.List = {
 		name = "Marine Cadet",
 		icon = "anchor",
 		color = Color3.fromRGB(110, 160, 240),
-		story = "Fresh out of the academy and posted to the Daybreak harbor.",
+		story = "Your last day at the Bastion Rock cadet academy. The Registrar has your first orders.",
 		perk = "Starts in the Marines: salary by rank + a Seastone Bracer to arrest pirates",
 		limit = "Marine ships and Marines are your side: you can never attack them",
-		island = "Daybreak",
-		npc = "FastTravel", -- the harbor post
+		island = "BastionRock",
+		npc = "Marine", -- the Marine Registrar in front of the academy
 		faction = "Marine",
 		kit = { { "SeastoneBracer", 1 } },
 	},
@@ -33,10 +33,10 @@ O.List = {
 		name = "Bounty Hunter",
 		icon = "skull",
 		color = Color3.fromRGB(240, 190, 80),
-		story = "You came for the posters on the Bounty Board. Big heads pay big.",
+		story = "Smuggler's Hollow, where every wanted poster in the sea ends up. Big heads pay big.",
 		perk = "Bosses give +30% EXP and Doubloons",
 		limit = "Regular monsters give 20% less EXP",
-		island = "Daybreak",
+		island = "SmugglersHollow",
 		npc = "BossBoard",
 		mult = { bossExp = 1.3, bossBeli = 1.3, mobExp = 0.8 },
 	},
@@ -44,11 +44,11 @@ O.List = {
 		name = "Outlaw",
 		icon = "flag",
 		color = Color3.fromRGB(230, 90, 80),
-		story = "You broke out of a prison ship and hid in the Daybreak tavern.",
+		story = "The prison hulk ran aground on Shackle Reef in the storm. You walked out of your cell.",
 		perk = "+20% EXP and Doubloons from humanoid enemies",
 		limit = "Starts as a pirate with a bounty: Marines can arrest you",
-		island = "Daybreak",
-		npc = "Tavern",
+		island = "ShackleReef",
+		npc = "Guide", -- Rattle Jack at the escapees' camp
 		faction = "Pirate",
 		bounty = 5000,
 		mult = { humanExp = 1.2, humanBeli = 1.2 },
@@ -57,11 +57,11 @@ O.List = {
 		name = "Relic Seeker",
 		icon = "book",
 		color = Color3.fromRGB(190, 140, 240),
-		story = "An old map led you to the ruins said to lie under these islands.",
+		story = "The Inkwell library holds the old map of the ruins said to lie under these islands.",
 		perk = "Chests and dungeons give +30% EXP and Doubloons",
 		limit = "Deals 10% less damage until Lv.20",
-		island = "Daybreak",
-		npc = "Shop", -- 0.1.10: no Job Master any more; the General Store keeper sells maps of the ruins
+		island = "InkwellIsle",
+		npc = "Shop", -- the Librarian inside the Inkwell library
 		mult = { chestExp = 1.3, chestBeli = 1.3, damage = 0.9, damageUntil = 20 },
 	},
 }

@@ -2514,14 +2514,33 @@ function Panels.FastTravel()
 	-- v0.25.11: islands drawn where they are (x east, -z north), Doldrums bands top and bottom
 	local strip = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), AnchorPoint = Vector2.new(0, 0), Position = UDim2.new(0, 0, 0, 0), Size = UDim2.new(1, 0, 1, -70), Parent = win.body })
 	local minX, maxX = -500, Islands.RedLine.x
+	-- R5: the Origin home islands lie west of Daybreak, close together: they get small tiles of their own in a
+	-- staggered column at the west edge (north to south like the sea), the route islands start right of it
+	local ORIGIN_AT = {}
+	do
+		local list = {}
+		for _, isl in ipairs(Islands.List) do
+			if isl.origin then
+				table.insert(list, isl)
+			end
+		end
+		table.sort(list, function(a, b)
+			return (a.z or 0) < (b.z or 0)
+		end)
+		for i, isl in ipairs(list) do
+			local k = #list > 1 and (i - 1) / (#list - 1) or 0.5
+			ORIGIN_AT[isl.id] = Vector2.new(i % 2 == 1 and 0.1 or 0.03, k) -- zigzag: the strip is too short for one column
+		end
+	end
 	-- v0.25.110 (owner: tiles ran into each other and the Doldrums bands): islands live in an inner sea frame that keeps
 	-- a whole tile + its two label lines between the bands, and z is spread over the farthest island's z
 	local maxZ = 1
-	for _, isl in ipairs(Islands.List) do
+	for _, isl in ipairs(Islands.Route) do
 		maxZ = math.max(maxZ, math.abs(isl.z or 0))
 	end
+	local x0 = next(ORIGIN_AT) and 0.19 or 0.05
 	local function mapPos(x, z)
-		return math.clamp(0.05 + (x - minX) / (maxX - minX) * 0.83, 0.05, 0.88), 0.5 + math.clamp(z / maxZ, -1, 1) * 0.5
+		return math.clamp(x0 + (x - minX) / (maxX - minX) * (0.88 - x0), 0.04, 0.88), 0.5 + math.clamp(z / maxZ, -1, 1) * 0.5
 	end
 	UI.Corner(strip, 16)
 	-- v0.25.148 (owner: should read as sea water): deep-to-shallow blue + pixel wave crests scattered on a fixed hash
@@ -2554,17 +2573,26 @@ function Panels.FastTravel()
 	local sea = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 42 + TH / 2 + 4), Size = UDim2.new(1, 0, 1, -(84 + TH + 44)), Parent = strip })
 	local p = State.profile
 	local n = #Islands.List
-	for i, isl in ipairs(Islands.List) do
+	for _, isl in ipairs(Islands.List) do
 		local x, y = mapPos(isl.x, isl.z or 0)
+		local small = ORIGIN_AT[isl.id]
+		if small then
+			x, y = small.X, small.Y
+		end
 		local unlocked = p.unlocked[isl.id]
 		local charted = ChartsView.Known(isl.id)
 		-- v0.25.19 (owner): each island is its pixel-art emblem (tools/gen_island_icons.py) with our name on the ribbon;
 		-- uncharted islands are a dark silhouette with "???"
-		local dot = New("ImageButton", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(x, y), Size = UDim2.fromOffset(TW, TH), BackgroundTransparency = 1,
+		local dot = New("ImageButton", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(x, y), Size = small and UDim2.fromOffset(66, 58) or UDim2.fromOffset(TW, TH), BackgroundTransparency = 1,
 			Image = UI.IconId("isl_" .. isl.id) or "", ScaleType = Enum.ScaleType.Fit, ImageColor3 = charted and (unlocked and Color3.new(1, 1, 1) or Color3.fromRGB(170, 170, 185)) or Color3.fromRGB(40, 45, 60), AutoButtonColor = false, Parent = sea })
 		UI.Tactile(dot)
 		UI.Text(dot, charted and isl.name or "???", 13, Color3.fromRGB(255, 244, 214), "Display", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.785, 0), Size = UDim2.new(0.74, 0, 0.15, 0), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = false, TextScaled = true })
-		UI.Text(dot, "Lv." .. isl.levels[1] .. "-" .. isl.levels[2] .. (unlocked and "" or "  🔒"), 13, Rarity.LevelColor(player:GetAttribute("Level") or 1, isl.levels[1]), "Number", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, 2), Size = UDim2.fromOffset(140, 16), TextXAlignment = Enum.TextXAlignment.Center })
+		if small then -- no room for the level / chest lines under a small tile: the level goes in a tooltip
+			UI.Tooltip(dot, function()
+				return (charted and isl.name or "???") .. "  Lv." .. isl.levels[1] .. "-" .. isl.levels[2] .. (unlocked and "" or "  (locked)") .. (isl.subtitle and charted and ("  •  " .. isl.subtitle) or "")
+			end)
+		end
+		UI.Text(dot, small and "" or "Lv." .. isl.levels[1] .. "-" .. isl.levels[2] .. (unlocked and "" or "  🔒"), 13, Rarity.LevelColor(player:GetAttribute("Level") or 1, isl.levels[1]), "Number", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, 2), Size = UDim2.fromOffset(140, 16), TextXAlignment = Enum.TextXAlignment.Center })
 		local found, total = 0, 0
 		for _, m in ipairs(game:GetService("CollectionService"):GetTagged("Chest")) do
 			if m:GetAttribute("Island") == isl.id then
@@ -2574,7 +2602,7 @@ function Panels.FastTravel()
 				end
 			end
 		end
-		if total > 0 then
+		if total > 0 and not small then
 			UI.Text(dot, "🧰 " .. found .. "/" .. total, 15, found == total and T.Gold or T.Text, "Display", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, 20), Size = UDim2.fromOffset(100, 18), TextXAlignment = Enum.TextXAlignment.Center })
 		end
 		dot.Activated:Connect(function()
@@ -2582,7 +2610,7 @@ function Panels.FastTravel()
 				UI.Toast(charted and "Not discovered yet: reach it first" or "Uncharted: finish this island's story and your compass will point the way", "bad")
 				return
 			end
-			UI.Confirm("Fly by courier gull to " .. isl.name .. "?\nCost " .. COIN .. " " .. (100 * i), function()
+			UI.Confirm("Fly by courier gull to " .. isl.name .. "?\nCost " .. COIN .. " " .. Islands.TravelCost(isl), function()
 				req("FastTravel", { island = isl.id })
 				win:Destroy()
 			end, nil, "Travel", "Cancel")

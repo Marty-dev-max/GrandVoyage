@@ -16,6 +16,19 @@ end
 ById.MountainBandit = look({ hair = "Messy", eyes = "Thug", mouth = "Snarl", mark = "Scar", shirt = "Open Vest", pants = "Baggy", shoes = "Wraps",
 	hair1 = "3C2A1E", shirt1 = "785A3C", shirt2 = "A08060", pants1 = "4A3A2C", skin = "D6A478", eyes1 = "C08020", eyes2 = "6A3A10",
 	acc = { "Bandana", "BeardDark" }, held = "HeldClub", attack = "Hammer_Smash" })
+-- R5 Origin home islands
+ById.GullThief = look({ hair = "Messy", eyes = "Beady", mouth = "Grin", mark = "Stubble", shirt = "Belted Tunic", pants = "Rolled Cuffs", shoes = "Wraps",
+	hair1 = "6A4A2A", shirt1 = "8A9A6A", shirt2 = "5A4A30", pants1 = "5A4A3A", skin = "E8B88C", eyes1 = "6A4A20", eyes2 = "2A1E10",
+	acc = { "Bandana" }, held = "HeldClub", attack = "Hammer_Smash" })
+ById.DockRat = look({ hair = "Short", eyes = "Beady", mouth = "Snarl", shirt = "Sailor Stripes", pants = "Shorts", shoes = "Wraps",
+	hair1 = "2A2420", shirt1 = "E0D8C8", shirt2 = "8A3A30", pants1 = "4A4A56", skin = "D6A478", eyes1 = "806040", eyes2 = "302010",
+	acc = { "Bandana" }, held = "HeldCutlass", attack = "Sword_Slash" })
+ById.HulkJailer = look({ hair = "Bald", eyes = "Stern", mouth = "Scowl", mark = "Scar", shirt = "Belted Tunic", pants = "Long Pants", shoes = "Boots",
+	shirt1 = "4A4A52", shirt2 = "2A2A30", pants1 = "2E2A28", shoes1 = "1C1A18", skin = "C8946A", eyes1 = "5A5A60", eyes2 = "202024",
+	acc = { "BeardGrey" }, held = "HeldClub", attack = "Hammer_Smash" })
+ById.TombRobber = look({ hair = "Messy", eyes = "Sharp", mouth = "Flat", mark = "Stubble", shirt = "Open Vest", pants = "Cargo", shoes = "Boots",
+	hair1 = "4A3020", shirt1 = "B09060", shirt2 = "6A5030", pants1 = "6A5A40", skin = "EABE96", eyes1 = "3A6A40", eyes2 = "1A3020",
+	acc = { "SunHat" }, held = "HeldClub", attack = "Hammer_Smash" })
 -- mini bosses (v0.25.148): bigger by Config/Monsters style.scale
 ById.BanditChief = look({ hair = "Shaggy Long", eyes = "Thug", mouth = "Grin", mark = "Scar", shirt = "Open Vest", pants = "Baggy", shoes = "Boots",
 	hair1 = "2A1E18", shirt1 = "5A3C28", shirt2 = "8A6A48", pants1 = "3A2E24", shoes1 = "3A2A1E", skin = "C8946A", eyes1 = "C05020", eyes2 = "601C08",

@@ -220,14 +220,98 @@ def epilogue(c):
     ribbon(c)
 
 
+# ---------- R5 Origin home islands (Lv 1-5, World/OriginIslands) ----------
+def bastion_rock(c):
+    base(c, rock=True)
+    tree(c, 12, 31, 4, (50, 120, 70)), tree(c, 52, 31, 4, (50, 120, 70))
+    c.oval(32, 27, 16, 5, ROCK_D)  # rock plateau
+    c.oval(32, 24, 15, 4, GRASS)
+    c.rect(22, 12, 42, 24, (245, 245, 240))  # cadet academy
+    c.rect(22, 12, 42, 13, (50, 80, 160))
+    for x in (25, 30, 34, 39):
+        c.rect(x, 16, x + 1, 18, (100, 150, 230))
+    c.rect(31, 20, 33, 24, (60, 80, 140))
+    for cx in (18, 46):  # two white towers with navy caps
+        c.rect(cx - 3, 8, cx + 3, 25, (240, 240, 236))
+        c.poly([(cx - 4, 8), (cx, 3), (cx + 4, 8)], (50, 80, 160))
+    c.rect(32, 1, 32, 11, (220, 220, 230))  # flag
+    c.rect(33, 1, 37, 4, (60, 110, 220))
+    c.rect(30, 34, 34, 43, (180, 130, 80))  # jetty
+    ribbon(c)
+
+
+def smugglers_hollow(c):
+    base(c, rock=True)
+    c.oval(32, 22, 20, 13, ROCK_D)  # sea cliff
+    c.oval(32, 20, 18, 11, ROCK)
+    c.oval(32, 11, 13, 4, GRASS)
+    c.oval(32, 27, 6, 6, (26, 22, 22))  # cave mouth with a timber frame
+    c.rect(25, 21, 26, 33, (110, 75, 50)), c.rect(38, 21, 39, 33, (110, 75, 50))
+    c.rect(25, 20, 39, 21, (110, 75, 50))
+    c.px(23, 24, (255, 200, 90)), c.px(41, 24, (255, 200, 90))  # lanterns
+    house(c, 8, 31, (110, 70, 55), (170, 125, 90), 9, 5)  # the bar
+    c.rect(46, 28, 55, 34, (150, 108, 70))  # wanted wall
+    for x in (47, 50, 53):
+        c.rect(x, 29, x + 1, 31, (240, 226, 190))
+    c.rect(30, 34, 34, 43, (150, 120, 90))  # wharf
+    ribbon(c)
+
+
+def shackle_reef(c):
+    base(c, top=30)
+    palm(c, 10, 34), palm(c, 54, 35), palm(c, 46, 33)
+    # the prison hulk lying on the reef, bow up, barred windows
+    c.poly([(12, 30), (40, 22), (44, 12), (46, 24), (18, 34)], (80, 60, 48))
+    c.poly([(14, 31), (42, 23), (43, 25), (16, 33)], (140, 50, 44))
+    for x in (20, 26, 32, 38):
+        c.rect(x, 25 - (x - 20) // 5, x + 2, 27 - (x - 20) // 5, (24, 20, 20))
+        c.rect(x + 1, 25 - (x - 20) // 5, x + 1, 27 - (x - 20) // 5, (150, 150, 160))
+    c.rect(28, 6, 29, 22, (120, 85, 58))  # broken mast
+    c.poly([(29, 8), (36, 11), (29, 14)], (220, 210, 190))
+    c.oval(24, 37, 2, 1, (255, 150, 60))  # campfire
+    c.px(24, 35, (255, 220, 120))
+    c.rect(30, 34, 34, 43, (180, 130, 80))  # jetty
+    ribbon(c)
+
+
+def inkwell_isle(c):
+    base(c)
+    tree(c, 12, 30, 5), tree(c, 50, 31, 4, (50, 120, 70))
+    c.oval(30, 27, 15, 5, ROCK_D)  # the hill
+    c.oval(30, 24, 14, 4, GRASS)
+    c.rect(18, 12, 38, 24, (240, 230, 210))  # library
+    c.poly([(16, 12), (28, 5), (40, 12)], (110, 70, 160))
+    for x in (21, 26, 31):
+        c.rect(x, 15, x + 1, 18, (150, 110, 200))
+    c.rect(27, 19, 29, 24, (90, 60, 50))
+    c.rect(42, 4, 47, 24, (240, 230, 210))  # reading tower
+    c.poly([(41, 4), (44, 0), (48, 4)], (110, 70, 160))
+    c.px(44, 8, (255, 220, 120))
+    c.rect(52, 22, 53, 30, (176, 172, 166))  # ruined pillars
+    c.rect(56, 25, 57, 31, (176, 172, 166))
+    c.rect(10, 26, 11, 31, (240, 240, 250))  # quill in the ink pot
+    c.rect(8, 31, 13, 34, (40, 40, 70))
+    c.rect(30, 34, 34, 43, (180, 130, 80))  # jetty
+    ribbon(c)
+
+
 ISLANDS = {'Daybreak': daybreak, 'ConchBay': conch_bay, 'Marmalade': marmalade, 'Honeyslope': honeyslope,
-           'Barracuda': barracuda, 'Mikan': mikan, 'Epilogue': epilogue}
+           'Barracuda': barracuda, 'Mikan': mikan, 'Epilogue': epilogue,
+           'BastionRock': bastion_rock, 'SmugglersHollow': smugglers_hollow, 'ShackleReef': shackle_reef,
+           'InkwellIsle': inkwell_isle}
 
 
 def main():
+    import sys
+    # --only A,B renders just those islands (the others keep their uploaded PNG bytes)
+    only = None
+    if '--only' in sys.argv:
+        only = set(sys.argv[sys.argv.index('--only') + 1].split(','))
     os.makedirs(OUT, exist_ok=True)
     sheet = Image.new('RGB', (len(ISLANDS) * W * 4, H * 4), (40, 44, 70))
     for i, (name, fn) in enumerate(ISLANDS.items()):
+        if only and name not in only:
+            continue
         c = C()
         fn(c)
         img = finish(c)

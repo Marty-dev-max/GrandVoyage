@@ -153,6 +153,80 @@ local Islands = {
 		},
 		boss = { id = "MistCommodore", offset = Vector2.new(0, -215), respawn = 60 * 60 },
 	},
+	-- ===== R5 (owner, 28 Nov 2026): ORIGIN home islands =====
+	-- Small Lv 1-5 islands west of Daybreak, one per Origin (Config/Origins `island`): a new character starts on its
+	-- Origin's island, learns the ropes there and sails (or rides the current) to Daybreak. They are NOT on the story
+	-- route: `origin` marks them, Islands.Route leaves them out (sea segments, NPC ships, whirlpools, the route
+	-- currents), each one faces Daybreak and gets its own current toward it. Hand-laid in World/OriginIslands.lua.
+	-- Kept last in this list so the shared world random stream of the islands above never changes.
+	{
+		id = "BastionRock",
+		origin = "MarineCadet",
+		name = "Bastion Rock",
+		subtitle = "Cadet Academy",
+		layout = "BastionRock",
+		x = -720, z = -820,
+		radius = 150,
+		levels = { 1, 5 },
+		palette = { sand = Color3.fromRGB(236, 226, 200), grass = Color3.fromRGB(120, 196, 104), dirt = Color3.fromRGB(150, 130, 110), accent = Color3.fromRGB(62, 110, 210), wall = Color3.fromRGB(236, 234, 228) },
+		theme = "CadetAcademy",
+		townRadius = 50,
+		spawns = {
+			{ offset = Vector2.new(-82, 58), radius = 18, monster = "GullThief", count = 5, area = "Supply Sheds" },
+			{ offset = Vector2.new(-92, -46), radius = 16, monster = "ForestMonkey", count = 4, area = "Cliff Pines" },
+		},
+	},
+	{
+		id = "SmugglersHollow",
+		origin = "BountyHunter",
+		name = "Smuggler's Hollow",
+		subtitle = "Hunters' Den",
+		layout = "SmugglersHollow",
+		x = -1000, z = -300,
+		radius = 150,
+		levels = { 1, 5 },
+		palette = { sand = Color3.fromRGB(220, 200, 160), grass = Color3.fromRGB(128, 170, 92), dirt = Color3.fromRGB(120, 96, 76), accent = Color3.fromRGB(220, 160, 60), wall = Color3.fromRGB(196, 170, 136) },
+		theme = "SmugglerCove",
+		townRadius = 50,
+		spawns = {
+			{ offset = Vector2.new(70, 52), radius = 18, monster = "DockRat", count = 5, area = "Back Wharf" },
+			{ offset = Vector2.new(-84, 34), radius = 16, monster = "ForestMonkey", count = 4, area = "Scrub" },
+		},
+	},
+	{
+		id = "ShackleReef",
+		origin = "Outlaw",
+		name = "Shackle Reef",
+		subtitle = "Wreck of the Prison Hulk",
+		layout = "ShackleReef",
+		x = -1000, z = 300,
+		radius = 150,
+		levels = { 1, 5 },
+		palette = { sand = Color3.fromRGB(246, 230, 180), grass = Color3.fromRGB(110, 190, 96), dirt = Color3.fromRGB(150, 110, 76), accent = Color3.fromRGB(200, 70, 60), wall = Color3.fromRGB(200, 186, 160) },
+		theme = "PrisonWreck",
+		townRadius = 50,
+		spawns = {
+			{ offset = Vector2.new(-58, -66), radius = 18, monster = "HulkJailer", count = 5, area = "The Wreck" },
+			{ offset = Vector2.new(84, -36), radius = 16, monster = "ForestMonkey", count = 4, area = "Palm Grove" },
+		},
+	},
+	{
+		id = "InkwellIsle",
+		origin = "RelicSeeker",
+		name = "Inkwell Isle",
+		subtitle = "Scholars' Library",
+		layout = "InkwellIsle",
+		x = -720, z = 820,
+		radius = 150,
+		levels = { 1, 5 },
+		palette = { sand = Color3.fromRGB(240, 228, 196), grass = Color3.fromRGB(116, 200, 110), dirt = Color3.fromRGB(140, 116, 90), accent = Color3.fromRGB(150, 100, 200), wall = Color3.fromRGB(240, 232, 214) },
+		theme = "Library",
+		townRadius = 50,
+		spawns = {
+			{ offset = Vector2.new(76, -58), radius = 20, monster = "TombRobber", count = 5, area = "Old Ruins" },
+			{ offset = Vector2.new(-86, -30), radius = 16, monster = "ForestMonkey", count = 4, area = "Ink Woods" },
+		},
+	},
 }
 
 -- The Crimson Wall and Backflow Peak (gateway to the Grand Current, next update)
@@ -229,8 +303,24 @@ local function turn(v, yaw)
 	local c, s = math.cos(yaw), math.sin(yaw)
 	return Vector2.new(c * v.X + s * v.Y, -s * v.X + c * v.Y)
 end
+-- the story route (no Origin islands): sea segments, NPC ships, whirlpools and the route currents follow it
+local Route = {}
+for _, isl in ipairs(Islands) do
+	if not isl.origin then
+		table.insert(Route, isl)
+		isl.routeIndex = #Route
+	end
+end
+for k, isl in ipairs(Route) do
+	isl.nextId = Route[k + 1] and Route[k + 1].id or nil
+end
 for i = 2, #Islands do
-	local isl, prev = Islands[i], Islands[i - 1]
+	local isl = Islands[i]
+	-- an Origin island faces Daybreak (where its players sail to), a route island the island before it
+	local prev = isl.origin and Islands[1] or Route[(isl.routeIndex or 2) - 1]
+	if isl.origin then
+		isl.nextId = Islands[1].id
+	end
 	isl.yaw = math.atan2(prev.x - isl.x, (prev.z or 0) - (isl.z or 0))
 	isl.localOffsets = { spawns = {}, boss = isl.boss and isl.boss.offset, arena = isl.arena and isl.arena.offset }
 	for k, sp in ipairs(isl.spawns) do
@@ -295,10 +385,17 @@ local function WithRaw(isl, fn)
 	end
 end
 
+-- Courier gull fare: 100 per step along the route (an Origin island costs the same as Daybreak)
+local function TravelCost(isl)
+	return 100 * (isl.routeIndex or 1)
+end
+
 return {
 	WithRaw = WithRaw,
 	Scale = S,
 	List = Islands,
+	Route = Route,
+	TravelCost = TravelCost,
 	ById = byId,
 	RedLine = RedLine,
 	Forts = Forts,

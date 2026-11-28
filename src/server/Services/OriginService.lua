@@ -32,6 +32,12 @@ function O.Apply(d, originId, weaponId)
 	d.origin = o.id
 	d.originWeapon = weaponId
 	d.originSpawn = true -- the first spawn goes to the Origin's spot (PlayerService onCharacter)
+	-- R5: a new character starts on its Origin's home island (an older save that already played somewhere stays put)
+	if (d.level or 1) <= 1 and o.island then
+		d.unlocked = d.unlocked or {}
+		d.unlocked[o.island] = true
+		d.lastIsland = o.island
+	end
 	-- the starting weapon: the starter knuckles become the chosen weapon (an older slot gets it added + equipped)
 	d.inventory = d.inventory or {}
 	d.equipment = d.equipment or {}

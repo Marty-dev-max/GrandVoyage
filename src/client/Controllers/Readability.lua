@@ -196,7 +196,12 @@ local arrows = {}
 local function nextIsland(fromX)
 	local p = State.profile
 	local best
-	for _, isl in ipairs(Islands.List) do
+	-- R5: west of Daybreak (an Origin island) the way on is Daybreak itself
+	local start = Islands.Route[1]
+	if fromX < start.x - start.radius then
+		return start
+	end
+	for _, isl in ipairs(Islands.Route) do
 		if isl.x > fromX + 150 then
 			if not best then
 				best = isl

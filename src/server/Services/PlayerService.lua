@@ -1152,7 +1152,7 @@ local function setupHandlers()
 		if R.ShipService.GetShipOf(player) then
 			return false, "Dock your ship first"
 		end
-		local cost = 100 * island.index
+		local cost = Islands.TravelCost(island)
 		if not PS.AddBeli(player, -cost) then
 			return false, "Not enough Doubloons (" .. cost .. ")"
 		end

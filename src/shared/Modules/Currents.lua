@@ -23,14 +23,19 @@ end
 
 C.Lanes = {}
 do
-	local list = {}
+	-- R5: the story route island to island, plus one current from each Origin island to Daybreak
+	local pairsList = {}
+	local route = Islands.Route or Islands.List
+	for i = 1, #route - 1 do
+		table.insert(pairsList, { route[i], route[i + 1] })
+	end
 	for _, isl in ipairs(Islands.List) do
-		if type(isl) == "table" and isl.x and isl.radius then
-			table.insert(list, isl)
+		if isl.origin and isl.nextId and Islands.ById[isl.nextId] then
+			table.insert(pairsList, { isl, Islands.ById[isl.nextId] })
 		end
 	end
-	for i = 1, #list - 1 do
-		local a, b = list[i], list[i + 1]
+	for _, pr in ipairs(pairsList) do
+		local a, b = pr[1], pr[2]
 		local pa = Vector3.new(a.x, 0, a.z or 0)
 		local pb = Vector3.new(b.x, 0, b.z or 0)
 		local d = pb - pa

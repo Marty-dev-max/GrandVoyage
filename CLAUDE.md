@@ -1453,6 +1453,22 @@ The owner tests in Studio and sends screenshots; previews of new art are rendere
    (drift out, grow, fade), churn behind, bow spray > 22 studs/s; one pool of 320 parts (BulkMoveTo), on the Waves
    surface when VoxelSea.On. Test a design without saving: client invoke BuildEnter { slot } near a Plot, then TestSail
    { design = ShipPresets.Starter(...) }; a Scriptable camera bound with BindToRenderStep for close shots.
+   R5 0.1.26-remake (owner pick: Origin home islands): Islands.List gets 4 small Lv 1-5 islands WEST of Daybreak with
+   `origin` = the Origin id (BastionRock MarineCadet, SmugglersHollow BountyHunter, ShackleReef Outlaw, InkwellIsle
+   RelicSeeker; appended LAST so every other island keeps its index / rng). `Islands.Route` = the main chain without
+   them (route index, nextId; origin islands get nextId = "Daybreak" and face it); everything that walks the chain
+   (SeaZones.Segment, Currents lanes + origin->Daybreak lanes, Weather spots, ShipService crewDef / segmentBounds /
+   npcSpawner, Readability next island) reads Route, not List. `Islands.TravelCost(isl)` = 100 x routeIndex (origins
+   100). Layouts = `World/OriginIslands.For(id)` in WorldBuilder.LAYOUTS with `fresh = true` (no generic burn: built
+   after every other island). Front (+Z) = jetty + SpawnPoint; NPCs the Origins spawn at: Marine Registrar (role
+   Marine), Bounty Board (BossBoard), Guide (Rattle Jack), Librarian (Shop, inside the hollow "shop" library, Lift).
+   Rusty Hook = hollow tavern with a Shop NPC inside. New mobs GullThief / DockRat (Lv2) / HulkJailer / TombRobber
+   (Lv3) with MonsterLooks, Cards, DamageTypes, TYPE_OF; guides in Quests.Guide + ModelFactory NPC_LOOK. Origin
+   islands have NO boss (tools/test.luau guards it; every `isl.boss` use must check it). OriginService.Apply moves a
+   level-1 character to `o.island` (unlocked + lastIsland); older saves stay put. Map (Panels.FastTravel): origin
+   islands = 66x58 tiles zigzagged at the west edge (ORIGIN_AT), level in a tooltip, route islands start at x0 0.19.
+   Emblems isl_<Id> in tools/gen_island_icons.py (`--only A,B` renders just those; restore island_icons_sheet.png
+   after). Not done yet: per-Origin prologue quests (the tutorial still starts with Rowan on Daybreak). WORLD_VERSION 49.
 1. Wait for the owner's verdict on v0.10.3 (hills/flowers/grass); fix what they point at.
 2. Voxel art pass: monsters DONE v0.11.0 (voxel_monsters.py; AssetService sizes = shape base x style.scale,
    MonsterService.RefreshModels swaps placeholder island mobs). Pets + fruits DONE v0.11.1 (voxel_pets.py).

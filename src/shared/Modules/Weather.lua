@@ -82,7 +82,7 @@ W.HalfZ = GameConfig.Lane.HalfWidth - 150
 W.Spots = {}
 do
 	local list = {}
-	for _, isl in ipairs(Islands.List) do
+	for _, isl in ipairs(Islands.Route or Islands.List) do -- R5: no whirlpools on the way from an Origin island
 		if type(isl) == "table" and isl.x and isl.radius then
 			table.insert(list, isl)
 		end

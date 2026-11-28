@@ -184,7 +184,7 @@ end
 -- going instead of crossing the island (it used to be fixed at local east and often faced the Doldrums).
 -- Angle (local, before the island's own yaw) that turns the default east yard; nil = keep (Daybreak).
 local function yardAngle(island, worldZ)
-	local nxt = island.index and IslandsCfg.List[island.index + 1]
+	local nxt = island.nextId and IslandsCfg.ById[island.nextId] -- R5: the next route island, Daybreak for an Origin island
 	if not island.yaw or not nxt then
 		return island.yaw and 0 or nil
 	end
@@ -589,6 +589,11 @@ local LAYOUTS = {
 	Barracuda = { module = require(script.Parent.Barracuda), seed = 20261125 },
 	Mikan = { module = require(script.Parent.Mikan), seed = 20261126 },
 	Epilogue = { module = require(script.Parent.Epilogue), seed = 20261127 },
+	-- R5 Origin home islands (World/OriginIslands): built last, so no generic burn is needed (fresh = true)
+	BastionRock = { module = require(script.Parent.OriginIslands).For("BastionRock"), seed = 20261128, fresh = true },
+	SmugglersHollow = { module = require(script.Parent.OriginIslands).For("SmugglersHollow"), seed = 20261129, fresh = true },
+	ShackleReef = { module = require(script.Parent.OriginIslands).For("ShackleReef"), seed = 20261130, fresh = true },
+	InkwellIsle = { module = require(script.Parent.OriginIslands).For("InkwellIsle"), seed = 20261131, fresh = true },
 }
 
 -- the island exactly as its builder lays it out (hand-tuned numbers from Islands.WithRaw, at z 0, unturned)
@@ -616,12 +621,14 @@ local function buildIslandRaw(island)
 	if layout then
 		-- hand-laid island (v0.25.20): burn the old generic build to keep the shared Kit.rng stream where every later
 		-- island expects it, then build the new layout on its own stream (same trick as Daybreak)
-		local scratch = Instance.new("Model")
-		local prev = Kit.parent
-		Kit.parent = scratch
-		buildIslandGeneric(island)
-		Kit.parent = prev
-		scratch:Destroy()
+		if not layout.fresh then
+			local scratch = Instance.new("Model")
+			local prev = Kit.parent
+			Kit.parent = scratch
+			buildIslandGeneric(island)
+			Kit.parent = prev
+			scratch:Destroy()
+		end
 		Kit.WithRng(Random.new(layout.seed), function()
 			f = layout.module.Build(island, layoutApi)
 		end)
@@ -1115,7 +1122,7 @@ end
 -- away and rebuilt from code at server start (so the owner's published place updates through Rojo too).
 -- Hand-built content made in Studio goes in workspace.Handmade (never touched by rebuilds). Kit props placed there
 -- (tagged EnvProp/EnvPart) are dressed with the stylized meshes like the generated ones.
-WB.WORLD_VERSION = 48 -- v48 (0.1.24-remake, R5): islands built x GameConfig.WorldScale (1.5) around their center, people-size props keep their size; v47 (0.1.10-remake): no Job Master NPC (spots stay reserved); v46 (v0.25.150): no shipyard platform, the slips float (boardwalk only); v45 (v0.25.149): Courier Gull Post at every harbor, Marine Registrar by the Conch Bay stairs; v44 (v0.25.148): roof ridges sit on the stepped roof (no floating beam); v43 (v0.25.147): voxel stadium big top + the Confetti Crew occupying Marmalade; v42 (v0.25.146): Big Top for Captain Confetti, Epilogue execution platform; v41 (v0.25.143): a look of their own for every island quest giver; v40 (v0.25.142): one Tavern Keeper on Daybreak (inside the tavern); v39 (v0.25.141): tavern awning above the doorway; v38 (v0.25.140): enterable Daybreak tavern / smithy / store with their NPC inside; v37 (v0.25.134): organic voxel island outlines (IslandShape); v36 v36 (v0.25.133): Epilogue Town hand-laid; v35 v35 (v0.25.132): Mikan Isles hand-laid; v34 (v0.25.131): Barracuda Bistro hand-laid (World/Barracuda); v33 (v0.25.130): Honeyslope hand-laid (World/Honeyslope); v32 (v0.25.129): the Brig (jail cell) at the Conch Bay garrison; v31 (v0.25.120): Power board is a map piece in front of the west house; v30 (v0.25.119): Bounty Board moved to the west street house; v29 (v0.25.118): Job Master walk-in ring + new look; v28 (v0.25.115): DeFlicker stacks faces within 0.035 (grass under the plaza paving); v27 (v0.25.113): no Bay Serpent buoys/sign, wooden shipyard plots, voxel barrels/crates/chests; v26 (v0.25.112): DeFlicker pass, hill caps one step apart per lobe; v25 (v0.25.109): no island name signs at the docks; v24 (v0.25.108): Marine Registrar in Conch Bay, no Guild Registrar; v23 (v0.25.107): Tavern Keeper beside the Shipwright; v22 (v0.25.27): shipyards snap to the island side nearest the next island; v21 (v0.25.25): shipyards face the next island, circus ship offshore; v20 (v0.25.24): Marmalade Town hand-laid (World/Marmalade); v19 (v0.25.23): Conch Bay street spawns keep their houses; v18 (v0.25.22): Conch Bay terraced (quay, two terraces, garrison plateau, tapered towers); v17 (v0.25.21): islands turned to face the previous one, Conch Bay stairs; v16 (v0.25.20): Daybreak spawn by Rowan, Conch Bay hand-laid (World/ConchBay); v15 (v0.25.11): islands spread north/south, wider sea, islets; v14 (v0.25.6): Daybreak spawn by the campfire; v13: voxel NPCs; v12: Voxelize pass
+WB.WORLD_VERSION = 49 -- v49 (0.1.26-remake, R5): four Origin home islands west of Daybreak (World/OriginIslands); v48 (0.1.24-remake, R5): islands built x GameConfig.WorldScale (1.5) around their center, people-size props keep their size; v47 (0.1.10-remake): no Job Master NPC (spots stay reserved); v46 (v0.25.150): no shipyard platform, the slips float (boardwalk only); v45 (v0.25.149): Courier Gull Post at every harbor, Marine Registrar by the Conch Bay stairs; v44 (v0.25.148): roof ridges sit on the stepped roof (no floating beam); v43 (v0.25.147): voxel stadium big top + the Confetti Crew occupying Marmalade; v42 (v0.25.146): Big Top for Captain Confetti, Epilogue execution platform; v41 (v0.25.143): a look of their own for every island quest giver; v40 (v0.25.142): one Tavern Keeper on Daybreak (inside the tavern); v39 (v0.25.141): tavern awning above the doorway; v38 (v0.25.140): enterable Daybreak tavern / smithy / store with their NPC inside; v37 (v0.25.134): organic voxel island outlines (IslandShape); v36 v36 (v0.25.133): Epilogue Town hand-laid; v35 v35 (v0.25.132): Mikan Isles hand-laid; v34 (v0.25.131): Barracuda Bistro hand-laid (World/Barracuda); v33 (v0.25.130): Honeyslope hand-laid (World/Honeyslope); v32 (v0.25.129): the Brig (jail cell) at the Conch Bay garrison; v31 (v0.25.120): Power board is a map piece in front of the west house; v30 (v0.25.119): Bounty Board moved to the west street house; v29 (v0.25.118): Job Master walk-in ring + new look; v28 (v0.25.115): DeFlicker stacks faces within 0.035 (grass under the plaza paving); v27 (v0.25.113): no Bay Serpent buoys/sign, wooden shipyard plots, voxel barrels/crates/chests; v26 (v0.25.112): DeFlicker pass, hill caps one step apart per lobe; v25 (v0.25.109): no island name signs at the docks; v24 (v0.25.108): Marine Registrar in Conch Bay, no Guild Registrar; v23 (v0.25.107): Tavern Keeper beside the Shipwright; v22 (v0.25.27): shipyards snap to the island side nearest the next island; v21 (v0.25.25): shipyards face the next island, circus ship offshore; v20 (v0.25.24): Marmalade Town hand-laid (World/Marmalade); v19 (v0.25.23): Conch Bay street spawns keep their houses; v18 (v0.25.22): Conch Bay terraced (quay, two terraces, garrison plateau, tapered towers); v17 (v0.25.21): islands turned to face the previous one, Conch Bay stairs; v16 (v0.25.20): Daybreak spawn by Rowan, Conch Bay hand-laid (World/ConchBay); v15 (v0.25.11): islands spread north/south, wider sea, islets; v14 (v0.25.6): Daybreak spawn by the campfire; v13: voxel NPCs; v12: Voxelize pass
 
 -- Old copies of the map can hide anywhere in Workspace: a renamed or regrouped World, an island dragged into
 -- Handmade, single NPCs / chests / docks pasted from an old bake. They draw on top of the new islands and register

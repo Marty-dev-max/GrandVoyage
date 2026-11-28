@@ -32,6 +32,11 @@ Q.Guide = {
 	Barracuda = "Head Chef Gusto",
 	Mikan = "Granny Rind",
 	Epilogue = "Harbor Master Vane",
+	-- R5 Origin home islands
+	BastionRock = "Instructor Halyard",
+	SmugglersHollow = "Old Gaff",
+	ShackleReef = "Rattle Jack",
+	InkwellIsle = "Sage Quill",
 }
 
 Q.Main = {

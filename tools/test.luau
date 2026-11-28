@@ -41,7 +41,9 @@ for id, s in pairs(NPCShips.Ships) do
 end
 for _, isl in ipairs(Islands.List) do
 	for _, sp in ipairs(isl.spawns) do check(Monsters[sp.monster] ~= nil, "spawn monster missing " .. sp.monster) end
-	check(Monsters[isl.boss.id] ~= nil, "boss missing " .. isl.boss.id)
+	if isl.boss then -- R5 Origin home islands have no boss
+		check(Monsters[isl.boss.id] ~= nil, "boss missing " .. isl.boss.id)
+	end
 	for _, sp in ipairs(isl.spawns) do
 		local d = sp.offset.Magnitude + sp.radius
 		check(d <= isl.radius - 5, isl.id .. " spawn zone off island: " .. sp.monster .. " " .. d .. ">" .. isl.radius)

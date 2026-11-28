@@ -1348,7 +1348,7 @@ end
 local Monsters = require(Shared.Config.Monsters)
 local Waves = require(Shared.Modules.Waves)
 local function crewDef(shipDef, pos)
-	local isl = Islands.List[SeaZones.Segment(pos.X)] or Islands.List[1]
+	local isl = Islands.Route[SeaZones.Segment(pos.X)] or Islands.Route[1]
 	local level = isl.levels[2] + ((shipDef.tier or 1) - 1) * 5
 	local best
 	for _, m in pairs(Monsters) do
@@ -1588,8 +1588,8 @@ local function pickTier(weights)
 end
 
 local function segmentBounds(seg)
-	local a = Islands.List[seg]
-	local b = Islands.List[seg + 1]
+	local a = Islands.Route[seg]
+	local b = Islands.Route[seg + 1]
 	local x1 = a.x + a.radius + 160
 	local x2 = b and (b.x - b.radius - 160) or (Islands.RedLine.x - 500)
 	-- v0.25.8 (owner): keep NPC ships clear of a sea boss's waters (Bay Serpent off Daybreak got crowded)
@@ -1608,7 +1608,7 @@ local function npcSpawner()
 				counts[s.segment] = (counts[s.segment] or 0) + 1
 			end
 		end
-		for seg = 1, #Islands.List do
+		for seg = 1, #Islands.Route do
 			local x1, x2 = segmentBounds(seg)
 			local cx = (x1 + x2) / 2
 			local near = false

@@ -43,6 +43,20 @@ mob("BanditChief", { name = "Bandit Chief Ragmaw", level = 10, hp = 1300, atk = 
 	style = { shape = "humanoid", color = Color3.fromRGB(110, 80, 60), scale = 1.35 }, aggro = true, aggroRadius = 16, mini = "slam", respawn = 6 * 60, cardChance = 0.02,
 	drops = { { "SteelOre", 1, 1, 2 }, { "ChiefFurMantle", 0.06, 1, 1 }, { "BeardDark", 0.15, 1, 1 }, { "Sword_Plain", 0.1, 1, 1 } } })
 
+-- R5 Origin home islands (Lv 1-5, World/OriginIslands): one humanoid of their own per island, next to the Forest Monkeys
+mob("GullThief", { name = "Gull Thief", level = 2, hp = 90, atk = 11, def = 3, exp = 18, jobExp = 12, beli = { 8, 16 },
+	style = { shape = "humanoid", color = Color3.fromRGB(150, 120, 90), scale = 1 }, -- raids the Bastion Rock supply sheds
+	drops = { { "Bandana", 0.03, 1, 1 }, { "RawMeat", 0.2, 1, 1 }, { "Sword_Plain", 0.01, 1, 1 } } })
+mob("DockRat", { name = "Dock Rat", level = 2, hp = 90, atk = 11, def = 3, exp = 18, jobExp = 12, beli = { 8, 16 },
+	style = { shape = "humanoid", color = Color3.fromRGB(120, 110, 100), scale = 1 }, -- wharf cutpurse of Smuggler's Hollow
+	drops = { { "FreshFish", 0.3, 1, 1 }, { "Bandana", 0.03, 1, 1 }, { "Spice", 0.1, 1, 1 } } })
+mob("HulkJailer", { name = "Hulk Jailer", level = 3, hp = 120, atk = 14, def = 4, exp = 25, jobExp = 17, beli = { 10, 20 },
+	style = { shape = "humanoid", color = Color3.fromRGB(90, 90, 100), scale = 1.05 }, aggro = true, aggroRadius = 10, -- still guards the wrecked prison
+	drops = { { "SteelOre", 0.05, 1, 1 }, { "RawMeat", 0.2, 1, 1 } } })
+mob("TombRobber", { name = "Tomb Robber", level = 3, hp = 120, atk = 14, def = 4, exp = 25, jobExp = 17, beli = { 10, 20 },
+	style = { shape = "humanoid", color = Color3.fromRGB(150, 130, 100), scale = 1 }, -- digs in the Inkwell ruins
+	drops = { { "CompassCharm", 0.01, 1, 1 }, { "Bandana", 0.03, 1, 1 }, { "Tangerine", 0.15, 1, 1 } } })
+
 -- Conch Bay (10-20)
 mob("MarineRecruit", { name = "Rogue Marine Recruit", level = 12, hp = 520, atk = 42, def = 14, exp = 120, jobExp = 80, beli = { 40, 80 },
 	style = { shape = "humanoid", color = Color3.fromRGB(240, 240, 255), scale = 1, hat = "marine" },
@@ -179,10 +193,10 @@ mob("FortCore", { name = "Giant Signal Conch", level = 80, hp = 60000, atk = 0, 
 --   INT = tactics: stuns / crowd control on hit
 --   (v0.25.38: PHY is gone; its two gunners keep their long range below: Rifleman = DEX, Armored Gunner = STR)
 local TYPE_OF = {
-	STR = { "BanditChief", "ArmoredGunner", "WildBoar", "MountainBandit", "CircusLion", "ArmadaRaider", "SharkfolkBrawler", "AxeCaptain", "ArmadaAdmiral", "Leviathan" },
-	AGI = { "SpoiledEnsign", "MarineRecruit", "NightCatPirate", "SawfolkRaider", "MarineElite", "BountyHunter", "SilentClaw", "SawtoothOverlord", "ClawCat" },
-	DEX = { "BeastTamer", "MarineRifleman", "ForestMonkey", "JungleTiger", "GuardWolf", "CircusAcrobat", "StarvedPirate", "BaySerpent", "DepthsWarden" },
-	INT = { "ClownGrunt", "HypnoThug", "MistSoldier", "CaptainConfetti", "RingMaster", "MistCommodore", "OctofolkBrute" },
+	STR = { "HulkJailer", "BanditChief", "ArmoredGunner", "WildBoar", "MountainBandit", "CircusLion", "ArmadaRaider", "SharkfolkBrawler", "AxeCaptain", "ArmadaAdmiral", "Leviathan" },
+	AGI = { "DockRat", "SpoiledEnsign", "MarineRecruit", "NightCatPirate", "SawfolkRaider", "MarineElite", "BountyHunter", "SilentClaw", "SawtoothOverlord", "ClawCat" },
+	DEX = { "GullThief", "BeastTamer", "MarineRifleman", "ForestMonkey", "JungleTiger", "GuardWolf", "CircusAcrobat", "StarvedPirate", "BaySerpent", "DepthsWarden" },
+	INT = { "TombRobber", "ClownGrunt", "HypnoThug", "MistSoldier", "CaptainConfetti", "RingMaster", "MistCommodore", "OctofolkBrute" },
 }
 -- stars: 1 = plain animals, 2 = regular fighters, 3 = elites, 4 = bosses, 5 = the strongest bosses
 local STARS = {
